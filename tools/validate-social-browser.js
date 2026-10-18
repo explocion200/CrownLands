@@ -44,6 +44,12 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         if (input.action === "send") { socialQa.messages.push({ id: "c".repeat(40), sequence: socialQa.messages.length + 1, senderUid: "alice", senderDisplayName: "Alice", text: input.text, createdAtMs: Date.now(), expiresAtMs: Date.now() + 90 * 86400000 }); return { ok: true }; }
         return { ok: true };
       }, subscribeSocialSignals: callback => { socialQa.signal = callback; return () => {}; }, registerPushNotifications: async () => ({}), enablePushNotifications: async options => { socialQa.alertCategory = options.category; return { enabled: true }; }, disablePushNotifications: async options => { socialQa.disabledCategory = options.category; }, getNotificationPermission: () => "default", translateChatMessages: async () => ({ translations: [{ id: "b".repeat(40), text: "Translated fixture" }] }) };
+      const globalChat = CrownlandsChat.init(); globalChat.dispose({ resetSession: true });
+      globalChat.start({ uid: "alice", clanId: "fixture-clan", api: {
+        getServerNowMs: () => Date.now(),
+        subscribeChatMessages(options, handlers) { queueMicrotask(() => handlers.onMessages([{ id: "global-density", senderUid: "bob", senderDisplayName: "Bob", text: "Meet at the castle.", createdAtMs: Date.now(), status: "visible", channel: options.channel }], { initial: true, hasMore: false })); return () => {}; },
+        loadOlderChatMessages: async () => []
+      } }); globalChat.setMode("full");
       await CrownlandsSocial.start({ api: socialQa.api, uid: "alice", flagRenderer: FlagRenderer }); CrownlandsSocial.open("friends");
     });
     await delay(150);
@@ -64,7 +70,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         return { dialog: { x: d.x, y: d.y, width: d.width, height: d.height }, logHeight: log.height, composerInside: form.bottom <= d.bottom && form.left >= d.left && form.right <= d.right,
           overflow: document.getElementById("socialPanel").scrollWidth > document.getElementById("socialPanel").clientWidth + 1, injectedImage: Boolean(document.querySelector(".social-message img")), text: document.querySelector(".social-message p").textContent,
           sidebar: document.querySelector(".social-list").getBoundingClientRect().width, threadWidth: document.querySelector(".social-thread").getBoundingClientRect().width, workspaceWidth: document.querySelector(".social-workspace").clientWidth,
-          textSize: parseFloat(getComputedStyle(document.querySelector(".social-message p")).fontSize), inputSize: parseFloat(getComputedStyle(document.querySelector(".social-compose textarea")).fontSize),
+          textSize: parseFloat(getComputedStyle(document.querySelector(".social-message p")).fontSize), globalTextSize: parseFloat(getComputedStyle(document.querySelector("#chatMessageList .chat-message-text")).fontSize), inputSize: parseFloat(getComputedStyle(document.querySelector(".social-compose textarea")).fontSize),
           scrollable: document.querySelector(".social-log").scrollHeight > log.height,
           latestVisible: document.querySelector(".social-log").scrollTop + log.height >= document.querySelector(".social-log").scrollHeight - 2,
           targets: [...document.querySelectorAll(".social-thread-heading button,.social-compose button")].every(button => button.getBoundingClientRect().height >= 44) };
@@ -72,7 +78,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       layouts.push({ width, height, ...layout });
       await client.send("Page.captureScreenshot", { format: "png" }).then(shot => fs.writeFileSync(path.join(artifacts, `messages-${width}x${height}.png`), Buffer.from(shot.data, "base64")));
       const minHistoryHeight = height <= 360 ? 90 : height <= 480 ? 140 : height <= 600 ? 240 : 350;
-      assert(layout.composerInside && layout.logHeight >= minHistoryHeight && !layout.overflow && !layout.injectedImage && layout.targets && layout.textSize >= 16 && layout.inputSize >= 16 && layout.scrollable && layout.latestVisible, JSON.stringify({ width, height, ...layout }));
+      assert(layout.composerInside && layout.logHeight >= minHistoryHeight && !layout.overflow && !layout.injectedImage && layout.targets && layout.textSize === layout.globalTextSize && layout.textSize >= 12 && layout.inputSize >= 16 && layout.scrollable && layout.latestVisible, JSON.stringify({ width, height, ...layout }));
       if (width <= 900 || height <= 600) assert(layout.sidebar === 0 && layout.threadWidth >= layout.workspaceWidth - 1, "Phone/short-window thread must use the full width");
       else assert(layout.sidebar <= 240 && layout.threadWidth > layout.workspaceWidth * .74, "Desktop sidebar takes too much conversation space");
       assert(layout.text.includes("<img"));
@@ -95,14 +101,17 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       const compact = await ev(() => {
         const rows = [...document.querySelectorAll(".social-message")];
         const firstLine = node => { const range = document.createRange(); range.selectNodeContents(node); return range.getClientRects()[0]; };
+        const globalRow = getComputedStyle(document.querySelector("#chatMessageList .chat-message")), privateRow = getComputedStyle(rows[0]);
+        const globalText = getComputedStyle(document.querySelector("#chatMessageList .chat-message-text")), privateText = getComputedStyle(rows[0].querySelector("p"));
         return { shortHeight: rows[0].getBoundingClientRect().height,
           inline: rows.every(row => { const name = row.querySelector("strong"), text = row.querySelector(":scope>p"); return Math.abs(firstLine(name).top - firstLine(text).top) < 4 && name.getBoundingClientRect().right <= text.getBoundingClientRect().left; }),
-          contained: rows.every(row => row.scrollWidth <= row.clientWidth && row.querySelector(":scope>p").scrollWidth <= row.querySelector(":scope>p").clientWidth),
-          menuTargets: rows.every(row => row.querySelector("summary").getBoundingClientRect().width >= 44 && row.querySelector("summary").getBoundingClientRect().height >= 44),
+          globalDensity: privateText.fontSize === globalText.fontSize && privateText.lineHeight === globalText.lineHeight && parseFloat(privateRow.paddingTop) <= parseFloat(globalRow.paddingTop) && rows[0].getBoundingClientRect().height <= 25 + parseFloat(globalRow.paddingTop) + parseFloat(globalRow.paddingBottom),
+          contained: rows.every(row => { const text = row.querySelector(":scope>p"), time = row.querySelector("time").getBoundingClientRect(), menu = row.querySelector("summary").getBoundingClientRect(); return row.scrollWidth <= row.clientWidth && text.scrollWidth <= text.clientWidth && time.left >= text.getBoundingClientRect().right && menu.left >= time.right && Math.abs(menu.top - time.top) < 1; }),
+          menuTargets: rows.every(row => row.querySelector("summary").getBoundingClientRect().width >= 24 && row.querySelector("summary").getBoundingClientRect().height >= 24),
           fullTimestamp: rows.every((row, index) => { const time = row.querySelector("time"), expected = socialQa.messages[index].createdAtMs; return Date.parse(time.dateTime) === expected && time.title.includes(String(new Date(expected).getFullYear())) && time.getAttribute("aria-label") === time.title; }),
           multiline: rows[3].querySelector("p").innerText.includes("\n") && rows[3].querySelector("p").dir === "auto" };
       });
-      assert(compact.shortHeight <= 60 && compact.inline && compact.contained && compact.menuTargets && compact.fullTimestamp && compact.multiline, JSON.stringify({ width, height, compact }));
+      assert(compact.shortHeight <= 39 && compact.globalDensity && compact.inline && compact.contained && compact.menuTargets && compact.fullTimestamp && compact.multiline, JSON.stringify({ width, height, compact }));
       layouts.at(-1).compact = compact;
       await ev('document.querySelector(".social-log").scrollTop=0');
       await client.send("Page.captureScreenshot", { format: "png" }).then(shot => fs.writeFileSync(path.join(artifacts, `inline-messages-${width}x${height}.png`), Buffer.from(shot.data, "base64")));
