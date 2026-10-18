@@ -21,7 +21,7 @@ function renderIncomingThreatRow(row) {
     <div class="attacker"><span class="attacker-label">${legion ? "Citadel force" : scout ? "Scouting ruler" : "Attacking ruler"}</span>${row.identity}<p class="origin">From <strong>${escapeHtml(row.origin)}</strong></p></div>
     <div class="city"><span class="city-region">${escapeHtml(row.regionName)}</span><div class="city-title"><h3>${escapeHtml(row.name)}</h3>${!row.pending && row.regularCity ? `<span class="level">Lv ${formatNumber(row.level)}</span>` : ""}</div>${stats}</div>
     <div class="force${!scout && !row.force ? " unknown" : ""}"><span>${scout ? "Incoming" : "Estimated"}</span><strong>${escapeHtml(scout ? "1" : row.force || "Unknown")}</strong><small>${scout ? "scout" : "troops"}</small></div>
-    <button class="locate" data-incoming-city="${escapeHtml(row.id)}" data-incoming-region="${escapeHtml(row.regionId)}" type="button" aria-label="Locate ${escapeHtml(row.name)} in ${escapeHtml(row.regionName)}"${incomingThreatsNavigationPending ? " disabled" : ""}>${incomingThreatIcon("map")}<span>${row.regularCity ? "Locate City" : "Locate"}</span></button>
+    <button class="locate location-icon-button" title="Locate ${escapeHtml(row.name)}" data-incoming-city="${escapeHtml(row.id)}" data-incoming-region="${escapeHtml(row.regionId)}" type="button" aria-label="Locate ${escapeHtml(row.name)} in ${escapeHtml(row.regionName)}"${incomingThreatsNavigationPending ? " disabled" : ""}>${incomingThreatIcon("map")}<span>${row.regularCity ? "Locate City" : "Locate"}</span></button>
   </article>`;
 }
 function renderIncomingThreatsLedger(incoming) {

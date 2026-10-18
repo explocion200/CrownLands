@@ -1,0 +1,72 @@
+/* Fixed-size artwork never participates in row sizing. Preserve the smaller
+   existing profile, deed-history and retaliation slots. The theme layer keeps
+   optional screen styles from replacing these dimensions when loaded later. */
+@layer crownlands-theme {
+  :is(#modal, #combatTimers, #profileScreen) button.location-icon-button {
+    box-sizing: border-box !important;
+    position: relative !important;
+    display: inline-grid !important;
+    width: var(--location-button-size, 44px) !important;
+    height: var(--location-button-size, 44px) !important;
+    min-width: var(--location-button-size, 44px) !important;
+    min-height: var(--location-button-size, 44px) !important;
+    max-width: var(--location-button-size, 44px) !important;
+    max-height: var(--location-button-size, 44px) !important;
+    flex: 0 0 var(--location-button-size, 44px) !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    border: 1px solid #9b8352 !important;
+    border-radius: 2px !important;
+    color: #3e321e !important;
+    background: #efe2be !important;
+    box-shadow: none !important;
+    font-size: 0 !important;
+    vertical-align: middle;
+  }
+  :is(#modal, #combatTimers, #profileScreen) button.location-icon-button::after {
+    content: "";
+    position: absolute;
+    inset: 1px;
+    background: url("assets/optimized/location-map-flag-192x192-cf45708cfe0c.webp") center / contain no-repeat;
+    pointer-events: none;
+  }
+  /* Keep existing labels in the accessibility tree, including the profile's
+     changing “Locating…” label, without reserving their former visual space. */
+  :is(#modal, #combatTimers, #profileScreen) button.location-icon-button > * {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    clip-path: inset(50%) !important;
+    white-space: nowrap !important;
+  }
+  :is(#modal, #combatTimers, #profileScreen) button.location-icon-button:focus-visible {
+    outline: 2px solid #713641 !important;
+    outline-offset: 2px !important;
+  }
+  :is(#modal, #combatTimers, #profileScreen) button.location-icon-button:disabled {
+    opacity: .45 !important;
+    cursor: default !important;
+  }
+  .location-icon-button.battle-report-locate-btn { --location-button-size: 36px; }
+  .location-icon-button:is(.row-action, .map-button) { --location-button-size: 44px; }
+  .location-icon-button.deed-history-locate { --location-button-size: 36px; }
+  .location-icon-button.public-profile-location { --location-button-size: 42px; }
+  .location-icon-button.retaliation-location { --location-button-size: 34px; }
+  #modal .atlas-location-shortcut {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding-block: 0 !important;
+  }
+  #modal .atlas-location-shortcut > div { min-width: 0; }
+  #modal .atlas-location-shortcut strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rally-assembly-location { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; vertical-align: middle; }
+  .rally-assembly-location > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @media (max-height: 600px) and (orientation: landscape) {
+    .location-icon-button.public-profile-location { --location-button-size: 38px; }
+  }
+}

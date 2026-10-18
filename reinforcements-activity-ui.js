@@ -53,7 +53,7 @@ function reinforcementLocationKey(entry) {
 
 function renderReinforcementLocationButton(entry) {
   const label = entry.stationed ? `Show ${entry.targetName || "reinforced holding"} on map` : "Show current troop location on map";
-  return `<button class="support-location" data-support-location="${escapeHtml(reinforcementLocationKey(entry))}" type="button" aria-label="${escapeHtml(label)}"><span aria-hidden="true">⌖</span>Location</button>`;
+  return `<button class="support-location location-icon-button" title="${escapeHtml(label)}" data-support-location="${escapeHtml(reinforcementLocationKey(entry))}" type="button" aria-label="${escapeHtml(label)}"><span aria-hidden="true">⌖</span>Location</button>`;
 }
 
 async function focusReinforcementLocation(key) {

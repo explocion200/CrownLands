@@ -1,0 +1,11 @@
+{
+  "id": "location-map-flag",
+  "category": "hud",
+  "source": "docs/art-sources/location-button/location-map-flag-v1.png",
+  "output": "assets/optimized/location-map-flag-192x192-cf45708cfe0c.webp",
+  "width": 192,
+  "height": 192,
+  "bytes": 14710,
+  "sha256": "cf45708cfe0cbaaa32934c6beeef3dc315bfea70f8733959d63145f0418e54bf",
+  "hasAlpha": true
+}

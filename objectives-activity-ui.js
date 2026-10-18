@@ -20,7 +20,7 @@ function restoreObjectivesActivityView(previous) {
 }
 function renderObjectiveMapButton(target, stronghold) {
   return renderActiveOperationLocationButton(target, stronghold ? "stronghold" : "camp")
-    .replace('class="incoming-attack-locate"', `class="locate-${stronghold ? "hold" : "camp"}"`)
+    .replace('incoming-attack-locate', `locate-${stronghold ? "hold" : "camp"}`)
     .replace("</button>", "<span>Map</span></button>");
 }
 function renderHeldObjectivesView(holdings, strongholds) {

@@ -32,5 +32,7 @@
 // deflated). Bound that CPU-saving tradeoff at 8 KiB.
 // Ownership-triggered roster refresh and stale-read protection add 1,633 bytes.
 // Bound this at 2 KiB; no new assets or dependencies enter the offline shell.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024 + 2 * 1024;
+// Shared square location controls bring the source shell to 4,573,780 bytes,
+// 3,668 over the prior cap. Bound this at 4 KiB; the 14.4 KiB art stays lazy.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024 + 2 * 1024 + 4 * 1024;
 module.exports = { MAX_INSTALL_PRECACHE_BYTES };
