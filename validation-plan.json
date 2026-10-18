@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "1bce44da6647ff0ecdde2579bebdfa93ea477007",
+  "baseCommit": "16df24bb1a366ca601c516282852257bb3993667",
   "coverage": [
     {
       "paths": [
@@ -12,14 +12,14 @@
         "tools/validate-social-browser.js",
         "tools/validate-chat.js"
       ],
-      "reason": "Make conversation/request rows a single native button without profile actions and let the private panel fill the shared flex Chat window. Compact the desktop sidebar, adapt wide/short phones by available height, preserve 44px controls and visible composition, and retain translation disclosure inside message actions. The real browser fixture tests name/flag/clan/date/unread/background clicks, Enter/Space, Back and request rows; one-message and long scrolling histories at eight desktop/landscape/portrait/reduced-height sizes; readable text and fully visible Send; send, translation, notification permissions, public-chat return, account cleanup and XSS-safe text. The existing Chat validator covers shared public chat/channel/composer contracts. Production build and asset budgets validate the minified static social client and CSS. No backend, authorization, delivery, persistence or schema changes, so emulator suites are not applicable."
+      "reason": "Place private message text beside its sender in a wrapping grid, with compact time below the name and full accessible timestamp. Retain 16px message text and 44px action targets; expand translation/report controls below the message without overlap. The isolated browser fixture checks inline geometry, short-row height, long names, unbroken and multiline text, full timestamps, menu/report expansion and closure at eight desktop/landscape/portrait/reduced-height sizes. It also covers the affected shared thread rendering: history scrolling, visible composer, safe text, sending, translation, row navigation, notifications, account cleanup and returning to public chat. The existing Chat validator covers public channel/composer contracts. Production build and asset budgets validate the minified client and styles. No backend, delivery, authority, retention or database changes; emulator suites are not applicable."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the explicitly confirmed conversation-row navigation and compact private-chat presentation. This is a design clarification accompanying the tested UI implementation and does not change messaging permissions, retention, costs or combat rules."
+      "reason": "Record the user-confirmed inline sender/message presentation for private chat. Documentation accompanies the tested visual implementation and does not change messaging permissions, retention or gameplay rules."
     }
   ]
 }

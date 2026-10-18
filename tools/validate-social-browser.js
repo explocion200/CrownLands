@@ -82,6 +82,40 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       assert(singleMessageHeight >= minHistoryHeight, "A short conversation collapsed the history at " + width + "x" + height + ": " + singleMessageHeight);
       layouts.at(-1).singleMessageHeight = singleMessageHeight;
       await client.send("Page.captureScreenshot", { format: "png" }).then(shot => fs.writeFileSync(path.join(artifacts, `short-conversation-${width}x${height}.png`), Buffer.from(shot.data, "base64")));
+      await ev(() => {
+        const base = socialQa.savedMessages[0];
+        socialQa.messages = [
+          { ...base, text: "Meet at the castle." },
+          { ...base, id: "long-name", senderDisplayName: "StonewardWithoutAnySpaces", text: "Ready when you are." },
+          { ...base, id: "long-text", text: "W".repeat(120) },
+          { ...base, id: "multiline", text: "First line\nSecond line\nمرحبا من القلعة" }
+        ];
+        CrownlandsSocial.open("messages");
+      }); await delay(100); await click(".social-conversation");
+      const compact = await ev(() => {
+        const rows = [...document.querySelectorAll(".social-message")];
+        const firstLine = node => { const range = document.createRange(); range.selectNodeContents(node); return range.getClientRects()[0]; };
+        return { shortHeight: rows[0].getBoundingClientRect().height,
+          inline: rows.every(row => { const name = row.querySelector("strong"), text = row.querySelector(":scope>p"); return Math.abs(firstLine(name).top - firstLine(text).top) < 4 && name.getBoundingClientRect().right <= text.getBoundingClientRect().left; }),
+          contained: rows.every(row => row.scrollWidth <= row.clientWidth && row.querySelector(":scope>p").scrollWidth <= row.querySelector(":scope>p").clientWidth),
+          menuTargets: rows.every(row => row.querySelector("summary").getBoundingClientRect().width >= 44 && row.querySelector("summary").getBoundingClientRect().height >= 44),
+          fullTimestamp: rows.every((row, index) => { const time = row.querySelector("time"), expected = socialQa.messages[index].createdAtMs; return Date.parse(time.dateTime) === expected && time.title.includes(String(new Date(expected).getFullYear())) && time.getAttribute("aria-label") === time.title; }),
+          multiline: rows[3].querySelector("p").innerText.includes("\n") && rows[3].querySelector("p").dir === "auto" };
+      });
+      assert(compact.shortHeight <= 60 && compact.inline && compact.contained && compact.menuTargets && compact.fullTimestamp && compact.multiline, JSON.stringify({ width, height, compact }));
+      layouts.at(-1).compact = compact;
+      await ev('document.querySelector(".social-log").scrollTop=0');
+      await client.send("Page.captureScreenshot", { format: "png" }).then(shot => fs.writeFileSync(path.join(artifacts, `inline-messages-${width}x${height}.png`), Buffer.from(shot.data, "base64")));
+      await click(".social-message-menu summary");
+      assert(await ev('document.querySelector(".social-message-menu").open'), "Message menu must open using its visible target");
+      await ev('[...document.querySelectorAll(".social-message:first-child button")].find(b=>b.textContent==="Report").click()');
+      assert(await ev(() => {
+        const row = document.querySelector(".social-message"), r = row.getBoundingClientRect(), menu = row.querySelector(".social-row-actions").getBoundingClientRect(), report = row.querySelector(".social-report").getBoundingClientRect(), text = row.querySelector(":scope>p").getBoundingClientRect();
+        return menu.top >= text.bottom && menu.top >= row.querySelector("summary").getBoundingClientRect().bottom && report.top >= menu.bottom && report.left >= r.left && report.right <= r.right && row.scrollWidth <= row.clientWidth;
+      }), "Expanded message actions/report must follow the text without clipping or overlap");
+      await ev('[...document.querySelectorAll(".social-report button")].find(b=>b.textContent==="Cancel").click()');
+      await click(".social-message-menu summary");
+      assert(await ev('!document.querySelector(".social-message-menu").open && !document.querySelector(".social-report")'), "Message controls must close without leaving extra space");
       await ev('socialQa.messages=socialQa.savedMessages');
     }
     for (const selector of [".social-conversation .social-flag", ".social-conversation .social-player small", ".social-conversation .social-contact-meta", ".social-conversation .social-unread", ".social-conversation"]) {
