@@ -1,55 +1,40 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "6542877a9e22432322cb5e76e82c371238edfc4b",
+  "baseCommit": "f290c171cae5a345ebdab23fca9e5251b0d2c9bc",
   "coverage": [
     {
       "paths": [
-        "functions/combat-authorization.js",
-        "functions/index.js",
-        "functions/test/emulator-combat-authorization.js",
-        "functions/test/retaliation-impact-cases.js",
-        "tools/test-local-postgres-retaliation-impact.js",
-        "tools/validate-combat-authorization.js",
-        "tools/validate-authoritative-army-orders.js"
+        "reinforcements-activity-ui.js",
+        "reinforcements-activity-ui.css",
+        "tools/validate-reinforcement-locations-browser.js"
       ],
       "tests": [
-        "tools/validate-combat-authorization.js",
-        "tools/validate-authoritative-army-orders.js",
-        "tools/validate-peace-shield-returns.js",
-        "tools/validate-army-resolution-retries.js",
-        "tools/test-local-postgres-retaliation-impact.js",
-        "functions/test/emulator-combat-authorization.js"
-      ],
-      "reason": "Exercise current core/monthly realm authority: grant reservation at both city/Tower dispatch, same-city contention, exact actor/target/realm, failed sends, shield activation and arrival repair, Recall Horn, clan changes, noncombat returns, actual victory/defeat, anti-farming/former-clan capture restrictions, stale return/arrival replay, original launch deadlines and legacy receipts. Recapture closes all outstanding same-city grants atomically; delayed ownership events cannot close later losses. Shared real-callable PostgreSQL/emulator fixtures cover database transactions and read-before-write behavior without touching live data. Existing combat coverage verifies private grants and forbidden client writes. The authoritative-order validator now follows the existing platform adapter when checking the modular Messaging import, retaining route/idempotency/notification checks that previously failed on the obsolete direct import assertion."
-    },
-    {
-      "paths": [
-        "game.js",
-        "combat-timers-ui.js",
-        "tools/validate-combat-timers-browser.js",
-        "index.html"
-      ],
-      "tests": [
-        "tools/validate-combat-timers-browser.js",
-        "tools/validate-combat-authorization.js",
-        "tools/validate-army-resolution-retries.js",
+        "tools/validate-reinforcement-locations-browser.js",
+        "tools/validate-incoming-army-estimates.js",
+        "tools/validate-marching-army-visibility-browser.js",
         "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Use the existing ownership roster and loaded-map identities to suppress recovered/clan-owned retaliation targets; reserved grants cannot advertise or dispatch another attack. Verify reservation release, original countdown, recaptured city/roster suppression, exact city/map navigation, stale account handling and impact wording in the actual game fixture at desktop 1440x900 and landscape 844x390/568x320. Retain timer/popover bounds, chat clearance and asset budgets; no new browser listener or interval is added. Uncached targets stay hidden during initial roster loading to prevent a recovered-city alert flashing at login."
+      "reason": "Exercise real reinforcement snapshots, all three ledger sections and real route/progress helpers: own outgoing, incoming and returning support navigate to the current position; stationed own and allied defenders navigate to their target holding. Cover uncached/cross-map destinations, re-reading after map loads, vanished assignments, missing paths, network failures and session/clan invalidation. Verify desktop and 844x390/568x320 landscape layouts, 44px controls, independent Recall/Send Home controls, privacy of incoming troop estimates and preservation of scroll, keyboard focus and stable countdown controls. Shared march visibility tests protect the same route interpolation used by army rendering. This only adds client map navigation and does not change authority, networking contracts or gameplay, so no emulator suite is needed."
     },
     {
       "paths": [
-        "help-handbook-content.js",
-        "battle-economy-guide.html",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/COMBAT_AUTHORIZATION_RELEASE.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [
-        "tools/validate-help-handbook-browser.js",
-        "tools/validate-battle-economy-guide.js",
-        "tools/validate-combat-authorization.js"
+        "tools/validate-reinforcement-locations-browser.js"
       ],
-      "reason": "Document the owner-confirmed change from launch consumption to actual combat, one reserved army, shield/recall preservation, unchanged 24-hour deadline, third-owner/clan restrictions and recapture alert removal. Update former-clan wording consistently, keep historical spent grants unchanged, and mark deployment pending. Check actual handbook layout/search on desktop and landscape mobile plus the battle-guide content contract."
+      "reason": "Record the owner-confirmed Location behavior for traveling, stationed-with-allies and defending holdings, including failure feedback and navigation-only behavior. Browser checks exercise that documented interaction."
+    },
+    {
+      "paths": [
+        "tools/validate-incoming-army-estimates.js",
+        "tools/validate-marching-army-visibility-browser.js"
+      ],
+      "tests": [
+        "tools/validate-incoming-army-estimates.js",
+        "tools/validate-marching-army-visibility-browser.js"
+      ],
+      "reason": "Update two stale assertions encountered while validating the shared reinforcement dependencies: notification target-map formatting already moved into notification-delivery, and live army positions already moved to the lightweight position wrapper. Keep the same privacy, map identity and route-position assertions against the current implementation without changing runtime behavior."
     }
   ]
 }

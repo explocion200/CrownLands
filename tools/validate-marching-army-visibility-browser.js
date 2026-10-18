@@ -123,7 +123,7 @@ async function main() {
             check(token.getAttribute("aria-label").includes(target.name), `${label}/${missing}: destination name missing`);
             check(token.title.includes(target.name), `${label}/${missing}: destination tooltip missing`);
             const expected = worldToMapPoint(getMissionPointAtProgress(army, getArmyTravelProgress(army)).point);
-            const displayed = token.style.transform.match(/^translate\(([-.\d]+)px, ([-.\d]+)px\)/);
+            const displayed = getArmyTokenParts(token).position.style.transform.match(/^translate\(([-.\d]+)px, ([-.\d]+)px\)/);
             check(displayed && Math.max(Math.abs(Number(displayed[1])-expected.x), Math.abs(Number(displayed[2])-expected.y)) * zoom * devicePixelRatio <= .126, `${label}/${missing}: marker left its route`);
             check(armyTokenCache.size === 1, `${label}/${missing}: duplicate token`);
             checked++;
@@ -137,10 +137,10 @@ async function main() {
         const crossing = { ...base, sourceRegionId: other, targetRegionId: other, pathSegments: segments };
         const token = render(crossing);
         check(token?.isConnected && !token.hidden, "Intermediate map lost the army with both endpoints unloaded");
-        const before = token.style.transform;
+        const before = getArmyTokenParts(token).position.style.transform;
         clock += 1000;
         renderVisibleArmyMotion();
-        check(token.style.transform !== before, "Army stopped moving between label refreshes");
+        check(getArmyTokenParts(token).position.style.transform !== before, "Army stopped moving between label refreshes");
         clock = now + 50000;
         renderVisibleArmyMotion();
         check(token.hidden, "Army remained on the previous map after crossing a portal");
