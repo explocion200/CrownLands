@@ -93,8 +93,7 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
           existing.set(id, { ...row, ...patch }); retired++;
         } else if (row.status === "active") enemies.push(row);
       }
-      const structures = [...geometry.structures, ...cities.docs.map(doc => ({ ...doc.data(), clearance: 132 })),
-        ...[...existing.values()].filter(row => row.status === "defeated")];
+      const structures = [...geometry.structures, ...cities.docs.map(doc => ({ ...doc.data(), clearance: 132 }))];
       let spawned = 0, blocked = 0;
       for (const slot of slots) {
         const id = slotId(regionId, slot.slot), previous = existing.get(id);
@@ -103,10 +102,16 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
         if (enemies.length >= slots.length) { blocked++; continue; }
         // Crowded Core interiors need more chances; keep each slot's search bounded.
         const maxAttempts = slot.classification === "boss" ? 512 : 48;
+        // This slot's remains disappear atomically with its replacement. Only
+        // other remains still occupy space; buildings and living NPCs keep
+        // their existing clearance. Never reuse the exact previous position.
+        const obstacles = [...structures, ...[...existing.entries()]
+          .filter(([otherId, row]) => otherId !== id && row.status === "defeated").map(([, row]) => row)];
         let point = null;
         for (let attempt = 0; roadPoints.length && attempt < maxAttempts; attempt++) {
           const candidate = { ...roadPoints[crypto.randomInt(roadPoints.length)], regionId };
-          if (!isClear(candidate, { ...geometry, structures: previous ? [...structures, { ...previous, clearance: NPC_CLEARANCE }] : structures, enemies })) continue;
+          if (previous && candidate.x === previous.x && candidate.y === previous.y) continue;
+          if (!isClear(candidate, { ...geometry, structures: obstacles, enemies })) continue;
           if (!geometry.accessible(candidate)) continue;
           point = candidate; break;
         }
@@ -125,6 +130,7 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
           targetType: "marauder", ownerKind: "neutral", ownerUid: "", spawnedAtMs: now, respawnAtMs: 0 };
         transaction.set(island.collection("marauders").doc(id), row);
         transaction.set(island.collection("marauderCombat").doc(id), { ...row, troops: balance.defenders });
+        existing.set(id, row);
         enemies.push(row); spawned++;
       }
       if (!expected) transaction.set(mapRef(regionId), { regionId, placementVersion: PLACEMENT_VERSION, initialized: blocked === 0,
