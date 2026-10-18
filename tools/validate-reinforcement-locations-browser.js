@@ -66,6 +66,8 @@ async function main() {
       ];
       window.supportOpen = () => { activeOperationsTab = "reinforcements"; showOutgoingAttacksModal(); };
       window.supportCenters = [];
+      window.supportReturns = [];
+      returnClanReinforcement = id => { supportReturns.push(id); };
       const center = centerOnWorldPoint;
       centerOnWorldPoint = (point, map) => { supportCenters.push({ point: { x: point.x, y: point.y }, map }); return center(point, map); };
       supportOpen();
@@ -82,11 +84,26 @@ async function main() {
             const b = button.getBoundingClientRect(), row = button.closest(".support-row").getBoundingClientRect();
             return { width: b.width, height: b.height, fits: b.left >= row.left && b.right <= row.right && b.top >= row.top && b.bottom <= row.bottom };
           }), returns: ledger.querySelectorAll("[data-return-clan-reinforcement]").length,
+          rows: [...ledger.querySelectorAll(".support-row")].map(row => {
+            const r = row.getBoundingClientRect();
+            const location = row.querySelector("[data-support-location]").getBoundingClientRect();
+            const action = row.querySelector("[data-return-clan-reinforcement]")?.getBoundingClientRect();
+            const parts = [...row.children].filter(part => part.getBoundingClientRect().width > 0);
+            return { id: row.dataset.supportRow, height: r.height,
+              ordered: !action || location.right <= action.left && Math.abs(location.top - action.top) < 1,
+              overlap: parts.some((part, i) => parts.slice(i + 1).some(other => {
+                const a = part.getBoundingClientRect(), b = other.getBoundingClientRect();
+                return Math.min(a.right, b.right) > Math.max(a.left, b.left) + 1 && Math.min(a.bottom, b.bottom) > Math.max(a.top, b.top) + 1;
+              })) };
+          }),
           privacy: ledger.querySelector('[data-support-row="incoming"] .support-force').textContent };
       });
       assert(layout.fits && !layout.overflow && layout.height >= 80, JSON.stringify({ viewport, layout }));
       assert.equal(layout.buttons.length, 5);
       assert(layout.buttons.every(button => button.fits && button.width >= 44 && button.height >= 44), JSON.stringify(layout));
+      assert(layout.rows.every(row => row.ordered && !row.overlap), JSON.stringify({ viewport, rows: layout.rows }));
+      // Compactness must not be bought by clipping information or stacking the action pair.
+      assert(layout.rows.filter(row => ["stationed", "defending"].includes(row.id)).every(row => row.height <= (viewport.width <= 650 ? 130 : 90)), JSON.stringify({ viewport, rows: layout.rows }));
       assert.equal(layout.returns, 2, "Recall and Send Home remain separate controls.");
       assert.match(layout.privacy, /Estimated troops/);
       assert(!layout.privacy.includes("12,345"), "Location must not expose private incoming troop counts.");
@@ -95,6 +112,35 @@ async function main() {
         const shot = await client.send("Page.captureScreenshot", { format: "png" });
         fs.writeFileSync(path.join(artifacts, `${viewport.name}-${section}.png`), Buffer.from(shot.data, "base64"));
       }
+      const edgeLayout = await evaluate(() => {
+        const original = onlineReinforcements.map(entry => ({ ...entry }));
+        reinforcementReturnRequests.add("stationed");
+        setReinforcementActivityError("defending", "Connection interrupted. Please try sending these troops home again.");
+        onlineReinforcements.forEach(entry => { entry.targetName = "The Great Northern Highland Reinforcement Fortress"; entry.troops = 987654321012; });
+        renderOutgoingAttacksModalContent();
+        const ledger = modalBody.querySelector(".support-ledger");
+        const rows = [...ledger.querySelectorAll(".support-row.allies, .support-row.defending")].map(row => {
+          const location = row.querySelector("[data-support-location]");
+          const action = row.querySelector("[data-return-clan-reinforcement]");
+          const a = location.getBoundingClientRect(), b = action.getBoundingClientRect();
+          const force = row.querySelector(".support-force strong");
+          return { ordered: a.right <= b.left && Math.abs(a.top - b.top) < 1,
+            disabled: action.disabled, locationEnabled: !location.disabled,
+            fullCount: force.textContent === "987,654,321,012" && force.scrollWidth <= force.clientWidth + 1,
+            fits: row.scrollWidth <= row.clientWidth + 1 && action.scrollWidth <= action.clientWidth + 1 };
+        });
+        const result = { rows, overflow: ledger.scrollWidth > ledger.clientWidth + 1,
+          pending: ledger.querySelector('[data-support-row="stationed"]').textContent.includes("Sending return order"),
+          error: ledger.querySelector('[data-support-row="defending"] .row-feedback')?.textContent };
+        reinforcementReturnRequests.delete("stationed");
+        setReinforcementActivityError("defending");
+        onlineReinforcements = original;
+        renderOutgoingAttacksModalContent();
+        return result;
+      });
+      assert(!edgeLayout.overflow && edgeLayout.pending && edgeLayout.error, JSON.stringify(edgeLayout));
+      assert(edgeLayout.rows.every(row => row.ordered && row.locationEnabled && row.fullCount && row.fits), JSON.stringify({ viewport, edgeLayout }));
+      assert.deepEqual(edgeLayout.rows.map(row => row.disabled), [true, false]);
       const stable = await evaluate(() => {
         const button = modalBody.querySelector('[data-support-location="stationed:defending"]');
         button.scrollIntoView({ block: "center" }); button.focus();
@@ -126,7 +172,15 @@ async function main() {
         assert.deepEqual(result.point, result.expected, key);
         assert.equal(result.region, result.correctRegion);
       }
-      console.log(`Validated all reinforcement Location buttons, scroll/focus, touch targets and navigation at ${viewport.width}x${viewport.height}.`);
+      const actions = await evaluate(() => {
+        const locationReturns = supportReturns.splice(0);
+        supportOpen();
+        for (const id of ["stationed", "defending"]) modalBody.querySelector(`[data-return-clan-reinforcement="${id}"]`).click();
+        return { locationReturns, actionReturns: supportReturns.splice(0) };
+      });
+      assert.deepEqual(actions.locationReturns, [], "Location must never issue a return order.");
+      assert.deepEqual(actions.actionReturns, ["stationed", "defending"], "Recall and Send Home must keep their original assignment handlers.");
+      console.log(`Validated compact rows, left-to-right actions, pending/error layouts, full counts, Location buttons, scroll/focus, touch targets and navigation at ${viewport.width}x${viewport.height}.`);
     }
     const edgeCases = await evaluate(async () => {
       const check = (value, message) => { if (!value) throw Error(message); };
