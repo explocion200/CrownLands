@@ -15,13 +15,22 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     await client.send("Page.enable"); await client.send("Runtime.enable");
     client.on("Runtime.exceptionThrown", event => errors.push(event.exceptionDetails.exception?.description || event.exceptionDetails.text));
     const ev = async fn => { const response = await client.send("Runtime.evaluate", { expression: typeof fn === "function" ? `(${fn})()` : fn, awaitPromise: true, returnByValue: true }); if (response.exceptionDetails) throw Error(response.exceptionDetails.exception?.description || response.exceptionDetails.text); return response.result.value; };
+    const click = async selector => {
+      const point = await ev(`(() => { const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect(); return ${selector === ".social-conversation" ? "{x:r.right-3,y:r.bottom-3}" : "{x:r.x+r.width/2,y:r.y+r.height/2}"}; })()`);
+      await client.send("Input.dispatchMouseEvent", { type: "mousePressed", ...point, button: "left", clickCount: 1 });
+      await client.send("Input.dispatchMouseEvent", { type: "mouseReleased", ...point, button: "left", clickCount: 1 });
+      await delay(100);
+    };
     await client.send("Page.navigate", { url: address.url + "/__benchmark__/?scenario=A&visualMarches=0" });
     for (let i = 0; i < 300 && !await ev('document.documentElement?.dataset.crownlandsBenchmarkReady === "true"'); i++) await delay(100);
     assert(await ev('document.documentElement?.dataset.crownlandsBenchmarkReady === "true"'));
     await ev(async () => {
       __CROWNLANDS_BENCHMARK__.closeModal();
       window.socialQa = { calls: [], messages: [{ id: "b".repeat(40), sequence: 1, senderUid: "bob", senderDisplayName: "Bob", text: "A private message <img src=x onerror=alert(1)> — welcome to the realm.", createdAtMs: Date.now(), expiresAtMs: Date.now() + 90 * 86400000 }], unread: 1 };
-      const player = { uid: "bob", name: "Bob of Stoneward", flag: { primary: "#336633", secondary: "#eee1b9", pattern: "solid", symbol: "crown" } };
+      socialQa.profileOpens = 0;
+      addEventListener("crownlands:chat-player-profile", () => socialQa.profileOpens++);
+      socialQa.messages.push(...Array.from({ length: 19 }, (_, i) => ({ id: "fixture-" + i, sequence: i + 2, senderUid: i % 2 ? "alice" : "bob", senderDisplayName: i % 2 ? "Alice" : "Bob", text: "Private conversation line " + (i + 2) + ": the north road is clear. Meet at the castle after your troops return.", createdAtMs: Date.now() + i, expiresAtMs: Date.now() + 90 * 86400000 })));
+      const player = { uid: "bob", name: "Bob of Stoneward", clanTag: "CODE", flag: { primary: "#336633", secondary: "#eee1b9", pattern: "solid", symbol: "crown" } };
       socialQa.api = { social: async input => {
         socialQa.calls.push(input);
         const base = { serverNowMs: Date.now() };
@@ -32,7 +41,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         if (input.action === "presence") return { ...base, players: [{ uid: "bob", online: true, expiresAtMs: Date.now() + 180000 }] };
         if (input.action === "history") return { ...base, player, relation: { id: "a".repeat(40), friend: "friends", conversation: "accepted", canSend: true }, messages: socialQa.messages, next: null };
         if (input.action === "read") { socialQa.unread = 0; return { ok: true }; }
-        if (input.action === "send") { socialQa.messages.push({ id: "c".repeat(40), sequence: 2, senderUid: "alice", senderDisplayName: "Alice", text: input.text, createdAtMs: Date.now(), expiresAtMs: Date.now() + 90 * 86400000 }); return { ok: true }; }
+        if (input.action === "send") { socialQa.messages.push({ id: "c".repeat(40), sequence: socialQa.messages.length + 1, senderUid: "alice", senderDisplayName: "Alice", text: input.text, createdAtMs: Date.now(), expiresAtMs: Date.now() + 90 * 86400000 }); return { ok: true }; }
         return { ok: true };
       }, subscribeSocialSignals: callback => { socialQa.signal = callback; return () => {}; }, registerPushNotifications: async () => ({}), enablePushNotifications: async options => { socialQa.alertCategory = options.category; return { enabled: true }; }, disablePushNotifications: async options => { socialQa.disabledCategory = options.category; }, getNotificationPermission: () => "default", translateChatMessages: async () => ({ translations: [{ id: "b".repeat(40), text: "Translated fixture" }] }) };
       await CrownlandsSocial.start({ api: socialQa.api, uid: "alice", flagRenderer: FlagRenderer }); CrownlandsSocial.open("friends");
@@ -40,21 +49,59 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     await delay(150);
     assert((await ev('document.querySelector(".social-list").innerText')).includes("Online"));
     assert(await ev('Boolean(document.querySelector(".social-flag svg"))'), "Player flags use the shared renderer");
-    for (const [width, height] of [[1440, 900], [844, 390], [568, 320]]) {
+    for (const [width, height] of [[1440, 900], [1280, 590], [1024, 480], [932, 430], [844, 390], [568, 320], [390, 360], [390, 844]]) {
       await client.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
       await ev('CrownlandsSocial.open("friends")'); await delay(100);
       await client.send("Page.captureScreenshot", { format: "png" }).then(shot => fs.writeFileSync(path.join(artifacts, "friends-" + width + ".png"), Buffer.from(shot.data, "base64")));
       await ev('Array.from(document.querySelectorAll(".social-list button")).find(b=>b.textContent==="Message").click()'); await delay(120);
+      await ev('socialQa.unread=1;CrownlandsSocial.open("messages")'); await delay(100);
+      assert(await ev('document.querySelector("button.social-conversation") && !document.querySelector(".social-conversation button,.social-conversation a") && ![...document.querySelectorAll(".social-list button")].some(b=>b.textContent==="Open")'), "Conversation must be one native button, without nested profile actions or Open");
+      assert(await ev('document.querySelector(".social-conversation").getBoundingClientRect().height <= 80'), "Conversation list row is not compact");
+      await client.send("Page.captureScreenshot", { format: "png" }).then(shot => fs.writeFileSync(path.join(artifacts, `conversations-${width}x${height}.png`), Buffer.from(shot.data, "base64")));
+      await click(".social-conversation .social-player strong");
       const layout = await ev(() => {
         const d = document.getElementById("chatDialog").getBoundingClientRect(), log = document.querySelector(".social-log").getBoundingClientRect(), form = document.querySelector(".social-compose").getBoundingClientRect();
         return { dialog: { x: d.x, y: d.y, width: d.width, height: d.height }, logHeight: log.height, composerInside: form.bottom <= d.bottom && form.left >= d.left && form.right <= d.right,
-          overflow: document.getElementById("socialPanel").scrollWidth > document.getElementById("socialPanel").clientWidth + 1, injectedImage: Boolean(document.querySelector(".social-message img")), text: document.querySelector(".social-message p").textContent };
+          overflow: document.getElementById("socialPanel").scrollWidth > document.getElementById("socialPanel").clientWidth + 1, injectedImage: Boolean(document.querySelector(".social-message img")), text: document.querySelector(".social-message p").textContent,
+          sidebar: document.querySelector(".social-list").getBoundingClientRect().width, threadWidth: document.querySelector(".social-thread").getBoundingClientRect().width, workspaceWidth: document.querySelector(".social-workspace").clientWidth,
+          textSize: parseFloat(getComputedStyle(document.querySelector(".social-message p")).fontSize), inputSize: parseFloat(getComputedStyle(document.querySelector(".social-compose textarea")).fontSize),
+          scrollable: document.querySelector(".social-log").scrollHeight > log.height,
+          latestVisible: document.querySelector(".social-log").scrollTop + log.height >= document.querySelector(".social-log").scrollHeight - 2,
+          targets: [...document.querySelectorAll(".social-thread-heading button,.social-compose button")].every(button => button.getBoundingClientRect().height >= 44) };
       });
       layouts.push({ width, height, ...layout });
-      await client.send("Page.captureScreenshot", { format: "png" }).then(shot => fs.writeFileSync(path.join(artifacts, "messages-" + width + ".png"), Buffer.from(shot.data, "base64")));
-      assert(layout.composerInside && layout.logHeight >= 40 && !layout.overflow && !layout.injectedImage, JSON.stringify(layout));
+      await client.send("Page.captureScreenshot", { format: "png" }).then(shot => fs.writeFileSync(path.join(artifacts, `messages-${width}x${height}.png`), Buffer.from(shot.data, "base64")));
+      const minHistoryHeight = height <= 360 ? 90 : height <= 480 ? 140 : height <= 600 ? 240 : 350;
+      assert(layout.composerInside && layout.logHeight >= minHistoryHeight && !layout.overflow && !layout.injectedImage && layout.targets && layout.textSize >= 16 && layout.inputSize >= 16 && layout.scrollable && layout.latestVisible, JSON.stringify({ width, height, ...layout }));
+      if (width <= 900 || height <= 600) assert(layout.sidebar === 0 && layout.threadWidth >= layout.workspaceWidth - 1, "Phone/short-window thread must use the full width");
+      else assert(layout.sidebar <= 240 && layout.threadWidth > layout.workspaceWidth * .74, "Desktop sidebar takes too much conversation space");
       assert(layout.text.includes("<img"));
+      await ev('socialQa.savedMessages=socialQa.messages;socialQa.messages=socialQa.messages.slice(0,1);CrownlandsSocial.open("messages")'); await delay(100);
+      await click(".social-conversation");
+      const singleMessageHeight = await ev('document.querySelector(".social-log").getBoundingClientRect().height');
+      assert(singleMessageHeight >= minHistoryHeight, "A short conversation collapsed the history at " + width + "x" + height + ": " + singleMessageHeight);
+      layouts.at(-1).singleMessageHeight = singleMessageHeight;
+      await client.send("Page.captureScreenshot", { format: "png" }).then(shot => fs.writeFileSync(path.join(artifacts, `short-conversation-${width}x${height}.png`), Buffer.from(shot.data, "base64")));
+      await ev('socialQa.messages=socialQa.savedMessages');
     }
+    for (const selector of [".social-conversation .social-flag", ".social-conversation .social-player small", ".social-conversation .social-contact-meta", ".social-conversation .social-unread", ".social-conversation"]) {
+      await ev('socialQa.unread=1;CrownlandsSocial.open("messages")'); await delay(100); await click(selector);
+      assert(await ev('!document.querySelector(".social-thread").hidden && CrownlandsSocial.diagnostics().conversationId === "a".repeat(40)'));
+    }
+    for (const key of ["Enter", " "]) {
+      await ev('CrownlandsSocial.open("messages")'); await delay(100);
+      await ev('document.querySelector(".social-conversation").focus()');
+      assert(await ev('document.activeElement.matches(".social-conversation")'));
+      await client.send("Input.dispatchKeyEvent", { type: "keyDown", key, code: key === "Enter" ? "Enter" : "Space", windowsVirtualKeyCode: key === "Enter" ? 13 : 32, text: key === "Enter" ? "\r" : " " });
+      await client.send("Input.dispatchKeyEvent", { type: "keyUp", key, code: key === "Enter" ? "Enter" : "Space", windowsVirtualKeyCode: key === "Enter" ? 13 : 32 }); await delay(100);
+      assert(await ev('!document.querySelector(".social-thread").hidden'), "Keyboard activation must open the conversation: " + JSON.stringify(key));
+    }
+    assert.equal(await ev('socialQa.profileOpens'), 0, "Conversation-row clicks opened a player profile");
+    await click(".social-thread-heading button");
+    assert(await ev('document.querySelector(".social-thread").hidden && document.querySelector(".social-list").getBoundingClientRect().width > 0'), "Back must restore the list on phones");
+    await ev('[...document.querySelectorAll("#socialToolbar button")].find(b=>b.textContent==="Requests").click()'); await delay(100);
+    await click(".social-conversation .social-player strong");
+    assert.equal(await ev('socialQa.profileOpens'), 0, "A message-request row opened a profile");
     await ev('document.querySelector(".social-compose textarea").value="Hello privately";document.querySelector(".social-compose").dispatchEvent(new Event("submit",{cancelable:true}))'); await delay(150);
     assert.equal(await ev('socialQa.calls.filter(c=>c.action==="send").length'), 1);
     assert((await ev('document.querySelector(".social-log").innerText')).includes("Hello privately"));
@@ -73,6 +120,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     assert.equal(await ev('socialQa.disabledCategory'), "private");
     await ev('document.getElementById("globalTab").click()');
     assert.equal(await ev('document.getElementById("socialPanel").hidden'), true);
+    assert(await ev('document.querySelector(".composer-panel").getBoundingClientRect().height > 0 && document.getElementById("chatHistory").getBoundingClientRect().height > 100'), "Returning to Global must restore its history and composer");
     await ev('CrownlandsSocial.stop()');
     assert.equal(await ev('document.querySelector(".social-thread").textContent'), "");
     assert.equal(await ev('document.getElementById("socialFriendsTab").hidden'), true);

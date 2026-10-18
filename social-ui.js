@@ -139,6 +139,14 @@
     listPage = result; list.replaceChildren();
     if (!result.rows.length) list.append(element("p", kind === "friends" ? "Add friends from player profiles in chat, clans, the map, or leaderboards." : "Nothing here yet.", "social-empty"));
     for (const row of result.rows) {
+      if (kind === "conversations" || kind === "messageRequests") {
+        const contact = button("", () => run(() => openConversation({ id: row.id, peerUid: row.peerUid })), "social-contact social-conversation");
+        const meta = element("span", null, "social-contact-meta");
+        meta.append(element("small", kind === "messageRequests" ? row.from === uid ? "Awaiting acceptance" : "Message request" : row.lastMessageAtMs ? new Date(row.lastMessageAtMs).toLocaleDateString() : "Start a conversation"));
+        if (row.unread) meta.append(element("span", "Unread", "social-unread"));
+        contact.append(playerLabel(row.player), meta); list.append(contact);
+        continue;
+      }
       const article = element("article", null, "social-contact"), title = button("", () => root.dispatchEvent(new CustomEvent("crownlands:chat-player-profile", { detail: { uid: row.peerUid } })));
       title.className = "social-name"; title.append(playerLabel(row.player)); article.append(title);
       if (row.unread) article.append(element("span", "Unread", "social-unread"));
@@ -151,9 +159,6 @@
         article.append(element("small", row.friend === "incoming" ? "Wants to be your friend" : "Request sent"));
         if (row.friend === "incoming") actions.append(actionButton("Accept", { action: "friend", peerUid: row.peerUid, choice: "accept" }), actionButton("Decline", { action: "friend", peerUid: row.peerUid, choice: "decline" }));
         else actions.append(actionButton("Cancel request", { action: "friend", peerUid: row.peerUid, choice: "cancel" }));
-      } else {
-        article.append(element("small", kind === "messageRequests" ? row.from === uid ? "Awaiting acceptance" : "Message request" : row.lastMessageAtMs ? new Date(row.lastMessageAtMs).toLocaleDateString() : "Start a conversation"));
-        actions.append(button("Open", () => run(() => openConversation({ id: row.id, peerUid: row.peerUid }))));
       }
       article.append(actions); list.append(article);
     }
@@ -202,14 +207,14 @@
     const heading = element("header", null, "social-thread-heading");
     heading.append(button("Back", () => { viewVersion++; current = null; history = []; thread.replaceChildren(); thread.hidden = true; dialog().classList.remove("social-thread-open"); }), playerLabel(current.player));
     const block = actionButton(current.relation.blocked ? "Unblock" : "Block", { action: "block", peerUid: current.peerUid, enabled: !current.relation.blocked }, loadHistory);
-    heading.append(block); thread.append(heading, element("small", "Private history is kept for 90 days. Friendship does not affect combat."));
+    heading.append(block); thread.append(heading);
     const relationship = current.relation;
     if (relationship.conversation === "incoming") {
       const actions = element("div", null, "social-row-actions");
       actions.append(element("span", "Accept this message request?"), actionButton("Accept", { action: "conversation", conversationId: current.id, choice: "accept" }, loadHistory), actionButton("Decline", { action: "conversation", conversationId: current.id, choice: "decline" }, loadHistory)); thread.append(actions);
     }
     const log = element("div", null, "social-log"); log.setAttribute("role", "log"); log.setAttribute("aria-label", "Private messages"); log.tabIndex = 0;
-    const navigation = element("div", null, "social-row-actions");
+    const navigation = element("div", null, "social-row-actions social-history-nav");
     if (older) navigation.append(button("Older messages", () => { before = older; void run(loadHistory); }));
     const latest = button(before ? "Latest messages" : "New messages ↓", () => { before = null; if (oldLog && !before) log.scrollTop = log.scrollHeight; void run(loadHistory); }); latest.hidden = !before && nearBottom; latest.id = "socialLatest"; navigation.append(latest);
     thread.append(navigation);
@@ -231,6 +236,7 @@
       }, translate)); translate.title = "Sends this message text to Google Translation when clicked.";
       tools.append(translate);
       if (message.senderUid !== uid) tools.append(button("Report", () => reportMessage(row, message)));
+      tools.append(element("small", "Translate sends only this message to Google Translation.", "social-translation-note"));
       const menu = element("details", null, "social-message-menu"), summary = element("summary", "⋯"); summary.setAttribute("aria-label", "Message actions"); menu.append(summary, tools);
       const attribution = element("small", "Translated by Google"); attribution.hidden = true; row.append(menu, text, attribution); log.append(row);
     }
@@ -239,7 +245,7 @@
     input.setAttribute("aria-label", "Private message"); input.maxLength = 1000; input.rows = 2; input.value = draft; input.placeholder = relationship.canSend ? "Write a private message…" : "Send one message request…";
     input.disabled = senderBusy || relationship.unavailable || ["incoming", "outgoing"].includes(relationship.conversation);
     send.type = "submit"; send.disabled = input.disabled;
-    const note = element("small", relationship.unavailable ? "Private contact is blocked." : relationship.conversation === "outgoing" ? "Waiting for this player to accept your request." : "90-day history · 1,000 characters · 3s between sends. Translate sends selected text to Google.");
+    const note = element("small", relationship.unavailable ? "Private contact is blocked." : relationship.conversation === "outgoing" ? "Waiting for this player to accept your request." : "90-day history · 1,000 characters · 3s between sends.", "social-thread-note");
     form.hidden = relationship.unavailable || ["incoming", "outgoing"].includes(relationship.conversation);
     form.append(input, send); thread.append(form, note);
     const submit = event => { event.preventDefault(); if (senderBusy || input.disabled || !input.value.trim()) return; const target = current, text = input.value, session = conversationSession, scope = generation;

@@ -1,25 +1,25 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "0ca32ee6fb229b41c37e911c89fcb49fb255bc63",
+  "baseCommit": "1bce44da6647ff0ecdde2579bebdfa93ea477007",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "tools/validate-owned-city-list.js",
-        "tools/validate-owned-city-roster-refresh.js"
+        "social-ui.js",
+        "social-ui.css",
+        "tools/validate-social-browser.js"
       ],
       "tests": [
-        "tools/validate-owned-city-roster-refresh.js",
-        "tools/validate-owned-city-list.js",
-        "tools/validate-foreground-resume.js",
-        "tools/validate-city-list-browser.js"
+        "tools/validate-social-browser.js",
+        "tools/validate-chat.js"
       ],
-      "reason": "Bind full owned-city reads to the existing online session generation so stale same-account reconnect responses, catches and finalizers cannot replace a newer roster or release its request lock. Reject malformed replies before complete-roster reconciliation. The executable refresh regression covers both completion orders, success/failure, invalid and verified-empty replies, timeout, incomplete data, retry, coalescing and map changes. The owned-city validator also runs cross-map synchronization tests covering 42 cities on unloaded maps, canonical island identity, ownership loss, stable order and upgrades. Foreground-resume validation covers the shared caller's catch-up/coalescing/retry lifecycle. The real City List browser fixture checks five-row pagination, off-map info/locate, Stronghold/empty/incomplete states, retry, stable rows and upgrade controls at desktop, landscape, portrait and short landscape sizes. This changes only client refresh acceptance; no server authority, schema or backend changes, so emulator suites do not apply. Production build validation checks the static local-client package."
+      "reason": "Make conversation/request rows a single native button without profile actions and let the private panel fill the shared flex Chat window. Compact the desktop sidebar, adapt wide/short phones by available height, preserve 44px controls and visible composition, and retain translation disclosure inside message actions. The real browser fixture tests name/flag/clan/date/unread/background clicks, Enter/Space, Back and request rows; one-message and long scrolling histories at eight desktop/landscape/portrait/reduced-height sizes; readable text and fully visible Send; send, translation, notification permissions, public-chat return, account cleanup and XSS-safe text. The existing Chat validator covers shared public chat/channel/composer contracts. Production build and asset budgets validate the minified static social client and CSS. No backend, authorization, delivery, persistence or schema changes, so emulator suites are not applicable."
     },
     {
-      "paths": ["tools/validate-asset-performance-budgets.js"],
-      "tests": ["tools/validate-asset-performance-budgets.js"],
-      "reason": "The roster guard adds 263 normalized source bytes to game.js against 43 bytes of existing headroom. Raise only that source-entry allowance by 256 bytes to cover the 220-byte overage. Validate all existing image, entrypoint and service-worker installation budgets; the aggregate offline-shell cap and all other asset/request limits remain unchanged."
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
+      "tests": [],
+      "reason": "Record the explicitly confirmed conversation-row navigation and compact private-chat presentation. This is a design clarification accompanying the tested UI implementation and does not change messaging permissions, retention, costs or combat rules."
     }
   ]
 }
