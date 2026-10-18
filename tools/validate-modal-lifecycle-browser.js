@@ -42,6 +42,38 @@ async function main() {
           usable: !button.disabled && button.contains(document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2)) };
       }
     };`);
+    // A child window must consume dismissal without closing the Profile underneath.
+    for (const viewport of [{width:1440,height:900},{width:844,height:390}]) {
+      await client.send("Emulation.setDeviceMetricsOverride", {...viewport,deviceScaleFactor:1,mobile:false});
+      for (const child of ["showDailyLoginRewardsModal({skipRefresh:true})", "chatDialog.showModal()", "flagDiscardDialog.showModal()"] ) {
+        await evaluate(`showProfileScreen();${child}`);
+        await wait(200);
+        await client.send("Input.dispatchKeyEvent", {type:"keyDown",key:"Escape",code:"Escape",windowsVirtualKeyCode:27});
+        await client.send("Input.dispatchKeyEvent", {type:"keyUp",key:"Escape",code:"Escape",windowsVirtualKeyCode:27});
+        await wait(100);
+        const escaped = await evaluate("({profile:profileScreen.classList.contains('open'),modal:modal.open,chat:chatDialog.open,flag:flagDiscardDialog.open})");
+        assert(escaped.profile && !escaped.modal && !escaped.chat && !escaped.flag, `Escape dismissed two windows: ${JSON.stringify({viewport,child,escaped})}`);
+        await evaluate("closeProfileScreen({force:true})");
+      }
+      await evaluate("showProfileScreen();chatDialog.showModal()");
+      await wait(200);
+      const point = await evaluate("(()=>{const r=document.getElementById('chatCloseBtn').getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2};})()");
+      if (viewport.width < 1000) {
+        await client.send("Emulation.setTouchEmulationEnabled", {enabled:true});
+        await client.send("Input.dispatchTouchEvent", {type:"touchStart",touchPoints:[point]});
+        await client.send("Input.dispatchTouchEvent", {type:"touchEnd",touchPoints:[]});
+        await client.send("Emulation.setTouchEmulationEnabled", {enabled:false});
+      } else {
+        await client.send("Input.dispatchMouseEvent", {type:"mousePressed",...point,button:"left",clickCount:1});
+        await client.send("Input.dispatchMouseEvent", {type:"mouseReleased",...point,button:"left",clickCount:1});
+      }
+      await wait(100);
+      assert(await evaluate("profileScreen.classList.contains('open')&&!chatDialog.open"), "Closing Chat also closed Profile underneath.");
+      // Escape on the uncovered Profile still closes it normally.
+      await client.send("Input.dispatchKeyEvent", {type:"keyDown",key:"Escape",code:"Escape",windowsVirtualKeyCode:27});
+      await client.send("Input.dispatchKeyEvent", {type:"keyUp",key:"Escape",code:"Escape",windowsVirtualKeyCode:27});
+      assert(!await evaluate("profileScreen.classList.contains('open')"), "Uncovered Profile no longer dismisses.");
+    }
     const guidanceVisibility = await evaluate(`(async () => {
       const saved = { ...getOnboardingPrefs() };
       const source = selectedSourceId, target = selectedTargetId;
@@ -199,7 +231,7 @@ async function main() {
       return { stable, initiallyDisabled, ready, closed: !modal.open };
     })()`);
     assert(rally.stable && rally.initiallyDisabled && rally.ready && rally.closed, `Rally updates lost state or controls: ${JSON.stringify(rally)}`);
-    console.log(`Modal lifecycle passed: Reports transitions at 3 sizes in/out of fullscreen, profile transitions, queued reopen, and stable activity controls. 30 countdown updates: ${timing.elapsedMs.toFixed(1)}ms, ${timing.structuralMutations} structural mutations.`);
+    console.log(`Modal lifecycle passed: topmost-only Escape and mouse/touch Close over Profile, Reports transitions at 3 sizes in/out of fullscreen, profile transitions, queued reopen, and stable activity controls. 30 countdown updates: ${timing.elapsedMs.toFixed(1)}ms, ${timing.structuralMutations} structural mutations.`);
   } finally {
     if (client) await client.send("Browser.close").catch(() => {});
     if (session) { await waitForProcessExit(session.browserProcess); await removeBrowserProfile(session.profilePath); }

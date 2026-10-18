@@ -64,6 +64,29 @@ async function main() {
       const touch = width < 1000;
       await client.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: touch });
       await client.send("Emulation.setTouchEmulationEnabled", { enabled: touch });
+      // Daily Login shares a dialog with Box/Reports screens that hide header navigation.
+      // Exercise actual view transitions, including a queued close in the same turn.
+      for (const previous of ["showCommonGearBoxScreen();modal.close()", "showLogModal()"] ) {
+        await evaluate(`modal.close();${previous};showDailyLoginRewardsModal({skipRefresh:true})`);
+        await waitFor("!!modalBody.querySelector('.daily-shell')");
+        await settled();
+        const header = await evaluate(`(() => {
+          const buttons=[...modalHeaderNav.querySelectorAll('[data-daily-reward-tab]')];
+          return { classes:modal.className, hidden:modalHeaderNav.hidden, tabs:buttons.map(button=>{
+            const r=button.getBoundingClientRect();
+            return {id:button.dataset.dailyRewardTab,visible:r.width>=44&&r.height>=44,
+              hit:button.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))};
+          })};
+        })()`);
+        assert(!header.hidden && header.tabs.length===3 && header.tabs.every(tab=>tab.visible&&tab.hit),
+          `Daily tabs disappeared after ${previous} at ${size}: ${JSON.stringify(header)}`);
+        await click('[data-daily-reward-tab="quests"]',touch);
+        await waitFor("!!modalBody.querySelector('.quests-panel')");
+        await click('[data-daily-reward-tab="achievements"]',touch);
+        await waitFor("!!modalBody.querySelector('.achievements-panel')");
+        await click('#closeModalBtn',touch);
+        await waitFor("!modal.open");
+      }
       for (const fullscreen of [false, true]) {
         if (fullscreen) await evaluate("document.documentElement.requestFullscreen()");
         await waitFor(`Boolean(document.fullscreenElement) === ${fullscreen}`);
@@ -91,7 +114,7 @@ async function main() {
           })()`);
           const label = `${size}/${fullscreen ? "fullscreen" : "window"}/${tab}`;
           assert.equal(layout.source, art, label + " artwork");
-          if (tab === "rewards") assert.equal(layout.source, layout.hud);
+          if (tab === "rewards") assert.equal(layout.hud, "assets/optimized/hud-daily-labeled-192x192-91fa9910f959.webp", "HUD retains its approved caption artwork; window and tabs use the uncaptioned illustration.");
           assert.equal(layout.fit, "contain"); assert.equal(layout.alt, "");
           assert.deepEqual(layout.tabImages.map(image => image.source), tabs.map(entry => entry[2]));
           assert(layout.tabImages.every(image => image.decoded), label + " image decoding");
@@ -117,8 +140,8 @@ async function main() {
         await settled(); await click("#closeModalBtn", touch); await waitFor("!modal.open");
         await evaluate("showLeaderboardModal()"); await settled();
         await waitFor("!!modalTitle.querySelector('img')?.naturalWidth");
-        const leaderboard = await evaluate(`(() => {const img=modalTitle.querySelector('img'),r=img.getBoundingClientRect(),h=modalTitle.getBoundingClientRect(),c=closeModalBtn.getBoundingClientRect(),t=modalTitle.querySelector('span').getBoundingClientRect();return {same:img.currentSrc===document.querySelector('#leaderboardBtn img').currentSrc,aligned:Math.abs(r.y+r.height/2-h.y-h.height/2)<1,fits:r.x>=h.x&&r.right+7<=t.x&&t.right<c.x&&c.bottom<=h.bottom+1,overflow:modal.scrollWidth>modal.clientWidth+1};})()`);
-        assert(leaderboard.same && leaderboard.aligned && leaderboard.fits && !leaderboard.overflow, JSON.stringify(leaderboard));
+        const leaderboard = await evaluate(`(() => {const img=modalTitle.querySelector('img'),r=img.getBoundingClientRect(),h=modalTitle.getBoundingClientRect(),c=closeModalBtn.getBoundingClientRect(),t=modalTitle.querySelector('span').getBoundingClientRect();return {art:img.getAttribute('src')==='assets/optimized/hud-leaderboard-ink-384x384-7781c5983020.webp',aligned:Math.abs(r.y+r.height/2-h.y-h.height/2)<1,fits:r.x>=h.x&&r.right+7<=t.x&&t.right<c.x&&c.bottom<=h.bottom+1,overflow:modal.scrollWidth>modal.clientWidth+1};})()`);
+        assert(leaderboard.art && leaderboard.aligned && leaderboard.fits && !leaderboard.overflow, JSON.stringify(leaderboard));
         await screenshot(`leaderboard-${size}-${fullscreen ? "fullscreen" : "window"}`);
         await click("#closeModalBtn", touch); await waitFor("!modal.open");
         records.push({ label:`${size}/${fullscreen ? "fullscreen" : "window"}/leaderboard`, ...leaderboard });
@@ -127,7 +150,7 @@ async function main() {
     }
     assert.deepEqual(errors, []);
     fs.writeFileSync(path.join(output,"checks.json"), JSON.stringify({passed:true,records,errors},null,2));
-    console.log("Passed 24 reward/leaderboard layouts: matching artwork, stable tab geometry, fullscreen, scrolling, keyboard and mouse/touch dismissal.");
+    console.log("Passed Box/Reports-to-Daily transitions and 24 reward/leaderboard layouts: matching artwork, stable tab geometry, fullscreen, scrolling, keyboard and mouse/touch dismissal.");
   } finally {
     if (client) { await client.send("Browser.close").catch(() => {}); client.close(); }
     if (session) { await waitForProcessExit(session.browserProcess); await removeBrowserProfile(session.profilePath); }

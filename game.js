@@ -36053,7 +36053,8 @@ async function showDailyLoginRewardsModal(options = {}) {
   activeDailyRewardModalTab = ["rewards", "quests", "achievements"].includes(options.initialTab)
     ? options.initialTab
     : "rewards";
-  modal.classList.add("daily-login-reward-modal");
+  // Reset the view theme.
+  modal.className = "modal daily-login-reward-modal";
   renderDailyLoginRewardModal();
   if (!modal.open) modal.showModal();
   if (!options.skipRefresh) {
@@ -42349,6 +42350,8 @@ document.addEventListener("keydown", event => {
     return;
   }
   if (event.key !== "Escape" || !profileScreen?.classList.contains("open")) return;
+  // Child dialogs own Escape.
+  if (event.defaultPrevented || event.target.closest?.("dialog") || document.querySelector("dialog[open]")) return;
   if (event.target === profileNameInput) return;
   if (!flagEditorView.hidden) showProfileView();
   else closeProfileScreen();
@@ -42446,7 +42449,7 @@ modal.addEventListener("keydown", event => {
   if (event.key === "Escape" && !event.defaultPrevented) handleEquipmentModalCancel(event);
 });
 document.addEventListener("pointerdown", event => {
-  if (!profileScreen?.classList.contains("open") || modal.open || flagDiscardDialog?.open || document.getElementById("profileProductionDialog")?.open) return;
+  if (!profileScreen?.classList.contains("open") || document.querySelector("dialog[open]")) return;
   if (profileScreen.contains(event.target) || profileBtn?.contains(event.target) || clanHudBtn?.contains(event.target) || dailyLoginRewardBtn?.contains(event.target) || innerCityHudBtn?.contains(event.target)) return;
   event.preventDefault();
   event.stopPropagation();
@@ -42499,10 +42502,7 @@ function handleGameModalClose() {
   modal.classList.remove("offline-reward-modal");
   modal.classList.remove("city-list-modal");
   if (closedCityListSession) resetCityListSessionOrder();
-  modal.classList.remove("island-switcher-modal");
-  modal.classList.remove("leaderboard-modal");
-  modal.classList.remove("shop-modal");
-  modal.classList.remove("inventory-modal");
+  modal.classList.remove("island-switcher-modal", "leaderboard-modal", "shop-modal", "inventory-modal", "common-gear-box-modal", "cgb-modal");
   modal.classList.remove("incoming-attack-modal");
   modal.classList.remove("outgoing-attack-modal");
   modal.classList.remove("relinquish-city-modal");
