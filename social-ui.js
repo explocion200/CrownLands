@@ -221,10 +221,10 @@
     if (!history.length) log.append(element("p", "No messages in the past 90 days.", "social-empty"));
     for (const message of history) {
       const row = element("article", null, "social-message" + (message.senderUid === uid ? " is-own" : "")); row.dataset.messageId = message.id;
-      const sender = element("div", null, "social-message-sender"), sentAt = new Date(message.createdAtMs);
+      const sender = element("strong", message.senderDisplayName, "social-message-sender"), sentAt = new Date(message.createdAtMs);
       const time = element("time", sentAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
       time.dateTime = sentAt.toISOString(); time.title = sentAt.toLocaleString(); time.setAttribute("aria-label", time.title);
-      sender.append(element("strong", message.senderDisplayName)); row.append(sender);
+      row.append(sender);
       const text = element("p", message.text); text.dir = "auto";
       const tools = element("div", null, "social-row-actions");
       const translate = button("Translate", () => run(async () => {
