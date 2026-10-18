@@ -305,6 +305,8 @@ async function main() {
   await stagedWallCases();
   await troopProductionCases();
   await linkedAccountCases();
+  const beginner = await user("Beginner XP");
+  await require("./beginner-capture-xp-cases")({ db, actor: beginner, call: (name, data) => call(name, beginner, data) });
   console.log("Combat authorization emulator passed: actual low/high conquests, dispatch cooldowns, defense isolation, exact-city previews, ownership changes, expiry, long travel, independent captures, atomic single-use, retries, failed launches, abandonment, transfers, shield activation and Firestore authority/privacy.");
 }
 async function verifySpentRetaliation(high, low, source, enemySource, seed) {

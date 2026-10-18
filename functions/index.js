@@ -459,6 +459,7 @@ const HERO_XP_SOFT_CAP_LEVEL = 50;
 const HERO_XP_HARD_CAP_LEVEL = 100;
 const HERO_XP_EXPONENTIAL_START_LEVEL = 25;
 const HERO_XP_EXPONENTIAL_GROWTH_RATE = 1.1;
+const BEGINNER_CAPTURE_XP_TARGET_LEVEL = 15;
 const LEVEL_UP_GOLD_FLOOR_BASE = economyNumber("levelRewards.goldFloorBase", 500);
 const LEVEL_UP_GOLD_FLOOR_PER_LEVEL = economyNumber("levelRewards.goldFloorPerLevel", 250);
 const LEVEL_UP_GOLD_FLOOR_EXPONENT = economyNumber("levelRewards.goldFloorExponent", 1.25);
@@ -5831,6 +5832,18 @@ function getCaptureXpAward(
 
 function getDefenseHeldXpAward(attackingTroops, target = {}, defenderProfile = null) {
   return Math.floor(DEFENSE_HELD_XP_BASE + getBattleXpTroopCredit(target, attackingTroops, defenderProfile) * DEFENSE_HELD_XP_PER_ATTACKER);
+}
+
+function getBeginnerCaptureXpAward(battleXp, character, eligible) {
+  if (!eligible) return battleXp;
+  const current = normalizeCharacterProgress(character);
+  if (current.level >= BEGINNER_CAPTURE_XP_TARGET_LEVEL) return battleXp;
+  let remaining = -current.xp;
+  for (let level = current.level; level < BEGINNER_CAPTURE_XP_TARGET_LEVEL; level += 1) {
+    remaining += getXpRequiredForLevel(level);
+  }
+  // Two ordinary neutral captures per Hero level; never reduce normal battle XP.
+  return Math.max(battleXp, Math.min(remaining, Math.ceil(getXpRequiredForLevel(current.level) / 2)));
 }
 
 function getPartialBattleXpAward(fullWinXp) {
@@ -31764,7 +31777,12 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const defenseHeldXp = Math.floor(
       getDefenseHeldXpAward(troopCount, target, defenderProfile) * defenseOpponentXpMultiplier
     );
-    const cappedAttackWinXp = capBattleXpForHeroLevel(attackWinXp, attackerProfile);
+    const cappedAttackWinXp = capBattleXpForHeroLevel(getBeginnerCaptureXpAward(
+      attackWinXp,
+      attackerProfile.character,
+      cityCaptured && !oldOwnerUid && !attackProtection && !givenUpNeutralTarget
+        && !isStronghold(target) && !isRewardCamp(target)
+    ), attackerProfile);
     const cappedDefenseHeldXp = Math.floor(capBattleXpForHeroLevel(defenseHeldXp, defenderProfile || {}) * defenderXpMultiplierApplied);
     const attackerXp = result.success ? cappedAttackWinXp : getPartialBattleXpAward(cappedAttackWinXp);
     const defenderXp = result.success ? getPartialBattleXpAward(cappedDefenseHeldXp) : cappedDefenseHeldXp;

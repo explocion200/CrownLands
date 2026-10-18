@@ -1109,6 +1109,7 @@ const HERO_XP_SOFT_CAP_LEVEL = 50;
 const HERO_XP_HARD_CAP_LEVEL = 100;
 const HERO_XP_EXPONENTIAL_START_LEVEL = 25;
 const HERO_XP_EXPONENTIAL_GROWTH_RATE = 1.1;
+const BEGINNER_CAPTURE_XP_TARGET_LEVEL = 15;
 const LEVEL_UP_GOLD_FLOOR_BASE = economyNumber("levelRewards.goldFloorBase", 500);
 const LEVEL_UP_GOLD_FLOOR_PER_LEVEL = economyNumber("levelRewards.goldFloorPerLevel", 250);
 const LEVEL_UP_GOLD_FLOOR_EXPONENT = economyNumber("levelRewards.goldFloorExponent", 1.25);
@@ -8355,14 +8356,31 @@ function addCharacterXp(amount, reason = "progress", options = {}) {
   reconcileSkillPoints(state.character, state.upgrades);
 }
 
-function getCaptureXpAward(target, oldOwner, defenderLosses, attackerOwner = "player") {
+function getBeginnerCaptureXpAward(battleXp, character, eligible) {
+  if (!eligible) return battleXp;
+  const current = normalizeCharacterProgress(character);
+  if (current.level >= BEGINNER_CAPTURE_XP_TARGET_LEVEL) return battleXp;
+  let remaining = -current.xp;
+  for (let level = current.level; level < BEGINNER_CAPTURE_XP_TARGET_LEVEL; level += 1) {
+    remaining += getXpRequiredForLevel(level);
+  }
+  // Two ordinary neutral captures per Hero level; never reduce normal battle XP.
+  return Math.max(battleXp, Math.min(remaining, Math.ceil(getXpRequiredForLevel(current.level) / 2)));
+}
+
+function getCaptureXpAward(target, oldOwner, defenderLosses, attackerOwner = "player", successfulCapture = true) {
   if (isGivenUpNeutralCity(target)) return 0;
   const level = clampCityLevel(target?.level);
   const troopXp = Math.floor(getBattleXpTroopCredit(target, defenderLosses) * CAPTURE_XP_PER_DEFENDER);
   const ownerBonus = oldOwner === "enemy" ? ENEMY_CAPTURE_XP_BONUS : 0;
   const cityXp = CAPTURE_XP_BASE + level * CAPTURE_XP_PER_CITY_LEVEL + ownerBonus;
   const efficiency = attackerOwner === "player" ? getCaptureXpEfficiency(target, oldOwner) : 1;
-  return capBattleXpForCurrentLevel(Math.floor((cityXp + troopXp) * efficiency));
+  return capBattleXpForCurrentLevel(getBeginnerCaptureXpAward(
+    Math.floor((cityXp + troopXp) * efficiency),
+    state.character,
+    successfulCapture && attackerOwner === "player" && oldOwner === "neutral"
+      && !isStronghold(target) && !isRewardCampTarget(target)
+  ));
 }
 
 function getDefenseHeldXpAward(attackingTroops, target = null) {
@@ -8374,7 +8392,7 @@ function getPartialBattleXpAward(fullWinXp) {
 }
 
 function getFailedAttackXpAward(target, oldOwner, defenderLosses, attackerOwner = "player") {
-  return getPartialBattleXpAward(getCaptureXpAward(target, oldOwner, defenderLosses, attackerOwner));
+  return getPartialBattleXpAward(getCaptureXpAward(target, oldOwner, defenderLosses, attackerOwner, false));
 }
 
 function getCaptureXpEfficiency(target, oldOwner = target?.owner) {
@@ -37173,7 +37191,7 @@ function showAttackPreview(source, target) {
 
   modalBody.innerHTML = `
     <div class="battle-preview ${preview.success ? "win" : "lose"}">
-      <div class="battle-result"><strong>${preview.success ? "Likely Victory" : "Likely Defeat"}</strong><span>${preview.label} - ${Math.round(preview.xpEfficiency * 100)}% XP</span></div>
+      <div class="battle-result"><strong>${preview.success ? "Likely Victory" : "Likely Defeat"}</strong><span>${preview.label} - ${preview.beginnerCaptureBonus ? "Beginner XP bonus" : `${Math.round(preview.xpEfficiency * 100)}% XP`}</span></div>
       <div class="stat-grid">
         <div class="stat-card"><strong>${formatNumber(preview.send)}</strong><small>troops to send</small></div>
         <div class="stat-card"><strong>${formatNumber(target.troops)}</strong><small>target troops</small></div>
@@ -37454,6 +37472,9 @@ function calculateBattlePreviewForTroops(
       ? getCaptureXpAward(target, target.owner, result.defenderLosses, "player")
       : getFailedAttackXpAward(target, target.owner, result.defenderLosses, "player");
   const xpLabel = attackProtection ? "attacker XP" : result.success ? "capture XP" : "defeat XP";
+  const beginnerCaptureBonus = result.success && captureXp > getCaptureXpAward(
+    target, target.owner, result.defenderLosses, "player", false
+  );
   const advantageTier = getCombatAdvantageTier(result.ratio);
   let label = advantageTier.label;
   if (attackProtection) {
@@ -37504,6 +37525,7 @@ function calculateBattlePreviewForTroops(
       && send < minimumMeaningfulWallDamageTroops,
     xpEfficiency,
     captureXp,
+    beginnerCaptureBonus,
     xpLabel,
     label,
     attackProtection,
