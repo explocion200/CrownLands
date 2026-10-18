@@ -8,7 +8,7 @@ const topology = require("../coreExpansionTopology.js");
 const worldLayout = require("../core-expansion-world-layout.json");
 
 // Real claims only attempt a threshold transition when a placement reaches the
-// 20-city floor. Keep several transactions genuinely concurrent here without
+// 10-city floor. Keep several transactions genuinely concurrent here without
 // creating an emulator-only 50-writer lock convoy against one state document.
 const THRESHOLD_STRESS_CONCURRENCY = 5;
 const releaseConfig = require("../release-config.json");
@@ -185,7 +185,7 @@ async function main() {
   assert(new Set(afterFirst.activeRegionIds).size === afterFirst.activeRegionIds.length,
     "The first threshold created duplicate active maps.");
   assert(!afterFirst.admittingRegionIds.includes(firstSource),
-    "The threshold source continued admitting players after reaching 20 NPC cities.");
+    "The threshold source continued admitting players after reaching 10 NPC cities.");
   assert(afterFirst.admittingRegionIds.length === 2,
     "The first threshold did not leave exactly two admitting maps.");
 
@@ -193,10 +193,10 @@ async function main() {
   assert(!repeated.changed, "A repeated threshold request paid out another activation batch.");
 
   const belowThreshold = await applyThreshold(afterFirst.admittingRegionIds[0], 19, {
-    remainingNpcCities: 21,
+    remainingNpcCities: 11,
   });
   assert(!belowThreshold.changed && belowThreshold.reason === "threshold-not-reached",
-    "A map activated before it reached the 20-NPC threshold.");
+    "A map activated before it reached the 10-NPC threshold.");
 
   const secondWaveRequests = afterFirst.admittingRegionIds.flatMap((sourceRegionId, sourceIndex) => (
     Array.from({ length: 25 }, () => ({ sourceRegionId, thresholdRevision: 40 + sourceIndex }))
@@ -274,7 +274,7 @@ async function main() {
     }
   }
   assert(Number(realmInfo.startingCityCapacity) === (
-    topology.MAX_NEW_LANDS_REGIONS * topology.EXPANSION_THRESHOLD_NPC_CITIES
+    topology.MAX_NEW_LANDS_REGIONS * (topology.NEW_LANDS_CITY_CAPACITY - topology.EXPANSION_THRESHOLD_NPC_CITIES)
   ), "The dynamic New Lands realm reported a fixed legacy capacity.");
   const identity = {
     releaseId: realmInfo.currentReleaseId,
@@ -313,7 +313,10 @@ async function main() {
   }, identity);
   assert(postResetHeartbeat?.status === "active" && postResetHeartbeat.realmShardId === realmInfo.sharedRealmId,
     "The repaired post-reset membership could not heartbeat in the active realm.");
-  const claims = await mapWithConcurrency(users, 10, (user, index) => callFunction(
+  // The lower reserve serializes 30 claims on the first island. Keep real
+  // concurrent emulator claims without exhausting its reservation polling;
+  // the PostgreSQL admission-burst gate covers all 50 at concurrency 10.
+  const claims = await mapWithConcurrency(users, THRESHOLD_STRESS_CONCURRENCY, (user, index) => callFunction(
     "claimStartingCity",
     user.token,
     { playerName: `Expansion Ruler ${index + 1}` },
@@ -346,8 +349,8 @@ async function main() {
     db.doc(`islands/${realmInfo.worldId}--shard_0001--${regionId}`).get()
   )));
   const populations = activeIslandSnapshots.map(snapshot => Number(snapshot.data()?.playerCount || 0));
-  assert(populations[0] === 20, `The first New Lands map closed at ${populations[0]} players instead of 20.`);
-  assert(populations.slice(1, 3).reduce((sum, count) => sum + count, 0) === 30,
+  assert(populations[0] === 30, `The first New Lands map closed at ${populations[0]} players instead of 30.`);
+  assert(populations.slice(1, 3).reduce((sum, count) => sum + count, 0) === 20,
     "The successor maps did not receive all remaining players.");
   assert(Math.max(...populations.slice(1, 3)) - Math.min(...populations.slice(1, 3)) <= 1,
     `Successor-map placement was not balanced: ${populations.join("/")}.`);
@@ -367,10 +370,10 @@ async function main() {
       && city.isStronghold !== true
       && !String(city.strongholdType || "").trim();
   });
-  assert(neutralCities.length === 25,
-    `The recovery fixture expected 25 neutral cities, found ${neutralCities.length}.`);
+  assert(neutralCities.length === 30,
+    `The recovery fixture expected 30 neutral cities, found ${neutralCities.length}.`);
   const gameplayCaptureBatch = db.batch();
-  for (const citySnap of neutralCities.slice(0, 8)) {
+  for (const citySnap of neutralCities.slice(0, 23)) {
     gameplayCaptureBatch.update(citySnap.ref, {
       ownerKind: "player",
       ownerUid: users[0].uid,
@@ -403,8 +406,8 @@ async function main() {
     "Overdue recovery left the successor maps pending instead of fully activated.");
   const recoveryReceipt = Object.values(recoveredExpansion.activationReceipts)
     .find(receipt => receipt.sourceRegionId === depletedRegionId);
-  assert(recoveryReceipt?.remainingNpcCities === 17,
-    "Overdue recovery did not record the authoritative 17-city threshold state.");
+  assert(recoveryReceipt?.remainingNpcCities === 7,
+    "Overdue recovery did not record the authoritative 7-city threshold state.");
   assert(
     JSON.stringify(topology.normalizeExpansionState((await archivedStateRef.get()).data() || {}))
       === JSON.stringify(topology.normalizeExpansionState(archivedState)),

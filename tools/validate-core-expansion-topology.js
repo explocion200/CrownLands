@@ -6,7 +6,9 @@ const topology = require("../functions/coreExpansionTopology.js");
 assert.equal(topology.CORE_MAP_COUNT, 25);
 assert.equal(topology.FIRST_LAYER_MAP_COUNT, 24);
 assert.equal(topology.NEW_LANDS_CITY_CAPACITY, 40);
-assert.equal(topology.EXPANSION_THRESHOLD_NPC_CITIES, 20);
+assert.equal(topology.EXPANSION_THRESHOLD_NPC_CITIES, 10);
+assert.equal(require("../functions/player-region-spawn").MINIMUM_NPC_CITIES_FOR_SPAWN, topology.EXPANSION_THRESHOLD_NPC_CITIES);
+assert.equal(require("../functions/core-expansion-region-catalog.json").capacityPolicy.minimumNpcCitiesForSpawn, topology.EXPANSION_THRESHOLD_NPC_CITIES);
 assert.equal(topology.EXPANSION_ACTIVATION_BATCH_SIZE, 2);
 assert.equal(topology.MAX_NEW_LANDS_REGIONS, 4095);
 assert.equal(Object.keys(topology.PREPARED_CORE_REGION_NAMES).length, 25);
@@ -78,35 +80,58 @@ const belowThreshold = topology.planThresholdActivation({
   state: initial,
   resetGeneration: generation,
   sourceRegionId: "new-lands-l01-p001",
-  remainingNpcCities: 21,
+  remainingNpcCities: 11,
 });
 assert.equal(belowThreshold.changed, false);
 assert.equal(belowThreshold.reason, "threshold-not-reached");
+
+// A pending pair accepted under the previous 20-city rule finishes once;
+// lowering the threshold must not reopen its source or rewrite its receipt.
+const historicalEvent = `${generation}:new-lands-l01-p001:20:9`;
+const historicalPending = { ...initial, admittingRegionIds: [], nextActivationOrdinal: 3,
+  pendingActivation: { eventId: historicalEvent, sourceRegionId: initial.admittingRegionIds[0],
+    regionIds: ["new-lands-l01-p002", "new-lands-l01-p003"], remainingNpcCities: 19,
+    startActivationOrdinal: 1, nextActivationOrdinal: 3, thresholdRevision: 9, createdAtMs: 1 } };
+const historicalFinalized = topology.finalizePendingActivation({ state: historicalPending,
+  eventId: historicalEvent, readyRegionIds: historicalPending.pendingActivation.regionIds });
+assert(historicalFinalized.changed);
+assert.equal(historicalFinalized.state.activationReceipts[historicalEvent].remainingNpcCities, 19);
+assert(!historicalFinalized.state.admittingRegionIds.includes(initial.admittingRegionIds[0]));
+assert.deepEqual(topology.normalizeExpansionState(historicalFinalized.state), historicalFinalized.state);
+assert(!topology.finalizePendingActivation({ state: historicalFinalized.state,
+  eventId: historicalEvent, readyRegionIds: historicalPending.pendingActivation.regionIds }).changed);
+assert(!topology.planThresholdActivation({ state: historicalFinalized.state, resetGeneration: generation,
+  sourceRegionId: initial.admittingRegionIds[0], remainingNpcCities: 10 }).changed);
+for (const remainingNpcCities of [20, 19, 11]) {
+  assert(!topology.planThresholdActivation({ state: initial, resetGeneration: generation,
+    sourceRegionId: initial.admittingRegionIds[0], remainingNpcCities }).changed,
+  `${remainingNpcCities} remaining cities must not trigger expansion under the new policy.`);
+}
 
 const overdueActivation = topology.planThresholdActivation({
   state: initial,
   resetGeneration: generation,
   sourceRegionId: "new-lands-l01-p001",
-  remainingNpcCities: 17,
+  remainingNpcCities: 7,
   thresholdRevision: 2,
 });
 assert.equal(overdueActivation.changed, true);
 assert.equal(overdueActivation.reason, "threshold-preparing");
-assert.equal(overdueActivation.state.pendingActivation.remainingNpcCities, 17);
+assert.equal(overdueActivation.state.pendingActivation.remainingNpcCities, 7);
 const overdueFinalization = topology.finalizePendingActivation({
   state: overdueActivation.state,
   eventId: overdueActivation.eventId,
   readyRegionIds: overdueActivation.preparedRegions.map(region => region.id),
 });
 assert.equal(overdueFinalization.changed, true);
-assert.equal(overdueFinalization.state.activationReceipts[overdueActivation.eventId].remainingNpcCities, 17,
+assert.equal(overdueFinalization.state.activationReceipts[overdueActivation.eventId].remainingNpcCities, 7,
   "An overdue threshold repair must preserve the authoritative neutral-city count in its receipt.");
 
 const firstActivation = topology.planThresholdActivation({
   state: initial,
   resetGeneration: generation,
   sourceRegionId: "new-lands-l01-p001",
-  remainingNpcCities: 20,
+  remainingNpcCities: 10,
 });
 assert.equal(firstActivation.changed, true);
 assert.equal(firstActivation.reason, "threshold-preparing");
@@ -179,7 +204,7 @@ const replay = topology.planThresholdActivation({
   state: firstFinalization.state,
   resetGeneration: generation,
   sourceRegionId: "new-lands-l01-p001",
-  remainingNpcCities: 20,
+  remainingNpcCities: 10,
 });
 assert.equal(replay.changed, false);
 assert.equal(replay.reason, "source-not-admitting");
@@ -192,7 +217,7 @@ for (let ordinal = 1; ordinal < 24; ordinal += 1) {
     state,
     resetGeneration: generation,
     sourceRegionId,
-    remainingNpcCities: 20,
+    remainingNpcCities: 10,
     thresholdRevision: ordinal,
   });
   if (!prepared.changed) continue;
@@ -220,7 +245,7 @@ assert.throws(() => topology.planThresholdActivation({
   state,
   resetGeneration: "wrong-generation",
   sourceRegionId: state.admittingRegionIds[0],
-  remainingNpcCities: 20,
+  remainingNpcCities: 10,
 }), /active reset generation/);
 
 console.log("Validated the 25-map Core boundary, complete 24-map first ring, north-clockwise allocation, and idempotent two-map threshold activation.");

@@ -175,7 +175,7 @@ if (coreResetArmed) {
   if (!firstNewLandsMap || firstNewLandsMap.cities?.length !== coreTopology.NEW_LANDS_CITY_CAPACITY) {
     throw new Error("The first admitting New Lands map is not fully prepared.");
   }
-  if (coreTopology.MAX_NEW_LANDS_REGIONS * coreTopology.EXPANSION_THRESHOLD_NPC_CITIES !== 81_900) {
+  if (coreTopology.MAX_NEW_LANDS_REGIONS * (coreTopology.NEW_LANDS_CITY_CAPACITY - coreTopology.EXPANSION_THRESHOLD_NPC_CITIES) !== 122_850) {
     throw new Error("The automatic New Lands capacity envelope drifted.");
   }
 

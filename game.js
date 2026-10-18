@@ -103,7 +103,7 @@ let appliedCoreExpansionState = null;
 const LAND_BRIDGES = getMergedLandBridges(WORLD_CONFIG, MAP_EDITOR_DATA);
 const REGION_CITY_COUNT = Math.max(1, Math.floor(Number(WORLD_CONFIG.cityCountPerRegion) || 50));
 const MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES = CORE_EXPANSION_TOPOLOGY_ACTIVE
-  ? Math.max(20, Math.floor(Number(REGION_CATALOG.capacityPolicy?.minimumNpcCitiesForSpawn) || 20))
+  ? Math.max(10, Math.floor(Number(REGION_CATALOG.capacityPolicy?.minimumNpcCitiesForSpawn) || 10))
   : 10;
 let RESET_GENERATION = String(REALM_CONFIG.resetGeneration || "fresh-2026-07-26-server-reset");
 let REALM_SHARD_ID = "legacy";

@@ -532,7 +532,7 @@ let GAME_SERVER_DOCUMENT_ID = `${GAME_SERVER_ID}-${RESET_GENERATION}`;
 const SHARED_REALM_ID = REALM_TOPOLOGY.SHARED_REALM_SHARD_ID;
 const SHARED_REALM_STARTING_CITY_CAPACITY = REALM_TOPOLOGY.getSharedRealmStartingCityCapacity(REALM_CONFIG);
 const CORE_EXPANSION_STARTING_CITY_CAPACITY = CORE_EXPANSION.MAX_NEW_LANDS_REGIONS
-  * CORE_EXPANSION.EXPANSION_THRESHOLD_NPC_CITIES;
+  * (CORE_EXPANSION.NEW_LANDS_CITY_CAPACITY - CORE_EXPANSION.EXPANSION_THRESHOLD_NPC_CITIES);
 function getCurrentRealmStartingCityCapacity(nowMs = Date.now()) {
   return isCoreExpansionTopologyActive(nowMs)
     ? CORE_EXPANSION_STARTING_CITY_CAPACITY
@@ -2790,9 +2790,9 @@ const CORE_TEMPLATE_WORLD_MAPS = Object.freeze(CORE_STATIC_SERVER_WORLD_MAPS
     - CORE_EXPANSION.parseNewLandsRegionId(right.id).activationOrdinal
   )));
 const MINIMUM_SPAWN_NPC_CITIES = Math.max(
-  20,
+  CORE_EXPANSION.EXPANSION_THRESHOLD_NPC_CITIES,
   MINIMUM_NPC_CITIES_FOR_SPAWN,
-  Math.floor(safeNumber(SERVER_REGION_CATALOG?.capacityPolicy?.minimumNpcCitiesForSpawn, 20))
+  Math.floor(safeNumber(SERVER_REGION_CATALOG?.capacityPolicy?.minimumNpcCitiesForSpawn, MINIMUM_NPC_CITIES_FOR_SPAWN))
 );
 function getCurrentServerWorldLayout() {
   return isCoreExpansionTopologyActive()

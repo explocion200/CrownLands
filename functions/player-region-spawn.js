@@ -1,7 +1,7 @@
 "use strict";
 
 const PLAYER_REGION_CITY_CAPACITY = 40;
-const MINIMUM_NPC_CITIES_FOR_SPAWN = 20;
+const MINIMUM_NPC_CITIES_FOR_SPAWN = 10;
 const DIRECTIONS = Object.freeze({
   north: Object.freeze({ opposite: "south" }),
   east: Object.freeze({ opposite: "west" }),

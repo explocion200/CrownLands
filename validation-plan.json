@@ -1,23 +1,41 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "e47099b6327251745a6d4c3ce623099f8e899bfb",
+  "baseCommit": "60d330e5d6af3285b125bd655afe192f0e95bfed",
   "coverage": [
     {
       "paths": [
+        "assets/worlds/core-expansion-v1/build-receipt.json",
+        "assets/worlds/core-expansion-v1/region-catalog.js",
+        "assets/worlds/core-expansion-v1/region-catalog.json",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/NEW_LANDS_THRESHOLD_AUDIT_2026-10-18.md",
+        "functions/core-expansion-region-catalog.json",
+        "functions/coreExpansionTopology.js",
+        "functions/index.js",
+        "functions/player-region-spawn.js",
+        "functions/test/emulator-core-expansion-state.js",
         "game.js",
-        "tools/validate-modal-lifecycle-browser.js",
-        "tools/validate-reward-window-layout-browser.js"
+        "tools/build-prepared-core-expansion.js",
+        "tools/test-local-postgres-expansion-admission-burst.js",
+        "tools/test-local-postgres-expansion-threshold.js",
+        "tools/validate-core-expansion-release.js",
+        "tools/validate-core-expansion-reset.js",
+        "tools/validate-core-expansion-topology.js",
+        "tools/validate-player-region-capacity.js",
+        "tools/validate-reset-release.js"
       ],
       "tests": [
-        "tools/validate-modal-lifecycle-browser.js",
-        "tools/validate-reward-window-layout-browser.js",
-        "tools/validate-common-gear-box-browser.js",
-        "tools/validate-optional-ui-scripts-browser.js",
-        "tools/validate-daily-login-rewards.js",
-        "tools/validate-login-realm-sequence.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-player-region-capacity.js",
+        "tools/validate-core-expansion-topology.js",
+        "tools/validate-core-expansion-reset.js",
+        "tools/validate-core-expansion-release.js",
+        "tools/validate-reset-release.js",
+        "tools/validate-layer1-travel.js",
+        "tools/test-local-postgres-expansion-threshold.js",
+        "tools/test-local-postgres-expansion-admission-burst.js",
+        "functions/test/emulator-core-expansion-state.js"
       ],
-      "reason": "Repair two reproduced shared-window faults: Gear Box theme classes leaked after close and hid Daily Login navigation, and Profile Escape/outside-pointer handlers dismissed the Profile under a child dialog. Open Daily Login with only its own view classes, retire Box classes during normal cleanup, and let open/targeted child dialogs own dismissal. Browser regressions fail on the prior code and cover real Gear Box close/reopen and in-place Reports-to-Daily transitions, all three reward tabs, desktop/landscape/fullscreen/touch/keyboard geometry, topmost-only Escape over Daily/Chat/flag confirmation, mouse/touch Chat close, uncovered Profile dismissal, queued close events and existing report/activity lifecycle. Box validation covers close/reopen, in-flight requests and late results; optional UI checks cover first loads, stylesheet failure/retry and shared view ownership. Daily rewards/login sequencing validators protect the unchanged reward and auto-open flow; production build and asset budgets verify delivery. Artwork checks in the affected reward layout suite are brought in line with the already-approved labeled HUD images and existing uncaptioned window illustrations. Client lifecycle only; no reward rules, API, backend or data changes, so emulator suites are not applicable."
+      "reason": "Owner-confirmed reduction of the active Core-expansion admission reserve from 20 to 10. Cover shared authoritative spawn eligibility and index.js threshold wiring; correct realm capacity to 40 minus reserve, protect 40-city templates, exact 11-to-10 and overdue capture transitions, concurrent unique starting-city claims, balanced admission, closed-map/receipt preservation, old pending 20-city completion, generated-layer discovery, two-layer reset verification and archived-generation isolation. PostgreSQL exercises real handlers in disposable schemas and the selected emulator validates cold reset plus 50 concurrent joins. Catalog generator, both current browser catalogs and receipt are synchronized only for the changed policy; world assets and layout are unchanged. Release and layer travel validators cover server/client catalog parity, current topology and discovery. No visual layout changes; existing desktop/mobile presentation is unaffected. Specification records the confirmed rule and audit documents read-only aggregate current-realm evidence. Execute the actual client threshold and starter-region predicate against current and missing catalog policy to prevent the old 20-city floor from excluding 11\u201319-city maps while preserving Core and readiness restrictions. Native PostgreSQL stress keeps 50 real claims at concurrency 10 without caller retries and verifies unique claims, 30/10/10 balanced placement, one expansion and replay. The compatibility-only Firestore emulator uses its existing concurrency-5 stress limit for its 50 claims after concurrency 10 exhausted reservation polling on the longer 30-claim first-map sequence."
     }
   ]
 }
