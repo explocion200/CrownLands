@@ -1,83 +1,18 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "71749743576c8947aa551809a3926043e0edae3d",
+  "baseCommit": "5b04042796b986d76cbfc6096efd5b4271cc0336",
   "coverage": [
     {
       "paths": [
-        "functions/authoritative-route-planner.js",
-        "functions/world-travel-network.js",
-        "tools/validate-scout-route-cache.js"
+        "skills-ledger-ui.css",
+        "tools/validate-preset-confirmation-layout-browser.js"
       ],
       "tests": [
-        "tools/validate-scout-route-cache.js",
-        "tools/validate-responsive-scout-routing.js",
-        "tools/validate-world-travel-network.js",
-        "functions/test/emulator-world-travel.js",
-        "functions/test/emulator-scout-report-lifecycle.js"
+        "tools/validate-preset-confirmation-layout-browser.js",
+        "tools/validate-skill-presets.js",
+        "tools/validate-skill-point-efficiency-browser.js"
       ],
-      "reason": "Prune exact server terrain solves using a valid route upper bound and obstacle-free lower bounds; retain Dijkstra order, same-map no-revisit semantics, distance caps, active Core/New Lands topology, scout selection, reverse paths, cache bounds and persisted routes. Compare complete baseline geometry on current-world fixtures; exercise authoritative dispatch and scout lifecycle in emulators."
-    },
-    {
-      "paths": [
-        "functions/chat-translation.js",
-        "functions/test/emulator-chat-translation.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-smoothness.js",
-        "tools/test-local-postgres-translation.js",
-        "tools/validate-chat-translation.js",
-        "tools/validate-google-chat-translation.js",
-        "functions/test/emulator-chat-translation.js",
-        "functions/test/emulator-social.js"
-      ],
-      "reason": "Bounded pending-cache waits reuse an existing provider reservation across callers and service processes. Check per-attempt message visibility/access, private conversation authorization, cache source identity, rate limits, monthly reservation accounting, timeout diagnostics, provider failure and client retry behavior. No real provider requests."
-    },
-    {
-      "paths": [
-        "local-backend/store.js",
-        "tools/test-local-postgres-smoothness.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-smoothness.js",
-        "tools/test-local-postgres-store.js",
-        "tools/test-local-postgres-contention.js",
-        "tools/test-local-postgres-transaction-retries.js",
-        "tools/test-local-postgres-worker-loop.js",
-        "tools/test-local-postgres-game.js",
-        "tools/test-local-postgres-pickups.js",
-        "tools/test-local-postgres-payments.js",
-        "tools/test-local-social-integration.js"
-      ],
-      "reason": "Avoid locking SERIALIZABLE no-op projection writes while keeping READ COMMITTED blind-batch locks and real-write serialization. Real PostgreSQL tests cover no-op/concurrent-update regression, stale writes, double spending/write skew, receipts, deadlocks/retry bounds, job fencing, game triggers, pickups, payment replay and social writes. All data belongs to isolated test schemas."
-    },
-    {
-      "paths": [
-        "styles.css",
-        "interface-theme.css",
-        "profile-theme.css",
-        "crownlands-palette.css",
-        "tools/validate-modal-performance-browser.js",
-        "tools/validate-ui-stutter-browser.js",
-        "tools/validate-profile-theme.js",
-        "tools/validate-crownlands-palette.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/asset-performance-budgets.js"
-      ],
-      "tests": [
-        "tools/validate-modal-performance-browser.js",
-        "tools/validate-ui-stutter-browser.js",
-        "tools/validate-profile-theme.js",
-        "tools/validate-crownlands-palette.js",
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "reason": "Flatten four profiled high-cost card selector lists without changing declarations or specificity. Compare matching elements and computed paint/font/layout properties against the exact base CSS on six real UI views at 1440x900, 844x390 and 568x320. Preserve City Info controls, live counters, modal cleanup, theme and contrast contracts. Source budgets allow the indexed selector spelling; independent visual equivalence checks preserve the cascade. Historical City Details/contrast validators contain obsolete palette and HUD expectations that also fail on unchanged main; use current-theme equivalence and lifecycle tests instead."
-    },
-    {
-      "paths": [
-        "docs/GAME_SMOOTHNESS_FIXES_2026-10-17.md"
-      ],
-      "tests": [],
-      "reason": "Record measured root causes, exact-behavior safeguards, isolated test evidence, pre-existing obsolete test expectations and coordinated rollout requirements. No gameplay design decision changes."
+      "reason": "Keep the balance/retry paragraph in a content-sized row and reserve the only shrinking row for allocations, with the confirmation footer visible. Exercise the real shared modal, loaded optional styles, cost/balance visibility, allocation scrolling and pointer Apply/Cancel/Close/retry at desktop, short desktop, zoom-equivalent and landscape/portrait sizes. The regression fails on the previous CSS when the balance collapses. The existing skill browser test additionally covers the mocked Crown charge/replay and unchanged preset/build controls; the preset validator covers the 10-Crown rule and safe cancellation. CSS only: no server authority, data or backend changes, so emulator suites are not applicable."
     }
   ]
 }

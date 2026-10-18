@@ -284,7 +284,8 @@
 }
 #modal.skill-preset-confirmation-modal .skill-preset-confirmation {
   min-height: 0;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  /* Identity, terms, balance/retry, scrolling allocation, fixed actions. */
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   gap: 0;
 }
 #modal.skill-preset-confirmation-modal .skill-preset-confirmation > div:first-child {
