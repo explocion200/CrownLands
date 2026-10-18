@@ -49,6 +49,20 @@ holding changes that require an uninstalled backend. This decision authorizes
 the publication workflow; it is not evidence that the backend migration or the
 publisher installation is complete. See [the publication runbook](AUTOMATIC_LOCAL_DEPLOYMENT.md).
 
+### Confirmed local backup schedule — October 18, 2026
+
+The owner requested one scheduled encrypted server backup 24 hours before each
+new monthly season, replacing daily local-server backups. Seasons start at
+00:00 UTC on the first; backups run at 00:00 UTC on the last day of the previous
+month. Ordinary updates do not trigger extra backups or full restore drills;
+additional manual backups require a separate owner request. Existing encrypted
+local/cloud copies and retention remain unchanged. Failed or missed seasonal
+backups must still alert, with freshness measured against the seasonal deadline
+rather than a daily threshold. Recovery can lose progress since the previous
+copy, potentially most of a season. See [the backup runbook](LOCAL_BACKUPS.md)
+for timing, missed-run behavior and installation verification. This decision is
+not evidence that the host schedule has been installed.
+
 ### Confirmed installed-game launch behavior — September 20, 2026
 
 - Opening an installed Crownlands app must lead to the game at `/play/`, never leave the player on the public homepage. Existing homepage shortcuts need a standalone/iOS launch redirect; ordinary browser visits to `/` retain the homepage.
