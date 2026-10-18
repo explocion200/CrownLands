@@ -1,25 +1,37 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "fed7be3d289c014997609c5afbc6d372dc1936f4",
+  "baseCommit": "841e449674740fe99a3ca0560737a5ae81aac17c",
   "coverage": [
     {
       "paths": [
-        "social-ui.js",
-        "social-ui.css",
-        "tools/validate-social-browser.js"
+        "app-entry.js",
+        "tools/validate-pwa-entry-routing.js"
       ],
       "tests": [
-        "tools/validate-social-browser.js",
-        "tools/validate-chat.js"
+        "tools/validate-pwa-entry-routing.js",
+        "tools/validate-focused-browser-smoke.js"
       ],
-      "reason": "Match private message density to Global chat: shared-size 14px desktop/12px landscape body text, compact row padding, sender/text/time on one line, and a 24px message menu instead of a 44px row minimum. The isolated browser validator now renders actual Global chat fixtures and compares computed type/line-height and row padding/height at eight desktop, landscape, portrait and reduced-height sizes. It verifies inline time/menu placement without overlap, long-name/unbroken/multiline wrapping, menu/report expansion, full timestamps, scrolling and visible composition. Existing send, translation, navigation, safe-text, account-cleanup and public-chat-return checks cover affected rendering dependencies; the Chat validator covers shared public chat contracts. Production build and asset budgets cover packaged static assets. No server-authoritative, delivery, database or retention changes, so emulator suites are not applicable."
+      "reason": "Send cached alternate-host root/home entries to the canonical game instead of the homepage, preserving search/hash and existing other-host and installed-app behavior. PWA routing tests cover canonical and legacy hosts, notification links, installed modes and offline shell boundaries; production browser checks cover desktop/landscape startup and built entry routes. No session, authentication, data or authority changes."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "tools/local-deploy/canonical_game_routes.js",
+        "tools/test-canonical-game-routes.js"
+      ],
+      "tests": [
+        "tools/test-canonical-game-routes.js",
+        "tools/test-local-deployment.js"
+      ],
+      "reason": "Prepare a narrowly scoped alternate-host Caddy insertion, preserving public website, API/health, protected paths, unsupported-method checks and worker cache/assets. Tests prove exact preservation outside the insertion and refusal of changed/duplicate layouts. The --caddy local integration additionally passes real HTTP GET/HEAD redirects, encoded query preservation, cache-fetch exclusions and unchanged files on an isolated loopback port. Existing publisher tests cover redirect-following byte verification and atomic publication/rollback dependencies. No installed publisher or backend changes; production Caddy installation and public smoke checks are separately verified."
+    },
+    {
+      "paths": [
+        "docs/AUTOMATIC_LOCAL_DEPLOYMENT.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/CANONICAL_GAME_ADDRESS.md"
       ],
       "tests": [],
-      "reason": "Record the explicitly requested refinement to match Global chat density, including moving the timestamp from under the name to the same row. Presentation only; messaging permissions, retention and gameplay remain unchanged."
+      "reason": "Record the explicitly confirmed canonical game address, compatibility scope, validation, reversible Caddy installation and origin-bound session/install limitations. Documentation does not alter monitoring, backup or gameplay policy."
     }
   ]
 }

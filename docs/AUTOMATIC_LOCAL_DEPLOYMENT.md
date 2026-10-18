@@ -46,6 +46,13 @@ https://playcrownlands.com/local-deployment.json and local status before claimin
 publication. A build normally takes several minutes; activation follows on the
 next timer run. An offline computer catches up after it comes back online.
 
+The owner confirmed the primary game address on October 18, 2026. Alternate-host
+entry navigations redirect to `https://playcrownlands.com/play/`; see
+[canonical game routing](CANONICAL_GAME_ADDRESS.md) for the separate Caddy change.
+The publisher follows this entry redirect and still checks exact bytes. The
+alternate host retains static assets and worker-cache requests, so publisher
+code, backend identity and monitoring endpoints do not need to change.
+
 The dedicated signature replaces GitHub artifact attestations, which require
 Enterprise for private repositories. It is a Crownlands-managed signing trust,
 not a GitHub/Sigstore attestation. Protect the repository owner's account, Actions
