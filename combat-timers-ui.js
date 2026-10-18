@@ -9,7 +9,7 @@
   }
   function activeRecords(records, nowMs) {
     return (Array.isArray(records) ? records : []).filter(record => record.status === "available"
-      && !record.usedArmyId && !Number(record.usedAtMs) && Number(record.expiresAtMs) > nowMs)
+      && !record.reservedArmyId && !record.usedArmyId && !Number(record.usedAtMs) && Number(record.expiresAtMs) > nowMs)
       .sort((a, b) => a.expiresAtMs - b.expiresAtMs || String(a.id).localeCompare(String(b.id)));
   }
   const contexts = new WeakMap();
@@ -104,7 +104,7 @@
     if (!note) return;
     const record = activeRecords(records, nowMs).find(entry => entry.id === activeId);
     note.textContent = record
-      ? `Retaliation — ${remaining(record.expiresAtMs, nowMs)} left. Sending uses this city's one retaliation, even if lost or recalled. King Power limits are lifted for this attack.`
+      ? `Retaliation — ${remaining(record.expiresAtMs, nowMs)} left. Used only when combat happens. Shields and recalls preserve the chance within this deadline. King Power limits are lifted for this attack.`
       : "Retaliation unavailable or expired. Reopen Attack to review normal King Power limits.";
   }
   root.CrownlandsCombatTimersUI = { remaining, activeRecords, render, renderFeedback };

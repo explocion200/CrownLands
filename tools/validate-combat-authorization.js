@@ -69,3 +69,31 @@ const start = server.indexOf("exports.launchClanRally =");
 const rally = server.slice(start, server.indexOf("exports.previewArmyProtection", start));
 assert(rally.includes("offensiveShieldCooldownPatch(participantProfiles.get(participant.uid)?.profile"), "Rally contributors need individual cooldowns");
 console.log("Combat policy passed: offensive-only PvP, all objective ownership, reset/retry timing, exact-city/realm/actor grants, expiry boundaries, used grants, ownership changes, independent capturer locks, committed arrival scope and UI countdown boundaries.");
+
+const reserved = { ...record, version: 2, reservedArmyId: "attack", reservedAtMs: army.launchedAtMs };
+const current = { ...army, retaliationAuthorization: reserved };
+const snapshot = data => ({ id: record.id, ref: { path: record.id }, data: () => data });
+assert.match(policy.retaliationError(reserved, identity), /already travelling/);
+assert.equal(ui.activeRecords([reserved], now).length, 0);
+assert(policy.hasCommittedRetaliation(current, identity));
+assert(!policy.hasCommittedRetaliation({ ...current, returning: true }, identity));
+assert(!policy.hasCommittedRetaliation({ ...current, recalledAtMs: now }, identity));
+assert(policy.reservationIsCurrent([snapshot(reserved)], current));
+assert(!policy.reservationIsCurrent([snapshot({ ...reserved, status: "recovered" })], current));
+const writes = [], transaction = { set: (ref, patch) => writes.push(patch) };
+policy.settleReservation(transaction, [snapshot(reserved)], current, now);
+assert.deepEqual(writes.pop(), { reservedArmyId: "", reservedAtMs: 0, updatedAtMs: now });
+policy.settleReservation(transaction, [snapshot(reserved)], current, now, true);
+assert.deepEqual(writes.pop(), { reservedArmyId: "", reservedAtMs: 0, status: "used", usedArmyId: "attack", usedAtMs: now, updatedAtMs: now });
+for (const data of [{ ...reserved, reservedArmyId: "new-army" }, { ...reserved, status: "used" }, { ...reserved, status: "recovered" }]) {
+  policy.settleReservation(transaction, [snapshot(data)], current, now);
+}
+policy.settleReservation(transaction, [snapshot(reserved)], army, now); // Legacy receipts never renew.
+assert.equal(writes.length, 0);
+policy.closeRecoveredCity(transaction, [snapshot(record)], now);
+assert.equal(writes.pop().status, "recovered");
+policy.closeRecoveredCity(transaction, [snapshot(record)], record.capturedAtMs - 1);
+policy.closeRecoveredCity(transaction, [snapshot(reserved)], now, "attack");
+policy.closeRecoveredCity(transaction, [snapshot({ ...record, status: "used" })], now);
+assert.equal(writes.length, 0, "Late events, the combat grant and historical spent grants remain unchanged");
+console.log("Retaliation reservation policy passed: exact receipt, recovery, stale return, legacy isolation and delayed ownership event guards.");

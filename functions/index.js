@@ -8013,29 +8013,35 @@ async function readRetaliationAuthorization(transaction, { uid, recordId, target
       reason: "retaliation-unavailable", retaliationId: recordId,
     });
   }
-  // Repeated losses can leave older unused grants for this city. Read them in
-  // the launch transaction so different grant IDs cannot authorize two sends.
+  // Reserve every pending grant for this city. Even an expired launch window
+  // cannot authorize another army while an earlier valid launch is in flight.
   let refs = [ref];
   if (forLaunch) {
-    const cityGrants = await transaction.get(db.collection(`players/${uid}/retaliationWindows`)
-      .where("cityPath", "==", targetRef.path));
-    refs = cityGrants.docs.filter(doc => !COMBAT_AUTHORIZATION.retaliationError(doc.data(), identity))
-      .map(doc => doc.ref);
+    const cityGrants = await COMBAT_AUTHORIZATION.readCityRecords(db, transaction, uid, targetRef.path, combatAuthorizationRealm());
+    if (cityGrants.some(doc => doc.data().status === "available" && doc.data().reservedArmyId)) {
+      throw new HttpsError("failed-precondition", "A retaliation attack is already travelling to this city.");
+    }
+    refs = cityGrants.filter(doc => !COMBAT_AUTHORIZATION.retaliationError(doc.data(), identity)).map(doc => doc.ref);
   }
   return { refs, record: { ...record, id: recordId } };
 }
 
-function commitRetaliationLaunch(transaction, authorization, movement, nowMs) {
+function reserveRetaliationLaunch(transaction, authorization, movement, nowMs) {
   if (!authorization) return;
   if (Date.now() >= authorization.record.expiresAtMs) {
     throw new HttpsError("failed-precondition", "Retaliation Expired: the launch window for this city has ended.");
   }
-  const used = { status: "used", usedArmyId: movement.id, usedAtMs: nowMs };
-  // Both writes belong to the launch transaction: a failed dispatch consumes nothing.
+  const reserved = { version: 2, reservedArmyId: movement.id, reservedAtMs: nowMs };
   for (const ref of authorization.refs) {
-    transaction.set(ref, { ...used, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    transaction.set(ref, { ...reserved, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
   }
-  movement.retaliationAuthorization = { ...authorization.record, ...used };
+  movement.retaliationAuthorization = { ...authorization.record, ...reserved };
+}
+
+async function readArmyRetaliationRecords(transaction, army) {
+  const receipt = army?.retaliationAuthorization;
+  return receipt?.version === 2
+    ? COMBAT_AUTHORIZATION.readCityRecords(db, transaction, army.ownerUid, receipt.cityPath, combatAuthorizationRealm()) : [];
 }
 
 function recordCaptureRetaliation(transaction, { armyId, target, targetRef, originalOwnerUid, capturerUid, highPower, lowPower, nowMs }) {
@@ -19989,10 +19995,16 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
         const army = { ...doc.data(), id: safeString(doc.id, 96) };
         if (army.id) armiesById.set(army.id, army);
       });
+      const returningArmies = [];
       armiesById.forEach(army => {
         const direction = getPeaceShieldReturnDirection(army, uid, nowMs);
         if (!direction) return;
         if (direction === "incoming" && !shieldedCityKeys.has(`${army.targetRegionId}:${army.toId}`)) return;
+        returningArmies.push({ army, direction });
+      });
+      const reservations = await Promise.all(returningArmies.map(({ army }) => readArmyRetaliationRecords(transaction, army)));
+      returningArmies.forEach(({ army, direction }, index) => {
+        COMBAT_AUTHORIZATION.settleReservation(transaction, reservations[index], army, nowMs);
         const movement = createMidRouteReturnMovement(army, nowMs, PEACE_SHIELD_RETURN_REASON);
         writeArmyMovementCopies(transaction, movement, {
           previousTargetOwnerUid: army.targetOwnerUid,
@@ -20223,6 +20235,8 @@ exports.useRecallHorn = onCall({ region: "us-central1", maxInstances: 20, invoke
     const owned = Math.max(0, Math.floor(safeNumber(shopItems[RECALL_HORN_ITEM_ID], 0)));
     if (owned <= 0) throw new HttpsError("failed-precondition", "You do not have a Recall Horn.");
 
+    const retaliationRecords = await readArmyRetaliationRecords(transaction, army);
+    COMBAT_AUTHORIZATION.settleReservation(transaction, retaliationRecords, army, nowMs);
     const movement = createMidRouteReturnMovement(army, nowMs, RECALL_HORN_ITEM_ID);
     const returnDurationMs = movement.arrivesAtMs - nowMs;
     let campUpdate = null;
@@ -26981,7 +26995,7 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
         createdByServer: true,
         serverAuthorityVersion: 3,
       };
-      commitRetaliationLaunch(transaction, retaliation, movement, nowMs);
+      reserveRetaliationLaunch(transaction, retaliation, movement, nowMs);
       let profilePatch = offensiveShieldCooldownPatch(profileAfter, uid, target, kind, nowMs);
       const cityPatches = [];
       const launchCityPatches = [];
@@ -27568,7 +27582,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
     };
 
     staminaService.writeChanges(transaction, staminaChanges);
-    commitRetaliationLaunch(transaction, retaliation, movement, nowMs);
+    reserveRetaliationLaunch(transaction, retaliation, movement, nowMs);
     let profileOverrides = offensiveShieldCooldownPatch(attackerProfile, uid, target, resolvedKind, nowMs);
     if (resolvedKind === "reinforce") {
       const assignmentToken = getClanReinforcementAssignmentToken(targetOwnerUid, reinforcementTargetKey);
@@ -28859,6 +28873,12 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       : null;
     const attackerUid = safeString(army.ownerUid, 128);
     const defenderUid = isReturning ? "" : getOwnerUid(target);
+    const retaliationRecords = targetType === "city" && !isStronghold(target) && army.kind === "attack"
+      ? await COMBAT_AUTHORIZATION.readCityRecords(db, transaction, attackerUid, targetRef.path, combatAuthorizationRealm()) : [];
+    const defenderRetaliationRecords = targetType === "city" && !isStronghold(target) && army.kind === "attack" && defenderUid !== attackerUid
+      ? await COMBAT_AUTHORIZATION.readCityRecords(db, transaction, defenderUid, targetRef.path, combatAuthorizationRealm()) : [];
+    let retaliationHit = false;
+
     const citadelReignSnapshots = await prefetchCrownCitadelReignSnapshots(transaction, {
       citadel: target,
       previousOwnerUid: defenderUid,
@@ -29212,6 +29232,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       };
     };
     const markResolved = resultPatch => {
+      COMBAT_AUTHORIZATION.settleReservation(transaction, retaliationRecords, army, nowMs, retaliationHit);
       const patch = {
         status: "resolved",
         resolvedAtMs: nowMs,
@@ -29609,7 +29630,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       : "breach";
     const committedRetaliation = COMBAT_AUTHORIZATION.hasCommittedRetaliation(army, {
       cityId: target.id, regionId: targetRegionId, ...combatAuthorizationRealm(),
-    });
+    }) && (army.retaliationAuthorization?.version !== 2 || COMBAT_AUTHORIZATION.reservationIsCurrent(retaliationRecords, army));
     const storedAttackProtection = effectiveKind === "attack" && targetType !== "camp" && !committedRetaliation
       ? normalizeAttackProtectionSnapshot(army.attackProtection, army.demoAttack)
       : null;
@@ -30175,7 +30196,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       };
     }
 
-    if (becameClanAllies) {
+    const revokedRetaliation = !isReturning && effectiveKind === "attack" && army.retaliationAuthorization?.version === 2 && !committedRetaliation;
+    if (becameClanAllies || revokedRetaliation) {
+      COMBAT_AUTHORIZATION.settleReservation(transaction, retaliationRecords, army, nowMs);
       const movement = createAlliedTargetReturnMovement(army, nowMs);
       writeArmyMovementCopies(transaction, movement, {
         previousTargetOwnerUid: army.targetOwnerUid,
@@ -30192,7 +30215,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         campUpdate = campUpdateForClient(target.id, targetRegionId, campPatch);
       }
       writeParticipantEconomies({}, {}, { addActiveArmies: [movement] });
-      writeClanAudit(transaction, attackerProfile.clanId, attackerUid, "friendly_march_return_started", {
+      if (becameClanAllies) writeClanAudit(transaction, attackerProfile.clanId, attackerUid, "friendly_march_return_started", {
         armyId,
         defenderUid,
         troops: troopCount,
@@ -30204,7 +30227,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         ok: true,
         status: "returning",
         kind: "transfer",
-        outcome: "allied_return_started",
+        outcome: revokedRetaliation ? "retaliation_unavailable" : "allied_return_started",
         movement,
         campUpdate,
         returnSeconds: Math.max(1, Math.ceil((movement.arrivesAtMs - nowMs) / 1000)),
@@ -31590,6 +31613,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     }
 
     if (effectiveKind === "transfer") {
+      COMBAT_AUTHORIZATION.closeRecoveredCity(transaction, retaliationRecords, nowMs);
       const nextTroops = Math.max(0, Math.floor(safeNumber(target.troops, 0))) + troopCount;
       const targetTroopPatch = {
         troops: nextTroops,
@@ -31728,6 +31752,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       troopCount = allowedTroops;
     }
 
+    retaliationHit = committedRetaliation;
     const oldOwnerUid = defenderUid;
     const defendersAtStart = Math.max(0, Math.floor(safeNumber(combatTarget.troops, 0)));
     const snapshottedAttackPower = getSnapshottedAttackPower(army.attackCombatSnapshot, troopCount);
@@ -32126,6 +32151,10 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           legacySnapshots: strongholdLegacySnapshots,
         });
       }
+      COMBAT_AUTHORIZATION.closeRecoveredCity(transaction, retaliationRecords, nowMs, retaliationHit ? armyId : "");
+      // The previous owner held this city immediately before this new loss.
+      // Close obsolete grants before creating their new qualifying opportunity.
+      COMBAT_AUTHORIZATION.closeRecoveredCity(transaction, defenderRetaliationRecords, nowMs);
       const retaliationAbandonLocks = recordCaptureRetaliation(transaction, {
         armyId, target: { ...target, regionId: targetRegionId }, targetRef,
         originalOwnerUid: oldOwnerUid, capturerUid: attackerUid,
@@ -33048,6 +33077,14 @@ async function processOwnershipChangeEvent(event) {
   const targetType = change.targetType === "camp" ? "camp" : "city";
   const beforeOwnerUid = safeString(change.beforeOwnerUid, 128);
   const afterOwnerUid = safeString(change.afterOwnerUid, 128);
+  if (targetType === "city" && afterOwnerUid && afterOwnerUid !== beforeOwnerUid) {
+    await runTransactionWithInfrastructureRetry(async transaction => {
+      const cityRef = cityRefForRegion(normalizeRegionId(change.regionId), safeString(change.targetId, 96));
+      const records = await COMBAT_AUTHORIZATION.readCityRecords(db, transaction, afterOwnerUid, cityRef.path, combatAuthorizationRealm());
+      // Event time prevents delayed ownership work from closing a later loss.
+      COMBAT_AUTHORIZATION.closeRecoveredCity(transaction, records, timestampToMs(change.createdAtMs));
+    });
+  }
   const armyRefresh = await refreshActiveArmyTargetOwner(change.targetKey, afterOwnerUid);
   const armyUpdates = armyRefresh.updated;
   const cancelledAssemblyRallies = await cancelInvalidAssemblyRalliesAfterOwnershipChange(change);

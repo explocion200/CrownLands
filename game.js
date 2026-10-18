@@ -20013,16 +20013,28 @@ function renderCombatTimers() {
   globalThis.CrownlandsStaminaUI?.tick();
   updateMarauderRespawnTimers();
   refreshOwnedCityRosterIfNeeded();
-  const ownSnapshot = onlineCombatAuthorization.uid === getCurrentOnlineUid() ? onlineCombatAuthorization : {};
+  const ownSnapshot = onlineCombatAuthorization.uid === getCurrentOnlineUid()
+    ? { ...onlineCombatAuthorization, retaliation: getAvailableRetaliationRecords() } : {};
   const ui = globalThis.CrownlandsCombatTimersUI, nowMs = getClanQuestServerNowMs();
   ui?.render(document.getElementById("combatTimers"), ownSnapshot, nowMs, focusBattleReportTarget);
   ui?.renderFeedback(modalBody, { records: ownSnapshot.retaliation, activeId: activeRetaliationId,
     getCityRecord: id => getTargetRetaliation(cityById(id)), nowMs });
 }
 
+function getAvailableRetaliationRecords() {
+  if (onlineCombatAuthorization.uid !== getCurrentOnlineUid()) return [];
+  const owned = new Set(onlineOwnedCitiesCache.filter(city => city.ownerUid === getCurrentOnlineUid())
+    .map(city => `${city.regionId}:${city.id}`));
+  return (onlineCombatAuthorization.retaliation || []).filter(record => {
+    if (owned.has(`${record.regionId}:${record.cityId}`)) return false;
+    const city = state?.cities?.find(city => city.id === record.cityId && getCityRegionId(city) === record.regionId);
+    return !city || (city.ownerUid !== getCurrentOnlineUid() && !isClanAllyCity(city));
+  });
+}
+
 function getTargetRetaliation(target) {
-  if (!target || onlineCombatAuthorization.uid !== getCurrentOnlineUid()) return null;
-  return globalThis.CrownlandsCombatTimersUI?.activeRecords(onlineCombatAuthorization.retaliation, getClanQuestServerNowMs())
+  if (!target || target.ownerUid === getCurrentOnlineUid() || isClanAllyCity(target)) return null;
+  return globalThis.CrownlandsCombatTimersUI?.activeRecords(getAvailableRetaliationRecords(), getClanQuestServerNowMs())
     .find(record => record.cityId === target.id && record.regionId === getCityRegionId(target)) || null;
 }
 
@@ -32791,7 +32803,7 @@ async function confirmTroopSliderOrder(shieldConfirmation = null) {
     renderAll();
     return;
   }
-  if (activeRetaliationId && !globalThis.CrownlandsCombatTimersUI.activeRecords(onlineCombatAuthorization.retaliation, getClanQuestServerNowMs()).some(record => record.id === activeRetaliationId)) {
+  if (activeRetaliationId && !globalThis.CrownlandsCombatTimersUI.activeRecords(getAvailableRetaliationRecords(), getClanQuestServerNowMs()).some(record => record.id === activeRetaliationId)) {
     rejectGameAction("Retaliation unavailable or expired. Reopen Attack to review normal King Power limits.");
     return;
   }

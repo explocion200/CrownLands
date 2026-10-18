@@ -69,3 +69,14 @@ New qualifying city losses grant 24 hours to send one retaliation attack at that
 The HUD and attack feedback display hours for long countdowns and retain minute/second display below one hour. The handbook and battle/economy guide explain the 24-hour window and consumption on send. The change adds no timers, listeners or per-frame work.
 
 Focused coverage includes the exact 24-hour boundary, historical saved deadlines, same-city concurrent dispatch and retries, failed dispatch preservation, failed combat and recall without renewed retaliation, Tower-origin attacks, arrival after the window, independent cities, and desktop/landscape-mobile countdown layout.
+
+
+## October 18 revision: one combat, with a launch reservation
+
+Branch: `codex/retaliation-on-impact`. Status: implementation pending validation and deployment. This revision supersedes the consumption-on-dispatch descriptions above.
+
+Dispatch atomically reserves every available, unexpired same-city grant with `version: 2`, `reservedArmyId` and `reservedAtMs`. A second launch cannot use another grant for that city, even if the first army's launch window has elapsed during travel. The original outbound army carries the reservation receipt; arrival validates its exact actor/city/map/realm and the current stored reservation. Combat consumes the reserved grants atomically with settlement, whether won or lost. Main City, Shield, clan and anti-farming checks precede combat. Shield activation, a Recall Horn and noncombat arrival outcomes release only reservations still belonging to that army; an old return cannot clear a newer launch. No deadline is extended.
+
+Recapture closes outstanding same-city grants in the capture transaction, including when a different army wins. Ownership events also close older grants using the event timestamp so late events cannot close a subsequent loss. The HUD excludes recovered cities using the existing ownership roster and loaded map, and suppresses loaded clan-owned targets. No new browser listeners or timers are added. Reservations remain in the existing private available-record subscription, but are not advertised as another available attack. Cancelling before combat makes the original countdown reappear. Legacy spent grants are never revived and legacy outbound receipts remain valid.
+
+The updated handbook and battle guide explain one combat within the original 24-hour launch window. No automatic backup or live data backfill accompanies this change.
