@@ -10738,7 +10738,7 @@ function renderRealmActivityCard(event = {}) {
       <footer class="realm-activity-card-foot activity-foot">
         <span><b>Objective</b>${escapeHtml(objectiveMeta)}</span>
         <span><b>Location</b>${escapeHtml(getRegionLabel(event.regionId))}</span>
-        <button class="realm-activity-location-btn location-button" type="button" data-realm-activity-location="${escapeHtml(event.eventId)}">View Location</button>
+        <button class="realm-activity-location-btn location-button location-icon-button" aria-label="View location" title="View location" type="button" data-realm-activity-location="${escapeHtml(event.eventId)}">View Location</button>
       </footer>
     </article>
   `;
@@ -14110,7 +14110,7 @@ function renderPublicPlayerProfile(profile) {
       </section>
     </div>
     <footer class="public-profile-footer"><div><span>Main City</span><strong>${profile.mainCityId ? escapeHtml(getRegionLabel(profile.mainRegionId || getCityRegionId(profile.mainCityId))) : "Location unavailable"}</strong></div>
-      <button class="public-profile-location" type="button" data-public-main-city="${escapeHtml(profile.mainCityId)}" data-public-main-region="${escapeHtml(profile.mainRegionId)}" ${profile.mainCityId && !publicPlayerLocationPending ? "" : "disabled"}>${renderCrownlandsIcon("locate")}<span>${publicPlayerLocationPending ? "Locating…" : "View Main City"}</span></button>
+      <button class="public-profile-location location-icon-button" title="View Main City" type="button" data-public-main-city="${escapeHtml(profile.mainCityId)}" data-public-main-region="${escapeHtml(profile.mainRegionId)}" ${profile.mainCityId && !publicPlayerLocationPending ? "" : "disabled"}>${renderCrownlandsIcon("locate")}<span>${publicPlayerLocationPending ? "Locating…" : "View Main City"}</span></button>
     </footer><p class="public-profile-location-status" role="status"></p>`;
   FlagRenderer.render(modalBody.querySelector("#publicPlayerFlag"), profile.flag, { stableKey: profile.uid, context: "public-profile" });
   window.CrownlandsSocial?.profileActions(modalBody, profile.uid);
@@ -15260,8 +15260,8 @@ function renderIslandSwitcherModalContent() {
   modalBody.innerHTML = `
     <div class="island-map-shell">
       <div class="atlas-toolbar">
-        <button type="button" class="location-shortcut" data-atlas-focus="${escapeHtml(activeRegionId)}"><small>Current map</small><strong>${escapeHtml(getRegionLabel(activeRegionId))}</strong></button>
-        <button type="button" class="location-shortcut home" data-atlas-focus="${escapeHtml(homeRegionId)}"><small>Home map</small><strong>${escapeHtml(getRegionLabel(homeRegionId))}</strong></button>
+        <div class="location-shortcut atlas-location-shortcut"><div><small>Current map</small><strong>${escapeHtml(getRegionLabel(activeRegionId))}</strong></div><button type="button" class="location-icon-button" data-atlas-focus="${escapeHtml(activeRegionId)}" aria-label="Locate current map: ${escapeHtml(getRegionLabel(activeRegionId))}" title="Locate current map"></button></div>
+        <div class="location-shortcut atlas-location-shortcut home"><div><small>Home map</small><strong>${escapeHtml(getRegionLabel(homeRegionId))}</strong></div><button type="button" class="location-icon-button" data-atlas-focus="${escapeHtml(homeRegionId)}" aria-label="Locate home map: ${escapeHtml(getRegionLabel(homeRegionId))}" title="Locate home map"></button></div>
         <button type="button" class="fit-button" data-atlas-fit>Whole realm</button>
         <div class="zoom-controls"><button type="button" data-atlas-zoom="-1" aria-label="Zoom out">−</button><output data-atlas-zoom-value aria-label="Map zoom"></output><button type="button" data-atlas-zoom="1" aria-label="Zoom in">+</button></div>
       </div>
@@ -30297,7 +30297,7 @@ function deedCampHistoryMarkup(history = [], status = "ready") {
               <span>${escapeHtml(entry.regionName || getRegionLabel(entry.regionId))}</span>
               <small>Awarded to you &middot; ${escapeHtml(awardedAt)}</small>
             </span>
-            <button class="battle-report-locate-btn deed-history-locate" type="button" data-deed-history-jump="${escapeHtml(entry.cityId)}" data-deed-history-region="${escapeHtml(entry.regionId)}" aria-label="Go to ${escapeHtml(cityName)}">${renderCrownlandsIcon("locate")}</button>
+            <button class="battle-report-locate-btn deed-history-locate location-icon-button" title="View city on map" type="button" data-deed-history-jump="${escapeHtml(entry.cityId)}" data-deed-history-region="${escapeHtml(entry.regionId)}" aria-label="Go to ${escapeHtml(cityName)}">${renderCrownlandsIcon("locate")}</button>
           </li>`;
       }).join("")}
     </ol>
@@ -34362,7 +34362,7 @@ function renderCityListRow(city) {
       <div class="cll-production">${stats ? `<span>${cityDetailsIcon("coin")}<span>${cityDetailsNumber(stats.goldProductionPerHour)} <small>gold / h</small></span></span><span>${cityDetailsIcon("troops")}<span>${cityDetailsNumber(stats.troopProductionPerHour)} <small>troops / h</small></span></span>` : `<span>${escapeHtml(statusLabel)}</span><small>Owner bonus</small>`}</div>
       <div class="city-list-actions">
         <div class="cll-upgrades">${optionState ? optionState.options.map(option => renderCityListUpgradeButton(city, option)).join("") : `<span class="cll-no-upgrade">Stronghold</span>`}
-        <button class="cll-locate" data-city-list-jump="${escapeHtml(city.id)}" data-city-list-region="${escapeHtml(regionId)}" type="button" aria-label="Center on ${escapeHtml(city.name)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/><circle cx="12" cy="12" r="7"/><path d="m12 8 3 4-3 4-3-4Z"/></svg></button></div>
+        <button class="cll-locate location-icon-button" title="View city on map" data-city-list-jump="${escapeHtml(city.id)}" data-city-list-region="${escapeHtml(regionId)}" type="button" aria-label="Center on ${escapeHtml(city.name)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/><circle cx="12" cy="12" r="7"/><path d="m12 8 3 4-3 4-3-4Z"/></svg></button></div>
         ${upgradeStatus ? `<small class="city-list-upgrade-result" role="status">${escapeHtml(upgradeStatus)}</small>` : ""}
       </div>
     </article>
@@ -34825,7 +34825,7 @@ function showDailyMissionDetails(missionId = "") {
   const complete = mission.completedAtMs || mission.claimedAtMs || mission.progress >= mission.target;
   const recommendation = mission.recommendedTarget;
   const recommendationHtml = recommendation ? `<section class="daily-mission-recommendation"><span>Low-risk target</span><strong>${escapeHtml(recommendation.cityName)}</strong>
-    <small>${escapeHtml(getRegionLabel(recommendation.regionId))}${recommendation.sourceCityName ? ` · From ${escapeHtml(recommendation.sourceCityName)}` : ""} · ≤${formatNumber(recommendation.recommendedTroops)} troops · ~${formatNumber(recommendation.estimatedLosses)} losses</small><button class="profile-primary-btn" type=button>View on Map</button><p>Recheck forecast before marching.</p></section>` : "";
+    <small>${escapeHtml(getRegionLabel(recommendation.regionId))}${recommendation.sourceCityName ? ` · From ${escapeHtml(recommendation.sourceCityName)}` : ""} · ≤${formatNumber(recommendation.recommendedTroops)} troops · ~${formatNumber(recommendation.estimatedLosses)} losses</small><button class="profile-primary-btn location-icon-button" type=button aria-label="View suggested target on map" title="View suggested target on map">View on Map</button><p>Recheck forecast before marching.</p></section>` : "";
   if (!openDailyMissionModal(mission.title, `
     <section class="daily-mission-detail">
       <span class="daily-mission-detail-icon" aria-hidden="true">${renderCrownlandsIcon(DAILY_MISSION_ICONS[mission.icon] || DAILY_MISSION_ICONS.banner)}</span>
@@ -38351,7 +38351,7 @@ function renderHeldStrongholdOperationCard(stronghold) {
 }
 
 function renderActiveOperationLocationButton(target, type) {
-  return `<button class="incoming-attack-locate" data-operation-location="${escapeHtml(target.id)}" data-operation-region="${escapeHtml(getCityRegionId(target))}" data-operation-type="${escapeHtml(type)}" type="button" aria-label="Go to ${escapeHtml(target.name)}">${renderCrownlandsIcon("locate")}</button>`;
+  return `<button class="incoming-attack-locate location-icon-button" title="View location" data-operation-location="${escapeHtml(target.id)}" data-operation-region="${escapeHtml(getCityRegionId(target))}" data-operation-type="${escapeHtml(type)}" type="button" aria-label="Go to ${escapeHtml(target.name)}">${renderCrownlandsIcon("locate")}</button>`;
 }
 
 async function focusActiveOperationLocation({ id = "", regionId = "", type = "" } = {}) {
@@ -38471,7 +38471,7 @@ function renderOutgoingAttackCard(mission) {
     ? `<button class="command swift" data-swift-march-order="${escapeHtml(onlineId)}" type="button" aria-label="Use Swift March Order on ${escapeHtml(targetName)}" ${itemActionBusy ? "disabled" : ""}>${renderItemIcon(getShopItemById(SWIFT_MARCH_ORDER_ITEM_ID))}<span>Swift Order</span></button>` : "";
   const recallButton = recallEligible && (recallCount > 0 || recallBusy)
     ? `<button class="command recall" data-recall-horn="${escapeHtml(onlineId)}" type="button" aria-label="Use Recall Horn on ${escapeHtml(targetName)}" ${itemActionBusy ? "disabled" : ""}>${renderItemIcon(getShopItemById(RECALL_HORN_ITEM_ID))}<span>Recall</span></button>` : "";
-  const mapButton = `<button class="command locate" ${marchId ? `data-outgoing-march="${escapeHtml(marchId)}"` : "disabled"} type="button" title="Go to current march location" aria-label="Go to current march location">${renderBattleReportLedgerIcon("map")}<span>Map</span></button>`;
+  const mapButton = `<button class="command locate location-icon-button" ${marchId ? `data-outgoing-march="${escapeHtml(marchId)}"` : "disabled"} type="button" title="Go to current march location" aria-label="Go to current march location">${renderBattleReportLedgerIcon("map")}<span>Map</span></button>`;
   const commandNote = swiftBusy ? "Applying Swift Order..." : recallBusy ? "Sounding Recall..." : !swiftCount && !recallCount && (swiftEligible || recallEligible) ? "No march items in your bag" : "";
   const pending = mission.serverPending || mission.isResolving;
   const timing = mission.serverPending ? mission.serverRetrying ? "Checking" : "Sending" : mission.isResolving ? mission.kind === "scout" ? "Receiving report…" : "Resolving" : formatDuration(mission.remaining);
@@ -39088,12 +39088,12 @@ function renderBattleReportLocateButton(report, extraClass = "") {
   const cityId = getResolvableReportCityId(report?.cityId, report?.regionId);
   const icon = extraClass === "row-action" ? renderBattleReportLedgerIcon("map") : renderCrownlandsIcon("locate");
   if (!cityId) {
-    return `<button class="battle-report-locate-btn ${extraClass}" type="button" aria-label="Target unavailable" disabled>${icon}</button>`;
+    return `<button class="battle-report-locate-btn location-icon-button ${extraClass}" title="View report location" type="button" aria-label="Target unavailable" disabled>${icon}</button>`;
   }
   const loadedCity = getArmyTargetById(cityId);
   const regionId = report.regionId || getCityRegionId(loadedCity || cityId);
   const label = report.cityName || "target city";
-  return `<button class="battle-report-locate-btn ${extraClass}" data-report-jump="${escapeHtml(cityId)}" data-report-region="${escapeHtml(regionId)}" type="button" aria-label="Go to ${escapeHtml(label)}">${icon}</button>`;
+  return `<button class="battle-report-locate-btn location-icon-button ${extraClass}" title="View report location" data-report-jump="${escapeHtml(cityId)}" data-report-region="${escapeHtml(regionId)}" type="button" aria-label="Go to ${escapeHtml(label)}">${icon}</button>`;
 }
 
 function getResolvableReportCityId(cityId, regionId = "") {

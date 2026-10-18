@@ -82,7 +82,7 @@
     const list = details.querySelector("[data-retaliation-list]");
     const signature = JSON.stringify([snapshot.uid, records.map(record => [record.id, record.cityName, record.cityId, record.regionId])]);
     if (list.dataset.signature !== signature) {
-      list.innerHTML = records.map(record => `<li><span>${escape(record.cityName || record.cityId)}<small>${escape(record.regionId)} · ${escape(record.cityId)}</small></span><strong data-retaliation-time="${escape(record.id)}"></strong><button class="retaliation-location" type="button" data-retaliation-location="${escape(record.id)}" aria-label="View ${escape(record.cityName || record.cityId)} on map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-7 7-12a7 7 0 0 0-14 0c0 5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>Map</button></li>`).join("");
+      list.innerHTML = records.map(record => `<li><span>${escape(record.cityName || record.cityId)}<small>${escape(record.regionId)} · ${escape(record.cityId)}</small></span><strong data-retaliation-time="${escape(record.id)}"></strong><button class="retaliation-location location-icon-button" title="View city on map" type="button" data-retaliation-location="${escape(record.id)}" aria-label="View ${escape(record.cityName || record.cityId)} on map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-7 7-12a7 7 0 0 0-14 0c0 5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>Map</button></li>`).join("");
       list.dataset.signature = signature;
       element.querySelector("[data-location-feedback]")?.remove();
       const feedback = element.ownerDocument.createElement("p");

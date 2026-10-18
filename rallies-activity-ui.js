@@ -48,7 +48,7 @@ function patchCityRallyAssemblyPanels() {
 
 function renderRallyAssemblyLink(rally) {
   const name = escapeHtml(rally.assemblyCityName || rally.assemblyCityId || "City");
-  return `<button type="button" class="rally-assembly-link" data-rally-action="assembly" data-rally-id="${escapeHtml(rally.id)}" aria-label="Show assembly city ${name} on map" title="Show assembly city on map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2Zm6-2v16m6-14v16"/></svg><span>${name}</span></button>`;
+  return `<span class="rally-assembly-location"><span title="${name}">${name}</span><button type="button" class="rally-assembly-link location-icon-button" data-rally-action="assembly" data-rally-id="${escapeHtml(rally.id)}" aria-label="Show assembly city ${name} on map" title="Show assembly city on map"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2Zm6-2v16m6-14v16"/></svg><span>${name}</span></button></span>`;
 }
 
 async function focusClanRallyAssembly(rally) {

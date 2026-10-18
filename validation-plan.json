@@ -1,16 +1,59 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "e7ebcb2f83a1ce63cbd11c559fe10c7a5dcf68eb",
+  "baseCommit": "cd53e46a424e68322562f437872c1020af40f32f",
   "coverage": [
     {
-      "paths": ["social-ui.css", "chat-ledger-ui.css", "tools/validate-social-browser.js"],
-      "tests": ["tools/validate-social-browser.js", "tools/validate-chat-reward-ledgers-browser.js", "tools/validate-asset-performance-budgets.js"],
-      "reason": "Compare computed frame, header, tab geometry and typography across Global, Clan, Messages and Friends at eight desktop, short-window, landscape-mobile and portrait sizes. Match social content and player-name typography to the shared chat sizes, keep every tab visible, and retain compact private-message rows, readable scrollable history, visible composer, touch targets, row navigation, reporting and translation. The shared chat ledger browser suite protects Global/Clan layout, draft retention, translation and mini-chat behavior after shared CSS changes. Asset budgets protect the client package. No server authority, networking or data behavior changes, so emulator suites are not applicable."
+      "paths": [
+        "game.js",
+        "combat-timers-ui.js",
+        "incoming-threats-ui.js",
+        "objectives-activity-ui.js",
+        "quests-ui.js",
+        "rallies-activity-ui.js",
+        "reinforcements-activity-ui.js",
+        "location-buttons.css",
+        "tools/validate-location-buttons-browser.js"
+      ],
+      "tests": [
+        "tools/validate-location-buttons-browser.js",
+        "tools/validate-reinforcement-locations-browser.js",
+        "tools/validate-incoming-threats-browser.js",
+        "tools/validate-public-player-profile-browser.js",
+        "tools/validate-city-list-browser.js",
+        "tools/validate-combat-timers-browser.js",
+        "tools/validate-rally-assembly-browser.js",
+        "tools/validate-report-location-navigation.js",
+        "tools/validate-battle-report-detail.js",
+        "tools/validate-scout-report-ui.js"
+      ],
+      "reason": "The common square image control affects all actual map-jump surfaces. Compare real rendered artwork and previous button/row geometry at 1440x900, 844x390 and 568x320 across atlas shortcuts, reports, realm activity, battle/scout detail, marches and long names, camps, strongholds, rally assembly, all reinforcement groups, incoming threats, public profiles including disabled state, both quest templates, city/deed lists and retaliation. Preserve accessible names, focus, labels, alpha and slot sizes. Existing navigation suites protect same/cross-map routing, current moving-army position, retry/failure, stale-account/clan guards, scroll/focus preservation, all reinforcement sections, city-list ownership and rally assembly from both Activity and Clan War Room. Report snapshot tests cover shared detail/Scout rendering dependencies. Presentation only: no server authority, economy, database, movement or retaliation rule changes; no emulator suites apply."
     },
     {
-      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
-      "tests": ["tools/validate-social-browser.js"],
-      "reason": "Record the explicitly requested consistent chat frame, navigation sizing and compact social typography; the browser regression compares those exact properties across all four tabs."
+      "paths": [
+        "index.html",
+        "service-worker.js",
+        "tools/build-production-client.js",
+        "tools/asset-performance-budgets.js",
+        "tools/validate-asset-performance-budgets.js",
+        "assets/optimized/location-map-flag-192x192-cf45708cfe0c.webp"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-location-buttons-browser.js"
+      ],
+      "reason": "Load and cache the shared stylesheet, ship the hashed transparent 14.4 KiB image on demand, and verify its checksum/alpha/192px dimensions. The source shell grows 3,668 bytes over the previous cap (bounded at 4 KiB); game.js markup needs at most 1 KiB above its prior entry cap. Build validation must verify package closure and both game entry points; image source masters are excluded from production."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/art-sources/location-button/README.md",
+        "docs/art-sources/location-button/delivery.json",
+        "docs/art-sources/location-button/location-map-flag-v1.png"
+      ],
+      "tests": [
+        "tools/validate-location-buttons-browser.js"
+      ],
+      "reason": "Record the explicitly approved image and square-control design, retaining destinations and existing container sizes. Preserve the original approved PNG and reproducible technical thumbnail metadata; the visual regression verifies delivery identity and design constraints. No additional gameplay behavior is introduced."
     }
   ]
 }
