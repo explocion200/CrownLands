@@ -224,7 +224,7 @@
       const sender = element("div", null, "social-message-sender"), sentAt = new Date(message.createdAtMs);
       const time = element("time", sentAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
       time.dateTime = sentAt.toISOString(); time.title = sentAt.toLocaleString(); time.setAttribute("aria-label", time.title);
-      sender.append(element("strong", message.senderDisplayName), time); row.append(sender);
+      sender.append(element("strong", message.senderDisplayName)); row.append(sender);
       const text = element("p", message.text); text.dir = "auto";
       const tools = element("div", null, "social-row-actions");
       const translate = button("Translate", () => run(async () => {
@@ -241,7 +241,7 @@
       if (message.senderUid !== uid) tools.append(button("Report", () => reportMessage(row, message)));
       tools.append(element("small", "Translate sends only this message to Google Translation.", "social-translation-note"));
       const menu = element("details", null, "social-message-menu"), summary = element("summary", "⋯"); summary.setAttribute("aria-label", "Message actions"); menu.append(summary, tools);
-      const attribution = element("small", "Translated by Google"); attribution.hidden = true; row.append(text, menu, attribution); log.append(row);
+      const attribution = element("small", "Translated by Google"); attribution.hidden = true; row.append(text, time, menu, attribution); log.append(row);
     }
     thread.append(log);
     const form = element("form", null, "social-compose"), input = element("textarea"), send = element("button", "Send");
