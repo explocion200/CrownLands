@@ -5,7 +5,7 @@ const layout = require("../core-expansion-world-layout.json");
 const towers = require("../holding-towers");
 
 // Shared by the current-realm emulator and an isolated PostgreSQL schema.
-module.exports = async function rallyRecallRejoinCases({ db, actor, call }) {
+module.exports = async function rallyRecallRejoinCases({ db, actor, call, settleReceipt }) {
   const users = [await actor("Recall leader"), await actor("Recall ally"), await actor("Recall third")];
   const [leader, ally, third] = users;
   const realm = await call("getRealmInfo", leader);
@@ -73,7 +73,20 @@ module.exports = async function rallyRecallRejoinCases({ db, actor, call }) {
     await due(movement);
     return movement;
   }
-  const cancel = rally => call("cancelClanRally", leader, params(rally));
+  const cancel = async rally => {
+    const result = await call("cancelClanRally", leader, params(rally));
+    const receipts = await db.collection(`rallyBattleReceipts/${identity.resetGeneration}--${identity.realmShardId}/entries`)
+      .where("rallyId", "==", rally.id).get();
+    // Firestore runs document triggers asynchronously. PostgreSQL's isolated
+    // fixture invokes the same handler explicitly; neither may leak settlement
+    // from a previous scenario into the next scenario's troop-counter baseline.
+    if (settleReceipt) for (const snapshot of receipts.docs) await settleReceipt(snapshot);
+    for (let attempt = 0; attempt < 100; attempt++) {
+      if ((await Promise.all(receipts.docs.map(doc => read(doc.ref)))).every(row => row.status === "settled")) return result;
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    assert.fail("Cancellation receipts did not settle before the next fixture");
+  };
   const first = await form(); await join(first);
   const initialHome = await read(city(ally.home));
   const initialAssembly = await read(city(assembly));
@@ -157,7 +170,7 @@ module.exports = async function rallyRecallRejoinCases({ db, actor, call }) {
     assert(!results.some(row => row.outcome === "rejoined"), `${scenario} must not rejoin`);
     const homeAfter = await read(city(ally.home));
     assert(homeAfter.troops >= homeBefore.troops + 5000 && homeAfter.troops < homeBefore.troops + 5100, `${scenario}: return exactly once`);
-    assert.equal((await read(profile(ally))).committedRallyTroops, baseCommitted + (scenario === "new contribution" ? 2000 : 0));
+    assert.equal((await read(profile(ally))).committedRallyTroops, baseCommitted + (scenario === "new contribution" ? 2000 : 0), scenario);
     assert.equal((await read(db.doc(`armies/${movement.id}`))).status, "resolved", `${scenario}: no stuck march`);
     // Restore only synthetic fixture eligibility, then release this forming slot.
     await profile(leader).update({ clanId: savedLeader.clanId }); await profile(ally).update({ clanId: savedAlly.clanId });

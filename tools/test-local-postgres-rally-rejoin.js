@@ -19,6 +19,7 @@ const assert = require("node:assert/strict"), { randomBytes } = require("node:cr
       return result;
     };
     await require("../functions/test/rally-recall-rejoin-cases")({ db, call,
+      settleReceipt: snapshot => game.settleRallyBattle({ data: snapshot, params: { receiptId: snapshot.id } }),
       actor: async label => ({ uid: `recall_${randomBytes(5).toString("hex")}`, label }) });
   } finally { await db.pool.query(`DROP SCHEMA IF EXISTS ${db.schema} CASCADE`); await db.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

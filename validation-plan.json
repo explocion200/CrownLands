@@ -22,7 +22,7 @@
         "tools/test-local-postgres-rally-rejoin.js",
         "functions/test/emulator-rally-staging-defense.js"
       ],
-      "reason": "Run the same synthetic gameplay regression cases in a disposable PostgreSQL schema and the current-realm emulator. Test real server authority and concurrent transactions without touching production or archived worlds. Keep the existing staging-defense gate to exercise both the changed fixture and dependent group settlement behavior."
+      "reason": "Run the same synthetic gameplay regression cases in a disposable PostgreSQL schema and the current-realm emulator. Test real server authority and concurrent transactions without touching production or archived worlds. Keep the existing staging-defense gate to exercise both the changed fixture and dependent group settlement behavior. Wait for asynchronous cancellation receipts between cases; invoke the same settlement handler explicitly in the isolated PostgreSQL fixture so prior cases cannot affect later troop totals."
     },
     {
       "paths": [
