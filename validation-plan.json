@@ -1,20 +1,21 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "ba69580c5d7a14ed8aa81eddd0c4b86d5b2c58a0",
+  "baseCommit": "91c227585e1913d3a27f15c1bd23c63dad9b5b50",
   "coverage": [
     {
       "paths": [
-        "tools/local-migration/backup_health.py",
-        "tools/local-migration/preseason-backup.conf",
-        "tools/local-migration/test_preseason_backup.py",
-        "tools/test-preseason-backup.js",
-        "docs/LOCAL_BACKUPS.md",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "game.js",
+        "tools/validate-owned-city-roster-refresh.js"
       ],
       "tests": [
-        "tools/test-preseason-backup.js"
+        "tools/validate-owned-city-roster-refresh.js",
+        "tools/validate-owned-city-cross-map-sync.js",
+        "tools/validate-owned-city-list.js",
+        "tools/validate-city-list-browser.js",
+        "tools/validate-foreground-resume.js",
+        "tools/validate-combat-timers-browser.js"
       ],
-      "reason": "Validate the systemd monthly timer against the existing UTC realm-end contract across 15 months including leap February and daylight-saving boundaries. Exercise daily-schedule replacement, no off-schedule reboot catch-up, completion grace, existing-copy transition, stale local/cloud copies, failed/stalled backups, malformed/future timestamps and private HTTP 200/503/404 responses. The runbook and Master Specification record the confirmed schedule, recovery exposure and unchanged storage/retention. No game runtime, database export format, schema, reset rule, publisher or visual behavior changes; emulator suites, gameplay builds and full backup/restore drills are not applicable."
+      "reason": "Ownership statistics now invalidate the cross-map roster and queue a server read through the existing combat UI clock; an open City List also retries at a bounded cadence. Exercise capture/loss/Stronghold/regional changes, stale and unrelated statistics, changes during an in-flight read, reconnect isolation, offline/hidden/closed gating, failure retention and retry, and verified empty rosters. Cross-map roster tests cover canonical ownership replacement, unloaded maps and upgrade authorization; City List browser checks cover stable rows, scroll, focus, pagination and upgrade recovery at desktop and landscape/portrait/short-phone sizes. Foreground resume and combat timer browser checks cover the shared scheduling dependencies. This changes client refresh behavior only, with no server authority, API, data or gameplay-rule changes, so emulator tests are not applicable. Production package validation is required for game.js."
     }
   ]
 }

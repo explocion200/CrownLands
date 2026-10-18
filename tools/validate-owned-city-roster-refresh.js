@@ -22,12 +22,17 @@ function fixture() {
     RESET_GENERATION: "realm-2026-10", REALM_SHARD_ID: "shard_0001", onlineSessionGeneration: 1,
     onlineOwnedCitiesRefreshInFlight: false, onlineOwnedCitiesCacheComplete: false,
     onlineOwnedCitiesCacheAt: 0, onlineOwnedCitiesRefreshError: "", onlineLastError: "",
+    onlineOwnedCitiesRefreshAt: 0, onlineOwnedCitiesRefreshRequested: false,
+    onlineOwnedCitiesOwnershipRevision: 0, onlineGlobalStats: null, lastComputedKingPower: 0,
+    now: 100000, signedIn: true, document: { hidden: false }, navigator: { onLine: true },
+    Date: { now: () => c.now },
     ONLINE_OWNED_CITIES_REFRESH_MS: 10000, ONLINE_OWNED_CITIES_LOOKUP_TIMEOUT_MS: 1000,
     window: { setTimeout, clearTimeout }, console: { warn() {} },
     getCurrentOnlineUid: () => c.uid,
     getRegionIds: () => ["core-v2-home", "core-v2-north"],
     getOnlineIslandId: id => `${c.ONLINE_WORLD_ID}--${c.REALM_SHARD_ID}--${id}`,
-    getOnlineApi: () => ({ isSignedIn: () => true, loadOwnedCitiesAcrossIslands: () => {
+    getOnlineApi: () => ({ isSignedIn: () => c.signedIn, loadOwnedCitiesAcrossIslands: (islands, options) => {
+      assert.equal(options.serverOnly, true, "Ownership reads must bypass a stale offline cache");
       const call = deferred(); calls.push(call); return call.promise;
     } }),
     playerCities: () => [], getCityRegionId: city => city.regionId,
@@ -38,15 +43,102 @@ function fixture() {
     },
     profileScreen: null,
     modal: { open: true, classList: { contains: name => name === "city-list-modal" } },
-    renderHud() {}, renderCityListModal() {},
+    renderHud() {}, renderCityListModal() {}, renderCities() {}, updateIslandSwitcherUi() {},
+    normalizeGlobalStatsSnapshot: raw => raw, getGlobalStatsSnapshot: () => c.onlineGlobalStats,
+    rememberPlayerIdentity() {},
   };
   vm.createContext(c);
-  for (const name of ["getOnlineRequestScope", "getOnlineSessionRequestScope", "withTimeout", "refreshAllOwnedCities"]) {
+  for (const name of ["getOnlineRequestScope", "getOnlineSessionRequestScope", "withTimeout", "refreshAllOwnedCities",
+    "getOwnedCityOwnershipSignature", "refreshOwnedCityRosterIfNeeded", "applyGlobalStatsSnapshot"]) {
     vm.runInContext(extract(name), c);
   }
   return { c, calls, merges };
 }
+const flush = () => new Promise(resolve => setImmediate(resolve));
 async function main() {
+  // Real global-stat notifications invalidate the roster only for ownership
+  // changes. Production ticks must not turn the one-second UI clock into polls.
+  for (const change of [
+    { totalCities: 3, cityCountsByRegion: { home: 2, north: 1 } },
+    { totalCities: 1, cityCountsByRegion: { home: 1 } },
+    { cityCountsByRegion: { home: 1, north: 1 } },
+    { strongholdCount: 1 },
+  ]) {
+    const { c, calls, merges } = fixture();
+    c.modal.open = false;
+    const original = { uid: "owner", totalCities: 2, strongholdCount: 0,
+      cityCountsByRegion: { home: 2 }, updatedAtMs: 100 };
+    c.onlineGlobalStats = c.state.globalStats = original;
+    c.onlineOwnedCitiesCacheComplete = true;
+    c.applyGlobalStatsSnapshot({ ...original, ...change, updatedAtMs: 101 });
+    assert.equal(c.onlineOwnedCitiesCacheComplete, false);
+    c.refreshOwnedCityRosterIfNeeded();
+    assert.equal(calls.length, 1, "Ownership change must refresh even with the list closed");
+    c.refreshOwnedCityRosterIfNeeded();
+    assert.equal(calls.length, 1, "Repeated timer ticks must coalesce the ownership refresh");
+    calls[0].resolve([{ id: "new-owner-roster" }]);
+    await flush();
+    assert.equal(merges[0].complete, true);
+    assert.equal(c.onlineOwnedCitiesCacheComplete, true);
+    c.applyGlobalStatsSnapshot({ ...c.onlineGlobalStats, totalTroops: 200, updatedAtMs: 102 });
+    c.applyGlobalStatsSnapshot({ ...c.onlineGlobalStats,
+      cityCountsByRegion: Object.fromEntries(Object.entries(c.onlineGlobalStats.cityCountsByRegion).reverse()), updatedAtMs: 103 });
+    c.applyGlobalStatsSnapshot({ ...original, updatedAtMs: 99 });
+    c.applyGlobalStatsSnapshot({ ...original, uid: "other", totalCities: 10, updatedAtMs: 104 });
+    c.refreshOwnedCityRosterIfNeeded();
+    assert.equal(calls.length, 1, "Unrelated, reordered, stale or foreign stats must not refresh the roster");
+  }
+  {
+    const { c, calls, merges } = fixture();
+    c.applyGlobalStatsSnapshot({ uid: "owner", totalCities: 2, cityCountsByRegion: { home: 2 } });
+    const stale = c.refreshAllOwnedCities(true);
+    c.applyGlobalStatsSnapshot({ uid: "owner", totalCities: 1, cityCountsByRegion: { home: 1 } });
+    calls[0].resolve([{ id: "lost-city" }, { id: "kept-city" }]);
+    assert.equal(await stale, false, "A roster started before an ownership event must not be accepted");
+    assert.equal(merges.length, 0);
+    assert.equal(c.onlineOwnedCitiesRefreshRequested, true);
+    c.refreshOwnedCityRosterIfNeeded();
+    calls[1].resolve([{ id: "kept-city" }]);
+    await flush();
+    assert.equal(merges.length, 1);
+    assert.equal(merges[0].cities.length, 1);
+    assert.equal(merges[0].complete, true);
+  }
+  {
+    const { c, calls, merges } = fixture();
+    c.refreshOwnedCityRosterIfNeeded();
+    calls[0].resolve([{ id: "old-city" }]);
+    await flush();
+    // Same-count swaps have no count notification. Refresh the open list at a
+    // bounded cadence, including after a failed read, without clearing rows.
+    c.now += c.ONLINE_OWNED_CITIES_REFRESH_MS - 1;
+    c.refreshOwnedCityRosterIfNeeded();
+    assert.equal(calls.length, 1);
+    c.now++;
+    c.refreshOwnedCityRosterIfNeeded();
+    calls[1].reject(Error("temporarily unavailable"));
+    await flush();
+    for (let tick = 0; tick < 10; tick++) c.refreshOwnedCityRosterIfNeeded();
+    assert.equal(calls.length, 2, "Failed reads must not retry every timer tick");
+    assert.equal(merges.length, 1, "A failed refresh must preserve the previous rows");
+    c.now += c.ONLINE_OWNED_CITIES_REFRESH_MS;
+    for (const [target, key, value] of [
+      [c.modal, "open", false], [c.document, "hidden", true],
+      [c.navigator, "onLine", false], [c, "signedIn", false],
+    ]) {
+      const old = target[key]; target[key] = value;
+      c.refreshOwnedCityRosterIfNeeded();
+      assert.equal(calls.length, 2, `Refresh was not paused by ${key}`);
+      target[key] = old;
+    }
+    c.refreshOwnedCityRosterIfNeeded();
+    calls[2].resolve([{ id: "replacement-city" }]);
+    await flush();
+    assert.equal(merges.length, 2);
+    assert.equal(merges[1].cities[0].id, "replacement-city");
+    assert.equal(merges[1].complete, true, "A verified roster replaces old ownership rather than appending");
+    assert.equal(c.onlineOwnedCitiesRefreshError, "");
+  }
   // A reconnect for the SAME account/realm must supersede old reads, including
   // their catch/finally paths. Account-and-realm identity alone cannot do that.
   for (const failure of [false, true]) for (const currentFinishesFirst of [false, true]) {
@@ -108,6 +200,6 @@ async function main() {
   c.state.activeRegionId = "core-v2-north";
   calls[0].resolve([{ id: "home" }, { id: "north" }]);
   assert.equal(await pending, true, "Switching maps must not invalidate a world-wide roster");
-  console.log("Validated roster refresh isolation across same-account reconnects, invalid/empty replies, failure/retry, and map changes.");
+  console.log("Validated ownership-triggered and bounded open-list refresh, in-flight ownership changes, reconnect isolation, invalid/empty replies, retry, and map changes.");
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

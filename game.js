@@ -2126,6 +2126,9 @@ let onlineOwnedCitiesCacheAt = 0;
 let onlineOwnedCitiesCacheComplete = false;
 let onlineOwnedCitiesRefreshInFlight = false;
 let onlineOwnedCitiesRefreshError = "";
+let onlineOwnedCitiesRefreshAt = 0;
+let onlineOwnedCitiesRefreshRequested = false;
+let onlineOwnedCitiesOwnershipRevision = 0;
 let activeOperationsTab = "marches";
 const islandMapPickerViewState = {
   x: 0,
@@ -8627,6 +8630,11 @@ function applyGlobalStatsSnapshot(raw = null, options = {}) {
     updatedAtMs: stats.updatedAtMs || Date.now(),
   }, { force: true });
   const changed = before !== JSON.stringify(stats);
+  if (getOwnedCityOwnershipSignature(currentStats) !== getOwnedCityOwnershipSignature(stats)) {
+    onlineOwnedCitiesCacheComplete = false;
+    onlineOwnedCitiesRefreshRequested = true;
+    onlineOwnedCitiesOwnershipRevision += 1;
+  }
   if (changed && options.render !== false) {
     renderHud();
     updateIslandSwitcherUi();
@@ -14961,6 +14969,22 @@ async function refreshOnlineIslandSummaries(force = false) {
   }
 }
 
+function getOwnedCityOwnershipSignature(stats = null) {
+  if (!stats) return "";
+  return JSON.stringify([stats.totalCities, stats.strongholdCount,
+    Object.entries(stats.cityCountsByRegion || {}).sort(([a], [b]) => a.localeCompare(b))]);
+}
+
+function refreshOwnedCityRosterIfNeeded() {
+  if (!state || document.hidden || !navigator.onLine || onlineOwnedCitiesRefreshInFlight) return;
+  const api = getOnlineApi();
+  if (!api?.isSignedIn?.()) return;
+  const visible = modal.open && modal.classList.contains("city-list-modal");
+  if (!onlineOwnedCitiesRefreshRequested
+    && (!visible || Date.now() - onlineOwnedCitiesRefreshAt < ONLINE_OWNED_CITIES_REFRESH_MS)) return;
+  void refreshAllOwnedCities(true);
+}
+
 async function refreshAllOwnedCities(force = false) {
   if (!state || onlineOwnedCitiesRefreshInFlight) return false;
   const api = getOnlineApi();
@@ -14977,6 +15001,9 @@ async function refreshAllOwnedCities(force = false) {
   if (!force && onlineOwnedCitiesCacheComplete && now - onlineOwnedCitiesCacheAt < ONLINE_OWNED_CITIES_REFRESH_MS) return true;
 
   onlineOwnedCitiesRefreshInFlight = true;
+  onlineOwnedCitiesRefreshAt = now;
+  onlineOwnedCitiesRefreshRequested = false;
+  const ownershipRevision = onlineOwnedCitiesOwnershipRevision;
   // Reconnecting the same account replaces the roster and its in-flight read.
   // Old responses must not overwrite that session or release its request lock.
   const requestScope = getOnlineSessionRequestScope();
@@ -14984,11 +15011,14 @@ async function refreshAllOwnedCities(force = false) {
   try {
     const islandIds = getRegionIds().map(getOnlineIslandId);
     const owned = await withTimeout(
-      api.loadOwnedCitiesAcrossIslands(islandIds),
+      api.loadOwnedCitiesAcrossIslands(islandIds, { serverOnly: true }),
       ONLINE_OWNED_CITIES_LOOKUP_TIMEOUT_MS,
       "Owned city lookup is taking too long."
     );
     if (requestScope !== getOnlineSessionRequestScope()) return false;
+    // A capture/loss observed during this read requires a later snapshot.
+    // Leave its queued refresh intact rather than declaring old rows complete.
+    if (ownershipRevision !== onlineOwnedCitiesOwnershipRevision) return false;
     if (!Array.isArray(owned)) throw new Error("Full owned-city roster returned an invalid response.");
     const roster = validateCompleteOwnedCityRoster(owned);
     if (!roster.complete) {
@@ -16796,6 +16826,9 @@ function disconnectOnlineWorld() {
   onlineOwnedCitiesCacheAt = 0;
   onlineOwnedCitiesCacheComplete = false;
   onlineOwnedCitiesRefreshInFlight = false;
+  onlineOwnedCitiesRefreshAt = 0;
+  onlineOwnedCitiesRefreshRequested = false;
+  onlineOwnedCitiesOwnershipRevision = 0;
   onlinePresenceTimer = 0;
   onlinePresenceRequestGeneration += 1;
   onlinePresenceInFlight = false;
@@ -19979,6 +20012,7 @@ function clearOnlineGlobalStatsWatcher() {
 function renderCombatTimers() {
   globalThis.CrownlandsStaminaUI?.tick();
   updateMarauderRespawnTimers();
+  refreshOwnedCityRosterIfNeeded();
   const ownSnapshot = onlineCombatAuthorization.uid === getCurrentOnlineUid() ? onlineCombatAuthorization : {};
   const ui = globalThis.CrownlandsCombatTimersUI, nowMs = getClanQuestServerNowMs();
   ui?.render(document.getElementById("combatTimers"), ownSnapshot, nowMs, focusBattleReportTarget);
