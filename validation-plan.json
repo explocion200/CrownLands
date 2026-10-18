@@ -15,6 +15,11 @@
         "tools/validate-city-list-browser.js"
       ],
       "reason": "Bind full owned-city reads to the existing online session generation so stale same-account reconnect responses, catches and finalizers cannot replace a newer roster or release its request lock. Reject malformed replies before complete-roster reconciliation. The executable refresh regression covers both completion orders, success/failure, invalid and verified-empty replies, timeout, incomplete data, retry, coalescing and map changes. The owned-city validator also runs cross-map synchronization tests covering 42 cities on unloaded maps, canonical island identity, ownership loss, stable order and upgrades. Foreground-resume validation covers the shared caller's catch-up/coalescing/retry lifecycle. The real City List browser fixture checks five-row pagination, off-map info/locate, Stronghold/empty/incomplete states, retry, stable rows and upgrade controls at desktop, landscape, portrait and short landscape sizes. This changes only client refresh acceptance; no server authority, schema or backend changes, so emulator suites do not apply. Production build validation checks the static local-client package."
+    },
+    {
+      "paths": ["tools/validate-asset-performance-budgets.js"],
+      "tests": ["tools/validate-asset-performance-budgets.js"],
+      "reason": "The roster guard adds 263 normalized source bytes to game.js against 43 bytes of existing headroom. Raise only that source-entry allowance by 256 bytes to cover the 220-byte overage. Validate all existing image, entrypoint and service-worker installation budgets; the aggregate offline-shell cap and all other asset/request limits remain unchanged."
     }
   ]
 }
