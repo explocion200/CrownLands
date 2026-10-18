@@ -1,18 +1,20 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "6acf3fda182bca9119ff086ae9c199131847c5fb",
+  "baseCommit": "ba69580c5d7a14ed8aa81eddd0c4b86d5b2c58a0",
   "coverage": [
     {
       "paths": [
-        "tools/local-migration/postgres_backup.py",
-        "tools/local-migration/install_database_backup.py",
-        "tools/local-migration/test_postgres_backup.py",
-        "tools/local-migration/test_database_backup_install.py"
+        "tools/local-migration/backup_health.py",
+        "tools/local-migration/preseason-backup.conf",
+        "tools/local-migration/test_preseason_backup.py",
+        "tools/test-preseason-backup.js",
+        "docs/LOCAL_BACKUPS.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [
-        "tools/test-local-postgres-backup.js"
+        "tools/test-preseason-backup.js"
       ],
-      "reason": "Exercise consistent snapshots during concurrent writes, complete row fingerprints, real PostgreSQL restore and encrypted restic recovery. Verify bounded one-hour dump/restore deadlines, retained snapshot lifetime, failed-export preservation and temporary-file cleanup, redacted phase diagnostics, restricted restore owner and failed-copy preservation. Only operator backup tooling changes; no gameplay/server request behavior, visual layout, active realm rules, schema or credentials change, so emulator and visual suites are not applicable."
+      "reason": "Validate the systemd monthly timer against the existing UTC realm-end contract across 15 months including leap February and daylight-saving boundaries. Exercise daily-schedule replacement, no off-schedule reboot catch-up, completion grace, existing-copy transition, stale local/cloud copies, failed/stalled backups, malformed/future timestamps and private HTTP 200/503/404 responses. The runbook and Master Specification record the confirmed schedule, recovery exposure and unchanged storage/retention. No game runtime, database export format, schema, reset rule, publisher or visual behavior changes; emulator suites, gameplay builds and full backup/restore drills are not applicable."
     }
   ]
 }
