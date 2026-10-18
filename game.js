@@ -20028,7 +20028,7 @@ function getAvailableRetaliationRecords() {
   return (onlineCombatAuthorization.retaliation || []).filter(record => {
     if (owned.has(`${record.regionId}:${record.cityId}`)) return false;
     const city = state?.cities?.find(city => city.id === record.cityId && getCityRegionId(city) === record.regionId);
-    return !city || (city.ownerUid !== getCurrentOnlineUid() && !isClanAllyCity(city));
+    return city ? city.ownerUid !== getCurrentOnlineUid() && !isClanAllyCity(city) : onlineOwnedCitiesCacheComplete;
   });
 }
 

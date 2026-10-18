@@ -32,6 +32,7 @@ async function main() {
       window.__CROWNLANDS_BENCHMARK__.closeModal();
       pendingOfflineRewardsSummary = null;
       getCurrentOnlineUid = () => "combat-viewer";
+      onlineOwnedCitiesCacheComplete = true;
       window.combatFixtureNow = getClanQuestServerNowMs();
       window.combatFixture = { uid: "combat-viewer", shieldExpiresAtMs: combatFixtureNow + 900_000,
         retaliation: Array.from({ length: 12 }, (_, i) => ({ id: `capture-${i}`, cityId: `city-${i}`, cityName: i === 0 ? "Stoneward Keep" : `Captured city ${i + 1}`,
@@ -84,6 +85,12 @@ async function main() {
         const ui = CrownlandsCombatTimersUI, element = document.getElementById("combatTimers");
         const record = combatFixture.retaliation[0], saved = onlineCombatAuthorization;
         const city = state.cities[0], priorCity = { ...city }, priorCache = onlineOwnedCitiesCache;
+        const priorComplete = onlineOwnedCitiesCacheComplete;
+        onlineOwnedCitiesCacheComplete = false;
+        onlineCombatAuthorization = { uid: "combat-viewer", retaliation: [record] };
+        renderCombatTimers();
+        const loadingHidden = element.hidden;
+        onlineOwnedCitiesCacheComplete = priorComplete;
         const known = { ...record, cityId: city.id, regionId: getCityRegionId(city) };
         onlineCombatAuthorization = { uid: "combat-viewer", retaliation: [known] };
         city.ownerUid = "combat-viewer";
@@ -106,7 +113,7 @@ async function main() {
         Object.assign(city, priorCity); onlineOwnedCitiesCache = priorCache; onlineCombatAuthorization = saved;
         ui.render(element, { ...combatFixture, retaliation: [{ ...record, expiresAtMs: combatFixtureNow + 86_400_000 }] }, combatFixtureNow);
         element.querySelector("details").open = true;
-        return { recoveredHidden, rosterHidden, reservedHidden, releasedVisible, impactCopy };
+        return { loadingHidden, recoveredHidden, rosterHidden, reservedHidden, releasedVisible, impactCopy };
       });
       assert(Object.values(impact).every(Boolean), JSON.stringify({ viewport, impact }));
       results.push({ viewport, impact });

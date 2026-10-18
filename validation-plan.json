@@ -35,7 +35,7 @@
         "tools/validate-army-resolution-retries.js",
         "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Use the existing ownership roster and loaded-map identities to suppress recovered/clan-owned retaliation targets; reserved grants cannot advertise or dispatch another attack. Verify reservation release, original countdown, recaptured city/roster suppression, exact city/map navigation, stale account handling and impact wording in the actual game fixture at desktop 1440x900 and landscape 844x390/568x320. Retain timer/popover bounds, chat clearance and asset budgets; no new browser listener or interval is added."
+      "reason": "Use the existing ownership roster and loaded-map identities to suppress recovered/clan-owned retaliation targets; reserved grants cannot advertise or dispatch another attack. Verify reservation release, original countdown, recaptured city/roster suppression, exact city/map navigation, stale account handling and impact wording in the actual game fixture at desktop 1440x900 and landscape 844x390/568x320. Retain timer/popover bounds, chat clearance and asset budgets; no new browser listener or interval is added. Uncached targets stay hidden during initial roster loading to prevent a recovered-city alert flashing at login."
     },
     {
       "paths": [
