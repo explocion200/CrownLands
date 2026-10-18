@@ -70,7 +70,7 @@ assert.match(css, /\.cl-action-button\.cl-action-scout:is\(\.armed, \.active, \.
 assert.match(css, /\.cl-action-button:focus-visible,[\s\S]*?drop-shadow\(0 0 7px var\(--cl-action-border\)\)/, "Shared action buttons are missing a visible color-family keyboard focus state.");
 assert.match(css, /data-qa-state="pressed"[\s\S]*?transform:\s*translateY\(1px\);/, "Pressed hex buttons do not move their visual face by one pixel.");
 assert.match(css, /@media \(max-width: 780px\)[\s\S]*?--cl-action-size:\s*64px;/, "Mobile action controls do not retain their touch target size.");
-assert.match(legacyCss, /\.map-frame\.detail-far \.map-world\s*\{\s*--map-hit-size:\s*110px;/, "Far-zoom map actions do not retain their zoom-aware touch target.");
+assert.match(legacyCss, /\.map-frame\.detail-far \.army-token::before\s*\{\s*--map-hit-size:\s*110px;/, "Far-zoom map actions do not retain their zoom-aware touch target.");
 
 for (const [selector, forbidden] of [
   [".city-wheel-action", /(?:width|height|padding|border|clip-path|color|background|filter)\s*:/],
