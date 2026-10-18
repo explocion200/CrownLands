@@ -14956,7 +14956,9 @@ async function refreshAllOwnedCities(force = false) {
   if (!force && onlineOwnedCitiesCacheComplete && now - onlineOwnedCitiesCacheAt < ONLINE_OWNED_CITIES_REFRESH_MS) return true;
 
   onlineOwnedCitiesRefreshInFlight = true;
-  const requestScope = getOnlineRequestScope();
+  // Reconnecting the same account replaces the roster and its in-flight read.
+  // Old responses must not overwrite that session or release its request lock.
+  const requestScope = getOnlineSessionRequestScope();
   onlineOwnedCitiesRefreshError = "";
   try {
     const islandIds = getRegionIds().map(getOnlineIslandId);
@@ -14965,8 +14967,9 @@ async function refreshAllOwnedCities(force = false) {
       ONLINE_OWNED_CITIES_LOOKUP_TIMEOUT_MS,
       "Owned city lookup is taking too long."
     );
-    if (requestScope !== getOnlineRequestScope()) return false;
-    const roster = validateCompleteOwnedCityRoster(Array.isArray(owned) ? owned : []);
+    if (requestScope !== getOnlineSessionRequestScope()) return false;
+    if (!Array.isArray(owned)) throw new Error("Full owned-city roster returned an invalid response.");
+    const roster = validateCompleteOwnedCityRoster(owned);
     if (!roster.complete) {
       onlineOwnedCitiesCacheComplete = false;
       mergeOwnedCitySnapshots(roster.cities, { complete: false });
@@ -14983,14 +14986,14 @@ async function refreshAllOwnedCities(force = false) {
     if (modal.open && modal.classList.contains("island-switcher-modal")) rerenderIslandSwitcherModalIfOpen();
     return true;
   } catch (error) {
-    if (requestScope !== getOnlineRequestScope()) return false;
+    if (requestScope !== getOnlineSessionRequestScope()) return false;
     onlineOwnedCitiesCacheComplete = false;
     onlineLastError = error?.message || String(error);
     onlineOwnedCitiesRefreshError = onlineLastError;
     console.warn("Could not load owned cities across islands", error);
     return false;
   } finally {
-    if (requestScope === getOnlineRequestScope()) {
+    if (requestScope === getOnlineSessionRequestScope()) {
       onlineOwnedCitiesRefreshInFlight = false;
       if (modal.open && modal.classList.contains("city-list-modal")) renderCityListModal();
     }
