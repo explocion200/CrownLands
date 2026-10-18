@@ -36,5 +36,8 @@
 // 3,668 over the prior cap. Bound this at 4 KiB; the 14.4 KiB art stays lazy.
 // Compact inline friend actions add 767 shell bytes; the prior cap covers 428.
 // Allow the remaining 339 bytes within a 512-byte step, with no new assets.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024 + 2 * 1024 + 4 * 1024 + 512;
+// Scoping zoom hit sizes to actual targets saves map-wide style work and adds
+// 550 source bytes. The previous cap had 3 bytes free; bound the 547-byte
+// overage within 1 KiB. No new requests, assets or runtime dependencies.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024 + 2 * 1024 + 4 * 1024 + 512 + 1024;
 module.exports = { MAX_INSTALL_PRECACHE_BYTES };

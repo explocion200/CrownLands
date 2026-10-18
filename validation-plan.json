@@ -20,6 +20,16 @@
         "tools/validate-map-ui-responsiveness-browser.js"
       ],
       "reason": "Limit the discrete zoom hit-size variable to actual city, camp, march and pickup hit areas so changing map detail no longer invalidates all map descendants. Preserve existing 58/84/110px hit targets, LOD thresholds, selection, animations and camera logic. The new browser regression checks computed targets and absence of variable inheritance into artwork/labels, coalesced wheel bursts with 150 cities/100 marches at normal and 4x CPU, reversed native touch pinch anchors and settling, and screenshots at desktop and two landscape sizes. Shared input and pickup validators protect click/gesture behavior; the Map Atlas browser test covers desktop wheel, touch pinch, navigation and drag-click suppression; Tower browser tests protect fixed-size action positioning while zooming. Existing action and historical phase-2 validators must recognize the narrower variable scope. Historical screenshot resolution is made checkout-independent and regenerated diagnostic output goes to ignored release-artifacts instead of rewriting committed baseline evidence. No server, authority, economy, topology or gameplay-rule changes, so no emulator suite applies."
+    },
+    {
+      "paths": [
+        "tools/asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "The scoped CSS adds exactly 550 normalized offline-shell bytes over the current main baseline, whose shared installation cap has only 3 bytes free. Bound the 547-byte overage at one KiB in the shared budget used by both source and production validators. Preserve all image, request, entrypoint and frame-time limits; no added assets, dependencies or network requests. Production build and artifact checks verify the actual delivered package."
     }
   ]
 }
