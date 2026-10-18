@@ -19,13 +19,14 @@
     },
     {
       "paths": [
-        "tools/asset-performance-budgets.js"
+        "tools/asset-performance-budgets.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
       "tests": [
         "tools/validate-asset-performance-budgets.js",
         "tools/validate-production-artifact.js"
       ],
-      "reason": "The ownership refresh adds 1,633 raw client bytes and exceeds the existing precache cap by 1,078 bytes. Allow one measured 2 KiB shell increase, retaining all individual art, startup request, lazy asset and production-artifact checks. No assets or dependencies are added."
+      "reason": "The ownership refresh adds 1,633 raw client bytes and exceeds the existing precache cap by 1,078 bytes. Allow one measured 2 KiB shell and game.js source increase, retaining all individual art, startup request, lazy asset and production-artifact checks. No assets or dependencies are added."
     }
   ]
 }
