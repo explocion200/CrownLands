@@ -24,8 +24,9 @@
 .social-thread-heading{display:flex;align-items:center;gap:8px;flex-shrink:0}.social-thread-heading>.social-player{flex:1}
 .social-history-nav{flex-shrink:0}.social-history-nav:not(:has(button:not([hidden]))){display:none}
 .social-log{min-height:40px;overflow:auto;overscroll-behavior:contain;flex:1;padding:8px;background:#f6ecd5;border:1px solid #b39b70;border-radius:4px}
-.social-message{padding:8px;border-bottom:1px solid #c6b28b;overflow-wrap:anywhere}.social-message.is-own{background:#e4d9ba}
-.social-message time{float:right;font-size:11px;margin-left:8px}#chatDialog .social-message p{white-space:pre-wrap;margin:5px 0;font:16px/1.4 "Segoe UI",Arial,sans-serif}
+.social-message{position:relative;display:grid;grid-template-columns:clamp(80px,18%,130px) minmax(0,1fr) 44px;grid-template-rows:minmax(44px,auto);column-gap:8px;align-items:start;min-height:54px;padding:5px 8px;border-bottom:1px solid #c6b28b;overflow-wrap:anywhere}.social-message.is-own{background:#e4d9ba}
+.social-message-sender{grid-column:1;grid-row:1;min-width:0;padding-top:4px}.social-message-sender strong{display:block}.social-message time{display:block;font-size:11px;color:#705d45}#chatDialog .social-message>p{grid-column:2;grid-row:1;min-width:0;white-space:pre-wrap;margin:0;padding-top:4px;font:16px/1.4 "Segoe UI",Arial,sans-serif}
+.social-message>small{grid-column:2}.social-message>.social-report{grid-column:1/-1}
 .social-message .social-row-actions button{font-size:12px;padding:4px 8px}.social-message small{font-size:11px}
 .social-compose{display:flex;gap:8px;flex-shrink:0}#chatDialog .social-compose textarea{min-width:0;resize:none;flex:1;height:48px;min-height:44px;background:#fff8e7;border:1px solid #9c8354;border-radius:4px;color:#3d3021;font:16px/1.35 "Segoe UI",Arial,sans-serif;padding:8px}
 .social-thread-note{flex-shrink:0;font-size:11px;line-height:1.2}.social-translation-note{flex-basis:100%}.social-status:empty{display:none}
@@ -42,4 +43,5 @@
 #chatDialog.social-active .chat-tabs button{flex:1;min-width:0;min-height:44px;padding:0 8px;font-size:15px}
 }
 @media(max-height:600px){#chatDialog.social-thread-open .channel-bar{display:none}}
-.social-message-menu{float:right;max-width:100%;margin-top:-8px}.social-message-menu summary{min-width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#72363a;font-size:24px;font-weight:bold;list-style:none}.social-message-menu[open]{float:none;clear:both}.social-message p{clear:both}.social-message-menu summary:focus-visible{outline:3px solid #72363a}
+.social-message-menu{grid-column:3;grid-row:1;min-width:0}.social-message-menu summary{width:44px;min-height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#72363a;font-size:24px;font-weight:bold;list-style:none}.social-message-menu[open]{grid-column:1/-1;grid-row:2;margin-top:4px}.social-message-menu[open] summary{position:absolute;top:5px;right:8px}.social-message-menu summary:focus-visible{outline:3px solid #72363a}
+@media(max-width:900px),(max-height:600px){.social-message{column-gap:6px}.social-message-menu[open] summary{right:5px}}
