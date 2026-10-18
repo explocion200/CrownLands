@@ -1,6 +1,6 @@
 .social-panel[hidden],.social-thread[hidden],.social-compose[hidden]{display:none!important}
 .social-active #chatHistory,.social-active .composer-panel,.social-active .chat-tools{display:none!important}
-.social-panel{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;padding:8px;color:#493923;background:#ede1c2;overflow:hidden;font:14px/1.35 "Segoe UI",Arial,sans-serif}
+.social-panel{flex:1;min-height:0;display:flex;flex-direction:column;gap:6px;padding:8px;color:#493923;background:#ede1c2;overflow:hidden;font:var(--chat-text-size,14px)/1.4 "Segoe UI",Arial,sans-serif}
 .social-toolbar,.social-row-actions,.social-profile-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .social-panel button,.social-profile-actions button{min-height:44px;border:1px solid #9c8354;border-radius:4px;background:#eee3c7;color:#493923;padding:6px 12px;font:inherit;cursor:pointer}
 .social-panel button:focus-visible,.social-panel textarea:focus-visible,.social-panel select:focus-visible{outline:3px solid #72363a;outline-offset:2px}
@@ -15,9 +15,9 @@
 .social-contact-meta{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;font-size:12px;color:#705d45}
 .social-thread-open .social-conversation{flex-wrap:wrap}.social-thread-open .social-contact-meta{justify-content:flex-start}
 .social-panel .social-name{border:0;background:none;padding:0;text-align:left}
-.social-player{display:inline-flex;align-items:center;gap:8px;min-width:0;overflow-wrap:anywhere}
+.social-player{display:inline-flex;align-items:center;gap:8px;min-width:0;overflow-wrap:anywhere;font:600 var(--chat-name-size,14px)/1.4 Georgia,serif}
 .social-flag{display:inline-block;flex:0 0 24px;width:24px;height:32px}
-.social-player strong{overflow-wrap:anywhere}.social-player small{white-space:nowrap}
+.social-player strong{overflow-wrap:anywhere;font-weight:inherit}.social-player small{white-space:nowrap;font:11px/1.4 "Segoe UI",Arial,sans-serif}
 .social-presence{color:#766d5c}.social-presence.is-online{color:#35612b;font-weight:bold}
 .social-unread{color:#72363a;font-weight:bold;font-size:12px}
 .social-thread{display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;gap:6px}
@@ -36,11 +36,6 @@
 .social-active.social-thread-open .social-list,.social-active.social-thread-open .social-toolbar{display:none}
 .social-panel{padding:5px;gap:4px}.social-toolbar{gap:4px}#chatDialog .social-toolbar button{padding:4px 7px;font-size:12px}
 .social-thread-heading{gap:4px}.social-thread{gap:4px}.social-log{padding:4px}
-#chatDialog.social-active{padding:4px;width:calc(100vw - 16px);height:calc(100dvh - 16px)}
-#chatDialog.social-active .chat-header{min-height:48px;padding:2px 8px;gap:6px}
-#chatDialog.social-active .chat-header h1{font-size:22px}#chatDialog.social-active .chat-heading-icon{width:30px;height:30px}#chatDialog.social-active .chat-eyebrow{display:none}
-#chatDialog.social-active .channel-bar{padding:0 5px}#chatDialog.social-active .chat-tabs{width:100%;min-width:0}
-#chatDialog.social-active .chat-tabs button{flex:1;min-width:0;min-height:44px;padding:0 8px;font-size:15px}
 }
 @media(max-height:600px){#chatDialog.social-thread-open .channel-bar{display:none}}
 .social-message-menu{grid-column:4;grid-row:1;min-width:0}.social-message-menu summary{width:24px;min-height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#72363a;font-size:20px;font-weight:bold;line-height:1;list-style:none}.social-message-menu[open]{grid-column:1/-1;grid-row:2;margin-top:4px}.social-message-menu[open] summary{position:absolute;top:var(--pm-y);right:var(--pm-x)}.social-message-menu summary:focus-visible{outline:3px solid #72363a}

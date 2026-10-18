@@ -1,40 +1,16 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "f290c171cae5a345ebdab23fca9e5251b0d2c9bc",
+  "baseCommit": "e7ebcb2f83a1ce63cbd11c559fe10c7a5dcf68eb",
   "coverage": [
     {
-      "paths": [
-        "reinforcements-activity-ui.js",
-        "reinforcements-activity-ui.css",
-        "tools/validate-reinforcement-locations-browser.js"
-      ],
-      "tests": [
-        "tools/validate-reinforcement-locations-browser.js",
-        "tools/validate-incoming-army-estimates.js",
-        "tools/validate-marching-army-visibility-browser.js",
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "reason": "Exercise real reinforcement snapshots, all three ledger sections and real route/progress helpers: own outgoing, incoming and returning support navigate to the current position; stationed own and allied defenders navigate to their target holding. Cover uncached/cross-map destinations, re-reading after map loads, vanished assignments, missing paths, network failures and session/clan invalidation. Verify desktop and 844x390/568x320 landscape layouts, 44px controls, independent Recall/Send Home controls, privacy of incoming troop estimates and preservation of scroll, keyboard focus and stable countdown controls. Shared march visibility tests protect the same route interpolation used by army rendering. This only adds client map navigation and does not change authority, networking contracts or gameplay, so no emulator suite is needed."
+      "paths": ["social-ui.css", "chat-ledger-ui.css", "tools/validate-social-browser.js"],
+      "tests": ["tools/validate-social-browser.js", "tools/validate-chat-reward-ledgers-browser.js", "tools/validate-asset-performance-budgets.js"],
+      "reason": "Compare computed frame, header, tab geometry and typography across Global, Clan, Messages and Friends at eight desktop, short-window, landscape-mobile and portrait sizes. Match social content and player-name typography to the shared chat sizes, keep every tab visible, and retain compact private-message rows, readable scrollable history, visible composer, touch targets, row navigation, reporting and translation. The shared chat ledger browser suite protects Global/Clan layout, draft retention, translation and mini-chat behavior after shared CSS changes. Asset budgets protect the client package. No server authority, networking or data behavior changes, so emulator suites are not applicable."
     },
     {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
-      "tests": [
-        "tools/validate-reinforcement-locations-browser.js"
-      ],
-      "reason": "Record the owner-confirmed Location behavior for traveling, stationed-with-allies and defending holdings, including failure feedback and navigation-only behavior. Browser checks exercise that documented interaction."
-    },
-    {
-      "paths": [
-        "tools/validate-incoming-army-estimates.js",
-        "tools/validate-marching-army-visibility-browser.js"
-      ],
-      "tests": [
-        "tools/validate-incoming-army-estimates.js",
-        "tools/validate-marching-army-visibility-browser.js"
-      ],
-      "reason": "Update two stale assertions encountered while validating the shared reinforcement dependencies: notification target-map formatting already moved into notification-delivery, and live army positions already moved to the lightweight position wrapper. Keep the same privacy, map identity and route-position assertions against the current implementation without changing runtime behavior."
+      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
+      "tests": ["tools/validate-social-browser.js"],
+      "reason": "Record the explicitly requested consistent chat frame, navigation sizing and compact social typography; the browser regression compares those exact properties across all four tabs."
     }
   ]
 }

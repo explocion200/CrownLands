@@ -1,4 +1,4 @@
-#chatDialog{color-scheme:light;--paper:var(--cl-panel,#ede1c2);--ink:var(--cl-text,#352b20);--muted:var(--cl-text-muted,#705d45);--line:var(--cl-border-faded,#b19a71);--olive:#53633f;--cl-ivory:#f6e8c8;--cl-gold-highlight:#b19456;font-family:"Segoe UI",Arial,sans-serif;color:var(--ink);background:#343c2b}
+#chatDialog{color-scheme:light;--chat-text-size:14px;--chat-name-size:14px;--paper:var(--cl-panel,#ede1c2);--ink:var(--cl-text,#352b20);--muted:var(--cl-text-muted,#705d45);--line:var(--cl-border-faded,#b19a71);--olive:#53633f;--cl-ivory:#f6e8c8;--cl-gold-highlight:#b19456;font-family:"Segoe UI",Arial,sans-serif;color:var(--ink);background:#343c2b}
 #chatDialog *{box-sizing:border-box}
 #chatDialog [hidden]{display:none!important}
 #chatDialog h1,#chatDialog p{margin:0}
@@ -136,8 +136,8 @@
 #chatDialog .history-heading{display:none;}
 #chatDialog .chat-message-list{padding:3px 16px;}
 #chatDialog .chat-message{padding:7px 10px;}
-#chatDialog .chat-message .chat-message-line{grid-template-columns:145px minmax(0,1fr) 60px; gap:12px; align-items:start; font-size:14px; line-height:1.4;}
-#chatDialog .chat-message-sender{grid-column:1; grid-row:1; align-self:start; font-size:14px; min-height:24px; line-height:1.4;}
+#chatDialog .chat-message .chat-message-line{grid-template-columns:145px minmax(0,1fr) 60px; gap:12px; align-items:start; font-size:var(--chat-text-size); line-height:1.4;}
+#chatDialog .chat-message-sender{grid-column:1; grid-row:1; align-self:start; font-size:var(--chat-name-size); min-height:24px; line-height:1.4;}
 #chatDialog .chat-message-text{grid-column:2; grid-row:1;}
 #chatDialog .chat-message time{grid-column:3; grid-row:1; align-self:start; padding-top:3px; text-align:right;}
 #chatDialog .chat-message.is-translated .chat-message-text{color:#415332;}
@@ -155,6 +155,7 @@
 #chatDialog .chat-composer .primary-btn{min-height:44px; font-size:17px;}
 #chatDialog .composer-footnote{margin-top:4px; font-size:9px;}
 @media(max-width:900px) and (orientation:landscape){
+#chatDialog{--chat-text-size:12px;--chat-name-size:13px}
 #chatDialog .chat-header{min-height:50px; padding:3px 11px; gap:8px;}
 #chatDialog .chat-heading-icon{width:32px; height:32px;}
 #chatDialog .chat-header h1{font-size:23px;}
@@ -164,8 +165,7 @@
 #chatDialog .chat-tools>p{display:none;}
 #chatDialog .chat-message-list{padding:2px 10px;}
 #chatDialog .chat-message{padding:5px 7px;}
-#chatDialog .chat-message .chat-message-line{grid-template-columns:119px minmax(0,1fr) 47px; gap:9px; font-size:12px;}
-#chatDialog .chat-message-sender{font-size:13px;}
+#chatDialog .chat-message .chat-message-line{grid-template-columns:119px minmax(0,1fr) 47px; gap:9px;}
 #chatDialog .history-footer{padding-inline:17px;}
 #chatDialog .history-footer>span{font-size:10px; display:inline;}
 #chatDialog .composer-panel{padding:5px 14px;}
@@ -176,6 +176,7 @@
 #chatDialog .composer-footnote{font-size:8px; margin-top:3px;}
 }
 @media(max-width:650px) and (orientation:landscape){
+#chatDialog{--chat-name-size:12px}
 #chatDialog .chat-header{padding-inline:8px; gap:6px;}
 #chatDialog .chat-header h1{font-size:22px;}
 #chatDialog .chat-heading-icon{width:29px; height:29px;}
@@ -184,10 +185,23 @@
 #chatDialog .chat-message-list{padding-inline:7px;}
 #chatDialog .chat-message{padding:4px 5px;}
 #chatDialog .chat-message .chat-message-line{grid-template-columns:88px minmax(0,1fr) 45px; gap:6px;}
-#chatDialog .chat-message-sender{font-size:12px;}
 #chatDialog .composer-panel{padding-inline:11px;}
 #chatDialog .history-footer{padding-inline:13px;}
 #chatDialog .history-footer>span{font-size:9px;}
+}
+
+/* The shared frame and navigation also fit narrow portrait windows. Switching
+   to Messages/Friends must never choose a different dialog or tab scale. */
+@media(max-width:650px) and (orientation:portrait){
+#chatDialog{width:calc(100vw - 16px);height:calc(100dvh - 16px);padding:4px}
+#chatDialog .chat-header{min-height:50px;padding:3px 8px;gap:6px}
+#chatDialog .chat-header h1{font-size:22px}
+#chatDialog .chat-heading-icon{width:29px;height:29px}
+#chatDialog .chat-eyebrow,#chatDialog .chat-tools{display:none}
+#chatDialog .connection{font-size:9px;gap:4px}
+#chatDialog .channel-bar{padding:0 9px;gap:5px}
+#chatDialog .chat-tabs{min-width:0;max-width:100%}
+#chatDialog .chat-tabs button{min-width:0;padding-inline:10px;font-size:15px}
 }
 
 /* Google supplies these attribution badges; preserve their artwork. */
