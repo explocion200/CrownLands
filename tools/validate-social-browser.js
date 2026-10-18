@@ -57,6 +57,30 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     assert(await ev('Boolean(document.querySelector(".social-flag svg"))'), "Player flags use the shared renderer");
     for (const [width, height] of [[1440, 900], [1280, 590], [1024, 480], [932, 430], [844, 390], [568, 320], [390, 360], [390, 844]]) {
       await client.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
+      let sharedShell;
+      for (const channel of ["global", "clan", "messages", "friends", "global"]) {
+        const selector = channel === "global" || channel === "clan" ? `[data-chat-channel="${channel}"]` : channel === "messages" ? "#socialMessagesTab" : "#socialFriendsTab";
+        await ev(`document.querySelector(${JSON.stringify(selector)}).click()`); await delay(100);
+        const shell = await ev(() => {
+          const measure = element => {
+            const rect = element.getBoundingClientRect(), style = getComputedStyle(element);
+            return { x: rect.x, y: rect.y, width: rect.width, height: rect.height, font: style.font, padding: style.padding };
+          };
+          return { frame: measure(document.getElementById("chatDialog")), header: measure(document.querySelector(".chat-header")), title: measure(document.getElementById("chatTitle")), tabs: [...document.querySelectorAll(".chat-tabs button")].map(measure) };
+        });
+        if (!sharedShell) sharedShell = shell;
+        assert.deepEqual(shell, sharedShell, `Chat frame, header and all four tabs must stay the same on ${channel} at ${width}x${height}`);
+        assert(shell.tabs.every(tab => tab.height >= 44 && tab.x >= shell.frame.x && tab.x + tab.width <= shell.frame.x + shell.frame.width), "Every chat tab must remain visible and tappable");
+        if (channel === "friends" || channel === "messages") {
+          const typography = await ev(() => {
+            const body = getComputedStyle(document.querySelector(".social-panel")), globalBody = getComputedStyle(document.querySelector(".chat-message-text"));
+            const name = getComputedStyle(document.querySelector(".social-player strong")), globalName = getComputedStyle(document.querySelector(".chat-message-sender"));
+            return { body: body.fontSize, globalBody: globalBody.fontSize, name: name.font, globalName: globalName.font };
+          });
+          assert.equal(typography.body, typography.globalBody, "Social content must match Global/Clan text size");
+          assert.equal(typography.name, typography.globalName, "Social player names must match Global/Clan typography");
+        }
+      }
       await ev('CrownlandsSocial.open("friends")'); await delay(100);
       await client.send("Page.captureScreenshot", { format: "png" }).then(shot => fs.writeFileSync(path.join(artifacts, "friends-" + width + ".png"), Buffer.from(shot.data, "base64")));
       await ev('Array.from(document.querySelectorAll(".social-list button")).find(b=>b.textContent==="Message").click()'); await delay(120);
