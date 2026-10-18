@@ -13,29 +13,41 @@ plus 29 eligible NPC captures, with upgrades and other XP providing additional
 progress. The old capture-only model earned 2,473 XP, ending at Level 5 with
 112 XP toward Level 6. Reaching Level 15 requires 48,859 cumulative XP.
 
-The implementation keeps every level threshold and ordinary battle award. For a
-successful regular neutral capture below Hero Level 15, it raises the award to
-at least half the current full level requirement (rounded up), limited to the
-remaining XP to Level 15. Any larger ordinary award is preserved. Failed attacks,
-player targets, objectives, hunts, relinquished/relocated targets and rejected
-captures receive no beginner floor. The existing battle cap still applies.
+The owner clarified that this should be a bonus for the **first 29 eligible NPC
+captures**, rather than a reward that stops at Hero Level 15. Each capture keeps
+its normal battle XP and receives an additional scheduled beginner bonus. The
+29 bonuses total exactly 48,859 XP. Their cumulative amount follows the existing
+Level 1–15 curve at `14*n/29` levels above Level 1 after capture `n`, interpolating
+within each level and rounding down. Consecutive differences give each award.
+This grows the bonus gradually: 120 XP on capture 1, 1,364 on capture 15 and
+4,291 on capture 29. Other activities never reduce these bonuses.
 
-| Total cities | Eligible captures | Hero level without other XP |
+| Total cities | Eligible captures | Hero level with normal capture XP, no other activities |
 | --- | --- | --- |
 | 1 | 0 | 1 |
 | 5 | 4 | 3 |
 | 10 | 9 | 5 |
 | 15 | 14 | 8 |
 | 20 | 19 | 10 |
-| 25 | 24 | 13 |
-| 29 | 28 | 15 |
+| 25 | 24 | 12 |
+| 29 | 28 | 14 |
 | 30 | 29 | 15 |
 
-This is a prospective reward change. Existing players below Level 15 benefit on
-future eligible captures; previously earned XP and completed battles are not
-rewritten. Players already at the city limit do not receive an automatic grant.
-The normal skill-point, Gold and Main City troop rewards apply exactly once.
-No new table, account migration, seasonal counter or permission is introduced.
+With current empty Level 1 neutral targets, the full journey gives 51,089 XP:
+48,859 in bonuses plus 2,230 ordinary XP, finishing Level 15 with 2,230 XP toward
+Level 16. The normal skill-point, Gold and Main City troop rewards apply once.
+Failed, protected, non-capturing, abandoned, relocated, player-target and objective
+attacks do not consume a bonus. Reaching Level 15 through other activities does
+not end the first-29 entitlement. A stored server-only character counter survives
+skill operations, logout and lost cities; replay and concurrent transactions
+cannot replenish or duplicate its rewards.
+
+Fresh starting-city claims initialize this seasonal counter. Existing profiles
+without it retain normal XP: their historical captures are not inferred from
+current ownership, and there is no retroactive grant. No new table or bulk data
+migration is introduced. The new field is inside the already protected character
+state; client writes remain forbidden. A future catch-up decision would need
+separate eligibility rules and owner approval.
 
 ## Later curve — review only, unchanged
 
@@ -83,10 +95,11 @@ rates, saved progress and level-up Gold/troop economics. That alternative is
 ## Validation and release boundary
 
 The source-based validator compares server and client awards across Levels
-1–200, exclusion cases, extra XP and the Level-15 boundary. The shared synthetic
+1–200, exclusion cases, fixed first-29 bonuses, independent extra XP and persisted counters. The shared synthetic
 capture journey runs on PostgreSQL and the current-realm combat emulator suite,
 including failed/abandoned captures, 29 actual settlements, duplicate and
-concurrent resolution, 14 skill points, level-up rewards and the ownership cap.
+concurrent resolution, 14 skill points, level-up rewards, counter tampering and the
+ownership cap. Losing a city after bonus 29 does not restore eligibility.
 Desktop and landscape-mobile browser checks exercise the real attack preview.
 
 The backend must be installed and verified separately before the configured

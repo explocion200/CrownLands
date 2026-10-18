@@ -14,5 +14,11 @@ const assert = require("node:assert/strict"), { randomBytes } = require("node:cr
     const info = await game.getRealmInfo({ auth, data: {} }); assert.equal(info.worldTopology, "core-expansion-v1");
     const identity = { clientReleaseId: info.currentReleaseId, clientWorldId: info.worldId, clientResetGeneration: info.resetGeneration, clientRealmShardId: info.sharedRealmId };
     await require("../functions/test/beginner-capture-xp-cases")({ db, actor, call: (name, data = {}) => game[name]({ auth, data: { ...identity, ...data } }) });
+    const { Access } = require("../local-backend/access"), target = `players/${actor.uid}`;
+    const before = (await db.doc(target).get()).data();
+    await db.runTransaction(async transaction => {
+      const access = await new Access({store:db,transaction,auth,now:Date.now()}).initialize();
+      assert.equal(await access.canWrite(target,before,{...before,character:{...before.character,beginnerNpcCaptures:0}}),false,"Client must not reset its bonus counter");
+    });
   } finally { await db.pool.query(`DROP SCHEMA IF EXISTS ${db.schema} CASCADE`); await db.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

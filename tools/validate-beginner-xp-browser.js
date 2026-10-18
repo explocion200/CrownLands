@@ -31,25 +31,26 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     const results = [];
     for (const [width, height] of [[1440,900],[844,390]]) {
       await client.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
-      for (const level of [1,10,14,15]) {
+      for (const [level,captures,expectedBonus] of [[1,0,120],[10,14,1364],[14,28,4291],[20,28,4291],[20,29,0]]) {
         const result = await evaluate(`(() => {
-          if(modal.open)modal.close();state.character={level:${level},xp:0,skillPoints:${level}-1};
+          if(modal.open)modal.close();state.character={level:${level},xp:0,skillPoints:${level}-1,beginnerNpcCaptures:${captures}};
           const preview=calculateBattlePreview(xpFixture.source,xpFixture.target,.5);
           showAttackPreview(xpFixture.source,xpFixture.target);
           const card=[...modalBody.querySelectorAll('.stat-card')].find(card=>card.querySelector('small')?.textContent==='capture XP');
           card?.scrollIntoView({block:'center'});
           const r=card?.getBoundingClientRect(),d=modal.getBoundingClientRect();
-          return {level:${level},award:preview.captureXp,bonus:preview.beginnerCaptureBonus,success:preview.success,text:card?.innerText,heading:modalBody.querySelector('.battle-result')?.innerText,open:modal.open,
+          return {level:${level},award:preview.captureXp,bonus:preview.beginnerCaptureBonus,ordinary:getCaptureXpAward(xpFixture.target,"neutral",preview.defenderLosses||0,"player",false),success:preview.success,text:card?.innerText,heading:modalBody.querySelector('.battle-result')?.innerText,open:modal.open,
             inside:!!r&&r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight,
             dialogInside:d.left>=0&&d.top>=0&&d.right<=innerWidth+1&&d.bottom<=innerHeight+1};
         })()`);
         assert(result.open && result.success && result.inside && result.dialogInside, JSON.stringify(result));
-        if (level < 15) { assert.equal(result.award, {1:125,10:2364,14:4444}[level]); assert(result.bonus); assert.match(result.heading,/Beginner XP bonus/); }
+        assert.equal(result.award-result.ordinary,expectedBonus);
+        if (expectedBonus) { assert(result.bonus); assert.match(result.heading,/Beginner XP bonus/); }
         else { assert.equal(result.bonus,false); assert(result.award<100); }
         results.push({width,height,...result});
         if(level===14){await delay(300);const screenshot=await client.send("Page.captureScreenshot",{format:"png"});fs.writeFileSync(path.join(directory,`capture-${width}x${height}.png`),Buffer.from(screenshot.data,"base64"));}
       }
-      const failed=await evaluate(`(() => {state.character={level:10,xp:0};const preview=calculateBattlePreviewForTroops(xpFixture.source,xpFixture.target,1);return {success:preview.success,award:preview.captureXp,bonus:preview.beginnerCaptureBonus};})()`);
+      const failed=await evaluate(`(() => {state.character={level:10,xp:0,beginnerNpcCaptures:0};const preview=calculateBattlePreviewForTroops(xpFixture.source,xpFixture.target,1);return {success:preview.success,award:preview.captureXp,bonus:preview.beginnerCaptureBonus};})()`);
       assert(!failed.success && !failed.bonus && failed.award < 100);
     }
     assert.deepEqual(errors,[]);fs.writeFileSync(path.join(directory,"browser-results.json"),JSON.stringify(results,null,2));

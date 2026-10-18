@@ -12,9 +12,12 @@
         "tools/validate-level-up-rewards.js",
         "tools/test-local-postgres-beginner-xp.js",
         "tools/validate-beginner-xp-browser.js",
-        "functions/test/emulator-combat-authorization.js"
+        "functions/test/emulator-combat-authorization.js",
+        "tools/validate-skills.js",
+        "tools/validate-skill-presets.js",
+        "functions/test/emulator-economy-concurrency.js"
       ],
-      "reason": "Server-authoritative neutral capture floor and matching previews below Hero Level 15. Verify unchanged PvP, failed/protected/abandoned/objective XP, city-upgrade and later-level dependencies, settlement-time eligibility, per-battle caps, rewards and duplicate/concurrent resolution. Current-realm emulator covers shared combat authorization and tower-origin paths; PostgreSQL fixture uses real local transactions, 29 captures, 14 skill points and the 30-city cap. Browser validates actual readable previews at desktop and landscape sizes. Remove only the immediately overwritten duplicate attack-preview markup in the same function so the new bonus stays within the existing offline-cache budget; browser checks verify retained visible controls and XP."
+      "reason": "Server-owned first-29 neutral capture bonus counter and matching client previews. Verify fixed bonus totals independent of other XP, unchanged ordinary battle caps, failed/protected/abandoned/objective exclusions, settlement-time eligibility and duplicate/concurrent resolution. Character normalization must preserve the counter through progression, city upgrades, skill resets and presets. Current-realm combat and economy emulator suites cover those shared paths; PostgreSQL exercises 29 actual captures, skill reset, loss after bonus exhaustion and denied counter forgery. Browser checks actual previews at desktop/mobile sizes. Remove only immediately overwritten duplicate markup in the same preview function to retain the existing offline-cache budget."
     },
     {
       "paths": [
@@ -26,7 +29,7 @@
         "tools/test-local-postgres-beginner-xp.js",
         "functions/test/emulator-combat-authorization.js"
       ],
-      "reason": "Run the new synthetic capture fixture on both local PostgreSQL and the current-realm emulator, preserving real dispatch limits and concurrent/replayed ownership and reward transactions. Fixture changes affect test data only, never production or archived worlds."
+      "reason": "Run synthetic first-29 capture fixtures on PostgreSQL and current-realm emulator with real dispatch limits, concurrent/replayed rewards, counter persistence after skill reset, no bonus after losing cities and denied client counter tampering. Fixtures never change production or archived worlds."
     },
     {
       "paths": [
@@ -41,7 +44,7 @@
         "tools/validate-beginner-xp-browser.js",
         "tools/validate-help-handbook-browser.js"
       ],
-      "reason": "Execute updated calculation/preview validators and verify handbook prose, search/navigation and desktop/mobile layout. Mathematical journey includes the baseline, capped target and extra XP; retained anchors detect unintended later curve changes."
+      "reason": "Execute updated calculation/preview validators and handbook browser checks. Cover the 29-bonus schedule, additional XP and persistent eligibility above Level 15; unchanged later curve anchors and desktop/mobile navigation/readability."
     },
     {
       "paths": [

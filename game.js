@@ -1110,6 +1110,7 @@ const HERO_XP_HARD_CAP_LEVEL = 100;
 const HERO_XP_EXPONENTIAL_START_LEVEL = 25;
 const HERO_XP_EXPONENTIAL_GROWTH_RATE = 1.1;
 const BEGINNER_CAPTURE_XP_TARGET_LEVEL = 15;
+const BEGINNER_CAPTURE_XP_COUNT = 29;
 const LEVEL_UP_GOLD_FLOOR_BASE = economyNumber("levelRewards.goldFloorBase", 500);
 const LEVEL_UP_GOLD_FLOOR_PER_LEVEL = economyNumber("levelRewards.goldFloorPerLevel", 250);
 const LEVEL_UP_GOLD_FLOOR_EXPONENT = economyNumber("levelRewards.goldFloorExponent", 1.25);
@@ -7655,6 +7656,9 @@ function normalizeCharacterProgress(character) {
     normalized.xp -= getXpRequiredForLevel(normalized.level);
     normalized.level += 1;
   }
+  if (Number.isInteger(character?.beginnerNpcCaptures) && character.beginnerNpcCaptures >= 0) {
+    normalized.beginnerNpcCaptures = Math.min(BEGINNER_CAPTURE_XP_COUNT, character.beginnerNpcCaptures);
+  }
   return normalized;
 }
 
@@ -8356,16 +8360,17 @@ function addCharacterXp(amount, reason = "progress", options = {}) {
   reconcileSkillPoints(state.character, state.upgrades);
 }
 
-function getBeginnerCaptureXpAward(battleXp, character, eligible) {
-  if (!eligible) return battleXp;
-  const current = normalizeCharacterProgress(character);
-  if (current.level >= BEGINNER_CAPTURE_XP_TARGET_LEVEL) return battleXp;
-  let remaining = -current.xp;
-  for (let level = current.level; level < BEGINNER_CAPTURE_XP_TARGET_LEVEL; level += 1) {
-    remaining += getXpRequiredForLevel(level);
-  }
-  // Two ordinary neutral captures per Hero level; never reduce normal battle XP.
-  return Math.max(battleXp, Math.min(remaining, Math.ceil(getXpRequiredForLevel(current.level) / 2)));
+function getBeginnerCaptureXpBonus(captures) {
+  if (!Number.isInteger(captures) || captures < 0 || captures >= BEGINNER_CAPTURE_XP_COUNT) return 0;
+  const totalAt = count => {
+    const steps = count * (BEGINNER_CAPTURE_XP_TARGET_LEVEL - 1);
+    const fullLevels = Math.floor(steps / BEGINNER_CAPTURE_XP_COUNT);
+    let total = 0;
+    for (let level = 1; level <= fullLevels; level += 1) total += getXpRequiredForLevel(level);
+    return total + Math.floor(getXpRequiredForLevel(fullLevels + 1)
+      * (steps % BEGINNER_CAPTURE_XP_COUNT) / BEGINNER_CAPTURE_XP_COUNT);
+  };
+  return totalAt(captures + 1) - totalAt(captures);
 }
 
 function getCaptureXpAward(target, oldOwner, defenderLosses, attackerOwner = "player", successfulCapture = true) {
@@ -8375,12 +8380,10 @@ function getCaptureXpAward(target, oldOwner, defenderLosses, attackerOwner = "pl
   const ownerBonus = oldOwner === "enemy" ? ENEMY_CAPTURE_XP_BONUS : 0;
   const cityXp = CAPTURE_XP_BASE + level * CAPTURE_XP_PER_CITY_LEVEL + ownerBonus;
   const efficiency = attackerOwner === "player" ? getCaptureXpEfficiency(target, oldOwner) : 1;
-  return capBattleXpForCurrentLevel(getBeginnerCaptureXpAward(
-    Math.floor((cityXp + troopXp) * efficiency),
-    state.character,
-    successfulCapture && attackerOwner === "player" && oldOwner === "neutral"
-      && !isStronghold(target) && !isRewardCampTarget(target)
-  ));
+  const beginnerBonus = successfulCapture && attackerOwner === "player" && oldOwner === "neutral"
+    && !isStronghold(target) && !isRewardCampTarget(target)
+    ? getBeginnerCaptureXpBonus(state.character?.beginnerNpcCaptures) : 0;
+  return capBattleXpForCurrentLevel(Math.floor((cityXp + troopXp) * efficiency)) + beginnerBonus;
 }
 
 function getDefenseHeldXpAward(attackingTroops, target = null) {
