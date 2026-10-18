@@ -229,7 +229,8 @@ const entrypointBudgets = {
   // in both this entry and the shared offline-shell allowance.
   // Session-safe roster refresh and invalid-response guards add 263 source bytes.
   // Existing headroom covers 43; allow 256 more without changing the offline-shell cap.
-  "game.js": (1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25 + 2 + 3 + 0.25) * 1024,
+  // Ownership notifications, bounded roster refresh and stale-read guards add 1,633 bytes.
+  "game.js": (1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25 + 2 + 3 + 0.25 + 2) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   // Medal crown selectors add under 0.5 KiB; retain all other payload limits.
