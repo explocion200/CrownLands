@@ -16,6 +16,16 @@
         "tools/validate-combat-timers-browser.js"
       ],
       "reason": "Ownership statistics now invalidate the cross-map roster and queue a server read through the existing combat UI clock; an open City List also retries at a bounded cadence. Exercise capture/loss/Stronghold/regional changes, stale and unrelated statistics, changes during an in-flight read, reconnect isolation, offline/hidden/closed gating, failure retention and retry, and verified empty rosters. Cross-map roster tests cover canonical ownership replacement, unloaded maps and upgrade authorization; City List browser checks cover stable rows, scroll, focus, pagination and upgrade recovery at desktop and landscape/portrait/short-phone sizes. Foreground resume and combat timer browser checks cover the shared scheduling dependencies. This changes client refresh behavior only, with no server authority, API, data or gameplay-rule changes, so emulator tests are not applicable. Production package validation is required for game.js."
+    },
+    {
+      "paths": [
+        "tools/asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "The ownership refresh adds 1,633 raw client bytes and exceeds the existing precache cap by 1,078 bytes. Allow one measured 2 KiB shell increase, retaining all individual art, startup request, lazy asset and production-artifact checks. No assets or dependencies are added."
     }
   ]
 }
