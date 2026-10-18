@@ -70,8 +70,8 @@ def verify_restore(module, stage):
     # Preserve a failed target for inspection. Only this invocation's fresh,
     # successfully verified disposable database is removed.
     try:
-        with (stage / "database.dump").open("rb") as archive:
-            command(["runuser", "-u", owner, "--", "pg_restore", *module.connection(target), "--exit-on-error", "--single-transaction", "--no-owner", "--no-acl"], stdin=archive, timeout=900)
+        with module.backup_phase("archive restore"), (stage / "database.dump").open("rb") as archive:
+            command(["runuser", "-u", owner, "--", "pg_restore", *module.connection(target), "--exit-on-error", "--single-transaction", "--no-owner", "--no-acl"], stdin=archive, timeout=module.ARCHIVE_TIMEOUT_SECONDS)
         actual = module.fingerprints(manifest["schemas"], database=target, prefix=["runuser", "-u", owner, "--"])
         if actual != manifest["tables"]:
             raise RuntimeError("Restored database rows differ from the shared snapshot")

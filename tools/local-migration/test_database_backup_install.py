@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 import install_database_backup as installer
+import postgres_backup as backup
 
 
 class BackupInstallerTests(unittest.TestCase):
@@ -65,6 +66,8 @@ class BackupInstallerTests(unittest.TestCase):
     def test_restore_as_restricted_owner_and_preserve_failed_copy(self):
         class FixtureModule:
             SOCKET = "/var/run/postgresql"
+            ARCHIVE_TIMEOUT_SECONDS = backup.ARCHIVE_TIMEOUT_SECONDS
+            backup_phase = staticmethod(backup.backup_phase)
             def verify_archive(self, stage):
                 return {"schemas": [], "tables": [{"rows": 2}], "sha256": "synthetic-checksum"}
             def query(self, statement, **kwargs):
@@ -76,7 +79,11 @@ class BackupInstallerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             stage = Path(temp); (stage / "database.dump").write_bytes(b"synthetic archive")
             calls = []
-            with patch.object(installer, "command", side_effect=lambda args, **kwargs: calls.append(args)):
+            def command(args, **kwargs):
+                calls.append(args)
+                if "pg_restore" in args:
+                    self.assertEqual(kwargs["timeout"], backup.ARCHIVE_TIMEOUT_SECONDS)
+            with patch.object(installer, "command", side_effect=command):
                 receipt = installer.verify_restore(FixtureModule(), stage)
                 self.assertTrue(receipt["allRowsCompared"])
                 restore = next(call for call in calls if "pg_restore" in call)

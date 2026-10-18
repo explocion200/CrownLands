@@ -1,8 +1,11 @@
 from pathlib import Path
+from contextlib import redirect_stdout
+import io
 import json
 import subprocess
 import tempfile
 import uuid
+from unittest.mock import patch
 import postgres_backup as backup
 
 
@@ -34,6 +37,31 @@ def main():
             assert backup.verify_archive(directory) == manifest
             assert (directory / "database.dump").stat().st_mode & 0o077 == 0
             assert (directory / "manifest.json").stat().st_mode & 0o077 == 0
+            previous = {name: (directory / name).read_bytes() for name in ["database.dump", "manifest.json"]}
+            real_run = subprocess.run
+            for failure in ["timeout", "warning"]:
+                def fail_dump(command, **kwargs):
+                    if "pg_dump" not in command:
+                        return real_run(command, **kwargs)
+                    assert kwargs["timeout"] == backup.ARCHIVE_TIMEOUT_SECONDS == 3600
+                    kwargs["stdout"].write(b"incomplete archive")
+                    if failure == "timeout":
+                        raise subprocess.TimeoutExpired(["PRIVATE_CANARY"], 3600, stderr=b"PRIVATE_CANARY")
+                    return subprocess.CompletedProcess(command, 0, stderr=b"PRIVATE_CANARY")
+                output = io.StringIO()
+                with redirect_stdout(output), patch.object(backup.subprocess, "run", side_effect=fail_dump):
+                    try:
+                        backup.capture(directory, schemas)
+                        raise AssertionError("Failed export replaced the previous backup")
+                    except (subprocess.TimeoutExpired, RuntimeError):
+                        pass
+                assert "PRIVATE_CANARY" not in output.getvalue()
+                assert "archive export " + ("timed out" if failure == "timeout" else "failed") in output.getvalue()
+                assert not list(directory.glob("*.pending"))
+                assert all((directory / name).read_bytes() == raw for name, raw in previous.items())
+            with backup.exported_snapshot() as snapshot:
+                assert snapshot
+                assert backup.SNAPSHOT_IDLE_MINUTES * 60 > backup.ARCHIVE_TIMEOUT_SECONDS + 900
             backup.query(f"ALTER SCHEMA {auth} RENAME TO {auth}_before; ALTER SCHEMA {game} RENAME TO {game}_before;")
             restored = subprocess.run(["pg_restore", *backup.connection(backup.DATABASE), "--exit-on-error", "--single-transaction", "--no-owner", "--no-acl", str(directory / "database.dump")], capture_output=True)
             assert restored.returncode == 0, "Synthetic restore failed"
@@ -54,7 +82,7 @@ def main():
                 raise AssertionError("Corrupt archive accepted")
             except ValueError:
                 pass
-            print("Consistent database backup: shared snapshot across concurrent account/game writes, private archive, all-row fingerprints, real restore, preserved later source writes, sequences and corruption/target rejection passed.")
+            print("Consistent database backup: shared snapshot, concurrent writes, real restore, private fingerprints, bounded deadlines, timeout/warning preservation, redacted diagnostics, sequences and corruption/target rejection passed.")
         finally:
             for schema in schemas:
                 backup.query(f"DROP SCHEMA IF EXISTS {schema} CASCADE; DROP SCHEMA IF EXISTS {schema}_before CASCADE;")
