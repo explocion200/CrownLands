@@ -104,7 +104,7 @@
     if (!note) return;
     const record = activeRecords(records, nowMs).find(entry => entry.id === activeId);
     note.textContent = record
-      ? `Retaliation — ${remaining(record.expiresAtMs, nowMs)} left. Used only when combat happens. Shields and recalls preserve the chance within this deadline. King Power limits are lifted for this attack.`
+      ? `Retaliation — ${remaining(record.expiresAtMs, nowMs)} left. Used only when combat happens. Shields and recalls preserve it until expiry. King Power limits are lifted.`
       : "Retaliation unavailable or expired. Reopen Attack to review normal King Power limits.";
   }
   root.CrownlandsCombatTimersUI = { remaining, activeRecords, render, renderFeedback };
