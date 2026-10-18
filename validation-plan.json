@@ -1,18 +1,25 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "5b04042796b986d76cbfc6096efd5b4271cc0336",
+  "baseCommit": "0ca32ee6fb229b41c37e911c89fcb49fb255bc63",
   "coverage": [
     {
       "paths": [
-        "skills-ledger-ui.css",
-        "tools/validate-preset-confirmation-layout-browser.js"
+        "game.js",
+        "tools/validate-owned-city-list.js",
+        "tools/validate-owned-city-roster-refresh.js"
       ],
       "tests": [
-        "tools/validate-preset-confirmation-layout-browser.js",
-        "tools/validate-skill-presets.js",
-        "tools/validate-skill-point-efficiency-browser.js"
+        "tools/validate-owned-city-roster-refresh.js",
+        "tools/validate-owned-city-list.js",
+        "tools/validate-foreground-resume.js",
+        "tools/validate-city-list-browser.js"
       ],
-      "reason": "Keep the balance/retry paragraph in a content-sized row and reserve the only shrinking row for allocations, with the confirmation footer visible. Exercise the real shared modal, loaded optional styles, cost/balance visibility, allocation scrolling and pointer Apply/Cancel/Close/retry at desktop, short desktop, zoom-equivalent and landscape/portrait sizes. The regression fails on the previous CSS when the balance collapses. The existing skill browser test additionally covers the mocked Crown charge/replay and unchanged preset/build controls; the preset validator covers the 10-Crown rule and safe cancellation. CSS only: no server authority, data or backend changes, so emulator suites are not applicable."
+      "reason": "Bind full owned-city reads to the existing online session generation so stale same-account reconnect responses, catches and finalizers cannot replace a newer roster or release its request lock. Reject malformed replies before complete-roster reconciliation. The executable refresh regression covers both completion orders, success/failure, invalid and verified-empty replies, timeout, incomplete data, retry, coalescing and map changes. The owned-city validator also runs cross-map synchronization tests covering 42 cities on unloaded maps, canonical island identity, ownership loss, stable order and upgrades. Foreground-resume validation covers the shared caller's catch-up/coalescing/retry lifecycle. The real City List browser fixture checks five-row pagination, off-map info/locate, Stronghold/empty/incomplete states, retry, stable rows and upgrade controls at desktop, landscape, portrait and short landscape sizes. This changes only client refresh acceptance; no server authority, schema or backend changes, so emulator suites do not apply. Production build validation checks the static local-client package."
+    },
+    {
+      "paths": ["tools/validate-asset-performance-budgets.js"],
+      "tests": ["tools/validate-asset-performance-budgets.js"],
+      "reason": "The roster guard adds 263 normalized source bytes to game.js against 43 bytes of existing headroom. Raise only that source-entry allowance by 256 bytes to cover the 220-byte overage. Validate all existing image, entrypoint and service-worker installation budgets; the aggregate offline-shell cap and all other asset/request limits remain unchanged."
     }
   ]
 }
