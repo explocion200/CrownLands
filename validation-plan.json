@@ -26,7 +26,8 @@
       "paths": [
         "game.js",
         "combat-timers-ui.js",
-        "tools/validate-combat-timers-browser.js"
+        "tools/validate-combat-timers-browser.js",
+        "index.html"
       ],
       "tests": [
         "tools/validate-combat-timers-browser.js",
