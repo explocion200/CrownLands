@@ -1109,6 +1109,8 @@ const HERO_XP_SOFT_CAP_LEVEL = 50;
 const HERO_XP_HARD_CAP_LEVEL = 100;
 const HERO_XP_EXPONENTIAL_START_LEVEL = 25;
 const HERO_XP_EXPONENTIAL_GROWTH_RATE = 1.1;
+const BEGINNER_CAPTURE_XP_TARGET_LEVEL = 15;
+const BEGINNER_CAPTURE_XP_COUNT = 29;
 const LEVEL_UP_GOLD_FLOOR_BASE = economyNumber("levelRewards.goldFloorBase", 500);
 const LEVEL_UP_GOLD_FLOOR_PER_LEVEL = economyNumber("levelRewards.goldFloorPerLevel", 250);
 const LEVEL_UP_GOLD_FLOOR_EXPONENT = economyNumber("levelRewards.goldFloorExponent", 1.25);
@@ -7654,6 +7656,9 @@ function normalizeCharacterProgress(character) {
     normalized.xp -= getXpRequiredForLevel(normalized.level);
     normalized.level += 1;
   }
+  if (Number.isInteger(character?.beginnerNpcCaptures) && character.beginnerNpcCaptures >= 0) {
+    normalized.beginnerNpcCaptures = Math.min(BEGINNER_CAPTURE_XP_COUNT, character.beginnerNpcCaptures);
+  }
   return normalized;
 }
 
@@ -8355,14 +8360,30 @@ function addCharacterXp(amount, reason = "progress", options = {}) {
   reconcileSkillPoints(state.character, state.upgrades);
 }
 
-function getCaptureXpAward(target, oldOwner, defenderLosses, attackerOwner = "player") {
+function getBeginnerCaptureXpBonus(captures) {
+  if (!Number.isInteger(captures) || captures < 0 || captures >= BEGINNER_CAPTURE_XP_COUNT) return 0;
+  const totalAt = count => {
+    const steps = count * (BEGINNER_CAPTURE_XP_TARGET_LEVEL - 1);
+    const fullLevels = Math.floor(steps / BEGINNER_CAPTURE_XP_COUNT);
+    let total = 0;
+    for (let level = 1; level <= fullLevels; level += 1) total += getXpRequiredForLevel(level);
+    return total + Math.floor(getXpRequiredForLevel(fullLevels + 1)
+      * (steps % BEGINNER_CAPTURE_XP_COUNT) / BEGINNER_CAPTURE_XP_COUNT);
+  };
+  return totalAt(captures + 1) - totalAt(captures);
+}
+
+function getCaptureXpAward(target, oldOwner, defenderLosses, attackerOwner = "player", successfulCapture = true) {
   if (isGivenUpNeutralCity(target)) return 0;
   const level = clampCityLevel(target?.level);
   const troopXp = Math.floor(getBattleXpTroopCredit(target, defenderLosses) * CAPTURE_XP_PER_DEFENDER);
   const ownerBonus = oldOwner === "enemy" ? ENEMY_CAPTURE_XP_BONUS : 0;
   const cityXp = CAPTURE_XP_BASE + level * CAPTURE_XP_PER_CITY_LEVEL + ownerBonus;
   const efficiency = attackerOwner === "player" ? getCaptureXpEfficiency(target, oldOwner) : 1;
-  return capBattleXpForCurrentLevel(Math.floor((cityXp + troopXp) * efficiency));
+  const beginnerBonus = successfulCapture && attackerOwner === "player" && oldOwner === "neutral"
+    && !isStronghold(target) && !isRewardCampTarget(target)
+    ? getBeginnerCaptureXpBonus(state.character?.beginnerNpcCaptures) : 0;
+  return capBattleXpForCurrentLevel(Math.floor((cityXp + troopXp) * efficiency)) + beginnerBonus;
 }
 
 function getDefenseHeldXpAward(attackingTroops, target = null) {
@@ -8374,7 +8395,7 @@ function getPartialBattleXpAward(fullWinXp) {
 }
 
 function getFailedAttackXpAward(target, oldOwner, defenderLosses, attackerOwner = "player") {
-  return getPartialBattleXpAward(getCaptureXpAward(target, oldOwner, defenderLosses, attackerOwner));
+  return getPartialBattleXpAward(getCaptureXpAward(target, oldOwner, defenderLosses, attackerOwner, false));
 }
 
 function getCaptureXpEfficiency(target, oldOwner = target?.owner) {
@@ -37149,31 +37170,7 @@ function showAttackPreview(source, target) {
   modalTitle.textContent = `Attack ${target.name}`;
   modalBody.innerHTML = `
     <div class="battle-preview ${preview.success ? "win" : "lose"}">
-      <div class="battle-result"><strong>${preview.success ? "Likely Victory" : "Likely Defeat"}</strong><span>${preview.label}</span></div>
-      <div class="stat-grid">
-        <div class="stat-card"><strong>${formatNumber(preview.send)}</strong><small>troops to send</small></div>
-        <div class="stat-card"><strong>${formatNumber(target.troops)}</strong><small>target troops</small></div>
-        <div class="stat-card"><strong>${formatNumber(preview.attackPower)}</strong><small>attack power</small></div>
-        <div class="stat-card"><strong>${formatNumber(preview.defensePower)}</strong><small>defense power</small></div>
-      </div>
-      <p><strong>${source.name}</strong> \u2192 <strong>${target.name}</strong> \u00B7 ${formatPercent(selectedMarchPercent)} march \u00B7 about ${formatDuration(preview.travel)} travel.</p>
-      <p>Route distance: <strong>${formatNumber(preview.pathLength)}</strong> map units. Troops avoid water, lakes, mountains, cities, and strongholds. Swamp and forests are walkable.</p>
-      <p>${preview.success
-        ? `Expected capture with about <strong>${formatNumber(preview.survivors)}</strong> surviving troops.`
-        : `Expected failure with about <strong>${formatNumber(preview.defendersLeft)}</strong> defenders left.`}</p>
-      ${protectionNotice ? `<p class="tiny-warning">${escapeHtml(protectionNotice)}</p>` : ""}
-      ${shieldDropWarning ? `<p class="shield-drop-warning"><strong>Shield warning</strong><span>${escapeHtml(shieldDropWarning)}</span></p>` : ""}
-      <p class="tiny-warning">This is an estimate based on current numbers. Confirm launches using the current troop count.</p>
-      <div class="modal-actions">
-        <button id="confirmAttackBtn" class="danger-action" type="button">Attack</button>
-        <button id="cancelAttackBtn" class="safe-action" type="button">Cancel</button>
-      </div>
-    </div>
-  `;
-
-  modalBody.innerHTML = `
-    <div class="battle-preview ${preview.success ? "win" : "lose"}">
-      <div class="battle-result"><strong>${preview.success ? "Likely Victory" : "Likely Defeat"}</strong><span>${preview.label} - ${Math.round(preview.xpEfficiency * 100)}% XP</span></div>
+      <div class="battle-result"><strong>${preview.success ? "Likely Victory" : "Likely Defeat"}</strong><span>${preview.label} - ${preview.beginnerCaptureBonus ? "Beginner XP bonus" : `${Math.round(preview.xpEfficiency * 100)}% XP`}</span></div>
       <div class="stat-grid">
         <div class="stat-card"><strong>${formatNumber(preview.send)}</strong><small>troops to send</small></div>
         <div class="stat-card"><strong>${formatNumber(target.troops)}</strong><small>target troops</small></div>
@@ -37454,6 +37451,9 @@ function calculateBattlePreviewForTroops(
       ? getCaptureXpAward(target, target.owner, result.defenderLosses, "player")
       : getFailedAttackXpAward(target, target.owner, result.defenderLosses, "player");
   const xpLabel = attackProtection ? "attacker XP" : result.success ? "capture XP" : "defeat XP";
+  const beginnerCaptureBonus = result.success && captureXp > getCaptureXpAward(
+    target, target.owner, result.defenderLosses, "player", false
+  );
   const advantageTier = getCombatAdvantageTier(result.ratio);
   let label = advantageTier.label;
   if (attackProtection) {
@@ -37504,6 +37504,7 @@ function calculateBattlePreviewForTroops(
       && send < minimumMeaningfulWallDamageTroops,
     xpEfficiency,
     captureXp,
+    beginnerCaptureBonus,
     xpLabel,
     label,
     attackProtection,

@@ -305,6 +305,13 @@ async function main() {
   await stagedWallCases();
   await troopProductionCases();
   await linkedAccountCases();
+  const beginner = await user("Beginner XP");
+  await require("./beginner-capture-xp-cases")({ db, actor: beginner, call: (name, data) => call(name, beginner, data) });
+  const bonusForgery = await fetch(`${restRoot}/players/${beginner.uid}?updateMask.fieldPaths=character.beginnerNpcCaptures`, {
+    method:"PATCH",headers:{authorization:`Bearer ${beginner.token}`,"content-type":"application/json"},
+    body:JSON.stringify({fields:{character:{mapValue:{fields:{beginnerNpcCaptures:{integerValue:"0"}}}}}}),
+  });
+  assert.equal(bonusForgery.status,403,"Clients must not replenish capture bonuses");
   console.log("Combat authorization emulator passed: actual low/high conquests, dispatch cooldowns, defense isolation, exact-city previews, ownership changes, expiry, long travel, independent captures, atomic single-use, retries, failed launches, abandonment, transfers, shield activation and Firestore authority/privacy.");
 }
 async function verifySpentRetaliation(high, low, source, enemySource, seed) {

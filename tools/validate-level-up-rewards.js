@@ -154,7 +154,7 @@ requireMatch(
 );
 requireMatch(
   clientSource,
-  /function getCaptureXpAward[\s\S]*?const troopXp[\s\S]*?const cityXp\s*=\s*CAPTURE_XP_BASE[\s\S]*?CAPTURE_XP_PER_CITY_LEVEL[\s\S]*?ownerBonus[\s\S]*?return capBattleXpForCurrentLevel\(Math\.floor\(\(cityXp \+ troopXp\) \* efficiency\)\)/,
+  /function getCaptureXpAward[\s\S]*?const troopXp[\s\S]*?const cityXp\s*=\s*CAPTURE_XP_BASE[\s\S]*?CAPTURE_XP_PER_CITY_LEVEL[\s\S]*?ownerBonus[\s\S]*?return capBattleXpForCurrentLevel\(Math\.floor\(\(cityXp \+ troopXp\) \* efficiency\)\) \+ beginnerBonus/,
   "Client capture preview must always include fixed city XP alongside troop-loss XP."
 );
 assert.doesNotMatch(serverSource, /CAPTURE_XP_COOLDOWN|getCaptureXpCooldownRemainingMs/, "Server still contains the capture-XP cooldown.");

@@ -1,37 +1,58 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "841e449674740fe99a3ca0560737a5ae81aac17c",
+  "baseCommit": "d47252f3eb2c53eed6e865d802a391526fd4238a",
   "coverage": [
     {
       "paths": [
-        "app-entry.js",
-        "tools/validate-pwa-entry-routing.js"
+        "functions/index.js",
+        "game.js"
       ],
       "tests": [
-        "tools/validate-pwa-entry-routing.js",
-        "tools/validate-focused-browser-smoke.js"
+        "tools/validate-beginner-capture-xp.js",
+        "tools/validate-level-up-rewards.js",
+        "tools/test-local-postgres-beginner-xp.js",
+        "tools/validate-beginner-xp-browser.js",
+        "functions/test/emulator-combat-authorization.js",
+        "tools/validate-skills.js",
+        "tools/validate-skill-presets.js",
+        "functions/test/emulator-economy-concurrency.js"
       ],
-      "reason": "Send cached alternate-host root/home entries to the canonical game instead of the homepage, preserving search/hash and existing other-host and installed-app behavior. PWA routing tests cover canonical and legacy hosts, notification links, installed modes and offline shell boundaries; production browser checks cover desktop/landscape startup and built entry routes. No session, authentication, data or authority changes."
+      "reason": "Server-owned first-29 neutral capture bonus counter and matching client previews. Verify fixed bonus totals independent of other XP, unchanged ordinary battle caps, failed/protected/abandoned/objective exclusions, settlement-time eligibility and duplicate/concurrent resolution. Character normalization must preserve the counter through progression, city upgrades, skill resets and presets. Current-realm combat and economy emulator suites cover those shared paths; PostgreSQL exercises 29 actual captures, skill reset, loss after bonus exhaustion and denied counter forgery. Browser checks actual previews at desktop/mobile sizes. Remove only immediately overwritten duplicate markup in the same preview function to retain the existing offline-cache budget."
     },
     {
       "paths": [
-        "tools/local-deploy/canonical_game_routes.js",
-        "tools/test-canonical-game-routes.js"
+        "functions/test/beginner-capture-xp-cases.js",
+        "functions/test/emulator-combat-authorization.js",
+        "tools/test-local-postgres-beginner-xp.js"
       ],
       "tests": [
-        "tools/test-canonical-game-routes.js",
-        "tools/test-local-deployment.js"
+        "tools/test-local-postgres-beginner-xp.js",
+        "functions/test/emulator-combat-authorization.js"
       ],
-      "reason": "Prepare a narrowly scoped alternate-host Caddy insertion, preserving public website, API/health, protected paths, unsupported-method checks and worker cache/assets. Tests prove exact preservation outside the insertion and refusal of changed/duplicate layouts. The --caddy local integration additionally passes real HTTP GET/HEAD redirects, encoded query preservation, cache-fetch exclusions and unchanged files on an isolated loopback port. Existing publisher tests cover redirect-following byte verification and atomic publication/rollback dependencies. No installed publisher or backend changes; production Caddy installation and public smoke checks are separately verified."
+      "reason": "Run synthetic first-29 capture fixtures on PostgreSQL and current-realm emulator with real dispatch limits, concurrent/replayed rewards, counter persistence after skill reset, no bonus after losing cities and denied client counter tampering. Fixtures never change production or archived worlds."
     },
     {
       "paths": [
-        "docs/AUTOMATIC_LOCAL_DEPLOYMENT.md",
+        "tools/validate-beginner-capture-xp.js",
+        "tools/validate-level-up-rewards.js",
+        "tools/validate-beginner-xp-browser.js",
+        "help-handbook-content.js"
+      ],
+      "tests": [
+        "tools/validate-beginner-capture-xp.js",
+        "tools/validate-level-up-rewards.js",
+        "tools/validate-beginner-xp-browser.js",
+        "tools/validate-help-handbook-browser.js"
+      ],
+      "reason": "Execute updated calculation/preview validators and handbook browser checks. Cover the 29-bonus schedule, additional XP and persistent eligibility above Level 15; unchanged later curve anchors and desktop/mobile navigation/readability."
+    },
+    {
+      "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CANONICAL_GAME_ADDRESS.md"
+        "docs/HERO_XP_PROGRESSION_REVIEW.md"
       ],
       "tests": [],
-      "reason": "Record the explicitly confirmed canonical game address, compatibility scope, validation, reversible Caddy installation and origin-bound session/install limitations. Documentation does not alter monitoring, backup or gameplay policy."
+      "reason": "Record the owner-confirmed 30-total-city target, precise prospective reward scope and evidence-backed later progression review. Later exponent changes remain recommendations only; no data migration or deployment is claimed."
     }
   ]
 }
