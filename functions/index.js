@@ -12856,7 +12856,10 @@ async function rejoinRecalledRallyContribution(transaction, army, assembly, nowM
     assertCurrentClanActorProfile(profile, clanId);
     assertCurrentClanActorProfile(leaderSnap.data() || {}, clanId);
     for (const snap of [clanSnap, memberSnap, leaderMemberSnap]) assertCurrentClan(snap.data());
-    if (rally.targetType === "tower") assertHoldingTowerMemberEligible(memberSnap.data(), nowMs, clanId);
+    if (rally.targetType === "tower") {
+      assertHoldingTowerMemberEligible(memberSnap.data(), nowMs, clanId);
+      assertHoldingTowerMemberEligible(leaderMemberSnap.data(), nowMs, clanId);
+    }
   } catch (error) {
     if (["failed-precondition", "permission-denied"].includes(error.code)) return null;
     throw error;

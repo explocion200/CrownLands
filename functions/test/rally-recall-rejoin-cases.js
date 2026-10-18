@@ -2,6 +2,7 @@
 const assert = require("node:assert/strict");
 const { randomUUID } = require("node:crypto");
 const layout = require("../core-expansion-world-layout.json");
+const towers = require("../holding-towers");
 
 // Shared by the current-realm emulator and an isolated PostgreSQL schema.
 module.exports = async function rallyRecallRejoinCases({ db, actor, call }) {
@@ -36,7 +37,7 @@ module.exports = async function rallyRecallRejoinCases({ db, actor, call }) {
   const request = movement => ({ armyId: movement.id, routeRegionIds: movement.routeRegionIds });
   const due = async movement => db.doc(`armies/${movement.id}`).update({ arrivesAtMs: Date.now() - 1000 });
   const settle = movement => call("resolveArmyOrder", ally, request(movement));
-  async function form() {
+  async function form(target = objective) {
     for (const user of users) {
       await city(user.home).update({ troops: 1000000, troopFloat: 1000000, productionUpdatedAtMs: Date.now() });
     }
@@ -44,9 +45,9 @@ module.exports = async function rallyRecallRejoinCases({ db, actor, call }) {
       ownerName: leader.label, ownerClanId: clanId, isMainCity: false, level: 1, troops: 11000,
       troopFloat: 11000, productionUpdatedAtMs: Date.now() });
     const id = `rejoin_${randomUUID()}`, ref = db.doc(`clans/${clanId}/rallies/${id}`);
-    await call("createClanRally", leader, { rallyId: id, sourceRegionId: assembly.regionId, targetRegionId: objective.regionId,
-      army: { id, fromId: assembly.id, toId: objective.id, targetType: "city", troops: 10000, requestedTroops: 10000,
-        sourceRegionId: assembly.regionId, targetRegionId: objective.regionId } });
+    await call("createClanRally", leader, { rallyId: id, sourceRegionId: assembly.regionId, targetRegionId: target.regionId,
+      army: { id, fromId: assembly.id, toId: target.id, targetType: target.tower ? "tower" : "city", troops: 10000, requestedTroops: 10000,
+        sourceRegionId: assembly.regionId, targetRegionId: target.regionId } });
     return { id, ref };
   }
   async function join(rally, user = ally, troops = 5000, source = user.home) {
@@ -120,14 +121,22 @@ module.exports = async function rallyRecallRejoinCases({ db, actor, call }) {
   assert.equal((await read(recapture.ref)).participants.find(row => row.uid === ally.uid).sourceId, secondary.id);
   await cancel(recapture);
 
+  const tower = { ...towers.TOWERS[3], tower: true };
+  await db.doc(`holdingTowers/${tower.id}`).set({ ...towers.createNeutralTowerState(tower.id, { nowMs: Date.now() }), ...identity });
+  const towerRally = await form(tower); await join(towerRally);
+  assert.equal((await settle(await withdraw(towerRally))).outcome, "rejoined");
+  await cancel(towerRally);
+
   const cases = ["cancelled", "launched", "full", "new contribution", "left clan", "member removed",
-    "creator left", "clan inactive", "assembly lost", "old rally generation", "wrong assembly", "no horn"];
+    "creator left", "clan inactive", "assembly lost", "old rally generation", "wrong assembly", "no horn",
+    "tower ally probation", "tower creator probation"];
   for (const scenario of cases) {
-    const rally = await form(); await join(rally);
+    const rally = await form(scenario.startsWith("tower") ? tower : objective); await join(rally);
     const movement = await withdraw(rally), prior = await read(rally.ref);
     const baseCommitted = (await read(profile(ally))).committedRallyTroops;
     const savedClan = await read(clanRef), savedLeader = await read(profile(leader)), savedAlly = await read(profile(ally));
     const savedMember = await read(member(ally));
+    const savedLeaderMember = await read(member(leader));
     if (scenario === "cancelled") await cancel(rally);
     if (scenario === "launched") { await join(rally, third); await call("launchClanRally", leader, params(rally)); }
     if (scenario === "full") await rally.ref.update({ participants: [...prior.participants, ...Array.from({ length: 19 }, (_, i) =>
@@ -141,6 +150,8 @@ module.exports = async function rallyRecallRejoinCases({ db, actor, call }) {
     if (scenario === "old rally generation") await rally.ref.update({ resetGeneration: "realm-2000-01" });
     if (scenario === "wrong assembly") await rally.ref.update({ assemblyCityId: leader.home.id });
     if (scenario === "no horn") await db.doc(`armies/${movement.id}`).update({ returnReason: "rally_recall" });
+    if (scenario === "tower ally probation") await member(ally).update({ joinedAtMs: Date.now() });
+    if (scenario === "tower creator probation") await member(leader).update({ joinedAtMs: Date.now() });
     const homeBefore = await read(city(ally.home));
     const results = await Promise.all([settle(movement), settle(movement)]);
     assert(!results.some(row => row.outcome === "rejoined"), `${scenario} must not rejoin`);
@@ -150,7 +161,7 @@ module.exports = async function rallyRecallRejoinCases({ db, actor, call }) {
     assert.equal((await read(db.doc(`armies/${movement.id}`))).status, "resolved", `${scenario}: no stuck march`);
     // Restore only synthetic fixture eligibility, then release this forming slot.
     await profile(leader).update({ clanId: savedLeader.clanId }); await profile(ally).update({ clanId: savedAlly.clanId });
-    await member(ally).set(savedMember); await clanRef.set(savedClan);
+    await member(ally).set(savedMember); await member(leader).set(savedLeaderMember); await clanRef.set(savedClan);
     if (!["cancelled", "launched"].includes(scenario)) {
       if (["full", "old rally generation", "wrong assembly"].includes(scenario)) await rally.ref.set(prior);
       await cancel(rally);
@@ -175,5 +186,5 @@ module.exports = async function rallyRecallRejoinCases({ db, actor, call }) {
   assert.equal((await read(launchRace.ref)).participants.filter(row => row.uid === ally.uid).length,
     arrival.outcome === "rejoined" ? 1 : 0);
   assert.equal((await read(db.doc(`armies/${turnBack.id}`))).status, "resolved");
-  console.log("Rally recall rejoin passed: real join/withdraw/Horn, repeated trips, duplicate arrivals, authorization, King Power, recapture withdrawal, launch/cancellation races and 12 safe-return cases.");
+  console.log("Rally recall rejoin passed: real join/withdraw/Horn, repeated trips, duplicate arrivals, authorization, King Power, Tower probation, recapture withdrawal, launch/cancellation races and 14 safe-return cases.");
 };

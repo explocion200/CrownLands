@@ -10,7 +10,7 @@
         "tools/test-local-postgres-rally-rejoin.js",
         "functions/test/emulator-rally-staging-defense.js"
       ],
-      "reason": "Exercise current core-realm city-assembled rallies using real join, withdraw, Recall Horn and arrival calls. Cover repeated departures, unique march identities, inventory/ownership authorization, duplicate/concurrent settlement, troop and King Power accounting, original-source preservation, capacity/clan/realm/assembly eligibility, cancellation and launch races, captured-source attack reversal and safe fallback returns. Existing current-realm staging tests cover shared arrival, early-launch turnbacks, defense casualties and Tower assembly; no visual markup or controls change."
+      "reason": "Exercise current core-realm city-assembled rallies using real join, withdraw, Recall Horn and arrival calls. Cover repeated departures, unique march identities, inventory/ownership authorization, duplicate/concurrent settlement, troop and King Power accounting, original-source preservation, capacity/clan/realm/assembly eligibility, Tower-target probation for both rulers, private response data, cancellation and launch races, captured-source attack reversal and safe fallback returns. Existing current-realm staging tests cover shared arrival, early-launch turnbacks, defense casualties and Tower assembly; no visual markup or controls change."
     },
     {
       "paths": [
