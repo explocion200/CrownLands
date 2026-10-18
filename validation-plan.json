@@ -1,32 +1,21 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "91c227585e1913d3a27f15c1bd23c63dad9b5b50",
+  "baseCommit": "5787793870ccfe286c7125f6295f4ff8043726e9",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "tools/validate-owned-city-roster-refresh.js"
+        "functions/marauder-population.js",
+        "functions/test/emulator-marauder-population.js",
+        "functions/test/marauder-respawn-cases.js",
+        "tools/test-local-postgres-marauder-respawn.js"
       ],
       "tests": [
-        "tools/validate-owned-city-roster-refresh.js",
-        "tools/validate-owned-city-cross-map-sync.js",
-        "tools/validate-owned-city-list.js",
-        "tools/validate-city-list-browser.js",
-        "tools/validate-foreground-resume.js",
-        "tools/validate-combat-timers-browser.js"
+        "tools/validate-marauder-terrain.js",
+        "tools/test-local-postgres-marauder-respawn.js",
+        "functions/test/emulator-marauder-population.js",
+        "functions/test/emulator-marauder-combat.js"
       ],
-      "reason": "Ownership statistics now invalidate the cross-map roster and queue a server read through the existing combat UI clock; an open City List also retries at a bounded cadence. Exercise capture/loss/Stronghold/regional changes, stale and unrelated statistics, changes during an in-flight read, reconnect isolation, offline/hidden/closed gating, failure retention and retry, and verified empty rosters. Cross-map roster tests cover canonical ownership replacement, unloaded maps and upgrade authorization; City List browser checks cover stable rows, scroll, focus, pagination and upgrade recovery at desktop and landscape/portrait/short-phone sizes. Foreground resume and combat timer browser checks cover the shared scheduling dependencies. This changes client refresh behavior only, with no server authority, API, data or gameplay-rule changes, so emulator tests are not applicable. Production package validation is required for game.js."
-    },
-    {
-      "paths": [
-        "tools/asset-performance-budgets.js",
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "tests": [
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "reason": "The ownership refresh adds 1,633 raw client bytes and exceeds the existing precache cap by 1,078 bytes. Allow one measured 2 KiB shell and game.js source increase, retaining all individual art, startup request, lazy asset and production-artifact checks. No assets or dependencies are added."
+      "reason": "Replace a due slot without treating its own atomically removed remains as a lasting obstacle, while rejecting the exact old point and retaining other remains, living NPC separation, road/inset/terrain/building clearances and reachable routes. Shared Firestore-emulator and isolated PostgreSQL fixtures reproduce the real Southhaven/Crown Citadel road deadlocks, exercise due deadlines, concurrent viewer/scheduler attempts, fresh private/public identities, stale requests, current-city obstruction and another defeated slot, and preserve genuinely blocked Lionwatch. Existing population coverage checks slot limits, level alternation, no fallback, retirement, inactive maps and realm isolation. Combat emulator coverage checks immutable encounter identities, reward/refund safety and defeated-state transitions. Terrain validation covers the current Core topology, all prepared maps and active generated New Lands templates; no archived topology or production data is edited. No client UI or timers change, so browser layout tests are not applicable."
     }
   ]
 }
