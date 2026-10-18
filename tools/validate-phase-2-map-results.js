@@ -63,7 +63,7 @@ if (detailFunctionMatch) {
   });
 }
 
-check("lod", "far and medium hit sizes are discrete CSS values", styles.includes(".map-frame.detail-far .map-world { --map-hit-size: 110px; }") && styles.includes(".map-frame.detail-medium .map-world { --map-hit-size: 84px; }"), "source scan", true);
+check("lod", "far and medium hit sizes are scoped to hit areas", styles.includes(".map-frame.detail-far .army-token::before { --map-hit-size: 110px; }") && styles.includes(".map-frame.detail-medium .army-token::before { --map-hit-size: 84px; }"), "source scan", true);
 check("lod", "camera transform does not rewrite inherited hit-size custom property", !source.includes('mapWorld.style.setProperty("--map-hit-size"'), "source scan", "no per-frame write");
 check("lod", "far LOD hides route flow but not route ribbon", styles.includes(".map-frame.detail-far .paths .army-route-flow { display: none; }") && !styles.includes(".map-frame.detail-far .paths .army-route-ribbon { display: none; }"), "source scan", true);
 check("lod", "far label rule preserves selected, targeted, main, and stronghold nodes", styles.includes(":not(.selected):not(.targeted):not(.main-city-node):not(.stronghold-node)"), "source scan", true);
@@ -102,7 +102,8 @@ for (const run of visualQa.runs) {
   const close = run.label.includes("-close-");
   const expectedDetail = far ? "detail-far" : medium ? "detail-medium" : "detail-close";
   const expectedViewport = run.label.includes("desktop") ? { width: 1440, height: 900 } : { width: 844, height: 390 };
-  const screenshotPath = path.resolve(run.file);
+  // Historical captures store Windows checkout paths; use the committed fixture here.
+  const screenshotPath = path.join(visualsDir, path.win32.basename(run.file));
   check("visual-qa", `${run.label} exact viewport`, run.viewport.width === expectedViewport.width && run.viewport.height === expectedViewport.height, run.viewport, expectedViewport);
   check("visual-qa", `${run.label} detail class`, run.detailClass.includes(expectedDetail), run.detailClass, expectedDetail);
   check("visual-qa", `${run.label} ownership city markers`, run.critical.mainCities >= 1, run.critical.mainCities, ">= 1");
@@ -135,7 +136,8 @@ const decision = {
   },
   unavailableProfiles: fullAfter.failures,
 };
-const outputPath = path.join(resultsDir, "phase-2-decision.json");
+const outputPath = path.join(root, "release-artifacts", "map-zoom-smoothness", "phase-2-decision.json");
+fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 fs.writeFileSync(outputPath, `${JSON.stringify(decision, null, 2)}\n`);
 console.log(`Phase 2 map decision: ${decision.passed ? "PASS" : "FAIL"} (${checks.length} checks).`);
 for (const failure of failures) console.error(`- ${failure.label}: ${JSON.stringify(failure.actual)} (expected ${JSON.stringify(failure.expected)})`);

@@ -1183,7 +1183,6 @@ input {
   line-height: 1.2;
 }
 .map-world {
-  --map-hit-size: 58px;
   position: absolute;
   left: 0;
   top: 0;
@@ -1193,9 +1192,20 @@ input {
   contain: layout style;
   backface-visibility: hidden;
 }
-.map-frame.detail-far .map-world { --map-hit-size: 110px; }
-.map-frame.detail-medium .map-world { --map-hit-size: 84px; }
-.map-frame.detail-close .map-world { --map-hit-size: 58px; }
+/* Only hit areas need this value. Inheriting it from the entire world makes
+   crossing a zoom-detail boundary recalculate every city and march label. */
+.map-world .harvest-bonus-node,
+.map-world .camp-node:not(.decorative)::before,
+.map-world .city-node::after,
+.map-world .army-token::before { --map-hit-size: 58px; }
+.map-frame.detail-far .harvest-bonus-node,
+.map-frame.detail-far .camp-node:not(.decorative)::before,
+.map-frame.detail-far .city-node::after,
+.map-frame.detail-far .army-token::before { --map-hit-size: 110px; }
+.map-frame.detail-medium .harvest-bonus-node,
+.map-frame.detail-medium .camp-node:not(.decorative)::before,
+.map-frame.detail-medium .city-node::after,
+.map-frame.detail-medium .army-token::before { --map-hit-size: 84px; }
 .map-frame.camera-moving .map-world,
 .map-frame.dragging .map-world,
 .map-frame.zooming .map-world {
