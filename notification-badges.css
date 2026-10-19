@@ -1,5 +1,5 @@
-/* The chat counter is the shared notification treatment. Layered important
-   rules keep optional panel themes from recoloring or enlarging the badge. */
+/* Shared chat-style counters. Layered rules prevent optional panel themes
+   from recoloring or enlarging badges. */
 @layer notification-badges {
   .notification-badge,
   .clan-hud-btn.has-clan-notifications::before,
@@ -40,6 +40,7 @@
   padding: 0 !important;
   border: 0 !important;
   background: transparent !important;
+  color: #493c27 !important;
   box-shadow: none !important;
 }
 }
