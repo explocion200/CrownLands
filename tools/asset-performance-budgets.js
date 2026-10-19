@@ -39,5 +39,8 @@
 // Scoping zoom hit sizes to actual targets saves map-wide style work and adds
 // 550 source bytes. The previous cap had 3 bytes free; bound the 547-byte
 // overage within 1 KiB. No new requests, assets or runtime dependencies.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024 + 2 * 1024 + 4 * 1024 + 512 + 1024;
+// Full-size stamina finder and fresh all-map reads add 7,741 delivered shell
+// bytes; bound the 7,264-byte cap overage at 8 KiB. Reuse existing art and
+// backend read batches; no new subscriptions or installed dependencies.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024 + 2 * 1024 + 4 * 1024 + 512 + 1024 + 8 * 1024;
 module.exports = { MAX_INSTALL_PRECACHE_BYTES };

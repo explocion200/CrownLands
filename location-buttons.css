@@ -2,7 +2,7 @@
    existing profile, deed-history and retaliation slots. The theme layer keeps
    optional screen styles from replacing these dimensions when loaded later. */
 @layer crownlands-theme {
-  :is(#modal, #combatTimers, #profileScreen) button.location-icon-button {
+  :is(#modal, #combatTimers, #profileScreen, .stamina-panel) button.location-icon-button {
     box-sizing: border-box !important;
     position: relative !important;
     display: inline-grid !important;
@@ -23,7 +23,7 @@
     font-size: 0 !important;
     vertical-align: middle;
   }
-  :is(#modal, #combatTimers, #profileScreen) button.location-icon-button::after {
+  :is(#modal, #combatTimers, #profileScreen, .stamina-panel) button.location-icon-button::after {
     content: "";
     position: absolute;
     inset: 1px;
@@ -32,7 +32,7 @@
   }
   /* Keep existing labels in the accessibility tree, including the profile's
      changing “Locating…” label, without reserving their former visual space. */
-  :is(#modal, #combatTimers, #profileScreen) button.location-icon-button > * {
+  :is(#modal, #combatTimers, #profileScreen, .stamina-panel) button.location-icon-button > * {
     position: absolute !important;
     width: 1px !important;
     height: 1px !important;
@@ -42,11 +42,11 @@
     clip-path: inset(50%) !important;
     white-space: nowrap !important;
   }
-  :is(#modal, #combatTimers, #profileScreen) button.location-icon-button:focus-visible {
+  :is(#modal, #combatTimers, #profileScreen, .stamina-panel) button.location-icon-button:focus-visible {
     outline: 2px solid #713641 !important;
     outline-offset: 2px !important;
   }
-  :is(#modal, #combatTimers, #profileScreen) button.location-icon-button:disabled {
+  :is(#modal, #combatTimers, #profileScreen, .stamina-panel) button.location-icon-button:disabled {
     opacity: .45 !important;
     cursor: default !important;
   }

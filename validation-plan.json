@@ -1,35 +1,73 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "0a8cf8175532cacf2cb787d971a0f7f3c0e7d932",
+  "baseCommit": "9fa08b73f6246ef9b8fc40e1fc9cda910fc8dbac",
   "coverage": [
     {
       "paths": [
-        "styles.css",
-        "tools/validate-map-zoom-smoothness-browser.js",
-        "tools/validate-objective-action-buttons.js",
-        "tools/validate-phase-2-map-results.js"
+        "stamina-ui.js",
+        "stamina-ui.css",
+        "marauders-ui.js",
+        "marauders-ui.css",
+        "location-buttons.css",
+        "tools/validate-marauders-browser.js"
       ],
       "tests": [
-        "tools/validate-map-zoom-smoothness-browser.js",
-        "tools/test-camera-settle.js",
-        "tools/validate-objective-action-buttons.js",
-        "tools/validate-harvest-pickups.js",
-        "tools/validate-interaction-health.js",
-        "tools/validate-phase-2-map-results.js",
-        "tools/validate-map-picker-input.js",
-        "tools/validate-map-ui-responsiveness-browser.js"
+        "tools/validate-marauders-browser.js",
+        "tools/test-stamina-display-recovery.js",
+        "tools/validate-marauder-rules.js",
+        "tools/validate-location-buttons-browser.js",
+        "tools/validate-mobile-ui-viewport.js",
+        "tools/validate-crownlands-palette.js",
+        "tools/validate-targeted-ui-contrast.js"
       ],
-      "reason": "Limit the discrete zoom hit-size variable to actual city, camp, march and pickup hit areas so changing map detail no longer invalidates all map descendants. Preserve existing 58/84/110px hit targets, LOD thresholds, selection, animations and camera logic. The new browser regression checks computed targets and absence of variable inheritance into artwork/labels, coalesced wheel bursts with 150 cities/100 marches at normal and 4x CPU, reversed native touch pinch anchors and settling, and screenshots at desktop and two landscape sizes. Shared input and pickup validators protect click/gesture behavior; the Map Atlas browser test covers desktop wheel, touch pinch, navigation and drag-click suppression; Tower browser tests protect fixed-size action positioning while zooming. Existing action and historical phase-2 validators must recognize the narrower variable scope. Historical screenshot resolution is made checkout-independent and regenerated diagnostic output goes to ignored release-artifacts instead of rewriting committed baseline evidence. No server, authority, economy, topology or gameplay-rule changes, so no emulator suite applies."
+      "reason": "Move enemy search into a full-size stamina dialog without changing paid-refill authority, daily limits, Shop return, immutable spawn scouting or explicit march launch. Source and built browser checks cover desktop and two landscape phone sizes, independently scrolling refill/results, reachable 44px location controls through the last result, all-map search, level validation, no matches, errors/retry, canceled late responses, defeated/replaced targets, and cross-map revalidation. Existing browser cases protect exact refill prices, pending purchase retries, preserved solo/rally drafts, balance changes and sign-out. Shared location-style coverage protects all other existing artwork buttons. No server behavior is changed. The historical readability.css validator is outside this change: its source, stylesheet, page and worker inputs are unchanged from main, and it rejects the existing October cache stamp against a hard-coded September stamp. The actual changed stamina layout, text contrast, sizes and shipped bytes are covered by the browser, palette, contrast and production-artifact checks above."
     },
     {
       "paths": [
-        "tools/asset-performance-budgets.js"
+        "firebaseClient.js",
+        "local-client.js",
+        "tools/test-marauder-search.js"
+      ],
+      "tests": [
+        "tools/test-marauder-search.js",
+        "tools/test-local-production-client.js",
+        "tools/test-stamina-display-recovery.js",
+        "tools/validate-owned-city-list.js",
+        "tools/validate-marauders-browser.js",
+        "functions/test/emulator-marauder-population.js",
+        "functions/test/emulator-stamina-refills.js"
+      ],
+      "reason": "Add server-only reads of public active marauders in the current world/generation/shard and expose the existing authorized local read endpoint as at most 20 targets per request. Test the actual transport and extracted API together, including minified transport, 100 maps in five sequential requests, endpoints 1/100, duplicate maps, invalid ranges, stale scope/status filtering, cancellation before further batches, account replacement, failed reads/retry and standard Firestore fallback. Local production and stamina subscription checks protect shared authentication/storage/request plumbing; owned-roster validation protects adjacent API behavior. Population emulator protects the public NPC lifecycle/data contract and refill emulator protects the untouched authority behind the redesigned UI. No backend, rules or data migration is included."
+    },
+    {
+      "paths": [
+        "game.js"
+      ],
+      "tests": [
+        "tools/validate-owned-city-list.js",
+        "tools/validate-city-list-browser.js",
+        "tools/validate-marauders-browser.js"
+      ],
+      "reason": "Remove only the obsolete Find enemies entry from the City List toolbar. Keep owned-city syncing, sorting, upgrade actions and location navigation intact; enemy selection continues using the existing map navigation and NPC action wheel."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
+      "tests": [],
+      "reason": "Record the user-confirmed full-size stamina panel and explicit level search across all active maps, replacing the old nearby search description. Preserve refill, stamina, scouting, combat and immutable spawn rules. Documentation itself has no runtime test."
+    },
+    {
+      "paths": [
+        "tools/asset-performance-budgets.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
       "tests": [
         "tools/validate-asset-performance-budgets.js",
-        "tools/validate-production-artifact.js"
+        "tools/validate-production-artifact.js",
+        "tools/test-local-production-client.js"
       ],
-      "reason": "The scoped CSS adds exactly 550 normalized offline-shell bytes over the current main baseline, whose shared installation cap has only 3 bytes free. Bound the 547-byte overage at one KiB in the shared budget used by both source and production validators. Preserve all image, request, entrypoint and frame-time limits; no added assets, dependencies or network requests. Production build and artifact checks verify the actual delivered package."
+      "reason": "The all-map finder reuses NPC art and the existing location artwork, adding no assets or dependencies. Bound approximately 7.7 KiB delivered shell growth in one 8 KiB allowance; the NPC/stamina source group becomes about 49 KiB within 50 KiB, and the client API becomes 167.5 KiB within 168 KiB. Preserve all other image, request, map and performance caps; check signed-package build inventory and local production transformation."
     }
   ]
 }

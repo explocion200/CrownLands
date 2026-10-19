@@ -154,9 +154,9 @@ async function main(built = false) {
         assert.equal(remains[i].background,'rgba(0, 0, 0, 0)','Defeated map artwork must retain a transparent backing: '+JSON.stringify(remains[i]));
         assert.equal(remains[i].backgroundImage,'none');
       }
-      await ev("document.querySelector('.marauder-node').click();showNearbyMarauders()");
+      await ev("document.querySelector('.marauder-node').click();CrownlandsStaminaUI.open()");
       assert(!await ev("!!document.querySelector('[data-enemy-id]')||!!document.querySelector('[data-marauder-spawn-id]')"));
-      await ev('modal.close()');
+      await ev("document.querySelector('[data-stamina-close]').click()");
       fs.writeFileSync(path.join(artifacts,`npc-defeated-${width}x${height}${built?'-built':''}.png`),Buffer.from((await client.send('Page.captureScreenshot',{format:'png'})).data,'base64'));
       records.push({kind:'defeatedNpc',width,height,built,remains});
     }
@@ -334,8 +334,7 @@ async function main(built = false) {
     await ev("huntQA.loadShop=ensureOptionalUiScripts;ensureOptionalUiScripts=(names,host,ready)=>{huntQA.shopReady=ready;return false;};document.querySelector('[data-refill-buy]').click();document.querySelector('[data-stamina-close]').click();huntQA.shopReady();ensureOptionalUiScripts=huntQA.loadShop");
     assert(await ev("modal.open && !modal.classList.contains('shop-modal') && !document.querySelector('.stamina-panel[open]') && huntQA.input===document.getElementById('troopExactAmount')"),'Late Shop load cannot reopen a canceled review');
     await ev("modal.close();huntQA.callbacks.onState({version:1,value:9,recoveredAtMs:Date.now(),revision:3,paidDay:''})");assert.equal(await ev("document.querySelector('[data-stamina-value]').textContent"),'9/100');
-    await ev("showNearbyMarauders()");assert.equal(await ev("document.querySelectorAll('[data-enemy-id]').length"),1);
-    await ev("document.querySelector('[data-enemy-id]').click()");assert(await ev("modalBody.textContent.includes('Scout this spawn')"));assert(!await ev("modalBody.textContent.includes('Scouted defenders:')"));
+    await ev("openMarauderDetails(huntQA.target.id)");assert(await ev("modalBody.textContent.includes('Scout this spawn')"));assert(!await ev("modalBody.textContent.includes('Scouted defenders:')"));
     await ev(`(()=>{const now=Date.now();mergeServerScoutReport({type:'scout',cityId:huntQA.target.id,targetType:'marauder',targetSpawnId:'fixture-spawn',scoutReport:{targetType:'marauder',targetSpawnId:'fixture-spawn',troops:87,totalDefense:87,regionId:huntQA.target.regionId,scoutedAtMs:now,expiresAtMs:now+600000}});openMarauderDetails(huntQA.target.id);})()`);
     assert(await ev("modalBody.textContent.includes('Scouted defenders:')"));
     assert.equal(await ev('getScoutReportForTarget(huntQA.target).troops'),87);
@@ -401,6 +400,60 @@ async function main(built = false) {
     assert(!await ev('modal.open'));
     await ev("bossReadiness.set('rally-fixture',{checkedAtMs:Date.now(),participants:[{uid:'ally',ready:false}],combatForecast:{status:'unavailable'}})");
     assert(await ev("renderBossReadiness({id:'rally-fixture',participants:[{uid:'ally',ownerName:'Ally'}]}).includes('Ally: Needs stamina')"));
+    // Full-size enemy finder uses fresh all-map reads, never the visited-map cache.
+    await ev(`(() => {
+      modal.close(); const qa=huntQA; qa.searchCalls=[];qa.searchRows=[];qa.searchError=false;
+      qa.api.getRealmInfo=async()=>({worldId:ONLINE_WORLD_ID,resetGeneration:RESET_GENERATION,worldTopology:'core-expansion-v1',coreExpansion:{activeRegionIds:getRegionIds(),revision:999,regions:[]}});
+      qa.api.loadActiveMarauders=async(maps,options={})=>{
+        qa.searchCalls.push(maps);if(qa.searchHold) await new Promise(resolve=>qa.releaseSearch=resolve);
+        if(qa.searchError)throw Error('Search temporarily unavailable. Try Search again.');
+        options.onProgress?.(maps.length,maps.length);
+        return qa.searchRows.filter(row=>maps.some(map=>map.regionId===row.regionId)&&row.level>=(options.min||1)&&row.level<=(options.max||100));
+      };
+      qa.searchRows=Array.from({length:45},(_,i)=>({...qa.target,id:'search-'+i,spawnId:'search-spawn-'+i,level:i+1,name:'Marauder Lv. '+(i+1)}));
+      qa.searchRows.push({...qa.target,id:'search-boss',spawnId:'search-boss-spawn',classification:'boss',level:100,name:'Clan Boss Lv. 100'});
+      qa.runSearch=()=>document.querySelector('.enemy-search-filters').requestSubmit();
+    })()`);
+    for(const [width,height] of [[1440,900],[844,390],[568,320]]) {
+      await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
+      await ev("CrownlandsStaminaUI.open();huntQA.runSearch()");
+      await wait("document.querySelectorAll('[data-enemy-location]').length===46");
+      assert(await ev("huntQA.searchCalls.at(-1).length===getRegionIds().length"),'Search includes unvisited active maps');
+      const layout=await ev(`(()=>{const panel=document.querySelector('.stamina-panel'),list=panel.querySelector('[data-enemy-results]'),row=list.firstElementChild,button=row.querySelector('button'),r=panel.getBoundingClientRect(),b=button.getBoundingClientRect(),buy=panel.querySelector('[data-refill-buy]').getBoundingClientRect();return{fit:r.left>=0&&r.top>=0&&r.right<=${width}&&r.bottom<=${height},width:r.width,height:r.height,listHeight:list.clientHeight,scrolls:list.scrollHeight>list.clientHeight,overflow:panel.scrollWidth>panel.clientWidth+1||list.scrollWidth>list.clientWidth+1,button:[b.width,b.height],rowHeight:row.getBoundingClientRect().height,hit:button.contains(document.elementFromPoint(b.x+b.width/2,b.y+b.height/2)),buyVisible:buy.bottom<=r.bottom};})()`);
+      assert(layout.fit&&!layout.overflow&&layout.scrolls&&layout.hit&&layout.buyVisible,JSON.stringify(layout));
+      assert(layout.width>Math.min(1000,width-40)&&layout.listHeight>=70,JSON.stringify(layout));assert.deepEqual(layout.button,[44,44]);assert(layout.rowHeight<80);
+      const purchases=await ev('huntQA.purchases.length');
+      await ev("document.querySelector('[data-enemy-results]').scrollTop=99999");
+      assert(await ev("(()=>{const b=[...document.querySelectorAll('[data-enemy-location]')].at(-1),r=b.getBoundingClientRect();return b.contains(document.elementFromPoint(r.x+22,r.y+22))})()"),'Last result scrolls into a reachable button');
+      await ev("document.querySelector('[data-enemy-results]').scrollTop=0");
+      fs.writeFileSync(path.join(artifacts,`enemy-search-${width}x${height}${built?'-built':''}.png`),Buffer.from((await client.send('Page.captureScreenshot',{format:'png'})).data,'base64'));
+      await ev("document.querySelector('[data-stamina-close]').click()");assert.equal(await ev('huntQA.purchases.length'),purchases,'Search never refills');records.push({kind:'enemySearch',width,height,layout});
+    }
+    await ev("CrownlandsStaminaUI.open();document.querySelector('.enemy-search-filters [name=min]').value=30;document.querySelector('.enemy-search-filters [name=max]').value=10;huntQA.runSearch()");
+    assert(await ev("document.querySelector('[data-enemy-status]').textContent.includes('minimum no higher')"));
+    await ev("document.querySelector('.enemy-search-filters [name=min]').value=90;document.querySelector('.enemy-search-filters [name=max]').value=99;huntQA.runSearch()");
+    await wait("document.querySelector('[data-enemy-status]').textContent.includes('No available enemies')");
+    await ev("document.querySelector('.enemy-search-filters [name=min]').value=1;document.querySelector('.enemy-search-filters [name=max]').value=100;huntQA.searchError=true;huntQA.runSearch()");
+    await wait("document.querySelector('[data-enemy-status]').textContent.includes('temporarily unavailable')");
+    assert.equal(await ev("document.querySelectorAll('[data-enemy-location]').length"),0);
+    await ev("huntQA.searchError=false;huntQA.runSearch()");await wait("document.querySelectorAll('[data-enemy-location]').length===46");
+    await ev("huntQA.searchRows=[];document.querySelector('[data-enemy-location]').click()");
+    await wait("document.querySelector('[data-enemy-status]').textContent.includes('defeated or replaced')");
+    assert(await ev("document.querySelector('.stamina-panel').open"),'Replaced spawn does not navigate or open a different enemy');
+    await ev("huntQA.searchHold=true;huntQA.runSearch()");await wait("!!huntQA.releaseSearch");
+    await ev("document.querySelector('[data-stamina-close]').click();CrownlandsStaminaUI.open();huntQA.searchRows=[huntQA.target];huntQA.releaseSearch();huntQA.searchHold=false");await delay(30);
+    assert.equal(await ev("document.querySelectorAll('[data-enemy-location]').length"),0,'Closed/reopened panel discards late results');
+    // Cross-map navigation verifies the spawn twice; only explicit Location leaves an order draft.
+    await ev(`(() => {const qa=huntQA;qa.realSwitch=switchOnlineIsland;qa.realActive=getActiveMapRegionId;qa.realSelect=selectMarauder;qa.realApply=applyOnlineMarauders;
+      qa.remote=getRegionIds().find(id=>id!==getActiveMapRegionId());qa.searchRows=[{...qa.target,regionId:qa.remote}];qa.switched=[];
+      switchOnlineIsland=async(region,options)=>{qa.switched.push({region,options});getActiveMapRegionId=()=>region;return true;};
+      selectMarauder=id=>qa.located=id;applyOnlineMarauders=(rows,region)=>{qa.applied={rows,region};};
+      huntQA.runSearch();})()`);
+    await wait("document.querySelectorAll('[data-enemy-location]').length===1");
+    await ev("document.querySelector('[data-enemy-location]').click()");await wait("!document.querySelector('.stamina-panel').open");
+    assert(await ev("huntQA.switched.length===1&&huntQA.switched[0].region===huntQA.remote&&huntQA.located===huntQA.target.id&&huntQA.applied.region===huntQA.remote"),'Location opens the remote map and selects the verified enemy');
+    assert(await ev("huntQA.searchCalls.slice(-2).every(maps=>maps.length===1&&maps[0].regionId===huntQA.remote)"),'Check spawn both before and after the map transition');
+    await ev("switchOnlineIsland=huntQA.realSwitch;getActiveMapRegionId=huntQA.realActive;selectMarauder=huntQA.realSelect;applyOnlineMarauders=huntQA.realApply");
     await ev("modal.close();document.getElementById('staminaButton').click()");
     await wait("document.querySelector('[data-refill-buy]').textContent==='Buy Crowns'");await ev("document.querySelector('[data-refill-buy]').click()");
     await wait("modal.open && modal.classList.contains('shop-modal')");

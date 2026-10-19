@@ -1,4 +1,4 @@
-/* exported applyOnlineMarauders, renderMarauders, updateMarauderRespawnTimers, renderBossReadiness, selectMarauder, selectedMarauderSpawnId, scoutMarauder, attackMarauder, getMarauderDetailsModel */
+/* exported installMarauderSearch, openMarauderDetails, applyOnlineMarauders, renderMarauders, updateMarauderRespawnTimers, renderBossReadiness, selectMarauder, selectedMarauderSpawnId, scoutMarauder, attackMarauder, getMarauderDetailsModel */
 /* exported getMarauderBattleTargetLabel, getMarauderBattleRuleLabel, getMarauderReportTarget, normalizeMarauderReportTarget, marauderBattleReportSide, getMarauderBattleResultLabel, getLegacyMarauderBattleSides */
 /* Shared NPC targets stay separate from capturable city and camp state. */
 const marauderMaps = new Map();
@@ -217,31 +217,92 @@ function openMarauderDetails(id) {
     finally { if (button.isConnected) button.disabled = false; }
   }));
 }
-function showNearbyMarauders() {
-  modal.className = "modal marauder-modal"; modalTitle.textContent = "Find enemies";
-  const source = cityById(selectedSourceId) || state.cities.find(city => city.owner === "player");
-  const rows = currentMarauders().slice().sort((a, b) => source
-    ? Math.hypot(a.x - source.x, a.y - source.y) - Math.hypot(b.x - source.x, b.y - source.y) || a.level - b.level
-    : a.level - b.level);
-  modalBody.innerHTML = `<section class="marauder-search"><p>${escapeHtml(getRegionLabel(getActiveMapRegionId()))} · ${source ? `Nearest to ${escapeHtml(source.name)}` : "Lowest level first"}</p>
-    <label>Minimum level <input data-npc-min type="number" min="1" max="100" value="1"></label><label>Maximum level <input data-npc-max type="number" min="1" max="100" value="100"></label>
-    <div data-npc-results>${rows.map(row => `<button type="button" data-enemy-id="${escapeHtml(row.id)}" data-level="${row.level}"><img src="${marauderArt(row)}" alt=""><span>${escapeHtml(row.name)}<small>${row.classification === "boss" ? "Clan rally" : "Solo hunt"}</small></span></button>`).join("")}</div>
-    <p data-npc-empty ${rows.length ? "hidden" : ""}>No matching enemies on this map. Switch maps in the World Map, or check back after respawns. Bosses appear only in the central 5×5 Core; solo marauders appear only in New Lands.</p></section>`;
-  if (!modal.open) modal.showModal();
-  modalBody.querySelectorAll("input").forEach(input => input.addEventListener("input", () => {
-    const min = Number(modalBody.querySelector("[data-npc-min]").value) || 1, max = Number(modalBody.querySelector("[data-npc-max]").value) || 100;
-    const buttons = [...modalBody.querySelectorAll("[data-enemy-id]")];
-    buttons.forEach(button => { button.hidden = Number(button.dataset.level) < min || Number(button.dataset.level) > max; });
-    modalBody.querySelector("[data-npc-empty]").hidden = buttons.some(button => !button.hidden);
-  }));
-  modalBody.querySelectorAll("[data-enemy-id]").forEach(button => button.addEventListener("click", () => openMarauderDetails(button.dataset.enemyId)));
+function installMarauderSearch(dialog, { isCurrent, canNavigate, onLocated }) {
+  const panel = dialog.querySelector("[data-enemy-search]");
+  panel.innerHTML = `<h3>Find enemies</h3><p class="enemy-search-intro">Search all active maps · Solo hunts &amp; clan bosses</p>
+    <form class="enemy-search-filters"><label>Min level<input name="min" type="number" min="1" max="100" step="1" value="1" required></label>
+    <label>Max level<input name="max" type="number" min="1" max="100" step="1" value="100" required></label><button type="submit">Search</button></form>
+    <p data-enemy-status role="status">Choose a level range, then search.</p><div data-enemy-results role="list" aria-label="Available enemies"></div>`;
+  const form = panel.querySelector("form"), results = panel.querySelector("[data-enemy-results]"), status = panel.querySelector("[data-enemy-status]");
+  let request = 0, busy = false;
+  const stop = () => {
+    request++; busy = false; form.elements.min.disabled = false; form.elements.max.disabled = false; form.querySelector("button").disabled = false;
+    results.replaceChildren(); status.textContent = "Choose a level range, then search.";
+    results.removeAttribute("aria-busy");
+  };
+  form.addEventListener("input", stop);
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (busy || !isCurrent()) return;
+    const min = Number(form.elements.min.value), max = Number(form.elements.max.value);
+    stop();
+    if (!Number.isInteger(min) || !Number.isInteger(max) || min < 1 || max > 100 || min > max) {
+      status.textContent = "Choose whole levels from 1 to 100, with minimum no higher than maximum."; return;
+    }
+    const token = request, scope = getOnlineSessionRequestScope(), api = getOnlineApi();
+    const current = () => isCurrent() && token === request && scope === getOnlineSessionRequestScope();
+    busy = true; form.querySelector("button").disabled = true; results.setAttribute("aria-busy", "true");
+    status.textContent = "Checking active maps…";
+    try {
+      const realm = await api.getRealmInfo();
+      if (!current()) return;
+      if (realm.worldId !== ONLINE_WORLD_ID || realm.resetGeneration !== RESET_GENERATION || realm.worldTopology !== "core-expansion-v1") {
+        throw new Error("The realm changed. Reconnect before searching.");
+      }
+      if (!Array.isArray(realm.coreExpansion?.activeRegionIds)) throw new Error("The active map list is unavailable. Try Search again.");
+      applyCoreExpansionRealmState(realm);
+      const maps = getRegionIds().map(regionId => ({ regionId, islandId: getOnlineIslandId(regionId) }));
+      const rows = await api.loadActiveMarauders(maps, { min, max, isCurrent: current,
+        onProgress: (done, total) => { if (current()) status.textContent = `Searching maps… ${done}/${total}`; } });
+      if (!current()) return;
+      rows.sort((a, b) => a.level - b.level || getRegionLabel(a.regionId).localeCompare(getRegionLabel(b.regionId)) || a.id.localeCompare(b.id));
+      status.textContent = rows.length ? `${rows.length} enemies · ${maps.length} maps searched · Level ${min}–${max}` : `No available enemies at levels ${min}–${max} across ${maps.length} maps. Try another range or search again after respawns.`;
+      results.innerHTML = rows.map((row, index) => `<div class="enemy-search-row" role="listitem"><img src="${marauderArt(row)}" alt="" loading="lazy"><div><strong>${escapeHtml(row.name)}</strong><small>Level ${row.level} · ${row.classification === "boss" ? "Clan boss" : "Solo hunt"} · ${escapeHtml(getRegionLabel(row.regionId))}</small></div><button type="button" class="location-icon-button" data-enemy-location="${index}" title="Locate ${escapeHtml(row.name)}" aria-label="Locate ${escapeHtml(row.name)} in ${escapeHtml(getRegionLabel(row.regionId))}">Location</button></div>`).join("");
+      results.querySelectorAll("[data-enemy-location]").forEach(button => button.addEventListener("click", async () => {
+        if (busy || !current()) return;
+        if (!canNavigate()) { status.textContent = "Wait for your refill to finish before locating an enemy."; return; }
+        busy = true; form.elements.min.disabled = true; form.elements.max.disabled = true; button.disabled = true; form.querySelector("button").disabled = true;
+        const row = rows[Number(button.dataset.enemyLocation)], map = { regionId: row.regionId, islandId: getOnlineIslandId(row.regionId) };
+        const verify = async () => {
+          const fresh = await api.loadActiveMarauders([map], { isCurrent: current });
+          if (!current()) return null;
+          if (!fresh.some(target => target.id === row.id && target.spawnId === row.spawnId)) throw new Error("That enemy was defeated or replaced. Search again for available enemies.");
+          return fresh;
+        };
+        status.textContent = `Locating ${row.name}…`;
+        try {
+          let fresh = await verify(); if (!fresh || !canNavigate()) return;
+          if (!isWorldRegionRuntimeActive(row.regionId)) throw new Error("That map is no longer active. Search again.");
+          if (row.regionId !== getActiveMapRegionId()) {
+            const switched = await switchOnlineIsland(row.regionId, { preserveModal: true });
+            if (!current()) return;
+            if (!switched || row.regionId !== getActiveMapRegionId()) throw new Error("Could not open that map. Try the location button again.");
+            fresh = await verify(); if (!fresh) return;
+          }
+          if (!current() || !canNavigate()) return;
+          applyOnlineMarauders([...visibleMarauders(row.regionId).filter(target => target.id !== row.id),
+            fresh.find(target => target.id === row.id)], row.regionId);
+          if (modal.open) modal.close();
+          onLocated(); selectMarauder(row.id); showToast(`Viewing ${row.name}`);
+        } catch (error) { if (current()) status.textContent = error.message || "Could not locate that enemy. Try again."; }
+        finally { if (current()) { busy = false; form.elements.min.disabled = false; form.elements.max.disabled = false; button.disabled = false; form.querySelector("button").disabled = false; } }
+      }));
+    } catch (error) {
+      if (current()) { results.replaceChildren(); status.textContent = error.message || "Enemy search unavailable. Reconnect and try Search again."; }
+    } finally {
+      if (isCurrent() && token === request) {
+        if (!current()) { stop(); status.textContent = "Your realm or session changed. Search again."; }
+        busy = false; form.querySelector("button").disabled = false; results.removeAttribute("aria-busy");
+      }
+    }
+  });
+  return { stop };
 }
 function renderBossReadiness(rally) {
   const checked = bossReadiness.get(rally.id), ready = checked?.participants, forecast = checked?.combatForecast;
   return `${renderHuntStamina("Each assembled member needs 10 stamina at launch.")}<div class="boss-readiness"><button type="button" data-boss-readiness="${escapeHtml(rally.id)}">Check member readiness</button><p role="status">${ready ? ready.map(row => `${escapeHtml((rally.participants || []).find(p => p.uid === row.uid)?.ownerName || "Member")}: ${row.ready ? "Ready" : "Needs stamina"}`).join(" · ") : "Member stamina readiness has not been checked."}</p>${checked ? "<small>Readiness at last check. Launch checks every member again.</small>" : ""}${forecast?.status === "scouted" ? `<p>Forecast at scout time: ${forecast.attackPower > forecast.defensePower ? "Victory expected" : "Defeat expected"} · ${formatNumber(forecast.defensePower)} defense. Current assembled force; bonuses are locked at launch.</p>` : "<p>Scout this boss spawn for a forecast.</p>"}</div>`;
 }
 document.addEventListener("click", async event => {
-  if (event.target.closest("[data-find-marauders]")) showNearbyMarauders();
   const button = event.target.closest("[data-boss-readiness]");
   if (!button) return;
   button.disabled = true;
