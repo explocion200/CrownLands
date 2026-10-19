@@ -7,7 +7,7 @@
         "docs/MARAUDER_REWARD_BALANCE_DRAFT.md"
       ],
       "tests": [],
-      "reason": "Documentation-only held reward draft. No runtime, balance configuration, Master Specification or production behavior changes. All 79 table rows were checked against the existing battle guide calculator and extracted authoritative city-upgrade server functions; installed relevant functions, constants, economy configuration and reward module match these inputs. All 79 full-strength defending troop counts were read from the unchanged balance module and matched its installed copy. Verify whole-Gold rounding and increasing rewards. Browser, build and emulator tests do not apply to this draft document."
+      "reason": "Documentation-only held reward and troop draft. No runtime, balance configuration, Master Specification or production behavior changes. All 79 Gold rows retain the verified city-cost formula; all current troop counts match the unchanged reward module and installed copy. Check 69 proposed defender rows against preserved levels 1–40 and geometric interpolation from 100,000 at level 40 to exactly 1,000,000 at level 69, with whole troops, strict growth and the cap. Levels 70–79 and bosses have no proposed troop change. Browser, build and emulator tests do not apply to this document."
     }
   ]
 }
