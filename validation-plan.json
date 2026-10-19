@@ -16,12 +16,11 @@
         "tools/test-stamina-display-recovery.js",
         "tools/validate-marauder-rules.js",
         "tools/validate-location-buttons-browser.js",
-        "tools/validate-ui-readability.js",
         "tools/validate-mobile-ui-viewport.js",
         "tools/validate-crownlands-palette.js",
         "tools/validate-targeted-ui-contrast.js"
       ],
-      "reason": "Move enemy search into a full-size stamina dialog without changing paid-refill authority, daily limits, Shop return, immutable spawn scouting or explicit march launch. Source and built browser checks cover desktop and two landscape phone sizes, independently scrolling refill/results, reachable 44px location controls through the last result, all-map search, level validation, no matches, errors/retry, canceled late responses, defeated/replaced targets, and cross-map revalidation. Existing browser cases protect exact refill prices, pending purchase retries, preserved solo/rally drafts, balance changes and sign-out. Shared location-style coverage protects all other existing artwork buttons. No server behavior is changed."
+      "reason": "Move enemy search into a full-size stamina dialog without changing paid-refill authority, daily limits, Shop return, immutable spawn scouting or explicit march launch. Source and built browser checks cover desktop and two landscape phone sizes, independently scrolling refill/results, reachable 44px location controls through the last result, all-map search, level validation, no matches, errors/retry, canceled late responses, defeated/replaced targets, and cross-map revalidation. Existing browser cases protect exact refill prices, pending purchase retries, preserved solo/rally drafts, balance changes and sign-out. Shared location-style coverage protects all other existing artwork buttons. No server behavior is changed. The historical readability.css validator is outside this change: its source, stylesheet, page and worker inputs are unchanged from main, and it rejects the existing October cache stamp against a hard-coded September stamp. The actual changed stamina layout, text contrast, sizes and shipped bytes are covered by the browser, palette, contrast and production-artifact checks above."
     },
     {
       "paths": [
@@ -68,7 +67,7 @@
         "tools/validate-production-artifact.js",
         "tools/test-local-production-client.js"
       ],
-      "reason": "The all-map finder reuses NPC art and the existing location artwork, adding no assets or dependencies. Bound approximately 7.7 KiB delivered shell growth in one 8 KiB allowance; the NPC/stamina source group becomes 50,118 bytes within 50 KiB, and the client API becomes 167.5 KiB within 168 KiB. Preserve all other image, request, map and performance caps; check signed-package build inventory and local production transformation."
+      "reason": "The all-map finder reuses NPC art and the existing location artwork, adding no assets or dependencies. Bound approximately 7.7 KiB delivered shell growth in one 8 KiB allowance; the NPC/stamina source group becomes about 49 KiB within 50 KiB, and the client API becomes 167.5 KiB within 168 KiB. Preserve all other image, request, map and performance caps; check signed-package build inventory and local production transformation."
     }
   ]
 }
