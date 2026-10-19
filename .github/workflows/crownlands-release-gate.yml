@@ -67,8 +67,14 @@ jobs:
       - name: Prepare PostgreSQL for selected migration tests
         env:
           VALIDATION_BASE: ${{ needs.classify.outputs.base_ref }}
+          VALIDATION_TIER: ${{ needs.classify.outputs.tier }}
         run: |
-          if node -e 'const {classifyGitDiff}=require("./tools/change-risk-classifier"); const c=classifyGitDiff(process.cwd(),{baseRef:process.env.VALIDATION_BASE}); process.exit(c.staticTests.some(t=>/^tools\/test-local-(?:postgres-|auth-service)/.test(t))?0:1)'; then
+          if [ "$VALIDATION_TIER" = "Full" ]; then
+            postgres_required=true
+          else
+            postgres_required="$(node -e 'const {classifyGitDiff}=require("./tools/change-risk-classifier"); const c=classifyGitDiff(process.cwd(),{baseRef:process.env.VALIDATION_BASE}); console.log(c.staticTests.some(t=>/^tools\/test-local-(?:postgres-|auth-service)/.test(t)))')"
+          fi
+          if [ "$postgres_required" = "true" ]; then
             sudo apt-get update -qq
             sudo apt-get install -y postgresql postgresql-client
             sudo systemctl start postgresql

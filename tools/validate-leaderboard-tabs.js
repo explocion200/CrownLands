@@ -56,13 +56,17 @@ assert.match(modalSource, /data-leaderboard-tab="clans"[\s\S]*data-leaderboard-t
 assert.match(firebaseClient, /orderBy\("pvpKills","desc"\),orderBy\("reachedAtMs","asc"\)/, "PvP ranks must use authoritative score and timestamp ordering.");
 
 for (const [label, theme] of [["Profile theme", profileTheme], ["final palette", finalPalette]]) {
-  const toolbarIndex = theme.indexOf("  .leaderboard-toolbar,");
-  const sharedCardEnd = theme.indexOf("\n) {", toolbarIndex);
+  const toolbarIndex = theme.indexOf(".leaderboard-toolbar.leaderboard-toolbar,");
+  const sharedCardStart = theme.lastIndexOf("}", toolbarIndex) + 1;
+  const sharedCardEnd = theme.indexOf("{", toolbarIndex);
   assert.ok(toolbarIndex >= 0 && sharedCardEnd > toolbarIndex, `${label} shared-card block is missing.`);
-  assert.doesNotMatch(theme.slice(toolbarIndex, sharedCardEnd), /\.leaderboard-row\b/, `${label} still replaces the dedicated slate ranking surface.`);
+  assert.doesNotMatch(theme.slice(sharedCardStart, sharedCardEnd), /\.leaderboard-row\b/, `${label} still replaces the dedicated parchment ranking surface.`);
   const protectedModalTypography = theme.match(/\.modal:where\(:not\(\.leaderboard-modal(?:, \.island-switcher-modal)?(?:, \.battle-report-modal)?\)\) \.modal-card/g) || [];
   assert.ok(protectedModalTypography.length >= 3, `${label} generic typography still leaks into leaderboard rows or gained unintended specificity.`);
-  assert.match(theme, /:not\(\.player-name-link\):not\(\.clan-identity-link\)/, `${label} still paints player or clan identity links as generic buttons.`);
+  const identityExclusion = label === "Profile theme"
+    ? /:not\(\.player-name-link\):not\(\.clan-identity-link\)/
+    : /button:not\(:where\([^{}]+\.player-name-link, \.clan-identity-link/;
+  assert.match(theme, identityExclusion, `${label} still paints player or clan identity links as generic buttons.`);
 }
 
 function luminance(hex) {

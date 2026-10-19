@@ -45,6 +45,8 @@ async function main() {
         toast.classList.remove('visible');
       })()`);
       await wait(250);
+      const selectedStyle = await evaluate(`(() => {const s=getComputedStyle(modalBody.querySelector('.cd-amounts [aria-pressed="true"]'));return {background:s.backgroundColor,color:s.color};})()`);
+      assert.deepEqual(selectedStyle, {background:"rgb(102, 92, 62)",color:"rgb(255, 246, 223)"}, "The chosen upgrade amount must retain a readable, distinct selected state.");
       const selectedPoint = await evaluate(`(() => {const r=modalBody.querySelector('[aria-pressed="true"]').getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()`);
       await client.send("Input.dispatchMouseEvent", { type: "mouseMoved", ...selectedPoint });
       assert.equal(await evaluate("getComputedStyle(modalBody.querySelector('[aria-pressed=\"true\"]')).backgroundColor"), "rgb(102, 92, 62)", "Hover must retain the selected amount's contrast.");
@@ -57,7 +59,7 @@ async function main() {
       })()`);
       assert(layout.bounds.x >= 0 && layout.bounds.y >= 0 && layout.bounds.height <= viewport.height, JSON.stringify(layout));
       assert(!layout.overflow && layout.footerVisible && layout.targets.every(n => n >= 44) && layout.art && layout.ledgerHeight >= 55, JSON.stringify(layout));
-      assert.equal(layout.paper, "rgb(242, 232, 205)");
+      assert.equal(layout.paper, "rgb(237, 225, 194)", "City Details must use the shared Guild Master parchment.");
       assert.equal(Math.round(layout.bounds.width), Math.min(1040, viewport.width - 24), "City Details must match the City List window width.");
       assert.equal(Math.round(layout.bounds.height), Math.min(790, viewport.height - 24), "City Details must match the City List window height.");
       assert(await evaluate("modalBody.querySelector('.cd-actions').getBoundingClientRect().left >= modalBody.querySelector('.cd-ledger').getBoundingClientRect().right - 1"), "Development must remain beside city information, including on phones.");

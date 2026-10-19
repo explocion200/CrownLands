@@ -186,13 +186,14 @@ assert.match(css, /\.battle-report-card \.battle-report-detail-btn[\s\S]*?backgr
 
 assert.match(baseCss, /\.flag-swatch-grid \.flag-color-swatch[\s\S]*?background-color:\s*var\(--flag-swatch\)/, "Flag swatches do not paint their actual heraldic colors.");
 assert.match(profileCss, /:not\(\.flag-color-swatch\):not\(\[data-flag-color\]\)/, "The Profile button theme can still overwrite inactive flag swatches.");
-assert.match(paletteCss, /:not\(\.flag-color-swatch\):not\(\[data-flag-color\]\)/, "The Crownlands palette can still overwrite inactive flag swatches.");
+assert.match(paletteCss, /button:not\(:where\([^{}]+\.flag-color-swatch,[^{}]+\[data-flag-color\]/, "The Crownlands palette can still overwrite inactive flag swatches.");
 assert.match(game, /data-flag-color[\s\S]{0,400}aria-pressed="\$\{selected\}"/, "Flag swatches must expose their selected state.");
 assert.match(flagRuntimeSprite, /id="cl-icon-flag-horse"[\s\S]*?<path\b[^>]*\bd="[^"]+"/, "The dedicated heraldic horse charge is missing from the runtime sprite.");
-assert.match(index, /hud-report-192x192-21644b7390fb\.webp/, "The approved Report artwork changed.");
+assert.match(index, /id="logBtn"[^>]*>[\s\S]*?<use href="#cl-icon-reports"><\/use>/, "Reports must retain its current shared emblem.");
 assert.match(index, /id="logBtn"[\s\S]{0,520}class="nav-btn-heading">Reports<\/strong>[\s\S]{0,160}nav-btn-timer-placeholder/, "Reports is missing the aligned heading and reserved timer row.");
 assert.match(index, /id="outgoingAttackBtn"[\s\S]{0,260}class="nav-btn-heading">[\s\S]{0,100}id="outgoingAttackCount"[\s\S]{0,100}Outgoing<\/strong>[\s\S]{0,160}id="outgoingAttackTime"/, "Troop Movements is missing its aligned count, label, and timer treatment.");
-assert.match(index, /id="incomingAttackBtn"[\s\S]{0,260}class="nav-btn-heading">[\s\S]{0,100}id="incomingAttackCount"[\s\S]{0,100}Incoming<\/strong>[\s\S]{0,160}id="incomingAttackTime"/, "Incoming Attacks is missing its aligned count, label, and timer treatment.");
+const incomingButton = index.match(/<button id="incomingAttackBtn"[\s\S]*?<\/button>/)?.[0] || "";
+assert.match(incomingButton, /class="nav-btn-heading">[\s\S]*?id="incomingAttackCount"[\s\S]*?Incoming<\/strong>[\s\S]*?id="incomingAttackTime"/, "Incoming Attacks is missing its aligned count, label, and timer treatment.");
 assert.match(css, /--cl-operation-button-width:\s*clamp\(78px,[\s\S]{0,120}98px\)/, "The shared bottom-nav button width is not responsive.");
 assert.match(css, /\.bottom-nav \{[\s\S]*?--cl-operation-stack-gap:\s*9px;[\s\S]*?display:\s*flex !important;[\s\S]*?flex-direction:\s*column;[\s\S]*?gap:\s*var\(--cl-operation-stack-gap\) !important;[\s\S]*?background:\s*transparent !important;[\s\S]*?box-shadow:\s*none !important;/, "The operation controls are not a compact, transparent vertical stack.");
 assert.match(css, /\.bottom-nav \.incoming-attack-btn\s*\{\s*order:\s*1;[\s\S]*?\.bottom-nav \.outgoing-attack-btn\s*\{\s*order:\s*2;[\s\S]*?\.bottom-nav \.report-nav-btn\s*\{\s*order:\s*3;/, "The operation controls no longer enforce Incoming, Outgoing, Reports order.");

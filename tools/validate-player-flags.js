@@ -182,7 +182,8 @@ for (const symbol of legacyOnlySymbols) {
 }
 
 assert.match(manuscript, /button:not\(\.player-flag-editor__control\)/, "Shared manuscript buttons still capture editor controls.");
-for (const theme of [profileTheme, palette]) assert.match(theme, /:not\(\.flag-color-swatch\):not\(\[data-flag-color\]\)/);
+assert.match(profileTheme, /:not\(\.flag-color-swatch\):not\(\[data-flag-color\]\)/);
+assert.match(palette, /button:not\(:where\([^{}]+\.flag-color-swatch,[^{}]+\[data-flag-color\]/, "The grouped palette exclusion must protect both swatch classes and color attributes.");
 assert.match(editorStyles, /background-color:\s*var\(--flag-swatch\)/);
 assert.match(editorStyles, /player-flag-editor__swatch::after/);
 assert.doesNotMatch(editorStyles.match(/player-flag-editor__swatch\s*\{[\s\S]*?\n\}/)?.[0] || "", /!important/);

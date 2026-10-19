@@ -1,28 +1,87 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "cbcbe31a1a01035b98581cc96a85a5ce65793764",
+  "baseCommit": "25839ad0eaafef7fef14fa8b633fa99e568a9879",
   "coverage": [
     {
       "paths": [
-        "estate-economy-ui.js",
-        "estate-economy-ui.css",
-        "tools/validate-estate-overview-timers.js",
-        "tools/validate-estate-economy-browser.js"
+        ".github/workflows/crownlands-release-gate.yml",
+        "tools/validate-release-gate.js"
       ],
       "tests": [
-        "tools/validate-estate-overview-timers.js",
-        "tools/validate-estate-economy-browser.js",
-        "tools/validate-estate-refresh-browser.js",
-        "tools/validate-estate-camera-performance-browser.js"
+        "tools/validate-release-gate.js",
+        "tools/test-change-risk-classifier.js",
+        "tools/test-targeted-validation.js",
+        "tools/test-safe-update-pipeline.js"
       ],
-      "reason": "Changes only construction-timer geometry: compact overview width/height, readable countdown text, smooth growth to the existing inspection size, and matching collision bounds. The overview browser suite checks all twenty buildings and concurrent projects in source and production builds at desktop and two landscape sizes, intermediate zooms through 4x, six-pixel artwork anchoring, text/viewport bounds, obstacle handling, completion, offscreen fallback and cleanup. Estate economy integration checks shared map controls, timing, Gear return and completion behavior. Refresh checks unchanged snapshots do not mutate timer DOM or add requests. Camera performance checks coalesced zoom/pan with active construction timers on source and built clients. No authoritative economy, server or data changes; emulator suites are not applicable."
+      "reason": "Use the already classified Full tier for nightly PostgreSQL setup and fail closed when targeted classification fails. Execute the actual workflow shell in disposable Git fixtures with a recording sudo shim: ordinary selection, PostgreSQL/auth selection, stale or missing plan failures, and Full with a stale merged plan. Preserve check names, selection, branch freshness, emulator requirements and push protections."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "tools/validate-stability-regressions.js",
+        "tools/validate-runtime-audit-cleanup.js"
       ],
-      "tests": [],
-      "reason": "Records the owner-requested compact overview timer presentation, superseding constant screen sizing while retaining close-up size, anchored placement and authoritative timing. Documentation has no runtime behavior; relevant dependencies are covered above."
+      "tests": [
+        "tools/validate-stability-regressions.js",
+        "tools/validate-runtime-audit-cleanup.js"
+      ],
+      "reason": "Repair VM fixtures to use the real incomingArmyData dependency and current clan roster/realm leaderboard contract. Assert serialized notification data and per-device retry, retained current-member contributions, exclusion of removed/archived members, stale aggregate repair, and write-free duplicate events, plus existing cache and deferred-code regressions. No server implementation or authority change."
+    },
+    {
+      "paths": [
+        "tools/validate-common-gear.js",
+        "tools/validate-soldier-defense.js"
+      ],
+      "tests": [
+        "tools/validate-common-gear.js",
+        "tools/validate-soldier-defense.js",
+        "tools/validate-skill-presets.js"
+      ],
+      "reason": "Update obsolete assertions for the approved shared gear notification badge and 10-Crown preset charge. Keep gear qualification, equipped/stored distinction, soldier combat and free-reset-credit checks. Existing preset tests independently verify Crown pricing and application. No balance or server changes."
+    },
+    {
+      "paths": [
+        "tools/validate-player-flags.js",
+        "tools/validate-ui-contrast-correction.js",
+        "tools/validate-leaderboard-tabs.js"
+      ],
+      "tests": [
+        "tools/validate-player-flags.js",
+        "tools/validate-ui-contrast-correction.js",
+        "tools/validate-leaderboard-tabs.js",
+        "tools/validate-parchment-notices-browser.js"
+      ],
+      "reason": "Recognize the current grouped palette exclusions, shared Reports emblem, full incoming button and flattened shared-card selectors. Preserve heraldic color/identity-link exclusions, protected leaderboard typography, route notice labels, artwork and accessibility. The existing browser suite verifies the approved parchment notice controls at desktop and landscape sizes."
+    },
+    {
+      "paths": [
+        "tools/validate-allied-target-return.js",
+        "tools/validate-clans.js"
+      ],
+      "tests": [
+        "tools/validate-allied-target-return.js",
+        "tools/validate-clans.js"
+      ],
+      "reason": "Inspect the current combined allied/retaliation-return branch instead of beginning at its later audit statement. Keep routed return geometry/timing, active-army copies and no-teleport assertions and check the conditional outcome. No combat implementation changes."
+    },
+    {
+      "paths": [
+        "tools/validate-server-route-parity.js"
+      ],
+      "tests": [
+        "tools/validate-server-route-parity.js"
+      ],
+      "reason": "Retain byte-for-byte executable route-engine parity while allowing only the server ESLint global annotation and checking the current isRegionWalkablePoint export. Existing route computations exercise every shared fixture city, directed map connections and bounded persisted points; no route engine, map or production data changes."
+    },
+    {
+      "paths": [
+        "city-details-ui.css",
+        "tools/validate-city-details-browser.js"
+      ],
+      "tests": [
+        "tools/validate-city-details-browser.js",
+        "tools/validate-crownlands-palette.js"
+      ],
+      "reason": "Restore the existing selected upgrade amount colors inside the shared theme layer so generic button and hover paint cannot erase selection. Assert readable selected/hover colors and current shared parchment, all five desktop/phone/landscape sizes, independent scrolling, amounts/upgrade projection/rejection, scope refresh, castle navigation, foreign-city privacy and no styling leakage. Only CSS presentation changes; no backend or emulator suites apply."
     }
   ]
 }
