@@ -94,10 +94,14 @@ const { MAX_INSTALL_PRECACHE_BYTES } = require("./asset-performance-budgets");
 // Main 5fa1b5e already ships 120,130 normalized bytes in these files, 1,346
 // over the previous limit. Record that existing baseline with a bounded 2 KiB
 // allowance so the login audit can run; the total offline-shell cap is unchanged.
+// Shared numeric unread counts add 1,409 bytes to the 120,172-byte main baseline.
+// Bound the 749-byte overage at 1 KiB, and the new shared badge stylesheet at
+// 2 KiB. No image assets, runtime dependencies or polling are added.
 assert(["chat-ledger-ui.css", "chat-ui.js", "chat-translation.js", "reward-ledger-ui.js", "reward-ledger-ui.css",
   "assets/icons/chat-ledger-seal.svg", "assets/icons/hero-reward-crown.svg"]
-  .reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 118 * 1024,
-"Chat and reward ledger shell files exceed their 118 KiB budget.");
+  .reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 119 * 1024,
+"Chat and reward ledger shell files exceed their 119 KiB budget.");
+assert(normalizedTextBytes("notification-badges.css") <= 2 * 1024, "Shared notification styles exceed 2 KiB.");
 const skillEmblemFiles = fs.readdirSync(path.join(root, "assets/icons/skills")).filter(name => name.endsWith(".svg"));
 assert.equal(skillEmblemFiles.length, 8, "Keep the eight legacy skill emblems available to older clients.");
 for (const name of skillEmblemFiles) assert(statBytes(`assets/icons/skills/${name}`) <= 2 * 1024, `${name} exceeds its 2 KiB emblem budget.`);
