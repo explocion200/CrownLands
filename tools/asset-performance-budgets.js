@@ -50,5 +50,8 @@
 // no image assets, dependencies or background polling are introduced.
 // Clan action notices add 5,095 shell bytes (4,604,354 total), bounded by 5 KiB.
 // Reuse existing styles, subscriptions and the one-second clan tick; no new assets.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024 + 2 * 1024 + 4 * 1024 + 512 + 1024 + 8 * 1024 + 12 * 1024 + 3 * 1024 + 5 * 1024;
+// Full personal boss rewards and departure-policy compatibility add 1,412 delivered
+// shell bytes (4,605,742 total). Bound the 1,326-byte overage at 2 KiB;
+// no new art, network requests, dependencies or background work.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024 + 2 * 1024 + 4 * 1024 + 512 + 1024 + 8 * 1024 + 12 * 1024 + 3 * 1024 + 5 * 1024 + 2 * 1024;
 module.exports = { MAX_INSTALL_PRECACHE_BYTES };

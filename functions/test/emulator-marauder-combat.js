@@ -1,6 +1,6 @@
 const { signUpVerifiedPlayer } = require("./auth-fixtures");
 const { initializeApp } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
+const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
 const { strictEqual, rejects } = require("node:assert/strict");
 const M = require("../marauder-rules.js");
@@ -338,12 +338,24 @@ async function main() {
     await db.doc('armies/'+join.movement.id).set({arrivesAtMs:Date.now()-1000},{merge:true});
     await callFunction('resolveArmyOrder',users[i+1].token,{armyId:join.movement.id});
   }}
-  const carried=await modernRally('carried',[10000000,1000]);await assemble(carried);
-  const unready=await callFunction('getBossRallyReadiness',users[0].token,{clanId,rallyId:carried.id});
-  strictEqual(unready.contribution.eligible,false);assert(unready.contribution.members.some(p=>p.reason));
-  await rejects(callFunction('launchClanRally',users[0].token,{clanId,rallyId:carried.id}),/10%|contribution/);
-  for(const u of users.slice(0,2))strictEqual((await db.doc('players/'+u.uid+'/stamina/state').get()).data().value,100,'Rejected contributions spend no stamina');
+  const carried=await modernRally('carried',[10000000,1]);await assemble(carried);
+  const carriedReady=await callFunction('getBossRallyReadiness',users[0].token,{clanId,rallyId:carried.id});
+  strictEqual(carriedReady.contribution.eligible,true);
+  strictEqual(carriedReady.contribution.rewardVersion,M.BOSS_REWARD_VERSION);
+  assert(carriedReady.contribution.members.every(p=>p.gold===M.balance(100,2).gold&&p.xp===M.balance(100,2).xp));
+  for(const u of users.slice(0,2))strictEqual((await db.doc('players/'+u.uid+'/stamina/state').get()).data().value,100,'Readiness spends no stamina');
   await callFunction('cancelClanRally',users[0].token,{clanId,rallyId:carried.id});
+  // A saved pre-update departure without the new policy keeps its shared rewards.
+  const historical=await modernRally('historical',[20000000,20000000]);await assemble(historical);
+  const oldDeparture=await callFunction('launchClanRally',users[0].token,{clanId,rallyId:historical.id});
+  await db.doc('armies/'+oldDeparture.movement.id).update({bossRewardVersion:FieldValue.delete()});
+  await db.doc('clans/'+clanId+'/rallies/'+historical.id).update({bossRewardVersion:FieldValue.delete()});
+  const oldReadiness=await callFunction('getBossRallyReadiness',users[0].token,{clanId,rallyId:historical.id});
+  strictEqual(oldReadiness.contribution.maxSharePercent,70);
+  const historicalResult=await arrive(oldDeparture.movement);strictEqual(historicalResult.outcome,'victory');
+  const oldLoot=(await db.doc('marauderBattles/'+oldDeparture.movement.id).get()).data().loot;
+  strictEqual(Object.values(oldLoot.gold).reduce((a,b)=>a+b,0),M.balance(100,2).gold);
+  strictEqual(Object.values(oldLoot.xp).reduce((a,b)=>a+b,0),M.balance(100,2).xp);
   // Equal meaningful contributors may deliberately take a losing fight. The boss recovers atomically.
   const losing=await modernRally('loss',[4000000,4000000]);await assemble(losing);
   const departingLoss=await callFunction('launchClanRally',users[0].token,{clanId,rallyId:losing.id});
@@ -357,37 +369,61 @@ async function main() {
   await callFunction('resolveArmyOrder',users[0].token,{armyId:departingLoss.movement.id});
   assert((await bossRef.get()).updateTime.isEqual(recoveryTime),'Duplicate failure must not heal or rewrite the boss again');
 
-  const five=await modernRally('five',[10000000,10000000,10000000,10000000,10000000]);
+  const five=await modernRally('five',[40000000,1,1,1,1]);
   await rejects(callFunction('joinClanRally',users[5].token,{clanId,rallyId:five.id,army:{id:five.id+'_sixth',kind:'rally_join',fromId:claims[5].cityId,sourceRegionId:claims[5].regionId||claims[5].mainRegionId,troops:10000000,requestedTroops:10000000}}),/5 participants/);
   await assemble(five);
   const eligibility=await callFunction('getBossRallyReadiness',users[0].token,{clanId,rallyId:five.id});
-  strictEqual(eligibility.contribution.eligible,true);strictEqual(eligibility.contribution.maxSharePercent,40);
+  strictEqual(eligibility.contribution.eligible,true);strictEqual(eligibility.contribution.rewardVersion,M.BOSS_REWARD_VERSION);
   const departing=await callFunction('launchClanRally',users[0].token,{clanId,rallyId:five.id});
   const departure=(await db.doc('clans/'+clanId+'/rallies/'+five.id).get()).data();
   strictEqual(departure.bossContribution.eligible,true);
-  // Current equipment/skills cannot change eligibility, shares or recovery after departure.
+  strictEqual(departure.bossRewardVersion,M.BOSS_REWARD_VERSION);
+  strictEqual(departing.movement.bossRewardVersion,M.BOSS_REWARD_VERSION);
+  for(const u of users.slice(0,5))strictEqual((await db.doc('players/'+u.uid+'/stamina/state').get()).data().value,90);
+  // Invalid or mismatched saved policies cannot settle or credit rewards.
+  const armyRef=db.doc('armies/'+departing.movement.id);
+  for(const invalidVersion of [3,1]){
+    await armyRef.update({bossRewardVersion:invalidVersion});
+    await rejects(arrive(departing.movement),/boss reward rules/);
+    strictEqual((await db.doc('marauderBattles/'+departing.movement.id).get()).exists,false);
+  }
+  await armyRef.update({bossRewardVersion:M.BOSS_REWARD_VERSION});
+  // Current equipment/skills cannot change eligibility, personal rewards or recovery after departure.
   const beforeProfiles=await Promise.all(users.slice(0,5).map(u=>db.doc('players/'+u.uid).get()));
   await profileRef.set({character:{level:100,xp:0}},{merge:true});
   const victory=await arrive(departing.movement);strictEqual(victory.outcome,'victory');
   const modernReceipt=(await db.doc('marauderBattles/'+departing.movement.id).get()).data();
   strictEqual(modernReceipt.loot.balanceVersion,2);strictEqual(modernReceipt.loot.rolls.length,20);
   const config=M.balance(100,2);
-  strictEqual(Object.values(modernReceipt.loot.gold).reduce((a,b)=>a+b,0),config.gold);
-  strictEqual(Object.values(modernReceipt.loot.xp).reduce((a,b)=>a+b,0),config.xp);
+  strictEqual(Object.values(modernReceipt.loot.gold).reduce((a,b)=>a+b,0),5*config.gold);
+  strictEqual(Object.values(modernReceipt.loot.xp).reduce((a,b)=>a+b,0),5*config.xp);
+  let wipedMembers=0;
   for(const [i,u] of users.slice(0,5).entries()){
     const after=(await db.doc('players/'+u.uid).get()).data(),report=after.battleReports.find(r=>r.battleId===departing.movement.id);
-    strictEqual(report.xpAwarded,modernReceipt.loot.xp[u.uid]);
+    strictEqual(report.xpAwarded,config.xp);
+    strictEqual(modernReceipt.loot.xp[u.uid],config.xp);
+    strictEqual(modernReceipt.loot.gold[u.uid],config.gold);
+    strictEqual(report.goldAwarded,config.gold+(report.levelUpReward?.goldAwarded||0));
+    strictEqual(report.bossRewardVersion,M.BOSS_REWARD_VERSION);
+    if(report.survivors===0)wipedMembers++;
     strictEqual(report.itemAwarded,modernReceipt.loot.items[u.uid]);assert(report.itemAwarded,'Level 100 always grants one consumable per member');
     strictEqual(after.shopItems[report.itemAwarded],(beforeProfiles[i].data().shopItems?.[report.itemAwarded]||0)+1);
     for(const rarity of ['common','uncommon'])strictEqual(after.gear[rarity+'GearBoxes'],beforeProfiles[i].data().gear[rarity+'GearBoxes']+(modernReceipt.loot.gearBoxes[u.uid]===rarity?1:0));
     strictEqual(report.gearBoxAwarded,modernReceipt.loot.gearBoxes[u.uid]);
   }
+  assert(wipedMembers>0,'Even a member with no surviving troops receives full rewards');
   const committed=await db.doc('marauderBattles/'+departing.movement.id).get();
   const rewarded=await Promise.all(users.slice(0,5).map(u=>db.doc('players/'+u.uid).get()));
   await Promise.all([0,1].map(()=>callFunction('resolveArmyOrder',users[0].token,{armyId:departing.movement.id})));
   assert((await db.doc('marauderBattles/'+departing.movement.id).get()).updateTime.isEqual(committed.updateTime));
-  for(const [i,u] of users.slice(0,5).entries())strictEqual(JSON.stringify((await db.doc('players/'+u.uid).get()).data().gear),JSON.stringify(rewarded[i].data().gear),'No duplicate Gear Boxes');
-  console.log('V2 callables: legacy/missing versions, fixed uncapped solo XP, solo wounds, five inbound slots, contribution rejection before charging, boss recovery, frozen departure shares, personal drops and duplicate settlement passed.');
+  // Clan/global-stat triggers can refresh profile metadata independently of settlement.
+  // Compare every reward-bearing field, not the whole document's update timestamp.
+  for(const [i,u] of users.slice(0,5).entries()){
+    const after=(await db.doc('players/'+u.uid).get()).data(),before=rewarded[i].data();
+    for(const field of ['gold','goldFloat','character','shopItems','gear','battleReports'])
+      strictEqual(JSON.stringify(after[field]),JSON.stringify(before[field]),'Duplicate settlement changed '+field);
+  }
+  console.log('V2 callables: legacy/missing versions, fixed uncapped solo XP, solo wounds, five inbound slots, one-troop eligibility, full rewards even after total losses, legacy departure shares, rejected policy mismatch, boss recovery, personal drops and duplicate settlement passed.');
   console.log('Marauder combat passed: real callables, routes, scouting privacy, departure charge, duplicate launch/settlement, shield preservation, normal combat/returns, simultaneous arrivals, failed survivors, immutable spawn refunds, insufficient stamina and Firestore privacy.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

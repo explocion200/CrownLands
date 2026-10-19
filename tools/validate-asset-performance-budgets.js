@@ -431,9 +431,11 @@ const marauderShellFiles = ['stamina-ui.js', 'stamina-ui.css', 'marauders-ui.js'
 // Defeated markers retained; the full stamina finder brings these sources to
 // 50,119 bytes. Balance v2 adds a fixed 100-level table, versioned drops and
 // contribution/reward disclosures, bringing the group to 61,141 bytes. Bound
-// these source files at 60 KiB; sprites and all other group caps are unchanged.
-assert(marauderShellFiles.reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 60 * 1024,
-  'NPC/stamina shell files exceed their 60 KiB source budget.');
+// these source files at 60 KiB. Full personal boss rewards and preservation of
+// historical departures bring the group to 62,655 bytes, bounded at 62 KiB;
+// sprites and all other group caps remain unchanged.
+assert(marauderShellFiles.reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 62 * 1024,
+  'NPC/stamina shell files exceed their 62 KiB source budget.');
 let marauderArtBytes = 0;
 for (const file of ['assets/marauders/solo-v1.webp', 'assets/marauders/boss-v1.webp']) {
   const bytes = statBytes(file); marauderArtBytes += bytes;

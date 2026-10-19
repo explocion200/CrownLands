@@ -202,6 +202,7 @@ async function main(built = false) {
         await ev(`openMarauderDetails(${kind==='solo'?'huntQA.visualSolo.id':'huntQA.visualBoss.id'})`);
         assert(await ev("modalBody.textContent.includes('Fixed NPC XP; no Hero-level cap.')"));
         if(kind==='boss')assert(await ev("modalBody.textContent.includes('90%') && modalBody.textContent.includes('10%') && modalBody.textContent.includes('restores the boss') && modalBody.textContent.includes('2–5 members')"));
+        if(kind==='boss')assert(await ev("modalBody.textContent.includes('Gold per member') && modalBody.textContent.includes('Hero XP per member') && modalBody.textContent.includes('starting at one') && modalBody.textContent.includes('full listed Gold and XP') && !modalBody.textContent.includes('Maximum shares') && !modalBody.textContent.includes('shared by departure')"));
         await checkInfo(kind,width,height);
       }
       records.push({kind:'balance-v2',width,height});
@@ -416,6 +417,8 @@ async function main(built = false) {
     await ev("bossReadiness.set('balance-v2',{rallyUpdatedAtMs:10,participants:[],contribution:{eligible:false,maxSharePercent:40,members:[{uid:'ally',attackPower:100,minimumPower:4000000,sharePercent:1,eligible:false,reason:'Needs at least 10% of full defense.',gold:100,xp:20,estimatedLosses:10}]},combatForecast:{status:'scouted',attackPower:100,defensePower:40000000,estimatedAttackerLosses:10}})");
     assert(await ev("(()=>{const html=renderBossReadiness({id:'balance-v2',targetBalanceVersion:2,updatedAtMs:10,participants:[{uid:'ally',ownerName:'Ally'}]});return html.includes('maximum 40%')&&html.includes('On victory:')&&html.includes('Estimated losses:')&&html.includes('expected to lose')})()"));
     assert(await ev("renderBossReadiness({id:'balance-v2',targetBalanceVersion:2,updatedAtMs:11}).includes('This rally changed')"));
+    await ev("bossReadiness.set('personal-boss',{rallyUpdatedAtMs:20,participants:[{uid:'ally',ready:true}],contribution:{rewardVersion:2,eligible:true,members:[{uid:'ally',attackPower:1,eligible:true,gold:271977950,xp:43672116,estimatedLosses:null}]}})");
+    assert(await ev("(()=>{const html=renderBossReadiness({id:'personal-boss',targetBalanceVersion:2,updatedAtMs:20,participants:[{uid:'ally',ownerName:'Ally'}]});return html.includes('full Gold and XP')&&html.includes('chances are individual')&&html.includes('On victory:')&&!html.includes('minimum')&&!html.includes('maximum')&&!html.includes('% share')})()"));
     assert(await ev("getClanRallyMaximumParticipants({targetType:'marauder',balanceVersion:2})===5 && getClanRallyMaximumParticipants({targetType:'marauder',targetBalanceVersion:1})===20 && getClanRallyMaximumParticipants({targetType:'city'})===20"));
     assert(await ev("renderLegacyBattleReportDetail({type:'attack',targetType:'marauder',cityName:'Boss',marauderLevel:100,regionId:huntQA.target.regionId,outcome:'victory',summary:'Victory',sentTroops:200,attackerLosses:30,survivors:170,defendersLeft:0,goldAwarded:100,xpAwarded:20,itemAwarded:'recall_horn',gearBoxAwarded:'uncommon'},{tone:'victory',label:'VICTORY'}).includes('Uncommon Gear Box')"));
     // Full-size enemy finder uses fresh all-map reads, never the visited-map cache.
