@@ -6942,7 +6942,8 @@ function rallyForClient(rally = {}) {
     leaderName: normalizePlayerName(rally.leaderName, "Ruler"),
     targetType: ["tower", "camp", "marauder"].includes(rally.targetType) ? rally.targetType : "city",
     targetSpawnId: safeString(rally.targetSpawnId, 96),
-    ...(rally.targetType === "marauder" ? { targetBalanceVersion: rally.targetBalanceVersion ?? 1 } : {}),
+    ...(rally.targetType === "marauder" ? { targetBalanceVersion: rally.targetBalanceVersion ?? 1,
+      bossRewardVersion: rally.bossRewardVersion ?? 1 } : {}),
     targetId: safeString(rally.targetId, 96),
     targetName: safeString(rally.targetName || rally.targetId, 80),
     targetRegionId: normalizeRegionId(rally.targetRegionId),
@@ -24329,7 +24330,7 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       };
     }
     const bossContribution = rally.targetType === "marauder" && target.balanceVersion === MARAUDERS.BALANCE_VERSION
-      ? MARAUDERS.bossEligibility(target.level, attackPackages.map(p => ({ uid: p.uid, attackPower: p.effectivePower }))) : null;
+      ? MARAUDERS.bossEligibility(target.level, attackPackages.map(p => ({ uid: p.uid, attackPower: p.effectivePower })), MARAUDERS.BOSS_REWARD_VERSION) : null;
     if (bossContribution && !bossContribution.eligible) {
       const member = bossContribution.members.find(p => !p.eligible);
       const name = attackPackages.find(p => p.uid === member?.uid)?.ownerName || "Member";
@@ -24353,6 +24354,7 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       rallyId: rally.id,
       rallyClanId: clanId,
       rallyParticipantCount: attackPackages.length,
+      ...(bossContribution ? { bossRewardVersion: MARAUDERS.BOSS_REWARD_VERSION } : {}),
       participantUids: attackPackages.map(participant => participant.uid),
       targetType: rally.targetType,
       targetSpawnId: rally.targetType === "marauder" ? target.spawnId : "",
@@ -24418,7 +24420,7 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       ...totals,
       inboundTroops: 0,
       returnedInbound,
-      ...(bossContribution ? { bossContribution } : {}),
+      ...(bossContribution ? { bossContribution, bossRewardVersion: MARAUDERS.BOSS_REWARD_VERSION } : {}),
       attackPower: attackPackages.reduce((total, participant) => total + participant.effectivePower, 0),
       marchSpeedMultiplier: movement.rallyMarchSpeedMultiplier,
       launchedAtMs: nowMs,
@@ -24549,7 +24551,8 @@ exports.getBossRallyReadiness = onCall({ region: "us-central1", maxInstances: 20
       if (troops) combatForecast = createCombatForecast({ attackerProfile: profile.data(), target, troops,
         attackCombatSnapshot: { ...createAttackCombatSnapshot(troops, profile.data()), attackPowerPerTroop: attackPower / troops } });
       if (target.balanceVersion === MARAUDERS.BALANCE_VERSION) {
-        contribution = MARAUDERS.bossEligibility(target.level, packages.map(p => ({ uid: p.uid, attackPower: p.effectivePower })));
+        contribution = MARAUDERS.bossEligibility(target.level, packages.map(p => ({ uid: p.uid, attackPower: p.effectivePower })),
+          locked ? rally.bossRewardVersion ?? 1 : MARAUDERS.BOSS_REWARD_VERSION);
         // Forecast losses remain scout-gated. Rewards/eligibility use full configured defense.
         const losses = combatForecast?.status === "scouted"
           ? allocateRallyAttackerLosses(packages, combatForecast.estimatedAttackerLosses) : [];
@@ -28711,6 +28714,12 @@ async function resolveMarauderArmyById({ armyId, callerUid = "", nowMs = Date.no
     if (army.rallyAttack && (!rally || rally.armyId !== armyId || rally.status !== RALLY_STATUS_LAUNCHED)) {
       throw new HttpsError("failed-precondition", "The rally state is unavailable for this army.");
     }
+    const bossRewardVersion = army.bossRewardVersion ?? 1;
+    if (![1, MARAUDERS.BOSS_REWARD_VERSION].includes(bossRewardVersion)
+      || (rally && (rally.bossRewardVersion ?? 1) !== bossRewardVersion)
+      || (bossRewardVersion !== 1 && (!rally || army.targetBalanceVersion !== MARAUDERS.BALANCE_VERSION))) {
+      throw new HttpsError("failed-precondition", "The boss reward rules are unavailable for this army.");
+    }
     const snapshot = normalizeAttackCombatSnapshot(army.attackCombatSnapshot);
     const participants = rally ? getRallyAttackPackages(rally) : [{ uid: army.ownerUid, ownerName: army.ownerName,
       ownerFlag: army.ownerFlag || null, sourceId: army.fromId, sourceName: army.fromName, sourceRegionId: army.sourceRegionId,
@@ -28744,7 +28753,7 @@ async function resolveMarauderArmyById({ armyId, callerUid = "", nowMs = Date.no
     const outcome = invalid ? "target_unavailable" : isScout ? "scout" : result.success ? "victory" : "defeat";
     const loot = result.success ? MARAUDERS.rewards(target.level, target.troops,
       participants.map(p => ({ uid: p.uid, attackPower: p.effectivePower })),
-      rolls.slice(0, target.balanceVersion === MARAUDERS.BALANCE_VERSION ? participants.length * 4 : 3), target.balanceVersion) : null;
+      rolls.slice(0, target.balanceVersion === MARAUDERS.BALANCE_VERSION ? participants.length * 4 : 3), target.balanceVersion, bossRewardVersion) : null;
     const bossRecovered = !invalid && !isScout && !result.success && target.classification === "boss"
       && target.balanceVersion === MARAUDERS.BALANCE_VERSION;
     const allocations = allocateRallyAttackerLosses(participants, result.attackerLosses);
@@ -28807,6 +28816,7 @@ async function resolveMarauderArmyById({ armyId, callerUid = "", nowMs = Date.no
         targetType: "marauder", targetSpawnId: army.targetSpawnId, marauderLevel: army.marauderLevel || target?.level || 0,
         staminaRefunded: refund ? MARAUDERS.HUNT_COST : 0, itemAwarded, gearBoxAwarded, bossRecovered,
         balanceVersion: army.targetBalanceVersion ?? target?.balanceVersion ?? 1,
+        ...(rally ? { bossRewardVersion } : {}),
         damageContribution: loot?.damage[participant.uid] || 0 };
       if (movement) { returns.push(movement); writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true }); }
       writePreparedEconomy(transaction, economy, patch, [], { excludeArmyIds: [armyId], addActiveArmies: movement ? [movement] : [], nowMs });
@@ -28834,7 +28844,8 @@ async function resolveMarauderArmyById({ armyId, callerUid = "", nowMs = Date.no
       worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, realmShardId: getCurrentRealmShardId(),
       armyId, targetSpawnId: army.targetSpawnId, regionId: army.targetRegionId, outcome, loot,
       participants: participants.map(p => ({ uid: p.uid, troops: p.troops, attackPower: p.effectivePower })),
-      result, bossRecovered, balanceVersion: army.targetBalanceVersion ?? target?.balanceVersion ?? 1, staminaRefunded: refund, settledAtMs: nowMs,
+      result, bossRecovered, balanceVersion: army.targetBalanceVersion ?? target?.balanceVersion ?? 1,
+      ...(rally ? { bossRewardVersion } : {}), staminaRefunded: refund, settledAtMs: nowMs,
     });
     const publicResult = { kind: army.kind, targetType: "marauder", outcome, targetSpawnId: army.targetSpawnId };
     armyRefsForRegions(army.viewRegionIds || army.routeRegionIds, armyId).forEach(ref => transaction.set(ref,

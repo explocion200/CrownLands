@@ -177,3 +177,39 @@ assert(contribution([500000,500000]).eligible,'A losing forecast alone must not 
 assert(contribution(Array(5).fill(Number.MAX_SAFE_INTEGER)).eligible,'Exact comparisons beyond Number sum precision');
 assert.throws(()=>M.bossEligibility(80,[{uid:'a',attackPower:1},{uid:'a',attackPower:2}]));
 console.log('Balance v2: all 100 approved rows, exact contribution boundaries, personal drops, rarity replacement, conserved pools and legacy/stamina isolation passed.');
+
+// New departure policy: one troop qualifies; every member gets the full reward.
+for(let level=80;level<=100;level++)for(let count=2;count<=5;count++){
+  const config=M.balance(level,2);
+  const members=Array.from({length:count},(_,i)=>({uid:'p'+i,attackPower:i?1:config.defenders+1}));
+  const readiness=M.bossEligibility(level,members,M.BOSS_REWARD_VERSION);
+  assert(readiness.eligible && readiness.members.every(p=>p.eligible));
+  assert(readiness.members.every(p=>p.gold===config.gold && p.xp===config.xp));
+  const rolls=members.flatMap((_,i)=>i%2?[.999999,0,.999999,0]:[0,0,0,.999999]);
+  const loot=M.rewards(level,config.defenders,members,rolls,2,M.BOSS_REWARD_VERSION);
+  for(const [i,p] of members.entries()){
+    assert.equal(loot.gold[p.uid],config.gold);assert.equal(loot.xp[p.uid],config.xp);
+    assert.equal(loot.items[p.uid],i%2&&level<100?null:'war_drums_30m');
+    assert.equal(loot.gearBoxes[p.uid],i%2?null:'common','Each member has independent box randomness');
+  }
+  assert.equal(Object.values(loot.gold).reduce((a,b)=>a+b,0),count*config.gold);
+  assert.equal(Object.values(loot.xp).reduce((a,b)=>a+b,0),count*config.xp);
+  assert.equal(Object.values(loot.damage).reduce((a,b)=>a+b,0),config.defenders);
+  assert.deepEqual(M.rewards(level,config.defenders,[...members].reverse(),rolls,2,M.BOSS_REWARD_VERSION),loot);
+  assert.deepEqual(M.rewards(level,config.defenders,members,rolls,2,M.BOSS_REWARD_VERSION),loot,'Retry reuses the same personal drops');
+}
+for(const powers of [[1],[1,1,1,1,1,1],[1,0]]){
+  const members=powers.map((attackPower,i)=>({uid:'p'+i,attackPower}));
+  assert.equal(M.bossEligibility(80,members,M.BOSS_REWARD_VERSION).eligible,false);
+}
+const tiny=[{uid:'a',attackPower:1},{uid:'b',attackPower:1}];
+assert(M.bossEligibility(80,tiny,M.BOSS_REWARD_VERSION).eligible,'A losing forecast does not prevent launch');
+assert.throws(()=>M.rewards(80,5000000,tiny,Array(8).fill(0),2,M.BOSS_REWARD_VERSION),'Defeat pays no loot');
+for(const version of [0,3,null,'2',NaN]){
+  assert.throws(()=>M.bossEligibility(80,tiny,version));
+  assert.throws(()=>M.rewards(80,1,tiny,Array(8).fill(0),2,version));
+}
+assert.throws(()=>M.bossEligibility(80,[tiny[0],tiny[0]],M.BOSS_REWARD_VERSION));
+assert.throws(()=>M.rewards(79,1,tiny,Array(8).fill(0),2,M.BOSS_REWARD_VERSION),'Personal boss policy cannot alter solo rewards');
+assert.throws(()=>M.rewards(80,1,tiny,Array(8).fill(0),1,M.BOSS_REWARD_VERSION),'Legacy NPC encounters remain unchanged');
+console.log('Boss departure policy: all 21 levels, 2–5 members, one-power contributions, full personal Gold/XP, independent drops, deterministic retries and invalid policies passed.');

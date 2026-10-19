@@ -8,6 +8,8 @@
   // Approved October 19 fixed values: level, defenders, Gold, XP, item bps, box bps, Uncommon upgrade bps.
   // Version 1 remains readable; stamina VERSION is independent of enemy balance.
   const BALANCE_VERSION = 2;
+  // Frozen on departure, separately from the NPC's immutable balance version.
+  const BOSS_REWARD_VERSION = 2;
   const BALANCE_V2 = Object.freeze([
     [1, 100, 5, 50, 100, 0, 0],
     [2, 127, 7, 84, 188, 0, 0],
@@ -193,7 +195,8 @@
     for (let i = 0; i < leftover; i++) ranked[i].amount++;
     return Object.fromEntries(shares.map(entry => [entry.uid, entry.amount]));
   }
-  function bossEligibility(level, participants) {
+  function bossEligibility(level, participants, rewardVersion = 1) {
+    if (rewardVersion !== 1 && rewardVersion !== BOSS_REWARD_VERSION) fail("Unknown boss reward version.");
     const config = balance(level, BALANCE_VERSION);
     if (config.classification !== "boss") fail("Choose a clan boss.");
     const rows = participants.map(p => ({ uid: p.uid, attackPower: p.attackPower }));
@@ -203,6 +206,11 @@
     const maxSharePercent = ({ 2: 70, 3: 55, 4: 45, 5: 40 })[rows.length] || 0;
     const reason = rows.length < 2 ? "At least two assembled clan members are required."
       : rows.length > 5 ? "A boss rally allows at most five members, including the leader." : "";
+    if (rewardVersion === BOSS_REWARD_VERSION) {
+      const members = rows.map(p => ({ ...p, eligible: !reason && p.attackPower > 0,
+        reason: reason || (p.attackPower > 0 ? "" : "Send at least one troop."), gold: config.gold, xp: config.xp }));
+      return { rewardVersion, eligible: !reason && members.every(p => p.eligible), reason, members };
+    }
     const gold = total ? allocate(config.gold, rows.map(p => ({ uid: p.uid, weight: p.attackPower }))) : {};
     const xp = total ? allocate(config.xp, rows.map(p => ({ uid: p.uid, weight: p.attackPower }))) : {};
     const members = rows.map(p => {
@@ -221,18 +229,22 @@
     let threshold = roll * 100;
     return ITEMS.find(([, weight]) => (threshold -= weight) < 0)?.[0] || ITEMS[ITEMS.length - 1][0];
   }
-  function rewards(level, remainingDefense, participants, rolls, version = 1) {
+  function rewards(level, remainingDefense, participants, rolls, version = 1, bossRewardVersion = 1) {
     const config = balance(level, version);
+    const personalBoss = config.version === BALANCE_VERSION && config.classification === "boss"
+      && bossRewardVersion === BOSS_REWARD_VERSION;
+    if (bossRewardVersion !== 1 && !personalBoss) fail("Unknown boss reward version.");
     const weights = participants.map(entry => ({ uid: entry.uid, weight: entry.attackPower }));
     const totalAttack = weights.reduce((sum, entry) => sum + BigInt(entry.weight), 0n);
     if (!Number.isSafeInteger(remainingDefense) || remainingDefense < 1 || totalAttack <= BigInt(remainingDefense)) fail("Only a victorious army receives loot.");
     const damage = allocate(remainingDefense, weights);
-    // Reward weights retain the exact proportional damage, avoiding a second
-    // rounding bias when a participant's share is less than one defense point.
-    const gold = allocate(config.gold, weights), xp = allocate(config.xp, weights);
+    // Historical shared rewards use exact power weights, avoiding double rounding.
+    // New boss departures grant the complete listed reward to every participant.
+    const gold = personalBoss ? Object.fromEntries(weights.map(p => [p.uid, config.gold])) : allocate(config.gold, weights);
+    const xp = personalBoss ? Object.fromEntries(weights.map(p => [p.uid, config.xp])) : allocate(config.xp, weights);
     const modern = config.version === BALANCE_VERSION;
     if (modern && (config.classification === "solo" ? participants.length !== 1
-      : !bossEligibility(level, participants).eligible)) fail("Invalid hunt contributions.");
+      : !bossEligibility(level, participants, bossRewardVersion).eligible)) fail("Invalid hunt contributions.");
     if (!Array.isArray(rolls) || rolls.length !== (modern ? participants.length * 4 : 3) || rolls.some(value => !Number.isFinite(value) || value < 0 || value >= 1)) fail("Invalid reward randomness.");
     if (modern) {
       const items = {}, gearBoxes = {};
@@ -242,7 +254,7 @@
         gearBoxes[p.uid] = boxRoll < config.boxChanceBps / 10000
           ? rarityRoll < config.uncommonUpgradeBps / 10000 ? "uncommon" : "common" : null;
       });
-      return { balanceVersion: version, damage, gold, xp, items, gearBoxes, rolls: [...rolls] };
+      return { balanceVersion: version, ...(personalBoss ? { bossRewardVersion } : {}), damage, gold, xp, items, gearBoxes, rolls: [...rolls] };
     }
     let item = null, recipientUid = null;
     if (rolls[0] < config.itemChance) {
@@ -253,6 +265,6 @@
     }
     return { balanceVersion: VERSION, damage, gold, xp, item, recipientUid, rolls: [...rolls] };
   }
-  return Object.freeze({ VERSION, BALANCE_VERSION, BALANCE_V2, REFILL_VERSION, MAX_STAMINA, HUNT_COST, RECOVERY_MS, FULL_REFILL_PRICE, ANCHORS, ITEMS,
+  return Object.freeze({ VERSION, BALANCE_VERSION, BOSS_REWARD_VERSION, BALANCE_V2, REFILL_VERSION, MAX_STAMINA, HUNT_COST, RECOVERY_MS, FULL_REFILL_PRICE, ANCHORS, ITEMS,
     day, refillPrice, balance, slots, stamina, changeStamina, view, allocate, bossEligibility, rewards });
 });

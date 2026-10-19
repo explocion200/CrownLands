@@ -1,87 +1,46 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "25839ad0eaafef7fef14fa8b633fa99e568a9879",
+  "baseCommit": "5b20216dc7484e071cf4ce25d280a1401139a7a8",
   "coverage": [
     {
       "paths": [
-        ".github/workflows/crownlands-release-gate.yml",
-        "tools/validate-release-gate.js"
+        "functions/index.js",
+        "functions/marauder-rules.js",
+        "functions/test/emulator-marauder-combat.js",
+        "tools/validate-marauder-rules.js"
       ],
       "tests": [
-        "tools/validate-release-gate.js",
-        "tools/test-change-risk-classifier.js",
-        "tools/test-targeted-validation.js",
-        "tools/test-safe-update-pipeline.js"
+        "tools/validate-marauder-rules.js",
+        "tools/validate-clan-rallies.js",
+        "tools/validate-rally-assembly.js",
+        "tools/validate-marauder-reports.js",
+        "functions/test/emulator-marauder-combat.js",
+        "functions/test/emulator-rally-rules.js",
+        "functions/test/emulator-rally-lifecycle.js"
       ],
-      "reason": "Use the already classified Full tier for nightly PostgreSQL setup and fail closed when targeted classification fails. Execute the actual workflow shell in disposable Git fixtures with a recording sudo shim: ordinary selection, PostgreSQL/auth selection, stale or missing plan failures, and Full with a stale merged plan. Preserve check names, selection, branch freshness, emulator requirements and push protections."
+      "reason": "Change only balance-v2 boss departure eligibility and payouts: accept any positive contribution in 2\u20135 member rallies, freeze a separate reward policy, grant every launched member the full listed Gold/XP, preserve damage/loss allocation and individual item/box odds. Cover all 21 boss levels, legacy shared-reward departures, solo invariance, unsupported/mismatched policies, five reserved slots, stamina charging, losses including wiped participants, ordinary rally rules, recovery/returns and duplicate atomic settlement. The unchanged PostgreSQL adapter executes this same authoritative server code; no schema, queries, worker or world generation changes."
     },
     {
       "paths": [
-        "tools/validate-stability-regressions.js",
-        "tools/validate-runtime-audit-cleanup.js"
+        "marauders-ui.js",
+        "tools/validate-marauders-browser.js"
       ],
       "tests": [
-        "tools/validate-stability-regressions.js",
-        "tools/validate-runtime-audit-cleanup.js"
+        "tools/validate-marauders-browser.js",
+        "tools/validate-marauder-reports-browser.js",
+        "tools/validate-rally-assembly-browser.js"
       ],
-      "reason": "Repair VM fixtures to use the real incomingArmyData dependency and current clan roster/realm leaderboard contract. Assert serialized notification data and per-device retry, retained current-member contributions, exclusion of removed/archived members, stale aggregate repair, and write-free duplicate events, plus existing cache and deferred-code regressions. No server implementation or authority change."
+      "reason": "Boss Info labels full Gold/XP per member and one-troop participation; readiness removes contribution thresholds for new policies while retaining original terms for traveling legacy-policy rallies. Verify desktop and landscape mobile sizing, scrolling and reachable actions, stale readiness, independent drops wording and unchanged scout/stamina/report and shared assembly interfaces."
     },
     {
       "paths": [
-        "tools/validate-common-gear.js",
-        "tools/validate-soldier-defense.js"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/MARAUDER_REWARD_BALANCE_DRAFT.md"
       ],
       "tests": [
-        "tools/validate-common-gear.js",
-        "tools/validate-soldier-defense.js",
-        "tools/validate-skill-presets.js"
+        "tools/validate-marauder-rules.js"
       ],
-      "reason": "Update obsolete assertions for the approved shared gear notification badge and 10-Crown preset charge. Keep gear qualification, equipped/stored distinction, soldier combat and free-reset-credit checks. Existing preset tests independently verify Crown pricing and application. No balance or server changes."
-    },
-    {
-      "paths": [
-        "tools/validate-player-flags.js",
-        "tools/validate-ui-contrast-correction.js",
-        "tools/validate-leaderboard-tabs.js"
-      ],
-      "tests": [
-        "tools/validate-player-flags.js",
-        "tools/validate-ui-contrast-correction.js",
-        "tools/validate-leaderboard-tabs.js",
-        "tools/validate-parchment-notices-browser.js"
-      ],
-      "reason": "Recognize the current grouped palette exclusions, shared Reports emblem, full incoming button and flattened shared-card selectors. Preserve heraldic color/identity-link exclusions, protected leaderboard typography, route notice labels, artwork and accessibility. The existing browser suite verifies the approved parchment notice controls at desktop and landscape sizes."
-    },
-    {
-      "paths": [
-        "tools/validate-allied-target-return.js",
-        "tools/validate-clans.js"
-      ],
-      "tests": [
-        "tools/validate-allied-target-return.js",
-        "tools/validate-clans.js"
-      ],
-      "reason": "Inspect the current combined allied/retaliation-return branch instead of beginning at its later audit statement. Keep routed return geometry/timing, active-army copies and no-teleport assertions and check the conditional outcome. No combat implementation changes."
-    },
-    {
-      "paths": [
-        "tools/validate-server-route-parity.js"
-      ],
-      "tests": [
-        "tools/validate-server-route-parity.js"
-      ],
-      "reason": "Retain byte-for-byte executable route-engine parity while allowing only the server ESLint global annotation and checking the current isRegionWalkablePoint export. Existing route computations exercise every shared fixture city, directed map connections and bounded persisted points; no route engine, map or production data changes."
-    },
-    {
-      "paths": [
-        "city-details-ui.css",
-        "tools/validate-city-details-browser.js"
-      ],
-      "tests": [
-        "tools/validate-city-details-browser.js",
-        "tools/validate-crownlands-palette.js"
-      ],
-      "reason": "Restore the existing selected upgrade amount colors inside the shared theme layer so generic button and hover paint cannot erase selection. Assert readable selected/hover colors and current shared parchment, all five desktop/phone/landscape sizes, independent scrolling, amounts/upgrade projection/rejection, scope refresh, castle navigation, foreign-city privacy and no styling leakage. Only CSS presentation changes; no backend or emulator suites apply."
+      "reason": "Record the owner-confirmed override explicitly, including fivefold total payouts with five members, per-member drop probabilities, legacy departure protection and deployment pending. The immutable table is unchanged and validated for all 100 levels; no additional runtime paths arise from documentation."
     }
   ]
 }

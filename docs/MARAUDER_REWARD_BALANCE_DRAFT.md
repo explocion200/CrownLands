@@ -4,6 +4,14 @@ Solo Marauders cover levels 1–79, with a maximum item-drop chance of 70%. Clan
 
 **Approved October 19:** Keep the solo Gold/XP formulas, one-million solo defender maximum at 79, five-player boss design reference, two-to-five boss participants, 70% solo consumable ceiling and 60–90% boss Gear Box chances. Ease solo levels 11–78, use the 40M boss endpoint, derive boss XP from same-level Hero progression, enforce meaningful contributions, allow conditional Uncommon box upgrades and restore bosses after failed rallies.
 
+## Later October 19 amendment: full rewards for each boss participant
+
+The owner confirmed removing contribution minimums and giving **every launched member the full listed Gold and XP** on victory. This is departure reward policy 2, independent of NPC balance version 2. No level-table values or drop chances change. Two to five current clan members still participate, each with at least one troop and 10 stamina; no minimum defense/attack share or maximum contribution share remains. Casualties never remove an accepted member's reward.
+
+For new departures, the boss table's historically named “Total Gold pool” and “Total XP pool” columns below now mean **Gold per member** and **XP per member**. Level 80 pays each member 33,997,243 Gold and 6,491,581 XP; level 100 pays each 271,977,950 Gold and 43,672,116 XP. A five-member win pays five times those amounts across the party, five times the old total. Hero level-up bonuses remain additional. Consumable and Gear Box rolls remain independent per member with unchanged odds and box contents.
+
+The shared-pool derivations and contribution limits below document the initial balance release and remain applicable only to already-launched policy-1 armies. New policy-2 launches freeze the new policy on the rally and army. Missing saved policy means 1; unsupported or mismatched policies fail closed. Forming rallies against balance-version-2 targets adopt policy 2 at departure. Legacy balance-version-1 encounters, solo rewards, combat and respawn are unchanged. No NPC rewrite or new backup is part of this amendment. Implementation is approved; installation and verified publication remain pending.
+
 ## Fixed solo values
 
 Each solo Marauder level has fixed full-strength defending troops, Gold, XP and item-drop chance. Use the table below as a level lookup. Player level, XP-bar progress, city levels, production, skills, equipment and bonuses do not alter these configured values. Future changes to city upgrade costs or Hero progression do not automatically change the table.
