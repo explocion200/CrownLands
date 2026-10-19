@@ -141,13 +141,13 @@ Gold and XP are full solo victory payouts. Troops are full-strength starting def
 
 ## Boss brainstorm for levels 80 through 100
 
-The following are proposals for discussion, not approved boss balance rules. Keep the existing Core-only boss placement, at least two clan participants and maximum of 20. Solo levels 70–79 remain in New Lands. No spawn-boundary or world-data migration is proposed.
+The owner selected a minimum of two and maximum of five clan members per boss rally, including the leader: one leader plus up to four allies. This draft decision replaces the current Master Specification's 20-member boss limit; runtime behavior remains unchanged until the complete package is implemented. Keep the existing Core-only boss placement. Solo levels 70–79 remain in New Lands, and other rally types retain their existing limits. Other boss mechanics and numbers below remain proposals for discussion.
 
 ### Meaningful contributions
 
 Require every participant to bring effective attack power of at least 5% of the boss's configured full-strength defense. Do not use 5% of the rally total, so another member joining does not raise that participant's minimum. Also require no individual to contribute more than 70% of the assembled rally's total attack power; other members must collectively contribute at least 30%. For two people, 70/30 or 50/50 qualifies, while 99/1 does not. Combat bonuses count toward effective attack power.
 
-Show the required troops for each member's own combat bonuses, their contribution share, forecast losses and estimated payout before launch. Validate assembled membership and contributions before spending stamina, with all launch checks atomic. If members withdraw during assembly, recheck readiness. At least two members does not itself guarantee victory. Stronger members may reduce their committed force or wait for more help if the 70% limit prevents launch; this restriction needs playtesting with unequal-strength clans.
+Show the required troops for each member's own combat bonuses, their contribution share, forecast losses and estimated payout before launch. Reserve at most five active participant slots, counting inbound and assembled members together. Recheck the two-to-five assembled-member requirement and contribution rules before launch and stamina spending, with all launch checks atomic. If members withdraw during assembly, recheck readiness. At least two members does not itself guarantee victory. Stronger members may reduce their committed force or wait for more help if the 70% limit prevents launch; this restriction needs playtesting with unequal-strength clans.
 
 ### Fixed pools with a rally premium
 
@@ -169,13 +169,15 @@ Gold and XP are shared totals for the victorious rally, not per-member awards. D
 
 At level 80, two equal contributors would each receive approximately 6,799,448 Gold and 1,180,287 XP, with any remaining whole unit assigned once. The premium is 25% above one level-79 solo payout per person, while the full boss has twice the defenders.
 
+With five equal contributors at the proposed level-100 boss, each would receive 43,516,472 Gold and 7,553,840 XP, plus one item on victory. The 32,000,000 total defenders and those reward pools remain unapproved first-pass values. Reaching five members alone does not establish that the party is strong enough to win.
+
 ### Personal item rolls
 
-Propose one personal roll for each qualifying participant: level 80 gives 80%, level 85 gives 85%, and level 100 guarantees one item per participant. Reuse the same weighted consumable pool and at most one item per participant. This replaces the current single-item maximum for the entire victorious boss rally; it deliberately increases total item output with meaningful participation. Failed or canceled hunts receive no items.
+Propose one personal roll for each qualifying participant: level 80 gives 80%, level 85 gives 85%, and level 100 guarantees one item per participant. Reuse the same weighted consumable pool and at most one item per participant. This replaces the current single-item maximum for the entire victorious boss rally. With five members maximum, a victory can award at most five items total; at level 100 every qualifying participant gets one. Failed or canceled hunts receive no items.
 
 ### Review before choosing boss values
 
-Compare attack bonuses, expected losses, casualty recovery, stamina and replacement time for two-member and larger rallies at every tier. Test the 5% contribution floor and 70% ceiling against both strong and developing clan members. Account for indirect Hero level-up rewards and total item output. Also review weakened bosses after failed attacks: the live rules preserve surviving defenders and only the victorious rally earns loot, so a finishing rally can face less risk than the configured full-strength pool suggests. The full-strength minimum contributions remain in this proposal; no additional wound, healing or earlier-damage payout policy is approved.
+Reassess the proposed 2M–32M defender curve and reward pools specifically for parties of two, three, four and five; no tier may assume access to more than five members. Compare attack bonuses, expected losses, casualty recovery, stamina and replacement time before approving those values. Test the 5% contribution floor and 70% ceiling against both strong and developing clan members. Account for indirect Hero level-up rewards and total item output. Also review weakened bosses after failed attacks: the live rules preserve surviving defenders and only the victorious rally earns loot, so a finishing rally can face less risk than the configured full-strength pool suggests. The full-strength minimum contributions remain in this proposal; no additional wound, healing or earlier-damage payout policy is approved.
 
 ## Sources and verification
 
@@ -190,3 +192,5 @@ The calculation source is repository base `439e9083b87c6a3f5d29e205ef64706270b3b
 All 79 solo Gold costs match the extracted server functions and battle guide. All 79 Hero requirements match server and client. Relevant installed functions, constants, economy configuration and the Marauder module match those inputs. Gold/XP preserve the previous level 1–69 draft; early defenders preserve levels 1–40. Every proposed solo value increases with level, the troop maximum is exactly 1,000,000 at 79, and chances start at 1% and end at 70% without exceeding the cap. The six item weights sum to 100%; weighted level-79 drops total 70%.
 
 All 21 proposed boss levels were checked for increasing positive integer defenders and pools, exact endpoint values and 80–100% personal item chances. Integer arithmetic calculates reward pools without floating-point payout rounding. These are arithmetic and document checks only; no runtime, battle simulation, production mutation, merge or publication has occurred.
+
+The boss-party limit is two to five members including the leader, scoped only to bosses. The five-way level-100 reward example conserves both pools exactly, and the proposed personal-drop maximum is five items. All existing solo rows and proposed boss-tier totals remain unchanged; five-member combat feasibility has not yet been simulated.
