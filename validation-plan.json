@@ -1,22 +1,45 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "c5b10b8fa619e52e70fd8c53b95b24baf64704f3",
+  "baseCommit": "3c9fd3b8a7dfc2e1bfffaabefebccc4597454b70",
   "coverage": [
     {
       "paths": [
+        "barracks-gear-ui.js",
         "common-gear-ui.js",
-        "battle-report-detail-ui.js",
-        "battle-report-detail-ui.css",
-        "tools/validate-battle-report-detail.js",
-        "tools/validate-gear-rarity-backgrounds-browser.js"
+        "common-gear.js",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "functions/common-gear.js",
+        "functions/estate-economy.js",
+        "functions/estate-service.js",
+        "functions/index.js",
+        "functions/test/emulator-estate-economy.js",
+        "functions/test/emulator-reset-gate.js",
+        "gatehouse-gear-ui.js",
+        "royal-stables-gear-ui.js",
+        "tools/test-estate-economy.js",
+        "tools/test-local-postgres-estate-quotes.js",
+        "tools/validate-common-gear.js",
+        "tools/validate-estate-economy-browser.js",
+        "tools/validate-gear-rarities.js",
+        "treasury-gear-ui.js",
+        "tools/test-local-postgres-estate-gear-gates.js",
+        "tools/validate-estate-gear-gates-browser.js"
       ],
       "tests": [
-        "tools/validate-battle-report-detail.js",
-        "tools/validate-report-system.js",
+        "tools/test-estate-economy.js",
+        "tools/validate-common-gear.js",
+        "tools/validate-gear-rarities.js",
+        "tools/validate-gear-bonus-gameplay.js",
+        "tools/test-local-postgres-estate-quotes.js",
+        "tools/test-local-postgres-estate-gear-gates.js",
+        "tools/validate-estate-economy-browser.js",
+        "tools/validate-estate-gear-gates-browser.js",
         "tools/validate-gear-rarity-backgrounds-browser.js",
-        "tools/validate-production-artifact.js"
+        "tools/validate-production-artifact.js",
+        "functions/test/emulator-estate-economy.js",
+        "functions/test/emulator-reset-gate.js"
       ],
-      "reason": "Pass the recorded item rarity through the shared report-entry model and paint report art with the established gear palette. Report value, escaping, perspective, rally/Tower participants and historical fallback checks protect the shared presentation path. The expanded real-browser test covers all five rarities in attack, defense, rally and item-bearing historical reports; generic historical summaries remain neutral. It asserts unchanged icon dimensions and horizontal fit at desktop and two landscape-mobile sizes. The same browser run verifies every officer's inventory, equipped slots, selection/hover, upgrade previews, equip/unequip and both Common/Uncommon chest reward displays. Production artifact validation protects lazy report delivery and asset budgets. No server code, game rules, saved reports or player data change, so emulator suites are not applicable."
+      "reason": "Enforce all eight completed producer levels before the next Hall upgrade and completed officer milestones for every new rarity promotion. Newly granted gear has server-owned building requirements; old items retain equip and same-rarity upgrade access. Rule tests cover all Hall levels, gear definitions/normalization and unaffected bonuses/prices. Actual PostgreSQL API tests exercise every officer and rarity boundary, strict promotion despite earned entitlements, atomic rejection, concurrent receipt replay and box flags. Existing PostgreSQL estate quote coverage protects JSONB comparisons, spending and all 20 building completions. Estate emulator tests cover claims, commissions, Guild grants, server authority and resource state; reset emulator verifies marker preservation with existing permanent inventory. Desktop and two landscape browser sizes cover prerequisite navigation, blocked/allowed equipment actions, distinct old/new stacks, unknown-state rejection, reachable controls and retained rarity artwork in all gear/report surfaces. Production artifact validation protects shared delivery. The specification records this explicitly approved rule change, including grandfathered owned items and preserved paid contracts."
     }
   ]
 }

@@ -163,11 +163,6 @@ assert.match(game, /data-gear-merge/);
 assert.match(game, /data-manage-common-gear/);
 assert.match(game, /function createCommonGearViewModel/, "The officer equipment renderer must consume a display view model.");
 assert.match(game, /function createCommonGearBagGroups/, "The officer bag must use an explicit stack grouping helper.");
-assert.match(
-  game,
-  /const key = `\$\{instance\.gearKey\}:\$\{instance\.level\}:\$\{displayBucket\}`/,
-  "Equipment bag stacks must be separated by gear key, exact level, and equipped display state."
-);
 assert.match(game, /getCommonGearInstances\(buildingId\)/, "The right bag must load every slot for only the active officer.");
 assert.match(game, /data-gear-bag-scroll/, "The redesigned officer bag must own vertical scrolling.");
 assert.match(game, /commonGearBagScrollTop/, "Officer bag scroll position must survive rerenders.");
@@ -220,6 +215,8 @@ assert.equal(levelOneStack.count, 2, "Same-key same-level stored duplicates did 
 assert.equal(levelOneStack.representativeInstanceId, "l1_b", "A selected stacked instance must remain the real representative.");
 assert(levelOneStack.instanceIds.every(id => id.startsWith("l1_")), "A bag stack contains an instance from a different level.");
 assert.equal(bagGroups.filter(group => group.level === 2).length, 2, "Equipped and stored Level 2 pieces must remain visibly distinct.");
+const mixedAccess = groupingContext.groupGear([groupedInstances[0],{...groupedInstances[1],requiresBuildingLevel:true}],groupingDefinition.slot,"l1_a");
+assert.equal(mixedAccess.length,2,"New building-gated items must not hide previously earned usable copies in the same stack");
 
 const stableOrderDefinitions = gear.COMMON_DEFINITIONS.filter(definition => definition.buildingId === groupingDefinition.buildingId).slice(0, 3);
 const stableOrderInstances = stableOrderDefinitions.map((definition, index) => ({
@@ -244,7 +241,9 @@ const previewTarget = { ...groupedInstances[0], instanceId: "preview_target", is
 const previewDuplicate = { ...groupedInstances[1], instanceId: "preview_duplicate", isEquipped: false };
 const previewContext = {
   COMMON_GEAR: gear,
-  innerCastleEconomy: null,
+  innerCastleEconomy: { snapshot:()=>({estate:{levels:Object.fromEntries(Object.keys(gear.BUILDINGS).map(key=>[key,100]))}}) },
+  titleCaseCommonGearLabel: value => value[0].toUpperCase()+value.slice(1),
+  getCommonGearActionScope: () => "fixture",
   formatNumber: value => String(value),
   authoritativeShopPricing: { rawBaseGoldPerHour: 100 },
   state: {
@@ -315,16 +314,20 @@ for (const rate of [null, 0, 1, 48000, 1e12]) {
 const promotionTarget = { ...previewTarget, rarity: "common", level: 5 };
 const promotionMaterial = { ...previewDuplicate, rarity: "common", level: 5 };
 const entitlements = { [promotionTarget.buildingId]: 0 };
-previewContext.innerCastleEconomy = { snapshot: () => ({ estate: { entitlements } }) };
+const levels = { [promotionTarget.buildingId]: 24 };
+previewContext.innerCastleEconomy = { snapshot: () => ({ estate: { entitlements, levels } }) };
 assert.equal(previewContext.previewUpgrade(promotionTarget, [promotionTarget, promotionMaterial]).canUpgrade, false, "New promotions require the completed officer milestone");
 assert.match(previewContext.previewUpgrade(promotionTarget, [promotionTarget, promotionMaterial]).reason, /Level 25/);
 entitlements[promotionTarget.buildingId] = 1;
-assert.equal(previewContext.previewUpgrade(promotionTarget, [promotionTarget, promotionMaterial]).canUpgrade, true, "Migrated or completed rarity access permits the original two-copy promotion");
+assert.equal(previewContext.previewUpgrade(promotionTarget, [promotionTarget, promotionMaterial]).canUpgrade, false, "Old entitlements cannot bypass completed building levels");
 entitlements[promotionTarget.buildingId] = 0;
 previewContext.state.gear.uncommonGearBoxes = 1;
-assert.equal(previewContext.previewUpgrade(promotionTarget, [promotionTarget, promotionMaterial]).canUpgrade, true, "An unopened earned chest preserves access while state synchronizes");
+assert.equal(previewContext.previewUpgrade(promotionTarget, [promotionTarget, promotionMaterial]).canUpgrade, false, "An unopened chest cannot unlock a promotion");
+levels[promotionTarget.buildingId]=25;
+assert.equal(previewContext.previewUpgrade(promotionTarget, [promotionTarget, promotionMaterial]).canUpgrade, true, "Completing the milestone permits the two-copy promotion");
 delete previewContext.state.gear.uncommonGearBoxes;
 previewContext.innerCastleEconomy = null;
+assert.equal(previewContext.previewUpgrade(promotionTarget, [promotionTarget, promotionMaterial]).canUpgrade, false, "Missing building state never authorizes a promotion");
 assert.match(gearUi, /group\.isUpgradeReady = !group\.isEquipped[\s\S]{0,160}getCommonGearUpgradePreview\(group\.representative, instances, upgradeContext\)\.hasMatchingMaterial/, "Stored material-ready groups must receive alerts even when gold is missing.");
 assert.match(gearUi, /isUpgradeReady: Boolean\(equipped && getCommonGearUpgradePreview\(equipped, instances, upgradeContext\)\.hasMatchingMaterial\)/, "Equipped gear with a valid stored material must flag its loadout slot.");
 assert.match(gearUi, /group\.isUpgradeReady && !group\.isEquipped \? `<span class="common-gear-upgrade-ready common-gear-bag-upgrade-ready"/, "Equipped bag copies must not render the upgrade alert.");

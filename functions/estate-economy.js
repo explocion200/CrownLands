@@ -147,14 +147,19 @@ function buildingPrerequisites(state, key, target) {
   const building = Object.hasOwn(BUILDINGS, key) ? BUILDINGS[key] : null;
   if (!building) fail("Unknown estate building.", "invalid-argument");
   integer(target, 1, 100, "Building level must be 1–100.");
-  const required = key === "great-hall" ? [] : [{ building: "great-hall", requiredLevel: target }];
+  // Producers can only reach the completed Hall level. Require that level,
+  // not the Hall's next level, so the progression cannot lock itself.
+  const required = key === "great-hall"
+    ? C.producers.map(p => ({ building: p.building, requiredLevel: target - 1 }))
+    : [{ building: "great-hall", requiredLevel: target }];
   required.push(...building.requires1.map(building => ({ building, requiredLevel: 1 })));
   return required.map(row => ({ ...row, currentLevel: state.levels[row.building] }))
     .filter(row => row.currentLevel < row.requiredLevel);
 }
 function checkBuilding(state, key, target) {
   const missing = buildingPrerequisites(state, key, target)[0];
-  if (missing) fail(missing.building === "great-hall" ? "Upgrade the Great Hall first." : "Construct " + missing.building + " first.");
+  if (missing) fail(missing.building === "great-hall" ? "Upgrade the Great Hall first."
+    : (missing.currentLevel ? "Upgrade " : "Construct ") + missing.building + " to Level " + missing.requiredLevel + " first.");
   return BUILDINGS[key];
 }
 function baseQuote(state, key, target, rawGoldPerHour) {

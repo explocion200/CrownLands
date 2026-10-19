@@ -392,6 +392,8 @@
       isNew: raw.isNew === true,
       acquiredAtMs: timestampToMs(raw.acquiredAtMs || raw.acquiredAt),
       upgradedAtMs: timestampToMs(raw.upgradedAtMs || raw.upgradedAt),
+      // Missing on previously earned items: retain their existing access.
+      ...(raw.requiresBuildingLevel === true ? { requiresBuildingLevel: true } : {}),
     };
   }
 
@@ -541,6 +543,15 @@
       }));
   }
 
+  function getBuildingRequirement(instance, promotionRarity = "") {
+    const definition = getDefinition(instance?.gearKey);
+    if (!definition || (!promotionRarity && !instance.requiresBuildingLevel)) return null;
+    const rarity = promotionRarity || definition.rarity;
+    const tier = RARITIES.indexOf(rarity);
+    if (tier < 0) return null;
+    return { buildingId: definition.buildingId, rarity, requiredLevel: [1, 25, 50, 75, 100][tier] };
+  }
+
   function getUpgradeRequirement(level, rarity = RARITY) {
     if (level && typeof level === "object") {
       const definition = getDefinition(level.gearKey);
@@ -636,6 +647,7 @@
       isNew: false,
       acquiredAtMs: craftedAtMs,
       upgradedAtMs: craftedAtMs,
+      requiresBuildingLevel: requirement.promotion || target.requiresBuildingLevel === true,
     });
     if (!upgradedInstance) return null;
     upgradedInstance.isEquipped = wasEquipped;
@@ -687,6 +699,7 @@
     getEquippedBonusItems,
     normalizeBattleItemEffects,
     getUpgradeRequirement,
+    getBuildingRequirement,
     getUpgradeResult,
     getUpgradeGoldCost,
     getBaseCopyCountForLevel,

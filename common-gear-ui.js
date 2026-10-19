@@ -1229,7 +1229,7 @@ function createCommonGearBagGroups(instances = [], selectedSlot = "head", select
   const groups = new Map();
   instances.forEach(instance => {
     const displayBucket = instance.isEquipped ? "equipped" : "stored";
-    const key = `${instance.gearKey}:${instance.level}:${displayBucket}`;
+    const key = `${instance.gearKey}:${instance.level}:${displayBucket}${instance.requiresBuildingLevel ? ":building-gated" : ""}`;
     const group = groups.get(key) || {
       key,
       gearKey: instance.gearKey,
@@ -1284,6 +1284,19 @@ function createCommonGearUpgradeContext(instances) {
   return { counts, ids };
 }
 
+let gearEstateAccess = null;
+
+function getCommonGearBuildingAccess(instance, promotionRarity = "") {
+  const requirement = COMMON_GEAR.getBuildingRequirement(instance, promotionRarity);
+  if (!requirement) return { allowed: true, reason: "" };
+  const cached = gearEstateAccess?.state === state && gearEstateAccess.scope === getCommonGearActionScope()
+    ? gearEstateAccess.levels : null;
+  const level = innerCastleEconomy?.snapshot()?.estate?.levels?.[requirement.buildingId] ?? cached?.[requirement.buildingId];
+  const name = COMMON_GEAR.BUILDINGS[requirement.buildingId].name;
+  const allowed = Number.isInteger(level) && level >= requirement.requiredLevel;
+  return { allowed, reason: allowed ? "" : `${name} Level ${requirement.requiredLevel} required for ${titleCaseCommonGearLabel(requirement.rarity)} Gear. ${Number.isInteger(level) ? `Current building Level ${level}.` : "Building level unavailable; reopen to refresh."}` };
+}
+
 function getCommonGearUpgradePreview(instance, instances = Object.values(state?.gear?.instances || {}), context = null) {
   if (!instance) {
     return {
@@ -1316,10 +1329,8 @@ function getCommonGearUpgradePreview(instance, instances = Object.values(state?.
   const hasMatchingMaterial = duplicateCount >= requirement.duplicates;
   const hasEnoughGold = Math.max(0, Number(state?.gold) || 0) >= upgradeGold;
   const issues = [];
-  const entitlement = innerCastleEconomy?.snapshot()?.estate?.entitlements?.[instance.buildingId];
-  const earnedTier = Math.max(entitlement || 0, state.gear?.uncommonGearBoxes ? 1 : 0, ...instances.filter(item=>item.buildingId===instance.buildingId).map(item=>COMMON_GEAR.RARITIES.indexOf(item.rarity)));
-  const hasEntitlement = !requirement.promotion || entitlement === undefined || earnedTier >= COMMON_GEAR.RARITIES.indexOf(requirement.nextRarity);
-  if(!hasEntitlement)issues.push("Upgrade this officer building to Level "+[1,25,50,75,100][COMMON_GEAR.RARITIES.indexOf(requirement.nextRarity)]+" to unlock this rarity.");
+  const buildingAccess = getCommonGearBuildingAccess(instance, requirement.promotion ? requirement.nextRarity : "");
+  if (!buildingAccess.allowed) issues.push(buildingAccess.reason);
   if (!hasMatchingMaterial) {
     issues.push(`No matching material. Requires ${requirement.duplicates} matching Level ${instance.level} cop${requirement.duplicates === 1 ? "y" : "ies"}; ${duplicateCount} available.`);
     if (!instance.isEquipped && matchingEquippedCount > 0) {
@@ -1335,7 +1346,7 @@ function getCommonGearUpgradePreview(instance, instances = Object.values(state?.
     upgradeGold,
     hasMatchingMaterial,
     hasEnoughGold,
-    canUpgrade: hasMatchingMaterial && hasEnoughGold && hasEntitlement,
+    canUpgrade: hasMatchingMaterial && hasEnoughGold && buildingAccess.allowed,
     reason: issues.join(" "),
   };
 }
@@ -1393,12 +1404,15 @@ function createCommonGearViewModel(buildingId) {
   const definition = selected ? COMMON_GEAR.getDefinition(selected.gearKey) : null;
   const upgradeContext = createCommonGearUpgradeContext(instances);
   const upgradePreview = getCommonGearUpgradePreview(selected, instances, upgradeContext);
+  const equipAccess = getCommonGearBuildingAccess(selected);
+  const equipReason = selected?.isEquipped ? "" : equipAccess.reason;
   const { requirement, duplicateCount, upgradeGold } = upgradePreview;
   const nextItem = selected ? COMMON_GEAR.getUpgradeResult(selected) : null;
   const progressionItem = nextItem || selected;
   const nextDefinition = nextItem ? COMMON_GEAR.getDefinition(nextItem.gearKey) : null;
   const bagGroups = createCommonGearBagGroups(instances, selectedCommonGearSlot, selectedCommonGearInstanceId);
   bagGroups.forEach(group => {
+    group.buildingLockReason = group.isEquipped ? "" : getCommonGearBuildingAccess(group.representative).reason;
     group.isUpgradeReady = !group.isEquipped
       && getCommonGearUpgradePreview(group.representative, instances, upgradeContext).hasMatchingMaterial;
   });
@@ -1450,8 +1464,9 @@ function createCommonGearViewModel(buildingId) {
     duplicateCount,
     upgradeGold,
     canMerge: upgradePreview.canUpgrade,
-    mergeReason: upgradePreview.reason,
-    canEquip: Boolean(selected),
+    mergeReason: upgradePreview.reason.replace(equipReason, "").trim(),
+    canEquip: Boolean(selected && (selected.isEquipped || equipAccess.allowed)),
+    equipReason,
     description: createCommonGearDescription(definition, selected),
     bagGroups,
     filteredBagGroups,
@@ -1557,9 +1572,10 @@ function renderCommonGearSelectedPanel(viewModel) {
       <small>${escapeHtml(viewModel.progressionLabel)} full path: ${formatNumber(viewModel.progressionBaseCopies)} Common Level 1 copies · ${formatCommonGearGold(viewModel.progressionGoldCost)} Gold</small>
     </div>
     <div class="common-gear-actions">
-      <button class="common-gear-equip-btn" type="button" data-gear-equip ${viewModel.actionInFlight ? "disabled" : ""}>${viewModel.actionInFlight ? "Working…" : selected.isEquipped ? "Unequip" : "Equip"}</button>
+      <button class="common-gear-equip-btn" type="button" data-gear-equip ${viewModel.actionInFlight || !viewModel.canEquip ? "disabled" : ""}>${viewModel.actionInFlight ? "Working…" : selected.isEquipped ? "Unequip" : "Equip"}</button>
       <button class="common-gear-merge-btn" type="button" data-gear-merge ${viewModel.actionInFlight || !viewModel.canMerge ? "disabled" : ""}>${requirement ? escapeHtml(viewModel.upgradeActionLabel) : "Max Level"}</button>
     </div>
+    ${viewModel.equipReason ? `<small class="common-gear-action-reason">${escapeHtml(viewModel.equipReason)}</small>` : ""}
     ${viewModel.mergeReason ? `<small class="common-gear-action-reason">${escapeHtml(viewModel.mergeReason)}</small>` : ""}
   </section>`;
 }
@@ -1833,6 +1849,7 @@ function bindCommonGearScreen(viewModel) {
       return;
     }
     if (event.target.closest?.("[data-gear-equip]")) {
+      if (!viewModel.canEquip || commonGearActionInFlight) return;
       const selected = state.gear.instances?.[selectedCommonGearInstanceId];
       if (selected) void runCommonGearAction(viewModel.buildingId, selected.isEquipped ? "unequip" : "equip", selected.instanceId);
       return;
@@ -1945,6 +1962,12 @@ function showCommonGearBuilding(buildingId) {
   commonGearPendingFocusSelector = `[data-gear-slot="${selectedCommonGearSlot}"]`;
   const requestId = ++commonGearViewRequestId;
   const viewState = state, viewSession = getCommonGearActionScope();
+  if (innerCastleEconomy) void innerCastleEconomy.refresh();
+  else getOnlineApi()?.getEstateState?.().then(result => {
+    if (state !== viewState || getCommonGearActionScope() !== viewSession || !result?.estate?.levels) return;
+    gearEstateAccess = { state: viewState, scope: viewSession, levels: result.estate.levels };
+    if (isCommonGearBuildingOpen(buildingId)) renderCommonGearBuilding(buildingId);
+  }).catch(() => {});
   getOnlineApi()?.viewCommonGearBuilding?.({ buildingId }).then(result => {
     if (requestId !== commonGearViewRequestId || state !== viewState || getCommonGearActionScope() !== viewSession || !result?.gear) return;
     state.gear = normalizeCommonGearState(result.gear);

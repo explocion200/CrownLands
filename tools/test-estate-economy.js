@@ -30,6 +30,7 @@ for (const line of table.split(/\r?\n/)) {
     const materials = ["timber", "stone", "planks", "iron", "tools", "grain", "food"];
     materials.forEach((k, i) => assert.equal(E.COSTS[current][level][k] || 0, cells[i + 1]));
     const state = all(1); state.levels["great-hall"] = 100;
+    if (current === "great-hall") for (const p of E.C.producers) state.levels[p.building] = level - 1;
     const actual = E.baseQuote(state, current, level, 285);
     assert.equal(actual.gold, cells[8]); assert.equal(actual.durationMs / 60000, cells[9]); rows++;
   }
@@ -202,9 +203,9 @@ assert(S.supplyQuote(s, "grain", .25, 24 * H));
     {building:"foresters-lodge",requiredLevel:1,currentLevel:0},
   ]);
   assert.deepEqual(prerequisites["guild-master"],[],"Starter Alehouse satisfies the guild prerequisite");
-  assert.deepEqual(prerequisites["great-hall"],[],"The Hall has no building dependency");
+  assert.deepEqual(prerequisites["great-hall"], E.C.producers.map(p=>({building:p.building,requiredLevel:1,currentLevel:0})), "All eight producers gate the Hall");
   assert.equal(JSON.stringify(state),before,"Guidance never changes saved state");
-  assert.throws(()=>E.constructionQuote(state,"workshop"),/Construct sawmill first/);
+  assert.throws(()=>E.constructionQuote(state,"workshop"),/Construct sawmill to Level 1 first/);
   state.levels.sawmill=1;
   assert.deepEqual(E.snapshot(state,0).buildingPrerequisites.workshop,[{building:"smithy",requiredLevel:1,currentLevel:0}]);
   const high = all(24);
@@ -215,6 +216,33 @@ assert(S.supplyQuote(s, "grain", .25, 24 * H));
   high.levels["great-hall"]=25;assert.deepEqual(E.snapshot(high,0).buildingPrerequisites.quarry,[]);
   assert(E.constructionQuote(high,"quarry").jobs[0]);
   assert(Object.values(E.snapshot(all(100),0).buildingPrerequisites).every(rows=>rows.length===0));
+}
+// Every Hall step is reachable without a circular dependency. Missing or
+// unfinished producers reject quote/funding before consuming stock or credit.
+for (let level = 1; level < 100; level++) {
+  const state = rich(all(level)), quote = E.constructionQuote(state, "great-hall");
+  assert.equal(quote.jobs[0].target, level + 1);
+  for (const p of E.C.producers) {
+    state.levels[p.building] = level - 1;
+    const before = structuredClone(state);
+    assert.deepEqual(E.buildingPrerequisites(state, "great-hall", level + 1), [{building:p.building,requiredLevel:level,currentLevel:level-1}]);
+    assert.throws(()=>E.constructionQuote(state,"great-hall"), /first/);
+    assert.throws(()=>E.fund(state,quote,"blocked_hall",0), /first/);
+    assert.deepEqual(state,before);
+    state.levels[p.building] = level;
+  }
+  E.fund(state,quote,"hall_start",0);
+  const deadline = state.jobs[0].completesAtMs;
+  E.settle(state,deadline);
+  assert.equal(state.levels["great-hall"],level+1);
+  assert.equal(E.constructionQuote(state,"quarry").jobs[0].target,level+1);
+}
+{
+  const state=E.initial(0),paid=E.baseQuote(all(1),"great-hall",2,285);
+  state.jobs=[{...paid,id:"previous_paid_hall",status:"queued",fundedAtMs:0}];
+  E.settle(state,paid.durationMs);
+  assert.equal(state.levels["great-hall"],2,"Already-paid Hall contracts complete even if new prerequisites are unmet");
+  assert.deepEqual(state.stock,E.zero(),"Existing contracts never charge again");
 }
 // Overview guidance must agree with actual next-level spending rules and remain
 // a read of state, including Hall gates, paid work and exact permanent credit.
