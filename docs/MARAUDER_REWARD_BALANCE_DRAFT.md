@@ -149,27 +149,38 @@ Require every participant to bring effective attack power of at least 5% of the 
 
 Show the required troops for each member's own combat bonuses, their contribution share, forecast losses and estimated payout before launch. Reserve at most five active participant slots, counting inbound and assembled members together. Recheck the two-to-five assembled-member requirement and contribution rules before launch and stamina spending, with all launch checks atomic. If members withdraw during assembly, recheck readiness. At least two members does not itself guarantee victory. Stronger members may reduce their committed force or wait for more help if the 70% limit prevents launch; this restriction needs playtesting with unequal-strength clans.
 
+### Defenders calculated for five players
+
+The owner requested boss defenders calculated for five players. Use a full five-member rally as the design reference at every boss level, including the leader. The minimum to launch remains two; a party of two, three or four faces the same fixed full-strength defenders as a party of five. Actual participant count, player level and equipment do not change the configured defender table.
+
+For the draft calculation, start each player's reference at the level-79 solo's 1,000,000 defenders. Five such references give the level-80 boss 5,000,000 defenders. Preserve the previously proposed doubling every five boss levels: 10,000,000 at 85, 20,000,000 at 90, 40,000,000 at 95 and 80,000,000 at 100. This replaces the earlier 2M–32M boss proposal; the five-player basis is requested, while the exact growth rate and endpoints remain balance proposals.
+
+- `perPlayerDefenderReference[L] = 1000000 * 2 ** ((L - 80) / 5)`
+- `bossDefenders[L] = floor(5 * perPlayerDefenderReference[L])`
+
+Round once after multiplying by five, then freeze the resulting level values. The per-player reference describes one fifth of the defending force for comparison, not an individual attack requirement or five separate battles. Each player's effective attack power still depends on their troop count and combat bonuses; the combined force must defeat the whole boss. Equal contributions are an illustration, not a launch requirement.
+
 ### Fixed pools with a rally premium
 
-Start with 2,000,000 defenders at level 80 and double every five boss levels, reaching 32,000,000 at level 100. For intermediate levels the proposed calculation is `floor(2000000 * 16 ** ((L - 80) / 20))`. Rewards use the revised level-79 solo as their reference, with a 25% premium per configured defender:
+Recalculate the proposed shared Gold and XP pools for the new defenders using the same level-79 solo reference and 25% premium per configured defender:
 
 `bossPool = floor(level79SoloReward * bossDefenders / 1000000 * 1.25)`
 
 Calculate Gold and XP separately, then freeze each boss level's totals. This is a first balance estimate, not evidence that the rewards cover every player's losses. Bosses do not grow stronger when more members join, and additional members do not increase the total Gold or XP pool.
 
-| Boss level | Defending troops | Total Gold pool | Total XP pool | Personal consumable chance |
-| ---: | ---: | ---: | ---: | ---: |
-| 80 | 2,000,000 | 13,598,897 | 2,360,575 | 80% |
-| 85 | 4,000,000 | 27,197,795 | 4,721,150 | 85% |
-| 90 | 8,000,000 | 54,395,590 | 9,442,300 | 90% |
-| 95 | 16,000,000 | 108,791,180 | 18,884,600 | 95% |
-| 100 | 32,000,000 | 217,582,360 | 37,769,200 | 100% |
+| Boss level | Defending troops | Defender reference per player (five equal shares) | Total Gold pool | Total XP pool | Personal consumable chance |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 80 | 5,000,000 | 1,000,000 | 33,997,243 | 5,901,437 | 80% |
+| 85 | 10,000,000 | 2,000,000 | 67,994,487 | 11,802,875 | 85% |
+| 90 | 20,000,000 | 4,000,000 | 135,988,975 | 23,605,750 | 90% |
+| 95 | 40,000,000 | 8,000,000 | 271,977,950 | 47,211,500 | 95% |
+| 100 | 80,000,000 | 16,000,000 | 543,955,900 | 94,423,000 | 100% |
 
 Gold and XP are shared totals for the victorious rally, not per-member awards. Divide them by each member's snapshotted effective attack-power contribution with integer remainder handling that preserves the total. A 70/30 split receives 70% and 30%; the leader gets no automatic extra share. To preserve those exact payouts, the proposed boss rule would exempt these shares from the recipient-level XP cap, as in the solo draft. That additional boss-cap change is part of this brainstorm only.
 
-At level 80, two equal contributors would each receive approximately 6,799,448 Gold and 1,180,287 XP, with any remaining whole unit assigned once. The premium is 25% above one level-79 solo payout per person, while the full boss has twice the defenders.
+At level 80, five equal contributors would each receive 6,799,448 Gold and 1,180,287 XP before remainder allocation: three receive one additional Gold and two receive one additional XP. The premium is approximately 25% above one level-79 solo payout per person, while the full boss has five times the defenders.
 
-With five equal contributors at the proposed level-100 boss, each would receive 43,516,472 Gold and 7,553,840 XP, plus one consumable on victory. The 32,000,000 total defenders and those reward pools remain unapproved first-pass values. Reaching five members alone does not establish that the party is strong enough to win.
+With five equal contributors at the proposed level-100 boss, each would receive 108,791,180 Gold and 18,884,600 XP, plus one consumable on victory. The 80,000,000 total defenders and those reward pools remain unapproved first-pass values. Reaching five members alone does not establish that the party is strong enough to win. Smaller successful rallies divide the same total pools by their actual effective attack-power contributions; there are no rewards reserved for absent players.
 
 ### Personal consumable rolls
 
@@ -195,7 +206,7 @@ This is a new boss loot source and conflicts with the current Master Specificati
 
 ### Review before choosing boss values
 
-Reassess the proposed 2M–32M defender curve and reward pools specifically for parties of two, three, four and five; no tier may assume access to more than five members. Compare attack bonuses, expected losses, casualty recovery, stamina and replacement time before approving those values. Test the 5% contribution floor and 70% ceiling against both strong and developing clan members. Account for indirect Hero level-up rewards, total consumable output and permanent gear growth from the separate Common Gear Box proposal. Also review weakened bosses after failed attacks: the live rules preserve surviving defenders and only the victorious rally earns loot, so a finishing rally can face less risk than the configured full-strength pool suggests. The full-strength minimum contributions remain in this proposal; no additional wound, healing or earlier-damage payout policy is approved.
+Reassess the proposed 5M–80M defender curve and matching reward pools with five-member rallies as the intended baseline; no tier may assume access to more than five members. The level-100 reference is sixteen times level 80 per player, so this curve is not evidence that five ordinary players can win or afford the losses. Also evaluate stronger parties of two, three and four against those same fixed defenders, without reducing boss strength for missing members. Compare attack bonuses, expected losses, casualty recovery, stamina and replacement time before approving those values. Test the 5% contribution floor and 70% ceiling against both strong and developing clan members. Account for indirect Hero level-up rewards, total consumable output and permanent gear growth from the separate Common Gear Box proposal. Also review weakened bosses after failed attacks: the live rules preserve surviving defenders and only the victorious rally earns loot, so a finishing rally can face less risk than the configured full-strength pool suggests. The full-strength minimum contributions remain in this proposal; no additional wound, healing or earlier-damage payout policy is approved.
 
 ## Sources and verification
 
@@ -209,8 +220,8 @@ The calculation source is repository base `439e9083b87c6a3f5d29e205ef64706270b3b
 
 All 79 solo Gold costs match the extracted server functions and battle guide. All 79 Hero requirements match server and client. Relevant installed functions, constants, economy configuration and the Marauder module match those inputs. Gold/XP preserve the previous level 1–69 draft; early defenders preserve levels 1–40. Every proposed solo value increases with level, the troop maximum is exactly 1,000,000 at 79, and chances start at 1% and end at 70% without exceeding the cap. The six item weights sum to 100%; weighted level-79 drops total 70%.
 
-All 21 proposed boss levels were checked for increasing positive integer defenders and pools, exact endpoint values and 80–100% personal consumable chances. Integer arithmetic calculates reward pools without floating-point payout rounding. These are arithmetic and document checks only; no runtime, battle simulation, production mutation, merge or publication has occurred.
+All 21 proposed boss levels were checked for increasing positive integer defenders and pools, the five-player derivation, 5M/80M endpoints, five-level doubling anchors and 80–100% personal consumable chances. Integer arithmetic calculates reward pools without floating-point payout rounding. These are arithmetic and document checks only; no runtime, battle simulation, production mutation, merge or publication has occurred.
 
-The boss-party limit is two to five members including the leader, scoped only to bosses. The five-way level-100 reward example conserves both pools exactly, and the proposed consumable maximum is five, with a separate Common Gear Box proposal allowing at most one box per participant. All existing solo rows and proposed boss-tier totals remain unchanged; five-member combat feasibility has not yet been simulated.
+The boss-party limit is two to five members including the leader, scoped only to bosses. Five-player examples at levels 80 and 100 conserve both reward pools, including remainder allocation. The proposed consumable maximum is five, with a separate Common Gear Box proposal allowing at most one box per participant. Solo rows and personal loot chances remain unchanged by the defender revision; five-member combat feasibility has not yet been simulated.
 
-The proposed Common Gear Box curve was checked at all 21 boss levels: 60% at 80, increments of 1.5 percentage points, and a 90% maximum at 100. Five-player expected box and gear-piece counts and at-least-one probabilities were calculated from independent personal rolls. Gold, XP, defender and consumable tables are unchanged; no new loot source has been implemented.
+The proposed Common Gear Box curve was checked at all 21 boss levels: 60% at 80, increments of 1.5 percentage points, and a 90% maximum at 100. Five-player expected box and gear-piece counts and at-least-one probabilities were calculated from independent personal rolls. These chances are independent of the revised defender and reward pools; no new loot source has been implemented.
