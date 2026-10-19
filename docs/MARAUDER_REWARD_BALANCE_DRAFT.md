@@ -1,6 +1,6 @@
 # Marauder reward balance draft
 
-This draft covers proposed Gold rewards and defending troops for Marauder levels 1–69. Keep this draft local until the full reward package is drafted and approved for publication. This document does not change runtime rewards or the approved Master Specification.
+This draft covers proposed Gold and Hero XP rewards and defending troops for Marauder levels 1–69. Keep this draft local until the full reward package is drafted and approved for publication. This document does not change runtime rewards or the approved Master Specification.
 
 ## Gold formula
 
@@ -10,7 +10,19 @@ For a Marauder at level L, award one fifth of the standard Gold cost to upgrade 
 
 For example, a level 20 Marauder references the level 20 to 21 city upgrade. Use the price before player skill, equipment or other discounts so each level has the same reward for every player. This current-level interpretation, undiscounted reference and rounding are draft assumptions for review. The requested one-fifth relationship replaces the existing geometric Gold anchors if the complete package is later approved.
 
-The main table covers the previously requested levels 1–69. Levels 70–79 are an extension for review only; applying the formula to that range is still pending. Bosses at levels 80–100 are outside this draft. XP, item drops, stamina and combat mechanics are unchanged. The troop changes below cover levels 1–69 only.
+The main table covers the previously requested levels 1–69. Levels 70–79 are an extension for review only; applying the formula to that range is still pending. Bosses at levels 80–100 are outside this draft. Item drops, stamina and combat mechanics are unchanged. The troop and XP changes below cover levels 1–69 only.
+
+## XP formula
+
+For a Marauder at level L, award one fifth of the XP required for a Hero at level L to advance to L + 1, rounded down to whole XP:
+
+`XP = floor(getXpRequiredForLevel(L) / 5)`
+
+The reference is the full requirement for that single Hero level, not cumulative lifetime XP or the player's remaining XP-bar gap. As with the Gold draft, match the Marauder's level to the reference Hero level. A Marauder's base reward therefore stays fixed for all players; a high-level player does not receive a larger base reward for defeating a level 1 enemy.
+
+Keep the existing Hero progression curve: through level 25, the requirement is `floor(150 + 65 * L + 35 * L ** 2.05)`; above 25, it is `floor(27469 * 1.1 ** (L - 25))`, subject to the current safe-integer bound. Player levels and stored XP are not changed. This draft replaces the Master Specification's fixed Marauder XP anchors for levels 1–69 only.
+
+Keep the existing server-authoritative battle XP cap. It does not reduce this 20% reward for a Hero at the same level as the defeated Marauder. A substantially lower-level Hero may receive less because the existing cap uses the recipient's Hero level. Five victories against the same-level Marauder give approximately one full level's requirement, with at most four XP missing due to rounding; after leveling up, the next Hero requirement is higher. Existing level-up Gold, troops and skill-point rewards still apply and should be included in the complete balance review.
 
 ## Defending troops
 
@@ -30,6 +42,8 @@ This replaces the Master Specification's current level-60 anchor of 1,000,000 de
 ## Balance effect
 
 Level 1 falls from 100 to 5 Gold and level 20 falls from 5,000 to 537 Gold. Level 69 falls from 1,488,175 to 1,180,872 Gold. Five wins provide approximately one standard same-level city upgrade; rounding can leave a shortfall of up to four Gold. These totals exclude troop losses, other income and player upgrade discounts.
+
+XP changes from 20 to 50 at level 1, from 500 to 3,542 at level 20, and from 15,434 to 364,041 at level 69. Gold rewards and the previously drafted troop curve remain unchanged.
 
 ## Levels 1 through 69
 
@@ -107,9 +121,85 @@ Current and draft troops are full-strength spawn counts; a surviving enemy can h
 | 68 | 2,636,650 | 923,670 | 5,033,077 | 1,318,325 | 1,006,615 | -23.6% |
 | 69 | 2,976,351 | 1,000,000 | 5,904,362 | 1,488,175 | 1,180,872 | -20.6% |
 
+## XP by level
+
+The Hero requirement is for the listed level to the next level. Draft XP is the base victory award before any recipient-level cap.
+
+| Marauder level | Hero XP needed | Current XP | Draft XP |
+| ---: | ---: | ---: | ---: |
+| 1 | 250 | 20 | 50 |
+| 2 | 424 | 23 | 84 |
+| 3 | 677 | 28 | 135 |
+| 4 | 1,010 | 33 | 202 |
+| 5 | 1,423 | 39 | 284 |
+| 6 | 1,918 | 46 | 383 |
+| 7 | 2,495 | 55 | 499 |
+| 8 | 3,155 | 65 | 631 |
+| 9 | 3,899 | 77 | 779 |
+| 10 | 4,727 | 91 | 945 |
+| 11 | 5,639 | 108 | 1,127 |
+| 12 | 6,636 | 128 | 1,327 |
+| 13 | 7,719 | 152 | 1,543 |
+| 14 | 8,887 | 180 | 1,777 |
+| 15 | 10,141 | 214 | 2,028 |
+| 16 | 11,482 | 253 | 2,296 |
+| 17 | 12,909 | 300 | 2,581 |
+| 18 | 14,423 | 356 | 2,884 |
+| 19 | 16,024 | 422 | 3,204 |
+| 20 | 17,712 | 500 | 3,542 |
+| 21 | 19,487 | 541 | 3,897 |
+| 22 | 21,351 | 587 | 4,270 |
+| 23 | 23,302 | 636 | 4,660 |
+| 24 | 25,342 | 689 | 5,068 |
+| 25 | 27,469 | 747 | 5,493 |
+| 26 | 30,215 | 810 | 6,043 |
+| 27 | 33,237 | 878 | 6,647 |
+| 28 | 36,561 | 951 | 7,312 |
+| 29 | 40,217 | 1,031 | 8,043 |
+| 30 | 44,239 | 1,118 | 8,847 |
+| 31 | 48,663 | 1,211 | 9,732 |
+| 32 | 53,529 | 1,313 | 10,705 |
+| 33 | 58,882 | 1,423 | 11,776 |
+| 34 | 64,770 | 1,542 | 12,954 |
+| 35 | 71,247 | 1,671 | 14,249 |
+| 36 | 78,372 | 1,811 | 15,674 |
+| 37 | 86,209 | 1,963 | 17,241 |
+| 38 | 94,830 | 2,128 | 18,966 |
+| 39 | 104,313 | 2,306 | 20,862 |
+| 40 | 114,744 | 2,500 | 22,948 |
+| 41 | 126,219 | 2,679 | 25,243 |
+| 42 | 138,841 | 2,871 | 27,768 |
+| 43 | 152,725 | 3,077 | 30,545 |
+| 44 | 167,997 | 3,298 | 33,599 |
+| 45 | 184,797 | 3,535 | 36,959 |
+| 46 | 203,277 | 3,789 | 40,655 |
+| 47 | 223,605 | 4,061 | 44,721 |
+| 48 | 245,965 | 4,352 | 49,193 |
+| 49 | 270,562 | 4,665 | 54,112 |
+| 50 | 297,618 | 5,000 | 59,523 |
+| 51 | 327,380 | 5,358 | 65,476 |
+| 52 | 360,118 | 5,743 | 72,023 |
+| 53 | 396,130 | 6,155 | 79,226 |
+| 54 | 435,743 | 6,597 | 87,148 |
+| 55 | 479,317 | 7,071 | 95,863 |
+| 56 | 527,249 | 7,578 | 105,449 |
+| 57 | 579,974 | 8,122 | 115,994 |
+| 58 | 637,971 | 8,705 | 127,594 |
+| 59 | 701,768 | 9,330 | 140,353 |
+| 60 | 771,945 | 10,000 | 154,389 |
+| 61 | 849,140 | 10,494 | 169,828 |
+| 62 | 934,054 | 11,012 | 186,810 |
+| 63 | 1,027,459 | 11,556 | 205,491 |
+| 64 | 1,130,205 | 12,127 | 226,041 |
+| 65 | 1,243,226 | 12,726 | 248,645 |
+| 66 | 1,367,549 | 13,355 | 273,509 |
+| 67 | 1,504,304 | 14,015 | 300,860 |
+| 68 | 1,654,734 | 14,708 | 330,946 |
+| 69 | 1,820,207 | 15,434 | 364,041 |
+
 ## Levels 70 through 79 for review
 
-These rows show the proposed Gold formula beyond the original requested range. They are not an approved scope extension. Troops in this section are current live counts for reference only; a new troop curve above level 69 has not been drafted.
+These rows show the proposed Gold formula beyond the original requested range. They are not an approved scope extension. Troops in this section are current live counts for reference only; new troop and XP curves above level 69 have not been drafted.
 
 | Marauder level | Current troops only | City upgrade cost | Current Gold | Draft Gold | Change |
 | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -129,11 +219,14 @@ These rows show the proposed Gold formula beyond the original requested range. T
 Calculated from repository base `439e9083b87c6a3f5d29e205ef64706270b3bee7`:
 
 - [City upgrade calculation](../functions/index.js): `getCityUpgradeCost`, `getCityUpgradeTargetHours`, and passive Gold production helpers.
+- [Hero XP calculation](../functions/index.js): `getXpRequiredForLevel`, `getBattleXpLevelCapRate`, `capBattleXpForHeroLevel` and the Marauder settlement cap call. The [client progression calculation](../game.js) supplies matching level requirements.
 - [Economy configuration](../functions/economy-config.json): the city production and upgrade curves.
 - [Current Marauder rewards](../functions/marauder-rules.js): `balance` and Gold anchors.
 - [Battle guide calculator](../battle-guide-calculations.js): independent existing implementation used to cross-check every city cost.
 - [Master Specification](CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md): Camps and World Objectives, Marauders and Clan Bosses.
 
-All 79 Gold calculations agree with the extracted server functions and the existing battle guide calculator. The relevant installed server functions, constants, economy configuration and Marauder reward module match the repository inputs. All proposed amounts are positive, strictly increase with level, and satisfy the one-fifth rule with whole-Gold rounding.
+All 79 Gold calculations agree with the extracted server functions and the existing battle guide calculator. The relevant installed server functions, constants, economy configuration and Marauder reward module match the repository inputs. All proposed Gold amounts are positive, strictly increase with level, and satisfy the one-fifth rule with whole-Gold rounding.
 
 All 79 current troop counts match the current server reward module and its installed copy. All 69 proposed troop counts are positive whole numbers, increase strictly with level and stay at or below 1,000,000. Levels 1–40 are unchanged, and level 69 reaches exactly 1,000,000. Gold calculations are unchanged by this troop revision.
+
+All 69 XP requirements agree between the server and client. The relevant XP and cap functions and constants match the installed server. Proposed XP rewards are positive whole numbers, increase strictly, and equal one fifth of the full same-level requirement rounded down. Each proposed reward passes the existing cap without reduction for a same-level Hero.

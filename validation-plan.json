@@ -7,7 +7,7 @@
         "docs/MARAUDER_REWARD_BALANCE_DRAFT.md"
       ],
       "tests": [],
-      "reason": "Documentation-only held reward and troop draft. No runtime, balance configuration, Master Specification or production behavior changes. All 79 Gold rows retain the verified city-cost formula; all current troop counts match the unchanged reward module and installed copy. Check 69 proposed defender rows against preserved levels 1–40 and geometric interpolation from 100,000 at level 40 to exactly 1,000,000 at level 69, with whole troops, strict growth and the cap. Levels 70–79 and bosses have no proposed troop change. Browser, build and emulator tests do not apply to this document."
+      "reason": "Documentation-only held Gold, defender and XP draft. No runtime, balance configuration, Master Specification or production data changes. All 79 Gold rows retain the verified city-cost formula; current troops match the unchanged reward module. Verify 69 drafted defenders retain levels 1–40, increase geometrically to exactly 1,000,000 at level 69 and never exceed the cap. Verify 69 Hero requirements using actual server/client functions, installed function/constant parity, floor(required / 5), strict growth and no reduction by the existing same-level Hero XP cap. XP level references are full requirements, not remaining or cumulative XP. Above level 69 troop/XP scope remains pending. Browser, build and emulator suites do not apply to this draft document."
     }
   ]
 }
