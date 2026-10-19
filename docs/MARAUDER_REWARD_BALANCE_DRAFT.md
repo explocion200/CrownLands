@@ -175,21 +175,21 @@ With five equal contributors at the proposed level-100 boss, each would receive 
 
 The proposed 80–100% personal chance applies only to the six existing consumables, such as War Drums and Recall Horn. It does not include Gear Boxes. Propose one personal roll per qualifying participant, with at most one consumable each; level 100 guarantees one consumable each. With five members maximum, a victory can award at most five consumables total. This replaces the current single-consumable maximum for the entire victorious boss rally. Failed or canceled hunts receive none.
 
-### Rare Common Gear Box proposal
+### Common Gear Box proposal
 
-The owner rejected an 80% starting Gear Box chance. As a separate recommendation for review, use an independent Common Gear Box roll per qualifying participant, starting at 2% for level 80 and rising to 10% for level 100. Intermediate levels increase by 0.4 percentage point: `gearBoxChanceBps[L] = 200 + 40 * (L - 80)`. The exact rate curve and choice of Common Box are proposals, not confirmed rules.
+The owner proposed a 60% Gear Box chance at boss level 80 and 90% at level 100. Keep the independent Common Gear Box roll per qualifying participant. Spread the increase evenly by 1.5 percentage points per boss level: `gearBoxChanceBps[L] = 6000 + 150 * (L - 80)`. These are the current draft rates; the complete boss package and Common Box choice remain under review.
 
 | Boss level | Common Gear Box chance per qualifying player |
 | ---: | ---: |
-| 80 | 2% |
-| 85 | 4% |
-| 90 | 6% |
-| 95 | 8% |
-| 100 | 10% |
+| 80 | 60% |
+| 85 | 67.5% |
+| 90 | 75% |
+| 95 | 82.5% |
+| 100 | 90% |
 
 These are unconditional per-player chances on victory, independent of the consumable roll. A member can receive a consumable, a Common Gear Box, both or neither. At most one unopened Common Gear Box per qualifying member per victory; never a guaranteed Gear Box, even at level 100. The proposed pool excludes Uncommon and higher-rarity boxes. Common Boxes contain three Level 1 Common pieces under the existing opening rules and remain in the persistent Gear inventory. Solo Marauders retain their consumable-only draft.
 
-With five qualifying players, level 80 averages 0.10 Common Gear Boxes per victory and level 100 averages 0.50. These are averages, not fixed rewards or guaranteed intervals. The chance that at least one of those five players receives a box is about 9.61% at level 80 and 40.95% at level 100. A maximum of five consumables and five boxes could be awarded in one rally; the box rolls are rare, independent bonuses.
+With five qualifying players, level 80 averages 3 Common Gear Boxes per victory and level 100 averages 4.5. If all awarded boxes are opened, that is an average of 9 and 13.5 permanent Common gear pieces respectively. These are averages across victories, not guaranteed counts in one rally. The chance that at least one of those five players receives a box is 98.976% at level 80 and 99.999% at level 100. A maximum of five consumables and five boxes could be awarded in one rally. Boxes would be a frequent boss reward, so the final economy review must account for this permanent gear output alongside the troop losses and stamina spent.
 
 This is a new boss loot source and conflicts with the current Master Specification's no-Gear-Boxes NPC rule. It requires explicit inclusion in the final approved balance package. Persist eligibility, both random results and awards once per encounter; retries cannot reroll. Failed or canceled hunts award neither consumables nor boxes.
 
@@ -211,6 +211,6 @@ All 79 solo Gold costs match the extracted server functions and battle guide. Al
 
 All 21 proposed boss levels were checked for increasing positive integer defenders and pools, exact endpoint values and 80–100% personal consumable chances. Integer arithmetic calculates reward pools without floating-point payout rounding. These are arithmetic and document checks only; no runtime, battle simulation, production mutation, merge or publication has occurred.
 
-The boss-party limit is two to five members including the leader, scoped only to bosses. The five-way level-100 reward example conserves both pools exactly, and the proposed consumable maximum is five, with a separate rare Common Gear Box proposal allowing at most one box per participant. All existing solo rows and proposed boss-tier totals remain unchanged; five-member combat feasibility has not yet been simulated.
+The boss-party limit is two to five members including the leader, scoped only to bosses. The five-way level-100 reward example conserves both pools exactly, and the proposed consumable maximum is five, with a separate Common Gear Box proposal allowing at most one box per participant. All existing solo rows and proposed boss-tier totals remain unchanged; five-member combat feasibility has not yet been simulated.
 
-The proposed Common Gear Box curve was checked at all 21 boss levels: 2% at 80, increments of 0.4 percentage point, and a 10% maximum at 100. Five-player expected counts and at-least-one probabilities were calculated from independent personal rolls. The existing balance tables are unchanged; no new loot source has been implemented.
+The proposed Common Gear Box curve was checked at all 21 boss levels: 60% at 80, increments of 1.5 percentage points, and a 90% maximum at 100. Five-player expected box and gear-piece counts and at-least-one probabilities were calculated from independent personal rolls. Gold, XP, defender and consumable tables are unchanged; no new loot source has been implemented.
