@@ -25611,7 +25611,7 @@ function renderClanHudAccess() {
     button.classList.toggle("has-clan-notifications", notificationCount > 0);
     button.dataset.rallyCount = rallyCount ? String(rallyCount) : "";
     button.dataset.applicationCount = applicationCount ? String(applicationCount) : "";
-    button.dataset.clanNotificationCount = notificationCount ? String(notificationCount) : "";
+    button.dataset.clanNotificationCount = notificationCount ? (notificationCount > 99 ? "99+" : String(notificationCount)) : "";
     button.title = notificationLabel;
   }
   clanTabBtn?.setAttribute("aria-label", `Clan${notificationLabel ? `, ${notificationLabel}` : ""}`);
@@ -26567,6 +26567,7 @@ function renderClanSectionNavigation(canManageApplications = false) {
     <nav class="clan-section-nav" role="tablist" aria-label="Clan sections">
       ${definitions.map(section => {
         const active = isClanSectionActive(section.key);
+        const notification = section.alert || section.key === "warroom";
         const description = section.countLabel ? `${section.label}, ${section.countLabel}` : section.label;
         return `
           <button id="clanSectionTab${section.key[0].toUpperCase()}${section.key.slice(1)}" type="button" role="tab"
@@ -26575,7 +26576,7 @@ function renderClanSectionNavigation(canManageApplications = false) {
             aria-label="${escapeHtml(description)}" tabindex="${active ? "0" : "-1"}" class="${active ? "active" : ""}">
             <span class="clan-section-nav-mark" aria-hidden="true">${section.mark}</span>
             <span>${section.label}</span>
-            ${section.count ? `<b class="${section.alert ? "alert" : ""}" aria-hidden="true">${formatNumber(section.count)}</b>` : ""}
+            ${section.count ? `<b class="${notification ? "alert notification-badge" : ""}" aria-hidden="true">${notification && section.count > 99 ? "99+" : formatNumber(section.count)}</b>` : ""}
           </button>`;
       }).join("")}
     </nav>`;
@@ -35165,6 +35166,7 @@ function renderDailyLoginRewardButton() {
   if (dailyLoginRewardBtn.disabled !== !active) dailyLoginRewardBtn.disabled = !active;
   dailyLoginRewardBtn.classList.toggle("is-claimable", eligible);
   setHiddenIfChanged(dailyLoginRewardBadge, !eligible);
+  setTextIfChanged(dailyLoginRewardBadge, alerts.total > 99 ? "99+" : String(alerts.total));
   const alertLabels = [
     alerts.rewards ? `${alerts.rewards} daily login` : "",
     alerts.quests ? `${alerts.quests} quest` : "",
@@ -35909,7 +35911,7 @@ function renderDailyRewardModalTabs() {
         const accessibleLabel = alertCount > 0
           ? `${tab.label}, ${alertCount} reward${alertCount === 1 ? "" : "s"} ready to collect`
           : tab.label;
-        return `<button type="button" id="dailyRewardTab${suffix}" role="tab" data-daily-reward-tab="${tab.id}" aria-label="${accessibleLabel}" title="${tab.label}" aria-selected="${active}" aria-controls="dailyRewardPanel${suffix}" tabindex="${active ? "0" : "-1"}" class="${active ? "active" : ""}"><img src="${tab.icon}" alt="" draggable="false" />${alertCount > 0 ? `<span class="daily-reward-tab-alert" aria-hidden="true">!</span>` : ""}</button>`;
+        return `<button type="button" id="dailyRewardTab${suffix}" role="tab" data-daily-reward-tab="${tab.id}" aria-label="${accessibleLabel}" title="${tab.label}" aria-selected="${active}" aria-controls="dailyRewardPanel${suffix}" tabindex="${active ? "0" : "-1"}" class="${active ? "active" : ""}"><img src="${tab.icon}" alt="" draggable="false" />${alertCount > 0 ? `<span class="daily-reward-tab-alert notification-badge" aria-hidden="true">${alertCount > 99 ? "99+" : alertCount}</span>` : ""}</button>`;
       }).join("")}
     </div>`;
 }
@@ -37916,7 +37918,7 @@ function updateIncomingAttackUi() {
     crownlandsAudio?.setMusicState("danger");
   }
   lastAudioIncomingAttackIds = incomingIds;
-  setTextIfChanged(incomingAttackCount, formatNumber(incoming.length));
+  setTextIfChanged(incomingAttackCount, incoming.length > 99 ? "99+" : String(incoming.length));
   setTextIfChanged(incomingAttackTime, formatDuration(incoming[0].remaining));
   setAttrIfChanged(incomingAttackBtn, "title", `${formatIncomingThreatSummary(incoming)} - soonest ${formatDuration(incoming[0].remaining)}`);
   setAttrIfChanged(incomingAttackBtn, "aria-label", incomingAttackBtn.title);
@@ -37956,7 +37958,7 @@ function updateOutgoingAttackUi() {
   if (operations.marches.length) titleParts.push(formatOutgoingMissionSummary(operations.marches));
   if (operations.rallies.length) titleParts.push(`${formatNumber(operations.rallies.length)} active ${operations.rallies.length === 1 ? "rally" : "rallies"}`);
   if (operations.reinforcements.length) titleParts.push(formatReinforcementOperationSummary(operations.reinforcements));
-  setTextIfChanged(outgoingAttackCount, formatNumber(total));
+  setTextIfChanged(outgoingAttackCount, total > 99 ? "99+" : String(total));
   setTextIfChanged(outgoingAttackTime, status);
   setAttrIfChanged(outgoingAttackBtn, "title", titleParts.join(" - "));
   setAttrIfChanged(outgoingAttackBtn, "aria-label", outgoingAttackBtn.title);
@@ -39068,7 +39070,7 @@ function renderBattleReportCard(report, index = 0) {
   const locateButton = renderBattleReportLocateButton(report, "row-action");
   return `
     <article class="battle-report-card report-row ${badge.tone}${defenderScout ? " scout-defender" : ""}${isNew ? " new" : ""}" data-report-card-id="${escapeHtml(report.id)}">
-      <div class="report-result">${renderBattleReportLedgerIcon(icon, "report-art")}<div class="result-copy"><div class="result-line"><strong class="outcome">${badge.label}</strong>${isNew ? '<span class="new-tag">New</span>' : ""}</div>${timingLabel}</div></div>
+      <div class="report-result">${renderBattleReportLedgerIcon(icon, "report-art")}<div class="result-copy"><div class="result-line"><strong class="outcome">${badge.label}</strong>${isNew ? '<span class="new-tag notification-badge" aria-label="Unread report">1</span>' : ""}</div>${timingLabel}</div></div>
       <div class="target"><span class="target-meta">${report.targetType === "camp" ? "Camp" : `Lv ${formatNumber(report.cityLevel)}`}</span><strong>${escapeHtml(report.cityName)}</strong></div>
       <div class="troops"><strong>${formatNumber(troopValue)}</strong><small>${troopLabel}</small></div>
       <div class="ruler">${opponentFlag}${renderPlayerNameLink(report.opponentUid, opponent, "name-link battle-report-opponent-link")}</div>

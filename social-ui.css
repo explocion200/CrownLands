@@ -36,7 +36,7 @@
 .social-compose{display:flex;gap:8px;flex-shrink:0}#chatDialog .social-compose textarea{min-width:0;resize:none;flex:1;height:48px;min-height:44px;background:#fff8e7;border:1px solid #9c8354;border-radius:4px;color:#3d3021;font:16px/1.35 "Segoe UI",Arial,sans-serif;padding:8px}
 .social-thread-note{flex-shrink:0;font-size:11px;line-height:1.2}.social-translation-note{flex-basis:100%}.social-status:empty{display:none}
 .social-status{margin:0;min-height:16px;font-size:12px}.social-empty{padding:12px;line-height:1.5}.social-report{display:flex;gap:6px;flex-wrap:wrap;padding:8px;border:1px solid #72363a}.social-report small{flex-basis:100%}
-.social-profile-actions{padding-top:10px}.social-hud-unread{position:absolute;right:-5px;top:-4px;background:#72363a;color:#fff3d6;border:1px solid #c8ae70;border-radius:12px;padding:2px 5px;font:bold 11px sans-serif}
+.social-profile-actions{padding-top:10px}
 @media(max-width:900px),(max-height:600px){
 .social-active.social-thread-open .social-list,.social-active.social-thread-open .social-toolbar{display:none}
 .social-panel{padding:5px;gap:4px}.social-toolbar{gap:4px}#chatDialog .social-toolbar button{padding:4px 7px;font-size:12px}

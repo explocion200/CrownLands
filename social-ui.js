@@ -63,7 +63,7 @@
     thread = element("section", null, "social-thread"); thread.hidden = true;
     workspace.append(list, thread); status = element("p", "", "social-status"); status.setAttribute("role", "status");
     panel.append(toolbar, workspace, status); dialog().querySelector(".chat-card").append(panel);
-    badge = element("span", "", "social-hud-unread"); badge.hidden = true; doc.getElementById("chatToggleBtn")?.append(badge);
+    badge = element("span", "", "social-tab-unread notification-badge"); badge.hidden = true; messagesTab.append(badge);
     new MutationObserver(() => { if (!dialog().open) { clearTimeout(presenceTimer); clearTimeout(expiryTimer); } else if (visible()) { void run(refreshList); if (current) void run(() => loadHistory()); } }).observe(dialog(), { attributes: true, attributeFilter: ["open"] });
     doc.addEventListener("visibilitychange", () => { if (visible()) { void run(refreshBadge); void run(refreshList); if (current) void run(() => loadHistory()); } });
 
@@ -127,9 +127,11 @@
 
   async function refreshBadge() {
     if (!ready) return; const result = await call({ action: "unread" });
-    const label = result.count ? String(result.count) + (result.more ? "+" : "") : "";
-    messagesTab.textContent = "Messages" + (label ? " (" + label + ")" : "");
-    badge.textContent = label; badge.hidden = !label; badge.setAttribute("aria-label", label + " unread private conversations");
+    const label = result.count ? result.count > 99 ? "99+" : String(result.count) + (result.more ? "+" : "") : "";
+    const description = (result.count || 0) + (result.more ? " or more" : "") + " unread private conversations";
+    badge.textContent = label; badge.hidden = !label; badge.setAttribute("aria-label", description);
+    messagesTab.setAttribute("aria-label", "Messages" + (label ? ", " + description : ""));
+    root.CrownlandsChat?.setPrivateUnread(result.count, result.more);
   }
   async function refreshList() {
     if (!visible()) return;
@@ -143,13 +145,13 @@
         const contact = button("", () => run(() => openConversation({ id: row.id, peerUid: row.peerUid })), "social-contact social-conversation");
         const meta = element("span", null, "social-contact-meta");
         meta.append(element("small", kind === "messageRequests" ? row.from === uid ? "Awaiting acceptance" : "Message request" : row.lastMessageAtMs ? new Date(row.lastMessageAtMs).toLocaleDateString() : "Start a conversation"));
-        if (row.unread) meta.append(element("span", "Unread", "social-unread"));
+        if (row.unread) { const marker = element("span", "1", "social-unread notification-badge"); marker.setAttribute("aria-label", "Unread conversation"); meta.append(marker); }
         contact.append(playerLabel(row.player), meta); list.append(contact);
         continue;
       }
       const article = element("article", null, "social-contact"), title = button("", () => root.dispatchEvent(new CustomEvent("crownlands:chat-player-profile", { detail: { uid: row.peerUid } })));
       title.className = "social-name"; title.append(playerLabel(row.player)); article.append(title);
-      if (row.unread) article.append(element("span", "Unread", "social-unread"));
+      if (row.unread) { const marker = element("span", "1", "social-unread notification-badge"); marker.setAttribute("aria-label", "Unread conversation"); article.append(marker); }
       const actions = element("div", null, "social-row-actions");
       if (kind === "friends") {
         article.classList.add("social-friend"); title.title = row.player.name || "Ruler";
@@ -299,8 +301,9 @@
   function stop() {
     generation++; conversationSession++; stopSignals?.(); stopSignals = null; clearTimeout(refreshTimer); clearTimeout(presenceTimer); clearTimeout(expiryTimer);
     ready = false; uid = ""; current = null; history = []; listPage = null; pendingDraft = null; senderBusy = false; lastSignals = {}; offset = 0; privateReady = false; leave();
-    if (friendsTab) friendsTab.hidden = true; if (messagesTab) { messagesTab.hidden = true; messagesTab.textContent = "Messages"; }
+    if (friendsTab) friendsTab.hidden = true; if (messagesTab) { messagesTab.hidden = true; messagesTab.setAttribute("aria-label", "Messages"); }
     if (list) list.replaceChildren(); if (thread) thread.replaceChildren(); if (badge) badge.hidden = true;
+    root.CrownlandsChat?.setPrivateUnread(0);
     doc.querySelectorAll(".social-profile-actions").forEach(node => node.remove());
   }
   function profileActions(container, peerUid) {

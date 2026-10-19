@@ -1,0 +1,53 @@
+/* The chat counter is the shared notification treatment. Layered important
+   rules keep optional panel themes from recoloring or enlarging the badge. */
+@layer notification-badges {
+  .notification-badge,
+  .clan-hud-btn.has-clan-notifications::before,
+  .profile-tabs button.has-clan-notifications::after {
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 0 20px !important;
+    width: 20px !important;
+    height: 20px !important;
+    min-width: 20px !important;
+    min-height: 20px !important;
+    max-width: 20px !important;
+    max-height: 20px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 1px solid #c8ae70 !important;
+    border-radius: 50% !important;
+    background: #72363a !important;
+    color: #fff !important;
+    box-shadow: 0 1px 3px #0005 !important;
+    font: bold 10px/1 Arial, sans-serif !important;
+    font-variant-numeric: tabular-nums !important;
+    letter-spacing: 0 !important;
+    text-align: center !important;
+    text-indent: 0 !important;
+    text-transform: none !important;
+    text-shadow: none !important;
+    white-space: nowrap !important;
+    pointer-events: none !important;
+  }
+  .notification-badge[hidden] { display: none !important; }
+}
+
+#chatToggleUnread { top: -4px; right: -5px; z-index: 4; }
+.chat-tab-unread, .social-tab-unread { vertical-align: middle; }
+#chatDialog .chat-tabs button { display: inline-flex; align-items: center; gap: 5px; }
+.nav-btn-heading > .notification-badge { vertical-align: middle; }
+#modal .ready-count:has(> .notification-badge) {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#incomingAttackBtn, #outgoingAttackBtn { position: relative; }
+#incomingAttackCount, #outgoingAttackCount { position: absolute; top: 2px; right: 3px; z-index: 2; }
