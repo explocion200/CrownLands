@@ -1,24 +1,24 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "217b5e7762c25869b1eb65c8430294cff914fc0e",
+  "baseCommit": "b74fe4bc064f20809ce6dc8eb77f936cc7cb3990",
   "coverage": [
     {
       "paths": [
         "game.js",
-        "tools/validate-reinforcement-locations-browser.js"
+        "tools/validate-notification-badges-browser.js"
       ],
       "tests": [
-        "tools/validate-reinforcement-locations-browser.js",
-        "tools/validate-clan-reinforcements.js"
+        "tools/validate-notification-badges-browser.js",
+        "tools/validate-report-system.js"
       ],
-      "reason": "The shared stationed reinforcement return handler skips browser confirmation only for Recall. Real production button bindings are exercised at desktop and landscape sizes, proving immediate dispatch, in-flight duplicate suppression, disabled controls, failed-request preservation and retry, server acknowledgement/fallback messaging, sign-in checks, holding-details Recall and preserved Send Home confirmation. Existing browser checks retain compact desktop and two landscape layouts, Location/Recall ordering, cross-map navigation, pending/error states and focus/scroll behavior. Reinforcement validation covers unchanged source returns, capacity/privacy and callable wiring. No server-authoritative rules or data are modified, so emulator suites are not applicable."
+      "reason": "Removes the unread circle from the shared battle-report row renderer while retaining the Reports HUD count. The existing browser suite now opens the real Reports panel with new attack, defense and scout reports at desktop and two landscape sizes, checks that rows have no unread badge while the Reports control retains its capped count, and preserves new-this-visit highlighting. Shared badge styling, sizing and clearing remain covered by that suite. Report-system validation covers report rendering, navigation, retention, unread calculation/read watermark and live-arrival dependencies. No server-authoritative behavior or data changes; emulator suites are not applicable."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Records the owner's explicit replacement of the old confirmation requirement for recalling their own stationed troops, with server return routing, acknowledgement and other-player Send Home behavior preserved. Documentation has no runtime behavior; shared UI implementation and dependencies are covered above."
+      "reason": "Records the explicitly requested refinement to the shared notification design: report unread circles appear on the Reports tab/button, not each row. Documentation has no runtime behavior; the relevant implementation is covered above."
     }
   ]
 }

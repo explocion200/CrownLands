@@ -125,10 +125,15 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       await ev('modalBody.innerHTML=renderClanSectionNavigation(false)');
       assert.equal(await ev('modalBody.querySelectorAll("#clanSectionTabMembers .notification-badge").length'), 0, "Ordinary member totals are not alerts");
       await ev(() => {
-        modal.className="battle-reports-modal"; battleReportVisitViewedAtMs=Date.now()-1000;
-        modalBody.innerHTML=renderBattleReportCard({id:"badge-report",type:"attack",result:"victory",cityName:"Oakfall",cityLevel:10,sentTroops:250,occurredAtMs:Date.now()});
+        modal.close(); state.reportsViewedAtMs=Date.now()-1000; reportsViewedPendingAtMs=0;
+        battleReportFilter="all";
+        state.battleReports=["attack","defense","scout"].map(type => ({id:"badge-report-"+type,type,outcome:type==="scout"?"scout":"victory",cityId:state.cities[0].id,cityName:"Oakfall",cityLevel:10,sentTroops:250,occurredAtMs:Date.now()}));
+        showLogModal({silentAudio:true,markViewed:false});
       });
-      await circle("#modal .new-tag", "1");
+      assert.equal(await ev('modalBody.querySelectorAll(".report-row.new").length'), 3, "New report highlighting remains available");
+      assert.equal(await ev('modalBody.querySelectorAll(".report-row .notification-badge, .report-row .new-tag").length'), 0, "Unread circles belong on Reports, not individual rows");
+      await circle("#reportUnreadBadge", "99+");
+      await shot("reports-" + width);
       await ev(() => {
         badgeQa.summary = badgeQa.savedSummary; modal.close();
         state.gold = 1e15; openInnerCastle(getMainCityReference().id);

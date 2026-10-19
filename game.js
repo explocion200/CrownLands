@@ -39148,7 +39148,7 @@ function renderBattleReportCard(report, index = 0) {
   const locateButton = renderBattleReportLocateButton(report, "row-action");
   return `
     <article class="battle-report-card report-row ${badge.tone}${defenderScout ? " scout-defender" : ""}${isNew ? " new" : ""}" data-report-card-id="${escapeHtml(report.id)}">
-      <div class="report-result">${renderBattleReportLedgerIcon(icon, "report-art")}<div class="result-copy"><div class="result-line"><strong class="outcome">${badge.label}</strong>${isNew ? '<span class="new-tag notification-badge" aria-label="Unread report">1</span>' : ""}</div>${timingLabel}</div></div>
+      <div class="report-result">${renderBattleReportLedgerIcon(icon, "report-art")}<div class="result-copy"><div class="result-line"><strong class="outcome">${badge.label}</strong></div>${timingLabel}</div></div>
       <div class="target"><span class="target-meta">${report.targetType === "camp" ? "Camp" : `Lv ${formatNumber(report.cityLevel)}`}</span><strong>${escapeHtml(report.cityName)}</strong></div>
       <div class="troops"><strong>${formatNumber(troopValue)}</strong><small>${troopLabel}</small></div>
       <div class="ruler">${opponentFlag}${renderPlayerNameLink(report.opponentUid, opponent, "name-link battle-report-opponent-link")}</div>
