@@ -235,7 +235,9 @@ const entrypointBudgets = {
   // Existing headroom covers 43; allow 256 more without changing the offline-shell cap.
   // Ownership notifications, bounded roster refresh and stale-read guards add 1,633 bytes.
   // Explicit location control classes, accessible labels and retained atlas context: at most 1 KiB over the prior cap.
-  "game.js": (1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25 + 2 + 3 + 0.25 + 2 + 1) * 1024,
+  // Numeric badge markup adds 405 bytes (320 beyond remaining headroom).
+  // Bound that source increase at 0.5 KiB within the shared shell allowance.
+  "game.js": (1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25 + 2 + 3 + 0.25 + 2 + 1 + 0.5) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   // Medal crown selectors add under 0.5 KiB; retain all other payload limits.
@@ -253,7 +255,8 @@ const entrypointBudgets = {
   // Current main's Clan controls total 86,047 bytes, 31 over the previous cap.
   "clan-ledger-ui.css": 85 * 1024,
   "settings-ledger-ui.css": 32 * 1024,
-  "common-gear-ui.js": (72 + 28) * 1024,
+  // Per-stack new-item counts and shared markers add 237 bytes; bound at 0.25 KiB.
+  "common-gear-ui.js": (72 + 28 + 0.25) * 1024,
   "treasury-gear-ui.js": 16 * 1024,
   "treasury-gear-ui.css": 40 * 1024,
   "barracks-gear-ui.js": 16 * 1024,

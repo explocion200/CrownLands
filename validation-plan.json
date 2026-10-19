@@ -69,7 +69,7 @@
         "tools/validate-asset-performance-budgets.js",
         "tools/validate-production-artifact.js"
       ],
-      "reason": "Measure the complete delivered shell against main: the feature adds 4,465 bytes, leaving a 3,035-byte cap overage. Bound it by 3 KiB, constrain the new CSS to 2 KiB and allow the 749-byte chat sub-budget overage within 1 KiB. Preserve all image, runtime and network budgets. Artifact validation shares the total shell cap; no limits are disabled."
+      "reason": "Measure the complete delivered shell against main: the feature adds 4,465 bytes, leaving a 3,035-byte cap overage. Bound it by 3 KiB, constrain the new CSS to 2 KiB and allow the 749-byte chat sub-budget overage within 1 KiB. Preserve all image, runtime and network budgets. Artifact validation shares the total shell cap; no limits are disabled. The game and gear entrypoint markup increases are bounded at 0.5 and 0.25 KiB within the same total allowance."
     },
     {
       "paths": [
