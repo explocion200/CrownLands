@@ -7,7 +7,7 @@
         "docs/MARAUDER_REWARD_BALANCE_DRAFT.md"
       ],
       "tests": [],
-      "reason": "Documentation-only held fixed Marauder balance draft. No runtime, Master Specification or production changes. Validate an exact, unique level 1–69 table with positive integer starting defenders, Gold and XP; compare every row with the previously verified draft to preserve all values and the one-million level-69 defender maximum. Formula descriptions record the original one-fifth derivation only, with no future runtime dependence on player/city/progression data. Explicitly document the requested fixed XP payout as a proposed exception to the existing recipient-level cap only for Marauders 1–69. Higher-level and boss decisions stay pending. Browser, build and emulator suites do not apply to this documentation."
+      "reason": "Documentation-only held fixed Marauder balance draft. No runtime, Master Specification or production changes. Validate one unique row for each level 1–69; preserve all previously verified troop, Gold and XP values and the one-million level-69 defender maximum. Check draft item chance equals level percent with exact 69% endpoint and all probabilities bounded. Preserve the existing six-item pool, weights, one-item limit and once-only victory settlement; verify weights total 100% and level-69 weighted chances total 69%, with 31% no drop. Verify relevant installed rules match. Formula descriptions are historical derivations, not runtime player dependencies; the draft XP cap exemption remains documented. Higher-level and boss decisions remain pending. Browser, build and emulator suites do not apply to this documentation."
     }
   ]
 }
