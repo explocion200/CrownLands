@@ -7,7 +7,7 @@
         "docs/MARAUDER_REWARD_BALANCE_DRAFT.md"
       ],
       "tests": [],
-      "reason": "Documentation-only held Gold, defender and XP draft. No runtime, balance configuration, Master Specification or production data changes. All 79 Gold rows retain the verified city-cost formula; current troops match the unchanged reward module. Verify 69 drafted defenders retain levels 1–40, increase geometrically to exactly 1,000,000 at level 69 and never exceed the cap. Verify 69 Hero requirements using actual server/client functions, installed function/constant parity, floor(required / 5), strict growth and no reduction by the existing same-level Hero XP cap. XP level references are full requirements, not remaining or cumulative XP. Above level 69 troop/XP scope remains pending. Browser, build and emulator suites do not apply to this draft document."
+      "reason": "Documentation-only held fixed Marauder balance draft. No runtime, Master Specification or production changes. Validate an exact, unique level 1–69 table with positive integer starting defenders, Gold and XP; compare every row with the previously verified draft to preserve all values and the one-million level-69 defender maximum. Formula descriptions record the original one-fifth derivation only, with no future runtime dependence on player/city/progression data. Explicitly document the requested fixed XP payout as a proposed exception to the existing recipient-level cap only for Marauders 1–69. Higher-level and boss decisions stay pending. Browser, build and emulator suites do not apply to this documentation."
     }
   ]
 }
