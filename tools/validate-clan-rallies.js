@@ -41,7 +41,7 @@ requires(server, /ARMY_TRAVEL_KIND_MULTIPLIERS\s*=\s*\{[^}]*rally_join:\s*0\.95/
 requires(client, /ARMY_TRAVEL_KIND_MULTIPLIERS\s*=\s*\{[^}]*rally_join:\s*0\.95/, "The client rally assembly travel multiplier drifted from the server.");
 requires(server, /function isRallyObjectiveTarget[\s\S]*?targetType === "city" && isStronghold\(target\)/, "Rallies are not restricted to Strongholds and the Crown Citadel.");
 requires(server, /activeRalliesQuery[\s\S]*?RALLY_STATUS_FORMING[\s\S]*?RALLY_STATUS_LAUNCHED[\s\S]*?RALLY_STATUS_RECALLING[\s\S]*?activeRallyIds\.length >= CLAN_ACTIVE_RALLY_LIMIT/, "The five-active-Rally clan limit is not transactionally enforced.");
-requires(server, /participantLimit\s*=\s*rally\.targetType === "tower" \? CLAN_MEMBER_LIMIT : RALLY_MAX_PARTICIPANTS[\s\S]*?activeRallyParticipants\(rally\)\.length >= participantLimit/, "The established 20-player limit is not preserved for normal rallies while Tower rallies use the clan-roster limit.");
+requires(server, /participantLimit\s*=\s*getRallyParticipantLimit\(rally\)[\s\S]*?activeRallyParticipants\(rally\)\.length >= participantLimit/, "The established 20-player limit is not preserved for normal rallies while Tower rallies use the clan-roster limit.");
 requires(server, /getRallyParticipant\(rally,\s*uid\)[\s\S]*?duplicate:\s*true/, "Duplicate contributions are not idempotent.");
 requires(server, /exports\.createClanRally[\s\S]*?buildServerGeneratedArmyRoute\(source,\s*target\)[\s\S]*?exports\.joinClanRally[\s\S]*?buildServerGeneratedArmyRoute\(source,\s*assembly\)/, "Leader and ally rally routes are not rebuilt by the canonical server planner.");
 assert.doesNotMatch(server.slice(server.indexOf("exports.createClanRally"), server.indexOf("exports.joinClanRally")), /getRallyShieldDeactivation/, "Creating a Rally still removes a Peace Shield.");
@@ -414,3 +414,11 @@ validateRallyTargets().then(() => {
   console.error(error);
   process.exitCode = 1;
 });
+
+const limitContext = vm.createContext({ RALLY_MAX_PARTICIPANTS: 20, CLAN_MEMBER_LIMIT: 50, MARAUDERS: require('../functions/marauder-rules'), HttpsError: Error });
+vm.runInContext(extractFunction(server, 'getRallyParticipantLimit', 'activeRallyParticipants'), limitContext);
+for (const [rally, limit] of [[{targetType:'city'},20],[{targetType:'tower'},50],[{targetType:'marauder'},20],
+  [{targetType:'marauder',targetBalanceVersion:1},20],[{targetType:'marauder',targetBalanceVersion:2},5]]) {
+  assert.equal(limitContext.getRallyParticipantLimit(rally),limit);
+}
+assert.throws(()=>limitContext.getRallyParticipantLimit({targetType:'marauder',targetBalanceVersion:3}));

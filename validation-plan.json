@@ -1,61 +1,73 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "9fa08b73f6246ef9b8fc40e1fc9cda910fc8dbac",
+  "baseCommit": "439e9083b87c6a3f5d29e205ef64706270b3bee7",
   "coverage": [
     {
       "paths": [
-        "stamina-ui.js",
-        "stamina-ui.css",
-        "marauders-ui.js",
-        "marauders-ui.css",
-        "location-buttons.css",
-        "tools/validate-marauders-browser.js"
-      ],
-      "tests": [
-        "tools/validate-marauders-browser.js",
-        "tools/test-stamina-display-recovery.js",
+        "functions/index.js",
+        "functions/marauder-rules.js",
         "tools/validate-marauder-rules.js",
-        "tools/validate-location-buttons-browser.js",
-        "tools/validate-mobile-ui-viewport.js",
-        "tools/validate-crownlands-palette.js",
-        "tools/validate-targeted-ui-contrast.js"
-      ],
-      "reason": "Move enemy search into a full-size stamina dialog without changing paid-refill authority, daily limits, Shop return, immutable spawn scouting or explicit march launch. Source and built browser checks cover desktop and two landscape phone sizes, independently scrolling refill/results, reachable 44px location controls through the last result, all-map search, level validation, no matches, errors/retry, canceled late responses, defeated/replaced targets, and cross-map revalidation. Existing browser cases protect exact refill prices, pending purchase retries, preserved solo/rally drafts, balance changes and sign-out. Shared location-style coverage protects all other existing artwork buttons. No server behavior is changed. The historical readability.css validator is outside this change: its source, stylesheet, page and worker inputs are unchanged from main, and it rejects the existing October cache stamp against a hard-coded September stamp. The actual changed stamina layout, text contrast, sizes and shipped bytes are covered by the browser, palette, contrast and production-artifact checks above."
-    },
-    {
-      "paths": [
-        "firebaseClient.js",
-        "local-client.js",
-        "tools/test-marauder-search.js"
+        "functions/test/emulator-marauder-combat.js"
       ],
       "tests": [
-        "tools/test-marauder-search.js",
-        "tools/test-local-production-client.js",
+        "tools/validate-marauder-rules.js",
+        "tools/validate-marauder-reports.js",
+        "tools/validate-common-gear.js",
+        "tools/validate-clan-rallies.js",
+        "tools/validate-rally-assembly.js",
         "tools/test-stamina-display-recovery.js",
-        "tools/validate-owned-city-list.js",
-        "tools/validate-marauders-browser.js",
-        "functions/test/emulator-marauder-population.js",
+        "functions/test/emulator-marauder-combat.js",
+        "functions/test/emulator-rally-lifecycle.js",
+        "functions/test/emulator-rally-staging-defense.js",
+        "functions/test/emulator-holding-tower-lifecycle.js",
         "functions/test/emulator-stamina-refills.js"
       ],
-      "reason": "Add server-only reads of public active marauders in the current world/generation/shard and expose the existing authorized local read endpoint as at most 20 targets per request. Test the actual transport and extracted API together, including minified transport, 100 maps in five sequential requests, endpoints 1/100, duplicate maps, invalid ranges, stale scope/status filtering, cancellation before further batches, account replacement, failed reads/retry and standard Firestore fallback. Local production and stamina subscription checks protect shared authentication/storage/request plumbing; owned-roster validation protects adjacent API behavior. Population emulator protects the public NPC lifecycle/data contract and refill emulator protects the untouched authority behind the redesigned UI. No backend, rules or data migration is included."
+      "reason": "Versioned fixed 100-level rewards and defender lookup; legacy and missing versions, exact integer contribution thresholds and party caps, atomic departure snapshots/charging, proportional uncapped NPC XP and unchanged ordinary caps, existing gear normalization and unopened counters, independent per-member drops, version-2 boss recovery, immutable identities and duplicate settlement. Shared rally capacity affects join/recall-rejoin/launch, so ordinary and Tower lifecycle plus staging/rejoin coverage is included. Stamina persistence version and refill accounting must remain isolated. Server emulator tests exercise real callables; pure tests check every fixed row and probability/contribution boundaries."
     },
     {
       "paths": [
-        "game.js"
+        "functions/marauder-population.js",
+        "functions/test/emulator-marauder-population.js",
+        "functions/test/marauder-respawn-cases.js"
       ],
       "tests": [
-        "tools/validate-owned-city-list.js",
-        "tools/validate-city-list-browser.js",
-        "tools/validate-marauders-browser.js"
+        "functions/test/emulator-marauder-population.js",
+        "tools/validate-marauder-terrain.js"
       ],
-      "reason": "Remove only the obsolete Find enemies entry from the City List toolbar. Keep owned-city syncing, sorting, upgrade actions and location navigation intact; enemy selection continues using the existing map navigation and NPC action wheel."
+      "reason": "Only new/replacement NPCs adopt balance 2; preserve active legacy targets, current topology, placement version 4, immutable respawn identities, bounded scheduler and public defender privacy. Population emulator uses the shared respawn cases and checks generated defender counts against the saved balance version."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "game.js",
+        "marauders-ui.js",
+        "rallies-activity-ui.js",
+        "scout-report-ui.js",
+        "battle-report-detail-ui.js",
+        "tools/validate-marauders-browser.js",
+        "tools/validate-clan-rallies.js",
+        "tools/validate-marauder-reports.js",
+        "tools/validate-marauder-reports-browser.js"
       ],
-      "tests": [],
-      "reason": "Record the user-confirmed full-size stamina panel and explicit level search across all active maps, replacing the old nearby search description. Preserve refill, stamina, scouting, combat and immutable spawn rules. Documentation itself has no runtime test."
+      "tests": [
+        "tools/validate-marauders-browser.js",
+        "tools/validate-marauder-reports-browser.js",
+        "tools/validate-rally-assembly-browser.js",
+        "tools/validate-clan-rallies.js",
+        "tools/validate-rally-assembly.js",
+        "tools/validate-marauder-reports.js",
+        "tools/validate-common-gear.js"
+      ],
+      "reason": "Actual desktop and landscape-mobile views for old/new NPC Info, disclosure and scroll containment; truthful consumable/box/rarity and XP text; new boss limits across rally cards/pickers/order drafts while ordinary rallies stay unchanged. Readiness shows per-member power, thresholds, shares, scout-gated losses and rewards, invalidates stale checks, and warns on losing forecasts. Report normalization/rendering retain independent box rewards and actual casualties with recovery explanation. Existing reports, scouting, stamina/review controls and assembly navigation remain covered."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/MARAUDER_REWARD_BALANCE_DRAFT.md"
+      ],
+      "tests": [
+        "tools/validate-marauder-rules.js"
+      ],
+      "reason": "Owner explicitly approved the revised full balance package October 19. Master Specification amendment records version-2 rules, old-spawn compatibility and coordinated home-server release hold. All 100 approved lookup rows are cross-checked against runtime constants; no production-data migration, automatic backend install, update-triggered backup or deployment claim."
     },
     {
       "paths": [
@@ -64,10 +76,19 @@
       ],
       "tests": [
         "tools/validate-asset-performance-budgets.js",
-        "tools/validate-production-artifact.js",
-        "tools/test-local-production-client.js"
+        "tools/validate-production-artifact.js"
       ],
-      "reason": "The all-map finder reuses NPC art and the existing location artwork, adding no assets or dependencies. Bound approximately 7.7 KiB delivered shell growth in one 8 KiB allowance; the NPC/stamina source group becomes about 49 KiB within 50 KiB, and the client API becomes 167.5 KiB within 168 KiB. Preserve all other image, request, map and performance caps; check signed-package build inventory and local production transformation."
+      "reason": "Measured new balance table/helper and disclosure shell growth is 10,801 bytes, 9,872 above the existing cap. Allow only a bounded 12 KiB increase with both artifact validators sharing the cap. No new artwork, runtime dependencies, requests or changed login/individual-asset limits. NPC/stamina source group measures 61,141 bytes, bounded at 60 KiB with unchanged sprite budgets."
+    },
+    {
+      "paths": [
+        "how-to-play.html"
+      ],
+      "tests": [
+        "tools/validate-public-site-content.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Update the existing hunting guide for approved fixed rewards, per-member consumables and boxes, contribution rules, failed-boss recovery and existing-spawn compatibility. Retain stamina spending/refunds, unchanged ordinary combat and the actual stamina enemy-search entry. The coordinated artifact includes this help page; no site/account operations occur here."
     }
   ]
 }

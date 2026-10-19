@@ -45,7 +45,7 @@ module.exports = async function respawnCases({ db, geometry }) {
     assert(Math.hypot(after.x - before.x, after.y - before.y) < 128,
       "A disappearing corpse must not exclude nearby otherwise-clear roads");
     assert(isClear(after, area) && area.accessible(after));
-    assert.equal(after.troops, M.balance(after.level).defenders);
+    assert.equal(after.troops, M.balance(after.level, after.balanceVersion).defenders);
     assert.equal(visible.status, "active"); assert(!Object.hasOwn(visible, "troops"));
     assert.equal((await population.refresh(request, due + 60001)).spawned, 0, "Old encounter requests cannot reset the replacement");
 

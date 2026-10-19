@@ -32,8 +32,9 @@ async function main() {
       const slot = expected.find(entry => entry.slot === row.slot);
       assert(row.level >= slot.min && row.level <= slot.max);
       assert.equal(row.classification === "boss", regions.get(region).permanentCore);
-      assert.equal(row.troops, M.balance(row.level).defenders);
+      assert.equal(row.troops, M.balance(row.level, row.balanceVersion).defenders);
       assert.equal(row.placementVersion, 4);
+      assert.equal(row.balanceVersion, 2);
       assert(roadPlacementPoints(geometry()).some(point => point.x === row.x && point.y === row.y), "All new NPCs use a road sample");
       const interior = placementBounds(geometry().bounds);
       assert(row.x >= interior.left && row.x <= interior.right && row.y >= interior.top && row.y <= interior.bottom,
@@ -49,10 +50,10 @@ async function main() {
   assert.equal(bosses.size, 25);
   // An old edge spawn remains stationary until defeated, including when a
   // committed army still refers to its immutable spawn identity.
-  const oldBoss = bosses.docs[0], oldBossRow = { ...oldBoss.data(), x: 50, y: 50, placementVersion: 1 };
+  const oldBoss = bosses.docs[0], oldBossRow = { ...oldBoss.data(), x: 50, y: 50, placementVersion: 1, balanceVersion: 1, troops: M.balance(oldBoss.data().level, 1).defenders };
   await oldBoss.ref.set(oldBossRow);
   const oldPublic = island(oldBossRow.regionId).collection("marauders").doc(oldBoss.id);
-  await oldPublic.set({ x: 50, y: 50, placementVersion: 1 }, { merge: true });
+  await oldPublic.set({ x: 50, y: 50, placementVersion: 1, balanceVersion: 1 }, { merge: true });
   const marching = db.doc(`armies/placement_${token}`);
   await marching.set({ targetSpawnId: oldBossRow.spawnId, toX: 50, toY: 50, status: "marching" });
   assert.equal((await population.populate(oldBossRow.regionId, now + 1)).spawned, 0);
@@ -72,6 +73,7 @@ async function main() {
     assert.equal((await population.populate(before.regionId, now + delay - 1)).spawned, 0);
     assert.equal((await population.populate(before.regionId, now + delay)).spawned, 1);
     const after = (await row.ref.get()).data();
+    assert.equal(after.balanceVersion, 2, "Only replacements receive new balance");
     assert.notEqual(after.spawnId, before.spawnId); assert.equal(after.regionId, before.regionId);
     assert.equal(after.placementVersion, 4);
     assert(roadPlacementPoints(geometry()).some(point => point.x === after.x && point.y === after.y), "Replacements stay on roads");

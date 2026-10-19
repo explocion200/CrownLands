@@ -1,4 +1,4 @@
-/* exported installMarauderSearch, openMarauderDetails, applyOnlineMarauders, renderMarauders, updateMarauderRespawnTimers, renderBossReadiness, selectMarauder, selectedMarauderSpawnId, scoutMarauder, attackMarauder, getMarauderDetailsModel */
+/* exported getClanRallyMaximumParticipants, installMarauderSearch, openMarauderDetails, applyOnlineMarauders, renderMarauders, updateMarauderRespawnTimers, renderBossReadiness, selectMarauder, selectedMarauderSpawnId, scoutMarauder, attackMarauder, getMarauderDetailsModel */
 /* exported getMarauderBattleTargetLabel, getMarauderBattleRuleLabel, getMarauderReportTarget, normalizeMarauderReportTarget, marauderBattleReportSide, getMarauderBattleResultLabel, getLegacyMarauderBattleSides */
 /* Shared NPC targets stay separate from capturable city and camp state. */
 const marauderMaps = new Map();
@@ -170,6 +170,7 @@ function marauderBattleReportSide(target, role) {
 }
 function getMarauderBattleResultLabel(report) {
   if (report.outcome === "target_unavailable") return "Target unavailable — your army is returning";
+  if (report.bossRecovered) return "Boss recovered to full strength after this battle";
   return report.outcome === "victory" ? "Enemy defeated — survivors return" : "Enemy survived — your survivors return";
 }
 function getLegacyMarauderBattleSides(report) {
@@ -187,18 +188,23 @@ function getLegacyMarauderBattleSides(report) {
   return sides;
 }
 function getMarauderDetailsModel(target) {
-  const intel = getScoutReportForTarget(target), balance = CrownlandsMarauders.balance(target.level), boss = target.classification === "boss";
+  const intel = getScoutReportForTarget(target), balance = CrownlandsMarauders.balance(target.level, target.balanceVersion), boss = target.classification === "boss";
   const count = cityDetailsNumber;
   return { kind: boss ? "Clan boss" : "Marauder", sections: [
     ["Defenders", [
       ["npcTroops", intel ? "Scouted defenders:" : "Defenders", intel ? count(intel.troops) : "Unknown", "troops", intel ? `${Math.ceil(getScoutReportRemainingSeconds(intel) / 60)} minutes until expiry` : "Scout this spawn to reveal its current defenders and combat forecast."],
-      ["npcDefense", "Total defense", intel ? count(intel.totalDefense) : "Unknown", "troops", "No walls · 1 defense per defender. Defeats leave survivors."]]],
+      ["npcDefense", "Total defense", intel ? count(intel.totalDefense) : "Unknown", "troops", balance.version === 2 && boss ? "No walls · 1 defense per defender. A failed rally restores the boss to full strength." : "No walls · 1 defense per defender. Defeats leave survivors."]]],
     ["Victory rewards", [
       ["npcGold", "Gold pool", count(balance.gold), "coin"],
-      ["npcXp", "Hero XP pool", count(balance.xp), "ledger", "Hero XP caps apply."],
-      ["npcItem", "One item chance", `${(balance.itemChance * 100).toFixed(1)}%`, "ledger"]]]],
-    note: boss ? "The winning rally shares rewards by damage contribution." : "",
-    actions: `<aside class="cd-actions" aria-label="Hunt preparation"><div class="cd-upgrade-heading">${cityDetailsIcon("troops")}<span><strong>Prepare a hunt</strong><small>${boss ? "Clan rally · 2–20 members" : "Solo army · Clan optional"}</small></span></div>${renderHuntStamina(boss ? "Each member needs 10 stamina at launch." : "")}
+      ["npcXp", "Hero XP pool", count(balance.xp), "ledger", balance.version === 2 ? "Fixed NPC XP; no Hero-level cap." : "Hero XP caps apply."],
+      ["npcItem", balance.version === 2 && boss ? "Consumable per member" : "One item chance", `${(balance.itemChance * 100).toFixed(2)}%`, "ledger"],
+      ...(balance.version === 2 && boss ? [
+        ["npcBox", "Gear Box per member", `${balance.boxChanceBps / 100}%`, "ledger", "Separate from the consumable roll; at most one box each."],
+        ["npcRarity", "Uncommon box upgrade", `${balance.uncommonUpgradeBps / 100}%`, "ledger", "If a box drops, this chance replaces Common (3 Common pieces) with Uncommon (1 Uncommon + 2 Common). All pieces level 1."]
+      ] : [])]]],
+    note: boss ? balance.version === 2 ? "2–5 members. Gold/XP are shared by departure attack power. Each member needs 10% of full boss defense and 10% of assembled power. Maximum shares: 70% / 55% / 45% / 40% for 2 / 3 / 4 / 5 members. Check readiness before launch."
+      : "The winning rally shares rewards by damage contribution. This existing spawn retains its original rules." : "",
+    actions: `<aside class="cd-actions" aria-label="Hunt preparation"><div class="cd-upgrade-heading">${cityDetailsIcon("troops")}<span><strong>Prepare a hunt</strong><small>${boss ? `Clan rally · 2–${balance.version === 2 ? 5 : 20} members` : "Solo army · Clan optional"}</small></span></div>${renderHuntStamina(boss ? "Each member needs 10 stamina at launch." : "")}
       ${["scout", "attack"].map(action => `<button class="marauder-info-action" type="button" data-npc-action="${action}">${renderCrownlandsIcon(action)} <span>${action === "scout" ? "Scout" : boss ? "Prepare rally" : "Attack"}</span></button>`).join("")}<p class="cd-note">Scouting uses one troop and no stamina.</p></aside>` };
 }
 function openMarauderDetails(id) {
@@ -298,9 +304,19 @@ function installMarauderSearch(dialog, { isCurrent, canNavigate, onLocated }) {
   });
   return { stop };
 }
+function getClanRallyMaximumParticipants(rally) {
+  const target = rally || {};
+  return target.targetType === "marauder" && (target.targetBalanceVersion ?? target.balanceVersion) === CrownlandsMarauders.BALANCE_VERSION
+    ? 5 : CLAN_RALLY_MAX_PARTICIPANTS;
+}
+
 function renderBossReadiness(rally) {
-  const checked = bossReadiness.get(rally.id), ready = checked?.participants, forecast = checked?.combatForecast;
-  return `${renderHuntStamina("Each assembled member needs 10 stamina at launch.")}<div class="boss-readiness"><button type="button" data-boss-readiness="${escapeHtml(rally.id)}">Check member readiness</button><p role="status">${ready ? ready.map(row => `${escapeHtml((rally.participants || []).find(p => p.uid === row.uid)?.ownerName || "Member")}: ${row.ready ? "Ready" : "Needs stamina"}`).join(" · ") : "Member stamina readiness has not been checked."}</p>${checked ? "<small>Readiness at last check. Launch checks every member again.</small>" : ""}${forecast?.status === "scouted" ? `<p>Forecast at scout time: ${forecast.attackPower > forecast.defensePower ? "Victory expected" : "Defeat expected"} · ${formatNumber(forecast.defensePower)} defense. Current assembled force; bonuses are locked at launch.</p>` : "<p>Scout this boss spawn for a forecast.</p>"}</div>`;
+  const cached = bossReadiness.get(rally.id);
+  const checked = rally.targetBalanceVersion === 2 && cached?.rallyUpdatedAtMs !== normalizeTimestampMs(rally.updatedAtMs) ? null : cached;
+  const ready = checked?.participants, forecast = checked?.combatForecast;
+  const contribution = checked?.contribution;
+  const shares = contribution ? `<div class="boss-contributions"><p>${contribution.eligible ? "Contributions qualify for launch." : escapeHtml(contribution.reason || "Adjust the contributions below before launching.")}</p>${contribution.members.map(row => `<p><strong>${escapeHtml((rally.participants || []).find(p => p.uid === row.uid)?.ownerName || "Member")}</strong>: ${formatNumber(row.attackPower)} attack · ${row.sharePercent}% share · minimum ${formatNumber(row.minimumPower)} power${contribution.maxSharePercent ? ` · maximum ${contribution.maxSharePercent}% share` : ""}<br>${row.eligible ? "Eligible" : escapeHtml(row.reason)} · On victory: ${formatNumber(row.gold)} Gold / ${formatNumber(row.xp)} XP${row.estimatedLosses === null ? "" : ` · Estimated losses: ${formatNumber(row.estimatedLosses)}`}</p>`).join("")}</div>` : "";
+  return `${renderHuntStamina("Each assembled member needs 10 stamina at launch.")}<div class="boss-readiness"><button type="button" data-boss-readiness="${escapeHtml(rally.id)}">Check member readiness</button><p role="status">${ready ? ready.map(row => `${escapeHtml((rally.participants || []).find(p => p.uid === row.uid)?.ownerName || "Member")}: ${row.ready ? "Ready" : "Needs stamina"}`).join(" · ") : cached ? "This rally changed. Check readiness again before launching." : "Member stamina readiness has not been checked."}</p>${checked ? "<small>Readiness at last check. Launch checks every member again.</small>" : ""}${shares}${forecast?.status === "scouted" ? `<p>Forecast at scout time: ${forecast.attackPower > forecast.defensePower ? "Victory expected" : "Defeat expected"} · ${formatNumber(forecast.defensePower)} defense. Estimated losses: ${formatNumber(forecast.estimatedAttackerLosses || 0)}. Current assembled force; bonuses are locked at launch.${forecast.attackPower <= forecast.defensePower ? " Warning: this army is expected to lose; launch is still your choice." : ""}</p>` : "<p>Scout this boss spawn for a forecast.</p>"}</div>`;
 }
 document.addEventListener("click", async event => {
   const button = event.target.closest("[data-boss-readiness]");

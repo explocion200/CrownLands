@@ -29,8 +29,8 @@ for (const def of G.DEFINITIONS.filter(def => def.rarity === "legendary")) {
   gear.equipped[def.buildingId][def.slot] = def.gearKey;
 }
 const equipped = { gear, playerName: "Departure Ruler" };
-function fixture(level, count, success = true) {
-  const defenders = M.balance(level).defenders;
+function fixture(level, count, success = true, version = 1) {
+  const defenders = M.balance(level, version).defenders;
   const participants = Array.from({ length: count }, (_, i) => {
     const troops = Math.ceil(defenders * (success ? 2 : 0.01) / count) + i;
     const attackBonusPercent = i ? 250 : 20, attackGearPercent = i ? 100 : 5;
@@ -46,7 +46,7 @@ function fixture(level, count, success = true) {
   const allocations = participants.map(p => ({ ...p, losses: success ? Math.floor(p.troops / 4) : p.troops,
     survivors: success ? p.troops - Math.floor(p.troops / 4) : 0 }));
   const input = { armyId: `hunt-${level}-${count}-${success}`, target: { id: "marauder_fixture_00",
-    name: level >= 80 ? "Clan Boss" : "Marauder", level, classification: level >= 80 ? "boss" : "solo",
+    name: level >= 80 ? "Clan Boss" : "Marauder", level, balanceVersion: version, classification: level >= 80 ? "boss" : "solo",
     regionId: "crownlands", troops: defenders, spawnId: `spawn-${level}`, x: 512, y: 512 },
     participants, allocations, attackerUid: participants[0].uid, attackerProfile: { playerName: "Hunter 1" }, nowMs: 123,
     result: { success, attackerLosses: allocations.reduce((n, p) => n + p.losses, 0),
@@ -86,6 +86,7 @@ function fixture(level, count, success = true) {
   return snapshot;
 }
 const snapshots = {
+  modernBoss: fixture(100, 5, true, 2), modernBossDefeat: fixture(80, 2, false, 2),
   solo: fixture(1, 1), soloDefeat: fixture(79, 1, false), boss: fixture(80, 2),
   bossDefeat: fixture(100, 2, false), maxRally: fixture(100, 20),
 };

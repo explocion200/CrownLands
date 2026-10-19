@@ -122,9 +122,9 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
           continue;
         }
         const range = spawnLevelRange(slot, previous, crypto.randomInt(2) === 1);
-        const level = crypto.randomInt(range.min, range.max + 1), balance = M.balance(level);
+        const level = crypto.randomInt(range.min, range.max + 1), balance = M.balance(level, M.BALANCE_VERSION);
         const row = { id, ...point, slot: slot.slot, spawnId: crypto.randomUUID(), level,
-          classification: slot.classification, balanceVersion: M.VERSION, placementVersion: PLACEMENT_VERSION, status: "active",
+          classification: slot.classification, balanceVersion: balance.version, placementVersion: PLACEMENT_VERSION, status: "active",
           name: `${slot.classification === "boss" ? "Clan Boss" : "Marauder"} Lv. ${level}`,
           worldId: world.worldId, resetGeneration: world.resetGeneration, realmShardId: world.realmShardId,
           targetType: "marauder", ownerKind: "neutral", ownerUid: "", spawnedAtMs: now, respawnAtMs: 0 };

@@ -33,6 +33,11 @@ function getMarauderBattleReportRewards(report = {}) {
       wide: true, art: item?.icon ? renderItemIcon(item, "reward-art") : "" });
     help.push("Added to your Bag");
   }
+  if (report.outcome === "victory" && report.gearBoxAwarded) {
+    rows.push({ icon: "dispatch", label: "Gear Box", amount: report.gearBoxAwarded === "uncommon" ? "Uncommon Gear Box" : "Common Gear Box", wide: true });
+    help.push("Unopened Gear Box added to your Bag");
+  }
+  if (report.bossRecovered) help.push("Losses show the battle result. The boss then recovered its full defending army.");
   if (report.staminaRefunded > 0) {
     rows.push({ icon: "dispatch", label: "Stamina refunded", amount: `+${formatNumber(report.staminaRefunded)}` });
     help.push("Stamina refunds are capped at 100");

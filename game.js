@@ -10811,6 +10811,9 @@ function normalizeBattleReports(reports) {
         staminaRefunded: count(report.staminaRefunded),
         damageContribution: count(report.damageContribution),
         itemAwarded: String(report.itemAwarded || ""),
+        gearBoxAwarded: ["common", "uncommon"].includes(report.gearBoxAwarded) ? report.gearBoxAwarded : "",
+        bossRecovered: report.bossRecovered === true,
+        balanceVersion: count(report.balanceVersion) || 1,
         targetType,
         regionId: rawRegionId ? normalizeRegionId(rawRegionId) : "",
         cityName: String(report.cityName || "Unknown city").slice(0, 40),
@@ -27152,7 +27155,7 @@ function renderClanRallyCard(rally, activityLedger = false) {
   const minimumParticipants = getClanRallyMinimumParticipants(rally);
   const allReady = activeParticipants.filter(participant => participant.status === "assembled").length >= minimumParticipants
     && activeParticipants.some(participant => participant.uid === rally.leaderUid && participant.status === "assembled");
-  const canJoin = forming && !ownParticipant && !leader && activeParticipants.length < CLAN_RALLY_MAX_PARTICIPANTS;
+  const canJoin = forming && !ownParticipant && !leader && activeParticipants.length < getClanRallyMaximumParticipants(rally);
   if (canJoin) {
     controls = `<button data-rally-action="join" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Join Rally</button>`;
   } else if (forming && ownParticipant && !leader) {
@@ -27170,7 +27173,7 @@ function renderClanRallyCard(rally, activityLedger = false) {
     <article class="clan-rally-card paper ${escapeHtml(rally.status || "")}">
       <div class="rally-body scroll-region" tabindex="0" aria-label="Rally details"><header>
         <span><small>${escapeHtml(getRegionLabel(rally.targetRegionId))}</small><strong>${escapeHtml(rally.targetName || rally.targetId || "Objective")}</strong></span>
-        <b>${activeParticipants.length || participants.length}/${CLAN_RALLY_MAX_PARTICIPANTS}</b>
+        <b>${activeParticipants.length || participants.length}/${getClanRallyMaximumParticipants(rally)}</b>
       </header>
       <div class="clan-rally-summary">
         <span>Creator ${renderPlayerNameLink(rally.leaderUid, rally.leaderName || "Ruler")}</span><span>Assembly ${renderRallyAssemblyLink(rally)}</span>
@@ -32276,7 +32279,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
       ${activeRetaliationId && orderKind === "attack" ? '<div class="troop-retaliation-note" data-retaliation-note></div>' : ""}
       ${isReinforcement ? `<div class="reinforcement-limit-note"><strong>${formatNumber(reinforcementUsage)} / ${formatNumber(CLAN_REINFORCEMENT_PER_RECIPIENT_LIMIT)} assignments with ${escapeHtml(reinforcementRecipientName)}</strong><span>Each assignment must support a different holding owned by this clanmate.</span></div>` : ""}
       ${isReinforcement && !campTarget && !isStronghold(target) ? `<div class="reinforcement-limit-note"><strong>${formatNumber(ordinaryCityReinforcementUsage)} / ${formatNumber(ORDINARY_CITY_REINFORCEMENT_CAPACITY)} reinforcement slots</strong><span>Ordinary cities reserve one slot per contributing clanmate when a march launches.</span></div>` : ""}
-      ${rallyOrder ? `<div class="reinforcement-limit-note rally-limit-note"><strong>${getClanRallyMinimumParticipants(activeRallyOrderContext?.rally || target)}–${CLAN_RALLY_MAX_PARTICIPANTS} participants</strong><span>${orderKind === "rally_create" ? "You will lead this manual-launch Rally. Ready troops defend the assembly city until launch. Incoming troops turn back if you launch early." : "Your troops defend the assembly city after arrival. If the rally launches first, they turn back."}</span></div>` : ""}
+      ${rallyOrder ? `<div class="reinforcement-limit-note rally-limit-note"><strong>${getClanRallyMinimumParticipants(activeRallyOrderContext?.rally || target)}–${getClanRallyMaximumParticipants(activeRallyOrderContext?.rally || target)} participants</strong><span>${orderKind === "rally_create" ? "You will lead this manual-launch Rally. Ready troops defend the assembly city until launch. Incoming troops turn back if you launch early." : "Your troops defend the assembly city after arrival. If the rally launches first, they turn back."}</span></div>` : ""}
 
       ${orderKind === "attack" && !campTarget ? renderOnboardingTip("attack", target, "order") : ""}
       <div class="troop-slider-control">
@@ -39819,7 +39822,7 @@ function renderBattleComparisonSections(left = {}, right = {}, defender = {}, si
 }
 
 function getViewerBattleResultLabel(snapshot = null, viewerRole = "attacker", report = null) {
-  if (snapshot?.target?.targetType === "marauder") return getMarauderBattleResultLabel(snapshot);
+  if (snapshot?.target?.targetType === "marauder") return getMarauderBattleResultLabel(report || snapshot);
   if (!snapshot) return "Outcome unavailable";
   if (report?.eventKind === CITADEL_ASSAULT_EVENT_KIND && report.outcome === "damaged") {
     return "The Citadel Legion damaged the holding";

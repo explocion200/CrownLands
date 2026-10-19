@@ -42,5 +42,8 @@
 // Full-size stamina finder and fresh all-map reads add 7,741 delivered shell
 // bytes; bound the 7,264-byte cap overage at 8 KiB. Reuse existing art and
 // backend read batches; no new subscriptions or installed dependencies.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024 + 2 * 1024 + 4 * 1024 + 512 + 1024 + 8 * 1024;
+// Approved balance v2 adds 10,801 shell bytes for the fixed table, versioned
+// loot/contribution helpers and disclosures (measured 4,593,808 bytes total).
+// Bound its 9,872-byte cap overage within 12 KiB; no new assets or requests.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024 + 2 * 1024 + 4 * 1024 + 512 + 1024 + 8 * 1024 + 12 * 1024;
 module.exports = { MAX_INSTALL_PRECACHE_BYTES };

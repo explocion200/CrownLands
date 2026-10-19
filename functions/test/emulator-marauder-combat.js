@@ -90,7 +90,7 @@ async function callFunction(name, token, data = {}, scopeOverrides = {}) {
 
 
 async function main() {
-  const users = await Promise.all(['hunter','ally','rival'].map(createAuthUser));
+  const users = await Promise.all(['hunter','ally','rival','fourth','fifth','sixth'].map(createAuthUser));
   const info = await callFunction('getRealmInfo', users[0].token);
   Object.assign(realm,{releaseId:info.currentReleaseId,resetGeneration:info.resetGeneration,worldId:info.worldId,realmShardId:info.sharedRealmId});
   const current={worldId:realm.worldId,resetGeneration:realm.resetGeneration,realmShardId:realm.realmShardId};
@@ -293,6 +293,101 @@ async function main() {
   strictEqual((await arrive(launch2.movement)).outcome,'target_unavailable');
   for(const user of users.slice(0,2))strictEqual((await db.doc('players/'+user.uid+'/stamina/state').get()).data().value,90);
   strictEqual((await db.doc('marauderBattles/'+launch2.movement.id).get()).data().loot,null);
+  // The same callables preserve legacy spawns above and settle new v2 spawns below.
+  enemy=await seed(10,M.balance(10,2).defenders);
+  await Promise.all([targetRef.set({balanceVersion:2},{merge:true}),publicRef.set({balanceVersion:2},{merge:true})]);
+  await staminaRef.set({version:1,value:100,recoveredAtMs:Date.now(),revision:200,paidDay:''});
+  await profileRef.set({character:{level:1,xp:0}},{merge:true});
+  const modernSolo=await launch('attack',10000),modernSoloResult=await arrive(modernSolo.movement);
+  strictEqual(modernSolo.movement.targetBalanceVersion,2);
+  strictEqual(modernSoloResult.reports[0].xpAwarded,M.balance(10,2).xp,'Fixed NPC XP bypasses recipient cap');
+  strictEqual((await db.doc('marauderBattles/'+modernSolo.movement.id).get()).data().loot.gold[users[0].uid],74);
+  enemy=await seed(1,100);await targetRef.set({balanceVersion:2},{merge:true});
+  const modernSoloLoss=await launch('attack',10);await arrive(modernSoloLoss.movement);
+  assert((await targetRef.get()).data().troops<100,'V2 solo wounds persist');
+  // A missing saved version retains legacy rewards. Unknown versions fail before charging.
+  enemy=await seed();await targetRef.set({balanceVersion:require('firebase-admin/firestore').FieldValue.delete()},{merge:true});
+  const unversioned=await launch('attack',200);await arrive(unversioned.movement);
+  strictEqual((await db.doc('marauderBattles/'+unversioned.movement.id).get()).data().loot.gold[users[0].uid],100);
+  enemy=await seed();await targetRef.set({balanceVersion:999},{merge:true});
+  const unknownBefore=(await staminaRef.get()).data().value;
+  await rejects(launch('attack',200),/version|precondition/i);
+  strictEqual((await staminaRef.get()).data().value,unknownBefore);
+
+  for(const [i,user] of users.entries()){
+    await db.doc('clans/'+clanId+'/members/'+user.uid).set({...current,uid:user.uid,clanId,status:'active',role:i?'member':'leader',joinedAtMs:Date.now()-172800000});
+    await db.doc('players/'+user.uid).set({clanId,clanRole:i?'member':'leader',clanJoinedAtMs:Date.now()-172800000,
+      character:{level:1,xp:0},gear:{commonGearBoxes:7,uncommonGearBoxes:3}},{merge:true});
+  }
+  async function modernRally(label,powers){
+    boss.spawnId=crypto.randomUUID();boss.balanceVersion=2;boss.level=100;boss.name='Clan Boss Lv. 100';
+    await bossRef.set({...boss,troops:M.balance(100,2).defenders});
+    await db.doc('islands/'+bossIsland+'/marauders/'+boss.id).set(boss);
+    for(const [i,user] of users.entries()){
+      await db.doc('players/'+user.uid+'/stamina/state').set({version:1,value:100,recoveredAtMs:Date.now(),revision:300,paidDay:''});
+      await db.doc('islands/'+claims[i].islandId+'/cities/'+claims[i].cityId).set({troops:100000000,troopFloat:100000000,productionUpdatedAtMs:Date.now()},{merge:true});
+    }
+    const id='v2_'+label+'_'+crypto.randomBytes(5).toString('hex');
+    const formed=await callFunction('createClanRally',users[0].token,{...bossOrder,rallyId:id,army:{...bossOrder.army,id,targetSpawnId:boss.spawnId,troops:powers[0],requestedTroops:powers[0]}});
+    strictEqual(formed.rally.targetBalanceVersion,2);
+    const joins=[];
+    for(let i=1;i<powers.length;i++) joins.push(await callFunction('joinClanRally',users[i].token,{clanId,rallyId:id,army:{id:id+'_join_'+i,kind:'rally_join',fromId:claims[i].cityId,sourceRegionId:claims[i].regionId||claims[i].mainRegionId,troops:powers[i],requestedTroops:powers[i]}}));
+    return {id,joins};
+  }
+  async function assemble(r){for(const [i,join] of r.joins.entries()){
+    await db.doc('armies/'+join.movement.id).set({arrivesAtMs:Date.now()-1000},{merge:true});
+    await callFunction('resolveArmyOrder',users[i+1].token,{armyId:join.movement.id});
+  }}
+  const carried=await modernRally('carried',[10000000,1000]);await assemble(carried);
+  const unready=await callFunction('getBossRallyReadiness',users[0].token,{clanId,rallyId:carried.id});
+  strictEqual(unready.contribution.eligible,false);assert(unready.contribution.members.some(p=>p.reason));
+  await rejects(callFunction('launchClanRally',users[0].token,{clanId,rallyId:carried.id}),/10%|contribution/);
+  for(const u of users.slice(0,2))strictEqual((await db.doc('players/'+u.uid+'/stamina/state').get()).data().value,100,'Rejected contributions spend no stamina');
+  await callFunction('cancelClanRally',users[0].token,{clanId,rallyId:carried.id});
+  // Equal meaningful contributors may deliberately take a losing fight. The boss recovers atomically.
+  const losing=await modernRally('loss',[4000000,4000000]);await assemble(losing);
+  const departingLoss=await callFunction('launchClanRally',users[0].token,{clanId,rallyId:losing.id});
+  const lossResult=await arrive(departingLoss.movement);strictEqual(lossResult.outcome,'defeat');
+  strictEqual((await bossRef.get()).data().troops,40000000);strictEqual((await bossRef.get()).data().spawnId,boss.spawnId);
+  strictEqual(lossResult.reports[0].bossRecovered,true);
+  const lossReceipt=(await db.doc('marauderBattles/'+departingLoss.movement.id).get()).data();
+  strictEqual(lossReceipt.loot,null);assert(lossReceipt.result.defenderLosses>0);
+  strictEqual(lossReceipt.result.defendersLeft+lossReceipt.result.defenderLosses,40000000,'Report preserves actual battle casualties before recovery');
+  const recoveryTime=(await bossRef.get()).updateTime;
+  await callFunction('resolveArmyOrder',users[0].token,{armyId:departingLoss.movement.id});
+  assert((await bossRef.get()).updateTime.isEqual(recoveryTime),'Duplicate failure must not heal or rewrite the boss again');
+
+  const five=await modernRally('five',[10000000,10000000,10000000,10000000,10000000]);
+  await rejects(callFunction('joinClanRally',users[5].token,{clanId,rallyId:five.id,army:{id:five.id+'_sixth',kind:'rally_join',fromId:claims[5].cityId,sourceRegionId:claims[5].regionId||claims[5].mainRegionId,troops:10000000,requestedTroops:10000000}}),/5 participants/);
+  await assemble(five);
+  const eligibility=await callFunction('getBossRallyReadiness',users[0].token,{clanId,rallyId:five.id});
+  strictEqual(eligibility.contribution.eligible,true);strictEqual(eligibility.contribution.maxSharePercent,40);
+  const departing=await callFunction('launchClanRally',users[0].token,{clanId,rallyId:five.id});
+  const departure=(await db.doc('clans/'+clanId+'/rallies/'+five.id).get()).data();
+  strictEqual(departure.bossContribution.eligible,true);
+  // Current equipment/skills cannot change eligibility, shares or recovery after departure.
+  const beforeProfiles=await Promise.all(users.slice(0,5).map(u=>db.doc('players/'+u.uid).get()));
+  await profileRef.set({character:{level:100,xp:0}},{merge:true});
+  const victory=await arrive(departing.movement);strictEqual(victory.outcome,'victory');
+  const modernReceipt=(await db.doc('marauderBattles/'+departing.movement.id).get()).data();
+  strictEqual(modernReceipt.loot.balanceVersion,2);strictEqual(modernReceipt.loot.rolls.length,20);
+  const config=M.balance(100,2);
+  strictEqual(Object.values(modernReceipt.loot.gold).reduce((a,b)=>a+b,0),config.gold);
+  strictEqual(Object.values(modernReceipt.loot.xp).reduce((a,b)=>a+b,0),config.xp);
+  for(const [i,u] of users.slice(0,5).entries()){
+    const after=(await db.doc('players/'+u.uid).get()).data(),report=after.battleReports.find(r=>r.battleId===departing.movement.id);
+    strictEqual(report.xpAwarded,modernReceipt.loot.xp[u.uid]);
+    strictEqual(report.itemAwarded,modernReceipt.loot.items[u.uid]);assert(report.itemAwarded,'Level 100 always grants one consumable per member');
+    strictEqual(after.shopItems[report.itemAwarded],(beforeProfiles[i].data().shopItems?.[report.itemAwarded]||0)+1);
+    for(const rarity of ['common','uncommon'])strictEqual(after.gear[rarity+'GearBoxes'],beforeProfiles[i].data().gear[rarity+'GearBoxes']+(modernReceipt.loot.gearBoxes[u.uid]===rarity?1:0));
+    strictEqual(report.gearBoxAwarded,modernReceipt.loot.gearBoxes[u.uid]);
+  }
+  const committed=await db.doc('marauderBattles/'+departing.movement.id).get();
+  const rewarded=await Promise.all(users.slice(0,5).map(u=>db.doc('players/'+u.uid).get()));
+  await Promise.all([0,1].map(()=>callFunction('resolveArmyOrder',users[0].token,{armyId:departing.movement.id})));
+  assert((await db.doc('marauderBattles/'+departing.movement.id).get()).updateTime.isEqual(committed.updateTime));
+  for(const [i,u] of users.slice(0,5).entries())strictEqual(JSON.stringify((await db.doc('players/'+u.uid).get()).data().gear),JSON.stringify(rewarded[i].data().gear),'No duplicate Gear Boxes');
+  console.log('V2 callables: legacy/missing versions, fixed uncapped solo XP, solo wounds, five inbound slots, contribution rejection before charging, boss recovery, frozen departure shares, personal drops and duplicate settlement passed.');
   console.log('Marauder combat passed: real callables, routes, scouting privacy, departure charge, duplicate launch/settlement, shield preservation, normal combat/returns, simultaneous arrivals, failed survivors, immutable spawn refunds, insufficient stamina and Firestore privacy.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

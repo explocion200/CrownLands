@@ -45,6 +45,8 @@ async function main(built = false) {
       getOnlineApi=()=>({...window.npcReportApi,isSignedIn:()=>true,
         loadBattleSnapshot:async()=>{if(window.reportLoadFails)throw Error('Fixture unavailable');return window.npcReportSnapshot;}});`);
     const cases = [
+      { name: "modern-boss", snapshot: snapshots.modernBoss, outcome: "victory", modern: true },
+      { name: "modern-boss-defeat", snapshot: snapshots.modernBossDefeat, outcome: "defeat", modern: true },
       { name: "solo", snapshot: snapshots.solo, outcome: "victory" },
       { name: "solo-defeat", snapshot: snapshots.soloDefeat, outcome: "defeat" },
       { name: "boss", snapshot: snapshots.boss, outcome: "victory", viewer: "hunter-1" },
@@ -72,7 +74,8 @@ async function main(built = false) {
           goldAwarded: victory ? 123456 : 0, xpAwarded: victory ? 789 : 0,
           troopsAwarded: victory ? 1500 : 0, fieldMedicsRecovered: test.outcome === "target_unavailable" ? 0 : 50,
           staminaRefunded: test.outcome === "target_unavailable" ? 10 : 0,
-          itemAwarded: victory ? "recall_horn" : "", damageContribution: victory ? 23456 : 0,
+          gearBoxAwarded: test.modern && victory ? "uncommon" : "", bossRecovered: test.modern && !victory,
+          balanceVersion: test.modern ? 2 : 1, itemAwarded: victory ? "recall_horn" : "", damageContribution: victory ? 23456 : 0,
           levelUpReward: victory ? { fromLevel: 1, toLevel: 2, levelsGained: 1, goldAwarded: 1000, troopsAwarded: 1500 } : null,
           summary: test.outcome === "target_unavailable" ? "The enemy was unavailable. Your army is returning. 10 stamina refunded." : "Recorded hunt result.",
           occurredAtMs: Date.now(), createdAtMs: Date.now() };
@@ -83,6 +86,7 @@ async function main(built = false) {
             spawnId:npcReportSnapshot.target.targetSpawnId,status:'active'}],npcReportSnapshot.target.regionId);
           showBattleReportDetail(${JSON.stringify(report.id)});`);
         await wait("modalBody.querySelector('.detail-ledger-shell .army') && modalBody.querySelector('[data-detail-jump]')");
+        if(test.modern) assert(await ev(`modalBody.textContent.includes(${JSON.stringify(victory ? "Uncommon Gear Box" : "Boss recovered to full strength")})`), test.name);
         const info = await ev(`(()=>{const b=modalBody.querySelector('.report-body'),text=b.textContent;
           return {shell:!!modalBody.querySelector('.detail-ledger-shell'),header:modalBody.querySelector('.window-header').textContent,
             text,art:b.querySelector('.npc-report-art')?.getAttribute('src'),fakeNpcFlag:!!b.querySelector('.opponent [data-battle-participant-flag]'),
