@@ -33,12 +33,6 @@
     pointer-events: none !important;
   }
   .notification-badge[hidden] { display: none !important; }
-}
-
-#chatToggleUnread { top: -4px; right: -5px; z-index: 4; }
-.chat-tab-unread, .social-tab-unread { vertical-align: middle; }
-#chatDialog .chat-tabs button { display: inline-flex; align-items: center; gap: 5px; }
-.nav-btn-heading > .notification-badge { vertical-align: middle; }
 #modal .ready-count:has(> .notification-badge) {
   display: inline-flex !important;
   align-items: center !important;
@@ -48,6 +42,12 @@
   background: transparent !important;
   box-shadow: none !important;
 }
+}
+
+#chatToggleUnread { top: -4px; right: -5px; z-index: 4; }
+.chat-tab-unread, .social-tab-unread { vertical-align: middle; }
+#chatDialog .chat-tabs button { display: inline-flex; align-items: center; gap: 5px; }
+.nav-btn-heading > .notification-badge { vertical-align: middle; }
 
 #incomingAttackBtn, #outgoingAttackBtn { position: relative; }
 #incomingAttackCount, #outgoingAttackCount { position: absolute; top: 2px; right: 3px; z-index: 2; }

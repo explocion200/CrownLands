@@ -24,14 +24,15 @@
       "paths": [
         "achievements-ui.js",
         "player-profile-ui.js",
-        "tools/validate-ui-stutter-browser.js"
+        "tools/validate-ui-stutter-browser.js",
+        "tools/validate-reward-window-layout-browser.js"
       ],
       "tests": [
         "tools/validate-notification-badges-browser.js",
         "tools/validate-ui-stutter-browser.js",
         "tools/validate-reward-window-layout-browser.js"
       ],
-      "reason": "Claimable reward summaries and profile alerts reuse the shared badge. Test live badge updates and removal without replacing focused controls, reward-window navigation and desktop/landscape layout, including the existing shared modal dependencies."
+      "reason": "Claimable reward summaries and profile alerts reuse the shared badge. Test live badge updates and removal without replacing focused controls, reward-window navigation and desktop/landscape layout, including the existing shared modal dependencies. Check that the optional achievement theme does not retain a second pill around the shared numeric circle."
     },
     {
       "paths": [

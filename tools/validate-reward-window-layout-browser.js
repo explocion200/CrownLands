@@ -96,6 +96,7 @@ async function main() {
           await settled();
           await click(`[data-daily-reward-tab="${tab}"]`, touch);
           await waitFor(`!!modalBody.querySelector('${panel}')?.querySelector('.window-title-art')?.naturalWidth`);
+          if (tab === "achievements") assert(await evaluate("(() => { const n=modalBody.querySelector('.ready-count:has(.notification-badge)'); return n && getComputedStyle(n).backgroundColor === 'rgba(0, 0, 0, 0)'; })()"), "Only the numeric circle should be painted as the reward notification");
           await settled();
           const layout = await evaluate(`(() => {
             const panel=document.querySelector('${panel}'), header=panel.querySelector('header'), art=header.querySelector('.window-title-art'), title=art.nextElementSibling, clock=title.nextElementSibling;
