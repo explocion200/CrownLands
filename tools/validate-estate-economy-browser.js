@@ -510,7 +510,7 @@ async function main() {
       await click('[data-estate-fit]');
       assert(await evaluate(()=>[...document.querySelectorAll('.estate-construction-timer:not([hidden])')].every(e=>{
         const b=e.getBoundingClientRect(),v=document.querySelector('.estate-viewport').getBoundingClientRect();
-        return b.width===88&&b.left>=v.left&&b.right<=v.right&&b.top>=v.top&&b.bottom<=v.bottom;
+        return b.width===52&&b.height===28&&b.left>=v.left&&b.right<=v.right&&b.top>=v.top&&b.bottom<=v.bottom;
       })),'Overview timers remain compact and in bounds');
       await click('[data-estate-directory-toggle]');
       await evaluate(()=>document.querySelector('[data-estate-directory-building="quarry"]').scrollIntoView({block:'center'}));
