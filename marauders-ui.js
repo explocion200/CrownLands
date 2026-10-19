@@ -1,4 +1,4 @@
-/* exported installMarauderSearch, applyOnlineMarauders, renderMarauders, updateMarauderRespawnTimers, renderBossReadiness, selectMarauder, selectedMarauderSpawnId, scoutMarauder, attackMarauder, getMarauderDetailsModel */
+/* exported installMarauderSearch, openMarauderDetails, applyOnlineMarauders, renderMarauders, updateMarauderRespawnTimers, renderBossReadiness, selectMarauder, selectedMarauderSpawnId, scoutMarauder, attackMarauder, getMarauderDetailsModel */
 /* exported getMarauderBattleTargetLabel, getMarauderBattleRuleLabel, getMarauderReportTarget, normalizeMarauderReportTarget, marauderBattleReportSide, getMarauderBattleResultLabel, getLegacyMarauderBattleSides */
 /* Shared NPC targets stay separate from capturable city and camp state. */
 const marauderMaps = new Map();
