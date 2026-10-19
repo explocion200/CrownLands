@@ -32,7 +32,8 @@ async function main() {
     await ev(`(async()=>{window.__CROWNLANDS_BENCHMARK__.closeModal();await new Promise(r=>setTimeout(r,100));
       state.gold=1e15;openInnerCastle(getMainCityReference().id);setAnimationModePreference('off');
       window.__gateLevels={};window.__gateCalls=[];
-      innerCastleEconomy={snapshot:()=>({estate:{levels:__gateLevels,entitlements:{barracks:4,treasury:4,gatehouse:4,'royal-stables':4}}}),visibilityChanged(){},refresh:async()=>{}};
+      innerCastleEconomy={snapshot:()=>({estate:{levels:__gateLevels,entitlements:{barracks:4,treasury:4,gatehouse:4,'royal-stables':4}}}),balances:()=>({}),now:Date.now,visibilityChanged(){},refresh:async()=>{}};
+      innerCastleEstateView?.updateResources();
       getOnlineApi=()=>({equipCommonGear:async()=>{__gateCalls.push('equip');return{};}});
     })()`);
     for(const [width,height] of [[1440,900],[844,390],[568,320]]){
