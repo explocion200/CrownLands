@@ -34124,7 +34124,6 @@ function renderCityListModal() {
         <p class="cll-summary"><strong>${rosterCountLabel}</strong> cities <i>·</i> <strong>${cityDetailsNumber(cities.length - regularCityCount)}</strong> Strongholds <i>·</i> <strong>${new Set(cities.map(getCityRegionId)).size}</strong> maps</p>
       </div>
       <div class="cll-toolbar" aria-label="City list sorting">
-        <button type="button" data-find-marauders>Find enemies</button>
         <span class="cll-sort-caption">Order by</span>
         <button class="${cityListSortKey === "level" ? "active" : ""}" data-city-list-sort="level" type="button" aria-pressed="${cityListSortKey === "level"}">
           <span>Level</span><small>${getCityListSortLabel("level")}</small>

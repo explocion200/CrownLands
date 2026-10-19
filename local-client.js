@@ -191,6 +191,10 @@
       return { docs, size: docs.length, empty: !docs.length, forEach: callback => docs.forEach(callback), docChanges: () => changes, metadata: { fromCache: false, hasPendingWrites: false } };
     }
     async function read(target) { return snapshot((await post("read", { targets: [spec(target)] }))[0]); }
+    async function readBatch(targets) {
+      if (!Array.isArray(targets) || !targets.length || targets.length > 20) throw new Error("Choose 1–20 game data ranges.");
+      return (await post("read", { targets: targets.map(spec) })).map(result => snapshot(result));
+    }
     function write(kind, reference, data, options = {}) {
       const entry = { path: reference.path, kind };
       if (kind !== "delete") {
@@ -309,7 +313,7 @@
       where: (field, op, value) => ({ kind: "where", field, op, value }), orderBy: (field, direction = "asc") => ({ kind: "order", field, direction }),
       limit: value => ({ kind: "limit", value }), documentId: () => ["__name__"],
       startAfter: (...values) => ({ kind: "start", values, inclusive: false }), startAt: (...values) => ({ kind: "start", values, inclusive: true }), endAt: (...values) => ({ kind: "end", values, inclusive: true }),
-      getDoc: read, getDocFromServer: read, getDocs: read, getDocsFromServer: read,
+      getDoc: read, getDocFromServer: read, getDocs: read, getDocsFromServer: read, getDocsBatch: readBatch,
       setDoc: (reference, data, options) => post("write", { writes: [write("set", reference, data, options)] }),
       updateDoc: (reference, data) => post("write", { writes: [write("update", reference, data)] }),
       deleteDoc: reference => post("write", { writes: [write("delete", reference)] }),

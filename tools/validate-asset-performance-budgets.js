@@ -297,7 +297,7 @@ const entrypointBudgets = {
   // NPC map subscription and readiness callable add 376 bytes over the prior cap.
   // Private Web Push selection adds 255 bytes; its implementation stays lazy.
   // Bound the entry at 164 KiB; the total installation-cache cap stays unchanged.
-  "firebaseClient.js": 166 * 1024, // +2 KiB: social bridge and separate browser alert categories.
+  "firebaseClient.js": 168 * 1024, // +2 KiB: bounded current-realm NPC search over public reads.
   "animation-manager.js": 80 * 1024,
   "map-transition-bats.css": 5 * 1024,
   "audio-manager.js": 80 * 1024,
@@ -420,9 +420,10 @@ assert(
 
 // The approved NPC/stamina UI and shared rules remain a small offline-shell addition.
 const marauderShellFiles = ['stamina-ui.js', 'stamina-ui.css', 'marauders-ui.js', 'marauders-ui.css', 'functions/marauder-rules.js'];
-// Defeated markers and the existing-clock countdown add a bounded 4 KiB step.
-assert(marauderShellFiles.reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 44 * 1024,
-  'NPC/stamina shell files exceed their 44 KiB source budget.');
+// Defeated markers retained; the full stamina finder brings these sources to
+// 50,119 bytes. Bound the new UI/controller within an additional 6 KiB.
+assert(marauderShellFiles.reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 50 * 1024,
+  'NPC/stamina shell files exceed their 50 KiB source budget.');
 let marauderArtBytes = 0;
 for (const file of ['assets/marauders/solo-v1.webp', 'assets/marauders/boss-v1.webp']) {
   const bytes = statBytes(file); marauderArtBytes += bytes;

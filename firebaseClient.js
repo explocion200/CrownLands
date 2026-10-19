@@ -3158,6 +3158,40 @@
     };
   }
 
+  async function loadActiveMarauders(regions, { min = 1, max = 100, isCurrent = () => true, onProgress = () => {} } = {}) {
+    await init();
+    const uid = requireSignedIn(), scope = JSON.stringify(getRealmIdentity());
+    const current = () => isCurrent() && client.user?.uid === uid && scope === JSON.stringify(getRealmIdentity());
+    const check = () => { if (!current()) throw new Error("Enemy search canceled. Search again in your current realm."); };
+    const { collection, query, where, getDocsFromServer, getDocsBatch } = client.modules.firestore;
+    if (!Array.isArray(regions) || !Number.isInteger(min) || !Number.isInteger(max) || min < 1 || max > 100 || min > max) {
+      throw new Error("Choose a level range from 1 to 100.");
+    }
+    const maps = [...new Map(regions.map(region => [region.islandId, region])).values()], rows = [];
+    // The local transport shares one authorized read transaction per small batch.
+    // No extra listeners, map artwork downloads or renderer-cache mutations.
+    const size = getDocsBatch ? 20 : 4;
+    for (let offset = 0; offset < maps.length; offset += size) {
+      check();
+      const batch = maps.slice(offset, offset + size);
+      const targets = batch.map(region => query(collection(client.db, "islands", region.islandId, "marauders"), where("status", "==", "active")));
+      const snapshots = getDocsBatch ? await getDocsBatch(targets) : await Promise.all(targets.map(target => getDocsFromServer(target)));
+      check();
+      snapshots.forEach((snapshot, index) => snapshot.docs.forEach(document => {
+        const row = document.data(), region = batch[index];
+        if (row.status === "active" && row.worldId === ONLINE_WORLD_ID && row.resetGeneration === RESET_GENERATION
+          && (row.realmShardId || "legacy") === REALM_SHARD_ID && row.regionId === region.regionId
+          && Number.isInteger(row.level) && row.level >= min && row.level <= max && row.spawnId
+          && Number.isFinite(row.x) && Number.isFinite(row.y)) {
+          rows.push({ ...row, id: document.id, islandId: region.islandId });
+        }
+      }));
+      onProgress(Math.min(offset + batch.length, maps.length), maps.length);
+    }
+    check();
+    return rows;
+  }
+
   async function loadOwnedCitiesAcrossIslands(islandIds = [], { serverOnly = false } = {}) {
     await init();
     const uid = requireSignedIn();
@@ -3843,6 +3877,7 @@
     loadKingPowerPresenceLeaderboard,
     loadIslandCitySummary,
     loadOwnedCitiesAcrossIslands,
+    loadActiveMarauders,
     loadServerReports,
     loadBattleSnapshot,
     subscribeIsland,

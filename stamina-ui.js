@@ -127,13 +127,16 @@
     if (!s.dialog) {
       const dialog = s.dialog = document.createElement("dialog"); dialog.className = "stamina-panel";
       dialog.setAttribute("aria-labelledby", "stamina-panel-title");
-      dialog.innerHTML = `<header><h2 id="stamina-panel-title">Refill stamina</h2><button type="button" data-stamina-close aria-label="Close stamina refill">×</button></header><div class="stamina-panel-body">
-        <p class="stamina-offer" data-refill-stamina>—</p><dl><div><dt>Crowns</dt><dd data-refill-crowns>—</dd></div><div><dt>Paid refills today</dt><dd data-refill-used>—/1</dd></div></dl>
+      dialog.innerHTML = `<header><h2 id="stamina-panel-title">Stamina &amp; hunts</h2><button type="button" data-stamina-close aria-label="Close stamina refill">×</button></header><div class="stamina-panel-layout"><section class="stamina-refill" aria-label="Stamina refill"><div class="stamina-panel-body">
+        <h3>Your stamina <strong data-panel-value>—/100</strong></h3><progress max="100" value="0"></progress>
+        <h3>Refill stamina</h3><p class="stamina-offer" data-refill-stamina>—</p><dl><div><dt>Crowns</dt><dd data-refill-crowns>—</dd></div><div><dt>Paid refills today</dt><dd data-refill-used>—/1</dd></div></dl>
         <p data-stamina-feedback role="status"></p><button type="button" data-stamina-refresh>Refresh review</button>
-        <div data-stamina-shop-loading hidden></div><details><summary>Recovery &amp; hunts</summary><strong data-panel-value>—/100</strong><progress max="100" value="0"></progress><p>Available hunts: <strong data-hunts>—</strong> · 10 stamina each</p>
+        <div data-stamina-shop-loading hidden></div><details><summary>Recovery &amp; hunts</summary><p>Available hunts: <strong data-hunts>—</strong> · 10 stamina each</p>
         <p>Recover 1 stamina every 12 minutes.<br>Next point: <strong data-next>—</strong> · Full in: <strong data-full>—</strong></p></details></div>
-        <footer><button type="button" data-refill-buy disabled>Loading stamina…</button></footer>`;
+        <footer><button type="button" data-refill-buy disabled>Loading stamina…</button></footer></section><section data-enemy-search aria-label="Find enemies"></section></div>`;
       document.body.append(dialog);
+      s.search = root.installMarauderSearch?.(dialog, { isCurrent: () => session === s && dialog.open,
+        canNavigate: () => !s.busy, onLocated: () => dialog.close() });
       dialog.querySelector("[data-refill-buy]").addEventListener("click", event => {
         if (event.currentTarget.disabled) return;
         if (event.currentTarget.dataset.action !== "shop") { void purchase(s); return; }
@@ -153,11 +156,12 @@
       dialog.querySelector("[data-stamina-refresh]").addEventListener("click", () => { void refresh(s); });
       dialog.querySelector("[data-stamina-close]").addEventListener("click", () => dialog.close());
       dialog.addEventListener("cancel", event => { if (s.busy) event.preventDefault(); });
-      dialog.addEventListener("close", () => { if (!dialog.open) s.shopLoad = (s.shopLoad || 0) + 1; if (!s.shop && !dialog.open && s.opener?.isConnected) s.opener.focus({ preventScroll: true }); });
+      dialog.addEventListener("close", () => { if (!dialog.open) { s.shopLoad = (s.shopLoad || 0) + 1; s.search?.stop(); } if (!s.shop && !dialog.open && s.opener?.isConnected) s.opener.focus({ preventScroll: true }); });
     }
     if (!s.dialog.open) {
       s.shopLoad = (s.shopLoad || 0) + 1;
       const host = s.dialog.querySelector("[data-stamina-shop-loading]"); host.hidden = true; host.replaceChildren();
+      s.search?.stop();
       s.opener = opener; s.dialog.showModal(); s.dialog.querySelector("[data-stamina-close]").focus();
     }
     s.success = ""; tick(); void refresh(s);
