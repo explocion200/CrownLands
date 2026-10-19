@@ -72,7 +72,7 @@ async function main() {
       state.gold=1e15;openInnerCastle(getMainCityReference().id);setAnimationModePreference('off');})()`);
     await ev('Promise.all([document.fonts.ready,...modal.getAnimations().map(a=>a.finished.catch(()=>{}))])');
     // The API exists only in this synthetic page; no player or production data is used.
-    await ev(`window.__gearCalls=[];getOnlineApi=()=>({
+    await ev(`window.__gearCalls=[];window.__gearOriginalApi=getOnlineApi;getOnlineApi=()=>({
       equipCommonGear:async({instanceId})=>{__gearCalls.push('equip');const g=normalizeCommonGearState(state.gear),i=g.instances[instanceId];g.equipped[i.buildingId][i.slot]=instanceId;g.updatedAtMs=Date.now();return{currentUser:{gear:g}};},
       unequipCommonGear:async({instanceId})=>{__gearCalls.push('unequip');const g=normalizeCommonGearState(state.gear),i=g.instances[instanceId];g.equipped[i.buildingId][i.slot]='';g.updatedAtMs=Date.now();return{currentUser:{gear:g}};}
     });void 0`);
@@ -127,9 +127,71 @@ async function main() {
       }
     }
     assert.equal(await ev('__gearCalls.length'), 24, 'Each officer and viewport must exercise Unequip and Equip.');
+    await ev('getOnlineApi=window.__gearOriginalApi;void 0');
+    await ev(fs.readFileSync(path.resolve(__dirname, '../docs/visual-qa/battle-report-detail/runtime-fixture.js'), 'utf8'));
+    await wait("!!modal.querySelector('[data-detail-section=forces]')");
+    await ev(`document.querySelector('#detailRuntimeExample')?.remove();
+      window.__rarityReportItems={};
+      for(const role of ['attacker','defender'])__rarityReportItems[role]=COMMON_GEAR.RARITIES.map((rarity,index)=>{
+        const d=COMMON_GEAR.DEFINITIONS.find(d=>d.rarity===rarity&&d.buildingId===(role==='attacker'?'barracks':'gatehouse')&&d.slot===(role==='attacker'?'weapon':'head'));
+        return {gearKey:d.gearKey,gearName:d.gearName,rarity,level:1,statType:d.statType,bonusPercent:COMMON_GEAR.getBonusPercent({gearKey:d.gearKey,level:1}),
+          bonusPower:100*(index+1),appliedPercent:1,ownerUid:role+'-'+index,ownerName:role==='attacker'?'Rally member '+index:'Allied defender '+index};
+      });
+      window.__rarityReportBefore=JSON.stringify(__rarityReportItems);
+      window.__rarityOriginalSnapshot=loadDetailedBattleSnapshot;
+      loadDetailedBattleSnapshot=async report=>{
+        const snapshot=await __rarityOriginalSnapshot(report);
+        if(['detail-victory','detail-defeat','detail-rally'].includes(report.id))
+          for(const role of ['attacker','defender'])snapshot.gearEffects[role].items=__rarityReportItems[role];
+        return snapshot;
+      };
+      state.battleReports.find(r=>r.id==='detail-legacy').gearEffects={attacker:{items:__rarityReportItems.attacker},defender:{items:__rarityReportItems.defender}};void 0`);
+    for (const [width, height] of [[1440, 900], [844, 390], [568, 320]]) {
+      await client.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
+      for (const example of ['victory', 'defeat', 'rally', 'legacy']) {
+        await ev(`showBattleReportDetail('detail-${example}')`);
+        await wait("modal.querySelectorAll('#battleDetail-gear .bonus-art[data-rarity]').length===10");
+        await ev("Promise.all([...modal.querySelectorAll('.bonus-art[data-rarity]')].map(i=>i.decode()))");
+        await click('[data-detail-jump="battleDetail-gear"]');
+        const check = await ev(`(()=>{const body=modal.querySelector('.report-body');return {
+          overflow:body.scrollWidth-body.clientWidth,
+          sides:[...modal.querySelectorAll('#battleDetail-gear [data-bonus-side]')].map(e=>e.dataset.bonusSide),
+          items:[...modal.querySelectorAll('#battleDetail-gear .bonus-art[data-rarity]')].map(e=>({rarity:e.dataset.rarity,
+            color:getComputedStyle(e).backgroundColor,width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height,
+            label:e.closest('.bonus-row').textContent,decoded:e.naturalWidth>0}))};})()`);
+        assert.deepEqual(check.sides, example === 'defeat' ? ['defender', 'attacker'] : ['attacker', 'defender']);
+        for (const item of check.items) {
+          assert.equal(item.color, colors[item.rarity], `${example}/${width}: report rarity color`);
+          assert(item.decoded && item.label.includes('Level 1'), 'Artwork and saved item label must remain visible.');
+          assert.equal(item.width, width === 1440 ? 33 : width === 844 ? 28 : 24, 'Rarity paint must not enlarge report artwork.');
+          assert.equal(item.height, width === 1440 ? 37 : width === 844 ? 32 : 27);
+        }
+        assert(check.overflow <= 1, 'Report must not scroll sideways.');
+        assert.equal(await ev('JSON.stringify(__rarityReportItems)'), await ev('__rarityReportBefore'), 'Rendering must preserve saved item effects.');
+        fs.writeFileSync(path.join(out, `report-${example}-${width}.png`), Buffer.from((await client.send('Page.captureScreenshot', { format: 'png' })).data, 'base64'));
+        results.push({ report: example, width, height, ...check });
+      }
+      await ev("showBattleReportDetail('detail-held')");
+      await wait("!!modal.querySelector('#battleDetail-gear')");
+      assert.equal(await ev("modal.querySelectorAll('#battleDetail-gear [data-rarity]').length"), 0, 'Aggregate historical bonuses have no known item rarity.');
+      assert(await ev("[...modal.querySelectorAll('#battleDetail-gear .bonus-art.item')].every(e=>getComputedStyle(e).backgroundColor==='rgb(214, 214, 208)')"), 'Historical generic icons remain neutral.');
+      // Render already-opened local receipts; no opening, purchase or account API is called.
+      for (const box of ['common', 'uncommon']) {
+        await ev(`(()=>{const g=COMMON_GEAR.createDefaultState();const ids=['box-0','box-1','box-2'];ids.forEach((id,i)=>{
+          const d=COMMON_GEAR.DEFINITIONS.find(d=>d.buildingId==='barracks'&&d.slot==='chest'&&d.rarity===(i===0&&${JSON.stringify(box)}==='uncommon'?'uncommon':'common'));
+          g.instances[id]=COMMON_GEAR.normalizeInstance({instanceId:id,gearKey:d.gearKey,level:1});});
+          state.gear=normalizeCommonGearState(g);showCommonGearBoxReveal({instanceIds:ids},${JSON.stringify(box)});})()`);
+        await wait("modal.querySelectorAll('.cgb-reward-card').length===3"); await paint();
+        const cards = await ev("[...modal.querySelectorAll('.cgb-reward-card')].map(e=>({rarity:e.dataset.rarity,color:getComputedStyle(e).backgroundColor}))");
+        assert.deepEqual(cards.map(c => c.rarity), box === 'common' ? ['common', 'common', 'common'] : ['uncommon', 'common', 'common']);
+        for (const card of cards) assert.equal(card.color, colors[card.rarity], 'Chest rewards must match inventory and report colors.');
+        fs.writeFileSync(path.join(out, `box-${box}-${width}.png`), Buffer.from((await client.send('Page.captureScreenshot', { format: 'png' })).data, 'base64'));
+        results.push({ box, width, height, cards });
+      }
+    }
     assert.deepEqual(errors, [], 'No uncaught browser errors.');
     fs.writeFileSync(path.join(out, 'results.json'), JSON.stringify(results, null, 2));
-    console.log('PASS: five rarity backgrounds, selection/hover, upgrade preview and equip round trips across four officers at desktop and two landscape-mobile sizes.');
+    console.log('PASS: all five rarities across officer inventory, loadouts, previews, equip round trips, attack/defense/rally/historical reports and both chest reveals at desktop and two landscape-mobile sizes.');
   } finally {
     if (client) await client.send('Browser.close').catch(() => {});
     if (session) { await waitForProcessExit(session.browserProcess); await removeBrowserProfile(session.profilePath); }

@@ -1074,7 +1074,7 @@ function getBattleSideBonusEntries(side = {}) {
       const repair = item.statType === "wallRepairSpeed";
       return {
         icon: renderCrownlandsIcon(recovery ? "troops" : repair ? "city" : "shield"),
-        art: definition?.art || "", gearKey: item.gearKey,
+        art: definition?.art || "", gearKey: item.gearKey, rarity: item.rarity || "",
         label: item.gearName,
         value: recovery ? `+${percent(item.appliedPercent)}% recovery`
           : repair ? `−${percent(item.appliedPercent)}% repair time`

@@ -1,15 +1,22 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "99781080a81715611cbf31d687ac4bc3beedf883",
+  "baseCommit": "c5b10b8fa619e52e70fd8c53b95b24baf64704f3",
   "coverage": [
     {
-      "paths": ["crownlands-palette.css", "tools/validate-gear-rarity-backgrounds-browser.js"],
+      "paths": [
+        "common-gear-ui.js",
+        "battle-report-detail-ui.js",
+        "battle-report-detail-ui.css",
+        "tools/validate-battle-report-detail.js",
+        "tools/validate-gear-rarity-backgrounds-browser.js"
+      ],
       "tests": [
-        "tools/validate-crownlands-palette.js",
+        "tools/validate-battle-report-detail.js",
+        "tools/validate-report-system.js",
         "tools/validate-gear-rarity-backgrounds-browser.js",
         "tools/validate-production-artifact.js"
       ],
-      "reason": "Exclude only filled officer equipment buttons from the shared theme's layered important paint so existing rarity surfaces, selection borders and hover rules can apply. The browser regression fails against the prior theme and exercises all five rarities in all four officer bags, equipped slots, selected previews and upgrade confirmations, plus real selection/hover and locally stubbed Unequip/Equip receipts. Desktop and two landscape-mobile sizes verify fit, empty-slot parchment and ordinary action-button theme preservation. Palette validation protects the shared design tokens and selectors; production artifact validation verifies delivery. No game rules, data, APIs or server-authoritative code change, so no emulator suites apply."
+      "reason": "Pass the recorded item rarity through the shared report-entry model and paint report art with the established gear palette. Report value, escaping, perspective, rally/Tower participants and historical fallback checks protect the shared presentation path. The expanded real-browser test covers all five rarities in attack, defense, rally and item-bearing historical reports; generic historical summaries remain neutral. It asserts unchanged icon dimensions and horizontal fit at desktop and two landscape-mobile sizes. The same browser run verifies every officer's inventory, equipped slots, selection/hover, upgrade previews, equip/unequip and both Common/Uncommon chest reward displays. Production artifact validation protects lazy report delivery and asset budgets. No server code, game rules, saved reports or player data change, so emulator suites are not applicable."
     }
   ]
 }
