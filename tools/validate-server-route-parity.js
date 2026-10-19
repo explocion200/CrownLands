@@ -38,7 +38,7 @@ function canonicalEngineSourceFromWorker() {
     )
     .replace(/\bself\.onmessage\b/g, "routeWorkerScope.onmessage")
     .replace(/\bself\.postMessage\b/g, "routeWorkerScope.postMessage");
-  return `${source}\n\nmodule.exports = Object.freeze({ calculateRoute, normalizeConstants });\n`;
+  return `${source}\n\nmodule.exports = Object.freeze({ calculateRoute, normalizeConstants, isRegionWalkablePoint });\n`;
 }
 
 function getServerCities(model) {
@@ -116,7 +116,9 @@ function main() {
     path.join(ROOT_DIR, "functions", "canonical-route-engine.js"),
     "utf8"
   ).replace(/\r\n/g, "\n");
-  const normalizedVendoredEngineSource = vendoredEngineSource.trimEnd();
+  // The server copy retains its ESLint global annotation; executable route
+  // logic and all shared exports must still match the browser worker exactly.
+  const normalizedVendoredEngineSource = vendoredEngineSource.replace(/^\/\* global self \*\/\n/, "").trimEnd();
   const expectedVendoredEngineSource = canonicalEngineSourceFromWorker().trimEnd();
   let engineDifferenceIndex = 0;
   while (

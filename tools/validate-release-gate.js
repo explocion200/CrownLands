@@ -1,6 +1,8 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const cp = require("node:child_process");
+const os = require("node:os");
 
 const root = path.resolve(__dirname, "..");
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), "utf8");
@@ -109,5 +111,74 @@ const emulatorFiles = fs.readdirSync(path.join(root, "functions/test"))
   .filter(fileName => /^emulator-.*\.js$/.test(fileName));
 assert.ok(emulatorFiles.includes("emulator-reset-gate.js"), "Reset emulator gate is missing.");
 assert.ok(emulatorFiles.length >= 11, "Expected multiplayer emulator coverage is missing.");
+
+// Exercise the actual setup shell against disposable Git histories. No database
+// or administrator command runs: the sudo shim only records the requested steps.
+const postgresStep = workflow.match(/      - name: Prepare PostgreSQL for selected migration tests\n([\s\S]*?)(?=      - name:)/)?.[1];
+assert.ok(postgresStep, "The database preparation step must exist.");
+requireMatch(postgresStep, /VALIDATION_TIER: \$\{\{ needs\.classify\.outputs\.tier \}\}/, "Database setup must receive the same tier as the gate.");
+const postgresShell = postgresStep.split("        run: |\n")[1]?.replace(/^          /gm, "");
+assert.ok(postgresShell, "The database setup shell must be testable.");
+const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "crownlands-postgres-setup-test-"));
+const gitFixture = args => cp.execFileSync("git", args, { cwd: fixtureRoot, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+const writeFixture = (file, contents) => fs.writeFileSync(path.join(fixtureRoot, file), contents);
+const commitFixture = () => { gitFixture(["add", "."]); gitFixture(["commit", "-qm", "fixture"]); };
+try {
+  fs.mkdirSync(path.join(fixtureRoot, "tools"));
+  fs.mkdirSync(path.join(fixtureRoot, "bin"));
+  for (const file of ["change-risk-classifier.js", "validation-plan.js"]) writeFixture(`tools/${file}`, read(`tools/${file}`));
+  writeFixture("bin/sudo", '#!/bin/sh\nprintf "%s\\n" "$*" >> "$POSTGRES_TEST_LOG"\n');
+  fs.chmodSync(path.join(fixtureRoot, "bin/sudo"), 0o755);
+  gitFixture(["init", "-q"]);
+  gitFixture(["config", "user.name", "Crownlands Test"]);
+  gitFixture(["config", "user.email", "test@example.invalid"]);
+  const tests = ["tools/validate-widget.js", "tools/test-local-postgres-store.js", "tools/test-local-auth-service.js"];
+  for (const file of tests) writeFixture(file, "// fixture\n");
+  commitFixture();
+  gitFixture(["branch", "-M", "main"]);
+  const baseCommit = gitFixture(["rev-parse", "main"]);
+  gitFixture(["switch", "-qc", "codex/fixture"]);
+  writeFixture(tests[0], "// changed fixture\n");
+  function setPlan(test, base = baseCommit) {
+    writeFixture("validation-plan.json", JSON.stringify({ schemaVersion: 1, baseCommit: base,
+      coverage: [{ paths: [tests[0]], tests: [test], reason: "Exercise database preparation for the selected validation dependencies." }] }));
+    commitFixture();
+  }
+  function runSetup(tier) {
+    const log = path.join(fixtureRoot, ".git/postgres-commands");
+    fs.rmSync(log, { force: true });
+    const result = cp.spawnSync("bash", ["--noprofile", "--norc", "-e", "-o", "pipefail", "-c", postgresShell], {
+      cwd: fixtureRoot, encoding: "utf8", env: { ...process.env, VALIDATION_BASE: "main", VALIDATION_TIER: tier,
+        PATH: `${path.join(fixtureRoot, "bin")}${path.delimiter}${process.env.PATH}`, POSTGRES_TEST_LOG: log },
+    });
+    return { ...result, commands: fs.existsSync(log) ? fs.readFileSync(log, "utf8") : "" };
+  }
+  setPlan(tests[0]);
+  const noDatabase = runSetup("Targeted");
+  assert.equal(noDatabase.status, 0, noDatabase.stderr);
+  assert.equal(noDatabase.commands, "", "Ordinary selected checks must not install a database.");
+  for (const test of tests.slice(1)) {
+    setPlan(test);
+    const selected = runSetup("Targeted");
+    assert.equal(selected.status, 0, selected.stderr);
+    assert.match(selected.commands, /createdb --owner=\S+ crownlands_migration/, `${test} needs the isolated migration database.`);
+  }
+  setPlan(tests[0], "0".repeat(40));
+  const stale = runSetup("Targeted");
+  assert.notEqual(stale.status, 0, "A broken selected plan must fail setup, not masquerade as no database required.");
+  assert.match(stale.stderr, /validation plan is stale/);
+  assert.equal(stale.commands, "");
+  const nightly = runSetup("Full");
+  assert.equal(nightly.status, 0, nightly.stderr);
+  assert.match(nightly.commands, /createdb --owner=\S+ crownlands_migration/, "Full runs must prepare fixtures without reclassifying the merged PR's stale plan.");
+  fs.unlinkSync(path.join(fixtureRoot, "validation-plan.json"));
+  commitFixture();
+  const missing = runSetup("Targeted");
+  assert.notEqual(missing.status, 0);
+  assert.match(missing.stderr, /Commit validation-plan.json/);
+  assert.equal(missing.commands, "");
+} finally {
+  fs.rmSync(fixtureRoot, { recursive: true, force: true });
+}
 
 console.log(`Validated release-gate parity and automatic discovery for ${emulatorFiles.length} emulator files.`);

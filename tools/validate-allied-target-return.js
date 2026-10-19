@@ -98,8 +98,9 @@ const resolveSource = serverSource.slice(
   serverSource.indexOf("async function resolveArmyOrderById"),
   serverSource.indexOf("exports.resolveArmyOrder")
 );
-const alliedBranchStart = resolveSource.indexOf("if (becameClanAllies)");
-const returningBranchStart = resolveSource.indexOf("if (isReturning)", alliedBranchStart);
+const alliedBranchStart = resolveSource.indexOf("if (becameClanAllies || revokedRetaliation)");
+const returningBranchStart = resolveSource.indexOf("if (isReturning && rallyAttack)", alliedBranchStart);
+assert.ok(alliedBranchStart >= 0 && returningBranchStart > alliedBranchStart, "The allied return branch must be inspected independently of normal combat.");
 const alliedBranch = resolveSource.slice(alliedBranchStart, returningBranchStart);
 assert.match(alliedBranch, /createAlliedTargetReturnMovement\(army,\s*nowMs\)/);
 assert.match(

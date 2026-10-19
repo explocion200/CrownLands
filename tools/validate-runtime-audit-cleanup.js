@@ -18,25 +18,34 @@ async function validateClanPower() {
   const records = new Map([
     ["players/player", {...identity, clanId: "clan"}],
     ["players/player/stats/global", {...identity, kingPower: 200}],
-    ["clans/clan", {...identity, totalKingPower: 1000}],
+    ["clans/clan", {...identity, status: "active", totalKingPower: 1000}],
     ["clans/clan/members/player", {...identity, kingPower: 0, lastLoginAtMs: 300}],
+    ["clans/clan/members/other", {...identity, kingPower: 1000}],
+    ["clans/clan/members/removed", {...identity, status: "removed", kingPower: 9000}],
+    ["clans/clan/members/archived", {...identity, resetGeneration: "old", kingPower: 9000}],
   ]);
   let reads = 0, writes = 0;
   const doc = name => ({path: name});
   const tx = {
-    get: async ref => { reads++; return {ref, exists: records.has(ref.path), data: () => records.get(ref.path)}; },
+    get: async ref => {
+      reads++;
+      if (ref.collection) return {docs: [...records].filter(([name]) => name.startsWith(`${ref.path}/`))
+        .map(([name, data]) => ({id: name.split("/").at(-1), ref: doc(name), data: () => data}))};
+      return {ref, exists: records.has(ref.path), data: () => records.get(ref.path)};
+    },
     set: (ref, data) => { writes++; records.set(ref.path, {...records.get(ref.path), ...data}); },
   };
   const context = vm.createContext({
-    exports: {}, db: {doc}, RESET_GENERATION: identity.resetGeneration, ONLINE_WORLD_ID: identity.worldId,
+    exports: {}, db: {doc, collection: name => ({path: name, collection: true})}, RESET_GENERATION: identity.resetGeneration, ONLINE_WORLD_ID: identity.worldId,
     safeString: value => String(value || ""), safeNumber: (value, fallback) => Number(value) || fallback,
     onDocumentWritten: (_options, handler) => handler, withDocumentRealmShard: handler => handler,
     getCurrentRealmShardId: () => identity.realmShardId,
+    getRealmStorageId: () => "audit-realm",
     REALM_TOPOLOGY: {normalizeRealmShardId: value => value || "legacy"},
     runTransactionWithInfrastructureRetry: callback => callback(tx),
     FieldValue: {serverTimestamp: () => 1}, playerGlobalStatsRef: uid => doc(`players/${uid}/stats/global`),
     leaderboardEntryRef: uid => doc(`leaderboard/${uid}`), clanIdentityPatch: () => ({}),
-    writeClanLeaderboard: (transaction, id, clan, patch) => transaction.set(doc(`clanLeaderboard/${id}`), {...clan, ...patch}),
+    writeClanLeaderboard: (transaction, id, clan, patch) => transaction.set(doc(`clanLeaderboards/audit-realm/entries/${id}`), {...clan, ...patch}),
     getPlayerLastLoginAtMs: data => data.lastLoginAtMs || 0,
   });
   vm.runInContext(section("function isCurrentRealmPowerSnapshot(", "function getPlayerPowerSnapshot("), context);
@@ -54,10 +63,17 @@ async function validateClanPower() {
   records.get("players/player/stats/global").kingPower = 50;
   await handler(event(200, 50));
   assert.equal(records.get("clans/clan").totalKingPower, 1050, "Legitimate decreases are applied");
-  assert.equal(records.get("clanLeaderboard/clan").totalKingPower, 1050);
+  assert.equal(records.get("clanLeaderboards/audit-realm/entries/clan").totalKingPower, 1050);
   reads = 0;
+  writes = 0;
   await handler(event(50, 50));
-  assert.equal(reads, 0, "Unchanged power does not perform database reads");
+  assert.equal(reads, 5, "Current stats, roster and both totals are checked in a bounded transaction");
+  assert.equal(writes, 0, "An already reconciled unchanged event performs no writes");
+  records.get("clans/clan").totalKingPower = 9999;
+  records.get("clanLeaderboards/audit-realm/entries/clan").totalKingPower = 8888;
+  await handler(event(50, 50));
+  assert.equal(records.get("clans/clan").totalKingPower, 1050, "Unchanged player power must still repair a stale roster aggregate");
+  assert.equal(records.get("clanLeaderboards/audit-realm/entries/clan").totalKingPower, 1050);
   writes = 0;
   records.get("players/player/stats/global").resetGeneration = "archived";
   await handler(event(50, 90));
