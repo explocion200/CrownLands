@@ -37,6 +37,7 @@ function harness() {
     holdingTowerSnapshots: new Map([["tower-a", { id: "tower-a", ownerMember: true, clanId: "clan-a" }]]),
     clanContent: { querySelector: () => input }, document: { activeElement: input },
     getOnlineApi: () => api, getCurrentOnlineUid: () => context.uid,
+    renderClanHudAccess() {},
     renderClanView: () => { renders.push("panel"); input.value = ""; },
     renderHoldingTowerModal: () => renders.push("tower"),
     markOnlineRealtimeRecoveryNeeded() {}, formatNumber: String,

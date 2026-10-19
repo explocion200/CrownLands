@@ -2289,6 +2289,9 @@ let clanGiftActivity = null;
 let clanWorldBenefits = null;
 let clanSocialStateUnsubscribe = null;
 let activeClanSocialSubscriptionId = "";
+let activeClanSocialSubscriptionScope = "";
+let clanMemberRewardsReady = false;
+let lastClanActionNoticeSignature = "";
 let clanQuestProgressUnsubscribe = null;
 let activeClanQuestSubscriptionKey = "";
 let activeClanQuestPeriod = null;
@@ -2327,6 +2330,8 @@ let clanNavigationClanId = "";
 let clanGiftActionInFlight = false;
 let clanQuestClaimInFlightId = "";
 let clanTreasuryStatus = null;
+let clanTreasuryStatusScope = "";
+let clanTreasuryResetRetryAtMs = 0;
 let clanTreasuryLoading = false;
 let clanTreasuryActionInFlight = false;
 let clanTreasuryClanId = "";
@@ -25577,6 +25582,42 @@ function clearOwnClanShieldPreview() {
   try { window.localStorage?.removeItem(CLAN_SHIELD_PREVIEW_STORAGE_KEY); } catch (_) { /* Storage is optional. */ }
 }
 
+function getClanActionAvailability(nowMs = getClanQuestServerNowMs()) {
+  const id = state?.clanId, uid = getCurrentOnlineUid(), api = getOnlineApi();
+  const active = Boolean(id && uid && api?.isSignedIn?.() && isOnlineWorldActive()
+    && clanSnapshot?.id === id && clanSnapshot.status === "active");
+  const gift = active && typeof api.sendClanGift === "function" && clanRosterReady && activeClanSubscriptionId === id
+    && activeClanSocialSubscriptionId === id && activeClanSocialSubscriptionScope === getOnlineSessionRequestScope()
+    && clanMemberRewardsReady && !clanGiftActionInFlight && !clanQuestClaimInFlightId
+    && clanMembers.some(member => (member.uid || member.id) === uid && member.status !== "removed")
+    && clanMembers.some(member => (member.uid || member.id) && (member.uid || member.id) !== uid && member.status !== "removed")
+    && normalizeTimestampMs(clanMemberRewards?.lastGiftSentAtMs) + CLAN_GIFT_COOLDOWN_MS <= nowMs;
+  const donate = active && typeof api.donateClanTreasuryGold === "function"
+    && clanTreasuryStatusScope === getClanTreasuryScope() && clanTreasuryClanId === id && clanTreasuryStatus?.clanId === id
+    && clanTreasuryStatus.utcDate === getUtcDateKeyAtMs(nowMs) && Boolean(clanTreasuryStatus.treasury)
+    && !clanTreasuryLoading && !clanTreasuryActionInFlight
+    && Math.floor(Number(state.gold) || 0) > 0 && Math.floor(Number(clanTreasuryStatus.allowance?.remaining) || 0) > 0;
+  return { gift: Boolean(gift), donate: Boolean(donate) };
+}
+
+function renderClanActionNotice(available, label) {
+  return available ? `<span class="notification-badge clan-action-notice" aria-label="${label}">!</span>` : "";
+}
+
+function refreshClanActionNotifications() {
+  const signature = JSON.stringify([getOnlineSessionRequestScope(), state?.clanId, getClanActionAvailability()]);
+  if (signature !== lastClanActionNoticeSignature) {
+    lastClanActionNoticeSignature = signature;
+    refreshClanTreasuryViews();
+  }
+  const nowMs = getClanQuestServerNowMs();
+  if (clanTreasuryStatus?.utcDate && clanTreasuryStatus.utcDate !== getUtcDateKeyAtMs(nowMs)
+      && !clanTreasuryRequest && !clanTreasuryLoading && nowMs >= clanTreasuryResetRetryAtMs) {
+    clanTreasuryResetRetryAtMs = nowMs + 60000;
+    void loadClanTreasuryStatus({ force: true });
+  }
+}
+
 function renderClanHudAccess() {
   if (!clanHudBtn || !clanHudIcon || !state) return;
   const hasClan = Boolean(state.clanId);
@@ -25589,9 +25630,13 @@ function renderClanHudAccess() {
     ? clanApplications.filter(application => application.status === "pending" && application.clanId === state.clanId).length : 0;
   const rallyCount = hasClan ? onlineClanRallies.length : 0;
   const notificationCount = applicationCount + rallyCount;
+  const actions = getClanActionAvailability();
+  const actionReady = actions.gift || actions.donate;
   const notificationLabel = [
     applicationCount ? `${applicationCount} pending ${applicationCount === 1 ? "application" : "applications"}` : "",
     rallyCount ? `${rallyCount} active ${rallyCount === 1 ? "rally" : "rallies"}` : "",
+    actions.gift ? "Clan gift ready to send" : "",
+    actions.donate ? "Clan Tower donation available" : "",
   ].filter(Boolean).join(", ");
   const signature = [
     state.clanId || "",
@@ -25599,6 +25644,7 @@ function renderClanHudAccess() {
     clanTag,
     onlineClanRallies.length,
     applicationCount,
+    actionReady, actions.gift, actions.donate,
     JSON.stringify(shield),
   ].join("|");
   if (signature === lastClanHudSignature) return;
@@ -25608,10 +25654,10 @@ function renderClanHudAccess() {
   for (const button of [clanHudBtn, clanTabBtn]) {
     if (!button) continue;
     button.classList.toggle("has-rallies", rallyCount > 0);
-    button.classList.toggle("has-clan-notifications", notificationCount > 0);
+    button.classList.toggle("has-clan-notifications", notificationCount > 0 || actionReady);
     button.dataset.rallyCount = rallyCount ? String(rallyCount) : "";
     button.dataset.applicationCount = applicationCount ? String(applicationCount) : "";
-    button.dataset.clanNotificationCount = notificationCount ? (notificationCount > 99 ? "99+" : String(notificationCount)) : "";
+    button.dataset.clanNotificationCount = notificationCount ? (notificationCount > 99 ? "99+" : String(notificationCount)) : actionReady ? "!" : "";
     button.title = notificationLabel;
   }
   clanTabBtn?.setAttribute("aria-label", `Clan${notificationLabel ? `, ${notificationLabel}` : ""}`);
@@ -25785,6 +25831,10 @@ function stopClanRealtimeSubscriptions({ clear = true, preserveApplications = fa
   if (typeof clanSocialStateUnsubscribe === "function") clanSocialStateUnsubscribe();
   clanSocialStateUnsubscribe = null;
   activeClanSocialSubscriptionId = "";
+  activeClanSocialSubscriptionScope = "";
+  clanMemberRewardsReady = false;
+  clanGiftActionInFlight = false;
+  clanQuestClaimInFlightId = "";
   if (typeof clanQuestProgressUnsubscribe === "function") clanQuestProgressUnsubscribe();
   clanQuestProgressUnsubscribe = null;
   activeClanQuestSubscriptionKey = "";
@@ -25926,7 +25976,7 @@ function updateClanGiftCountdown() {
   const sendButton = clanContent?.querySelector('[data-clan-action="send-gift"]');
   if (!countdown && !sendButton) return;
   const lastGiftSentAtMs = normalizeTimestampMs(clanMemberRewards?.lastGiftSentAtMs);
-  const cooldownMs = Math.max(0, lastGiftSentAtMs + CLAN_GIFT_COOLDOWN_MS - Date.now());
+  const cooldownMs = Math.max(0, lastGiftSentAtMs + CLAN_GIFT_COOLDOWN_MS - getClanQuestServerNowMs());
   if (countdown) countdown.textContent = cooldownMs ? `Ready in ${formatDuration(Math.ceil(cooldownMs / 1000))}` : "Ready now";
   if (sendButton) sendButton.disabled = clanGiftActionInFlight || cooldownMs > 0;
 }
@@ -26045,22 +26095,32 @@ function updateClanMemberLastLoginTimers() {
 function startClanSocialStateSubscription(api, clanId) {
   const id = String(clanId || "").trim();
   if (!id || !api?.subscribeClanSocialState) return false;
-  if (activeClanSocialSubscriptionId === id && typeof clanSocialStateUnsubscribe === "function") return true;
+  const scope = getOnlineSessionRequestScope(), generation = clanStateSubscriptionGeneration;
+  if (activeClanSocialSubscriptionId === id && activeClanSocialSubscriptionScope === scope && typeof clanSocialStateUnsubscribe === "function") return true;
   if (typeof clanSocialStateUnsubscribe === "function") clanSocialStateUnsubscribe();
   activeClanSocialSubscriptionId = id;
+  activeClanSocialSubscriptionScope = scope;
+  clanMemberRewardsReady = false;
+  const current = () => generation === clanStateSubscriptionGeneration && scope === getOnlineSessionRequestScope()
+    && activeClanSocialSubscriptionId === id && state?.clanId === id;
   clanMemberRewards = null;
   clanGiftActivity = null;
   clanWorldBenefits = null;
   clanSocialStateUnsubscribe = api.subscribeClanSocialState(id, {
     onMemberRewards: rewards => {
+      if (!current()) return;
       clanMemberRewards = rewards;
+      clanMemberRewardsReady = true;
+      renderClanHudAccess();
       if (activeProfileTab === "clan") renderClanView();
     },
     onGiftActivity: activity => {
+      if (!current()) return;
       clanGiftActivity = activity;
       if (activeProfileTab === "clan") renderClanView();
     },
     onWorldBenefits: benefits => {
+      if (!current()) return;
       const previousRevision = Number(clanWorldBenefits?.revision) || 0;
       clanWorldBenefits = benefits;
       if ((Number(benefits?.revision) || 0) !== previousRevision) {
@@ -26069,6 +26129,9 @@ function startClanSocialStateSubscription(api, clanId) {
       }
     },
     onError: (error, source) => {
+      if (!current()) return;
+      if (source === "memberRewards") clanMemberRewardsReady = false;
+      renderClanHudAccess();
       markOnlineRealtimeRecoveryNeeded(error);
       console.warn(`Clan ${source || "social"} subscription failed`, error);
     },
@@ -26076,6 +26139,7 @@ function startClanSocialStateSubscription(api, clanId) {
   startClanQuestProgressSubscription(api, id);
   if (clanGiftCountdownTimer) clearInterval(clanGiftCountdownTimer);
   clanGiftCountdownTimer = setInterval(() => {
+    refreshClanActionNotifications();
     updateClanGiftCountdown();
     updateClanNameChangeCountdown();
     updateClanQuestCountdown();
@@ -26514,6 +26578,7 @@ function isClanSectionActive(section) {
 }
 
 function renderClanSectionNavigation(canManageApplications = false) {
+  const actions = getClanActionAvailability();
   const pendingMinutes = Math.max(0, Math.floor(Number(clanMemberRewards?.pendingGiftGoldMinutes) || 0));
   const selfUid = getCurrentOnlineUid();
   const selfMember = clanMembers.find(member => String(member?.uid || member?.id || "") === selfUid);
@@ -26551,6 +26616,7 @@ function renderClanSectionNavigation(canManageApplications = false) {
       count: rewardReadyCount,
       countLabel: `${rewardReadyCount} ready ${rewardReadyCount === 1 ? "reward" : "rewards"}`,
       alert: rewardReadyCount > 0,
+      available: actions.gift || actions.donate,
     },
     {
       key: "members",
@@ -26567,8 +26633,9 @@ function renderClanSectionNavigation(canManageApplications = false) {
     <nav class="clan-section-nav" role="tablist" aria-label="Clan sections">
       ${definitions.map(section => {
         const active = isClanSectionActive(section.key);
-        const notification = section.alert || section.key === "warroom";
-        const description = section.countLabel ? `${section.label}, ${section.countLabel}` : section.label;
+        const notification = section.alert || section.available || section.key === "warroom";
+        const description = (section.countLabel ? `${section.label}, ${section.countLabel}` : section.label)
+          + (section.available ? ", clan action available" : "");
         return `
           <button id="clanSectionTab${section.key[0].toUpperCase()}${section.key.slice(1)}" type="button" role="tab"
             data-clan-action="section" data-clan-section="${section.key}"
@@ -26576,7 +26643,7 @@ function renderClanSectionNavigation(canManageApplications = false) {
             aria-label="${escapeHtml(description)}" tabindex="${active ? "0" : "-1"}" class="${active ? "active" : ""}">
             <span class="clan-section-nav-mark" aria-hidden="true">${section.mark}</span>
             <span>${section.label}</span>
-            ${section.count ? `<b class="${notification ? "alert notification-badge" : ""}" aria-hidden="true">${notification && section.count > 99 ? "99+" : formatNumber(section.count)}</b>` : ""}
+            ${section.count || section.available ? `<b class="${notification ? "alert notification-badge" : ""}" aria-hidden="true">${section.count ? notification && section.count > 99 ? "99+" : formatNumber(section.count) : "!"}</b>` : ""}
           </button>`;
       }).join("")}
     </nav>`;
@@ -26747,14 +26814,17 @@ function resetClanTreasuryState() {
   clanTreasurySubscriptionScope = "";
   clanTreasuryEpoch++;
   clanTreasuryStatus = null;
+  clanTreasuryStatusScope = "";
   clanTreasuryClanId = "";
   clanTreasuryRequest = null;
   clanTreasuryLoading = false;
   clanTreasuryLoadAttempted = false;
   clanTreasuryActionInFlight = false;
+  clanTreasuryResetRetryAtMs = 0;
 }
 
 function refreshClanTreasuryViews() {
+  renderClanHudAccess();
   if (activeProfileTab === "clan") {
     const input = clanContent?.querySelector("[data-clan-treasury-donation]");
     const value = input?.value;
@@ -26781,6 +26851,7 @@ function applyClanTreasuryStatus(clanId, update, scope = getClanTreasuryScope())
     ? incoming : previous?.treasury;
   clanTreasuryClanId = clanId;
   clanTreasuryStatus = { ...previous, ...update, clanId, treasury };
+  clanTreasuryStatusScope = scope;
   refreshClanTreasuryViews();
   return true;
 }
@@ -26940,8 +27011,9 @@ function renderClanTreasuryPanel() {
 function renderClanGiftPanel() {
   const pendingMinutes = Math.max(0, Math.floor(Number(clanMemberRewards?.pendingGiftGoldMinutes) || 0));
   const lastGiftSentAtMs = normalizeTimestampMs(clanMemberRewards?.lastGiftSentAtMs);
-  const cooldownMs = Math.max(0, lastGiftSentAtMs + CLAN_GIFT_COOLDOWN_MS - Date.now());
+  const cooldownMs = Math.max(0, lastGiftSentAtMs + CLAN_GIFT_COOLDOWN_MS - getClanQuestServerNowMs());
   const hours = formatClanProductionHours(pendingMinutes);
+  const actions = getClanActionAvailability();
   const recentDonations = (Array.isArray(clanGiftActivity?.recentDonations) ? clanGiftActivity.recentDonations : [])
     .map(donation => ({
       donorUid: String(donation?.donorUid || "").trim(),
@@ -26956,7 +27028,7 @@ function renderClanGiftPanel() {
       <div class="paper gift-feature"><img class="gift-art" src="assets/optimized/gold-coin-192x192-f2620b39eb0d.webp" alt=""><div class="gift-copy"><div class="profile-section-heading"><span>Clan generosity</span><h3>Gold Gifts</h3></div>
       <p>Send every other clan member 30 minutes of base gold production once every five hours.</p></div>
       <div class="clan-gift-actions">
-        <button type="button" data-clan-action="send-gift" ${clanGiftActionInFlight || cooldownMs ? "disabled" : ""}>${clanGiftActionInFlight ? "Sending…" : "Send .5h Gold Gift"}</button>
+        <button type="button" class="clan-action-notice-host" data-clan-action="send-gift" ${clanGiftActionInFlight || cooldownMs ? "disabled" : ""}>${clanGiftActionInFlight ? "Sending…" : "Send .5h Gold Gift"}${renderClanActionNotice(actions.gift, "Clan gift ready to send")}</button>
         <small data-clan-gift-cooldown>${cooldownMs ? `Ready in ${formatDuration(Math.ceil(cooldownMs / 1000))}` : "Ready now"}</small>
         <button type="button" class="profile-primary-btn" data-clan-action="collect-gifts" ${clanGiftActionInFlight || !pendingMinutes ? "disabled" : ""}>${clanGiftActionInFlight ? "Collecting…" : `Collect ${hours}h Gold`}</button>
       </div>
@@ -27021,9 +27093,10 @@ function renderClanQuestPanel() {
 }
 
 function renderClanOverviewPanel(canLead = false) {
+  const actions = getClanActionAvailability();
   const pendingMinutes = Math.max(0, Math.floor(Number(clanMemberRewards?.pendingGiftGoldMinutes) || 0));
   const captureCount = Math.max(0, Math.floor(Number(getCurrentClanQuestProgress()?.captureCount) || 0));
-  const giftCooldownMs = Math.max(0, normalizeTimestampMs(clanMemberRewards?.lastGiftSentAtMs) + CLAN_GIFT_COOLDOWN_MS - Date.now());
+  const giftCooldownMs = Math.max(0, normalizeTimestampMs(clanMemberRewards?.lastGiftSentAtMs) + CLAN_GIFT_COOLDOWN_MS - getClanQuestServerNowMs());
   const giftValue = pendingMinutes ? `${formatClanProductionHours(pendingMinutes)}h ready` : giftCooldownMs ? "Resting" : "Send now";
   const canManageApplications = ["leader", "officer"].includes(state.clanRole);
   return `
@@ -27040,7 +27113,7 @@ function renderClanOverviewPanel(canLead = false) {
         <header class="activity-heading"><h2>Clan affairs</h2><span>The strength of your house</span></header>
         <div class="activity-scroll" tabindex="0" aria-label="Clan activity shortcuts"><div class="activity-grid">
           <button type="button" class="activity-card war-room" data-clan-action="section" data-clan-section="warroom"><img src="assets/icons/skills/atlas-v1/marchOrders.webp" alt=""><span class="card-heading">War Room</span><strong>${formatNumber(onlineClanRallies.length)}</strong><span class="card-state">active rallies</span><span class="card-footer">Coordinate clan rallies <i aria-hidden="true">›</i></span></button>
-          <button type="button" class="activity-card gifts ${pendingMinutes ? "ready" : ""}" data-clan-action="section" data-clan-section="rewards" data-clan-reward="gifts"><img src="assets/optimized/gold-coin-192x192-f2620b39eb0d.webp" alt=""><span class="card-heading">Gold gifts</span><strong>${escapeHtml(giftValue)}</strong><span class="card-state">${giftCooldownMs ? `Send in ${formatDuration(Math.ceil(giftCooldownMs / 1000))}` : "Gift available now"}</span><span class="card-footer">Send or collect <i aria-hidden="true">›</i></span></button>
+          <button type="button" class="activity-card gifts clan-action-notice-host ${pendingMinutes ? "ready" : ""}" data-clan-action="section" data-clan-section="rewards" data-clan-reward="gifts">${renderClanActionNotice(actions.gift, "Clan gift ready to send")}<img src="assets/optimized/gold-coin-192x192-f2620b39eb0d.webp" alt=""><span class="card-heading">Gold gifts</span><strong>${escapeHtml(giftValue)}</strong><span class="card-state">${giftCooldownMs ? `Send in ${formatDuration(Math.ceil(giftCooldownMs / 1000))}` : "Gift available now"}</span><span class="card-footer">Send or collect <i aria-hidden="true">›</i></span></button>
           <button type="button" class="activity-card conquest" data-clan-action="section" data-clan-section="rewards" data-clan-reward="conquest"><img src="assets/icons/reward-daily-quests-r1.svg" alt=""><span class="card-heading">Weekly conquest</span><strong>${formatNumber(captureCount)} / ${formatNumber(CLAN_QUEST_MAX_CAPTURES)}</strong><span class="card-state">Resets Monday UTC</span><span class="conquest-track" role="progressbar" aria-label="Weekly conquest" aria-valuemin="0" aria-valuemax="${CLAN_QUEST_MAX_CAPTURES}" aria-valuenow="${Math.min(captureCount, CLAN_QUEST_MAX_CAPTURES)}"><i style="width:${Math.min(100,captureCount / CLAN_QUEST_MAX_CAPTURES * 100)}%"></i></span><span class="card-footer">View conquest rewards <i aria-hidden="true">›</i></span></button>
           <button type="button" class="activity-card roster" data-clan-action="section" data-clan-section="members"><img src="assets/optimized/troops-helmet-192x192-8c144647d31b.webp" alt=""><span class="card-heading">Roster</span><strong>${formatNumber(clanMembers.length)} / 30</strong><span class="card-state">${canManageApplications && clanApplications.length ? `${clanApplications.length} applications waiting` : "Members of your house"}</span><span class="card-footer">View household <i aria-hidden="true">›</i></span></button>
         </div></div>
@@ -27073,10 +27146,11 @@ function renderClanMembersPanel(canLead = false, canManageApplications = false) 
 }
 
 function renderClanRewardsPanel() {
+  const actions = getClanActionAvailability();
   const sections = [{ key: "gifts", label: "Gold Gifts", render: renderClanGiftPanel }, { key: "conquest", label: "Weekly Conquest", render: renderClanQuestPanel }, { key: "treasury", label: "Treasury", render: renderClanTreasuryPanel }];
   const selected = sections.find(section => section.key === activeClanRewardSection) || sections[0];
   return `<section id="clanRewardsPanel" class="clan-section-panel clan-rewards-panel ${isClanSectionActive("rewards") ? "active" : ""}" role="tabpanel" aria-labelledby="clanSectionTabRewards">
-    <nav class="rewards-tabs" aria-label="Clan rewards">${sections.map(section => `<button type="button" data-clan-action="reward-section" data-clan-reward="${section.key}" aria-pressed="${selected.key === section.key}">${section.label}</button>`).join("")}</nav>
+    <nav class="rewards-tabs" aria-label="Clan rewards">${sections.map(section => `<button type="button" class="clan-action-notice-host" data-clan-action="reward-section" data-clan-reward="${section.key}" aria-pressed="${selected.key === section.key}">${section.label}${renderClanActionNotice(section.key === "gifts" ? actions.gift : section.key === "treasury" && actions.donate, section.key === "gifts" ? "Clan gift ready to send" : "Clan Tower donation available")}</button>`).join("")}</nav>
     <div class="clan-reward-body scroll-region" tabindex="0" aria-label="${selected.label}">${selected.render()}</div>
   </section>`;
 }
@@ -27545,10 +27619,11 @@ async function runClanAction(action, payload = {}) {
 async function runClanSocialAction(action, rewardId = "", sourceElement = null) {
   const api = getOnlineApi();
   if (!api || clanGiftActionInFlight || clanQuestClaimInFlightId) return;
-  const soundScope = getOnlineSessionRequestScope();
+  const soundScope = getOnlineSessionRequestScope(), clanId = state?.clanId;
   const rewardSourceAnchor = captureAnimationAnchor(sourceElement);
   if (action === "send-gift" || action === "collect-gifts") clanGiftActionInFlight = true;
   if (action === "claim-quest") clanQuestClaimInFlightId = rewardId;
+  renderClanHudAccess();
   renderClanView();
   try {
     let result;
@@ -27558,7 +27633,7 @@ async function runClanSocialAction(action, rewardId = "", sourceElement = null) 
       const questPeriodId = (activeClanQuestPeriod || getCurrentClanQuestPeriod()).questPeriodId;
       result = await api.claimClanQuestReward({ rewardId, questPeriodId });
     }
-    if (!result) return;
+    if (!result || soundScope !== getOnlineSessionRequestScope() || state?.clanId !== clanId) return;
     if (result.memberRewards) clanMemberRewards = { ...(clanMemberRewards || {}), ...result.memberRewards };
     if (result.giftActivity) clanGiftActivity = result.giftActivity;
     applyServerEconomyResult(result);
@@ -27596,11 +27671,14 @@ async function runClanSocialAction(action, rewardId = "", sourceElement = null) 
       }
     }
   } catch (error) {
-    rejectGameAction(error?.message || "Clan reward action failed.");
+    if (soundScope === getOnlineSessionRequestScope() && state?.clanId === clanId) rejectGameAction(error?.message || "Clan reward action failed.");
   } finally {
-    clanGiftActionInFlight = false;
-    clanQuestClaimInFlightId = "";
-    renderClanView();
+    if (soundScope === getOnlineSessionRequestScope() && state?.clanId === clanId) {
+      clanGiftActionInFlight = false;
+      clanQuestClaimInFlightId = "";
+      renderClanHudAccess();
+      renderClanView();
+    }
   }
 }
 

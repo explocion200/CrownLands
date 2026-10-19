@@ -52,3 +52,5 @@
 
 #incomingAttackBtn, #outgoingAttackBtn { position: relative; }
 #incomingAttackCount, #outgoingAttackCount { position: absolute; top: 2px; right: 3px; z-index: 2; }
+.clan-action-notice-host { position: relative; }
+#profileScreen #clanContent .clan-action-notice { position: absolute !important; top: 2px; right: 2px; z-index: 2; }

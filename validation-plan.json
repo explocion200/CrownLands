@@ -1,38 +1,23 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "bc36102bf6530f17f608b3b8946c4cfcd7522cca",
+  "baseCommit": "e3682f440e28fdeb0fe3c10de90ad84b139d2875",
   "coverage": [
     {
       "paths": [
-        "notification-badges.css",
-        "index.html",
         "game.js",
-        "chat-ui.js",
-        "social-ui.js",
-        "social-ui.css",
-        "tools/validate-notification-badges-browser.js"
+        "notification-badges.css",
+        "tools/validate-clan-action-notifications-browser.js"
       ],
       "tests": [
-        "tools/validate-notification-badges-browser.js",
-        "tools/validate-chat.js",
-        "tools/validate-social-browser.js",
-        "tools/validate-clan-notifications-browser.js"
+        "tools/validate-clan-action-notifications-browser.js",
+        "tools/validate-clan-notifications-browser.js",
+        "tools/validate-clan-treasury-browser.js",
+        "tools/validate-clan-treasury-client.js",
+        "tools/validate-clan-ledger-ui.js",
+        "tools/validate-gold-spend-audio.js",
+        "tools/validate-ui-refresh-browser.js"
       ],
-      "reason": "Shared numeric circle styles and renderer wiring affect HUD movement/report/clan/reward counts and Global, Clan and private unread indicators. Real-browser fixtures cover desktop and two landscape sizes, badge geometry and contrast under optional themes, exact/capped counts, combined private/public HUD state, read and account clearing, and unchanged button bounds. Existing chat/social and clan notification tests cover session lifecycle, read signals, role filtering and reviewed application clearing. No server authority or message delivery behavior changes."
-    },
-    {
-      "paths": [
-        "achievements-ui.js",
-        "player-profile-ui.js",
-        "tools/validate-ui-stutter-browser.js",
-        "tools/validate-reward-window-layout-browser.js"
-      ],
-      "tests": [
-        "tools/validate-notification-badges-browser.js",
-        "tools/validate-ui-stutter-browser.js",
-        "tools/validate-reward-window-layout-browser.js"
-      ],
-      "reason": "Claimable reward summaries and profile alerts reuse the shared badge. Test live badge updates and removal without replacing focused controls, reward-window navigation and desktop/landscape layout, including the existing shared modal dependencies. Check that the optional achievement theme does not retain a second pill around the shared numeric circle."
+      "reason": "Clan HUD/Profile, reward navigation and gift/Treasury controls gain unquantified availability notices using confirmed current-clan/session data. Browser checks cover first gift vs unknown snapshot, active recipients, five-hour server-clock boundary, Gold and allowance limits, in-flight actions, failed/successful gifts, UTC expiry with bounded deduplicated reload, stale snapshots/receipts, numeric precedence, focused donation drafts and unchanged desktop/landscape button bounds. Existing clan tests cover application role filtering, counts and shield continuity; Treasury tests cover receipt/revision ordering, confirmation, duplicate donation, input and recovery. Shared social action/timer dependencies require audio and UI refresh checks. Server authority, economy and costs are unchanged, so emulator suites are not applicable."
     },
     {
       "paths": [
@@ -41,25 +26,28 @@
         "barracks-gear-ui.js",
         "gatehouse-gear-ui.js",
         "royal-stables-gear-ui.js",
-        "inner-city-estate.js"
+        "inner-city-estate.js",
+        "tools/validate-notification-badges-browser.js"
       ],
       "tests": [
-        "tools/validate-notification-badges-browser.js",
-        "tools/validate-gear-inventory-browser.js"
+        "tools/validate-notification-badges-browser.js"
       ],
-      "reason": "Equipment grouping now exposes the actual new-item count; new/upgrade-ready and estate notice markup use the shared style. Browser checks exercise all four real officer screens at desktop and two landscape sizes and verify multiple new copies per stack. Existing large-inventory test protects grouping performance and amount of shared economy work. Equipment eligibility, upgrade/equip actions and building rules are unchanged; no emulator changes are required."
+      "reason": "Replace only unquantified ready/new-building glyphs with !, retaining actual new-item counts and existing eligibility/clearing. The shared-badge browser fixture renders all four officer panels plus HUD/report/reward counts at desktop and two landscape sizes, checks white-on-burgundy circles and preserved dimensions. No equipment action, grouping, balance or building progression logic changes."
     },
     {
       "paths": [
-        "service-worker.js",
-        "tools/build-production-client.js",
-        "tools/generate-release-manifest.js",
-        "tools/validate-production-artifact.js"
+        "tools/validate-clan-treasury-client.js",
+        "tools/validate-clan-ledger-ui.js",
+        "tools/validate-gold-spend-audio.js",
+        "tools/validate-ui-refresh-browser.js"
       ],
       "tests": [
-        "tools/validate-production-artifact.js"
+        "tools/validate-clan-treasury-client.js",
+        "tools/validate-clan-ledger-ui.js",
+        "tools/validate-gold-spend-audio.js",
+        "tools/validate-ui-refresh-browser.js"
       ],
-      "reason": "Ship and precache the new stylesheet, include it in client build identity, and require it in the validated production artifact. The targeted workflow also builds the client and validates references and asset budgets; no backend or publisher installation is changed."
+      "reason": "Update isolated harness dependencies for the new HUD refresh and availability helpers; keep the existing ordinary rally-cap stub in the ledger fixture. Set/restore the current clan in the UI refresh fixture so real guarded social callbacks still exercise refreshes while public profiles are open. Preserve existing assertions and current-session action coverage."
     },
     {
       "paths": [
@@ -70,14 +58,14 @@
         "tools/validate-asset-performance-budgets.js",
         "tools/validate-production-artifact.js"
       ],
-      "reason": "Measure the complete delivered shell against main: the feature adds at most 4,465 bytes, leaving at most a 3,035-byte cap overage. Bound it by 3 KiB, constrain the new CSS to 2 KiB and allow the 749-byte chat sub-budget overage within 1 KiB. Preserve all image, runtime and network budgets. Artifact validation shares the total shell cap; no limits are disabled. The game and gear entrypoint markup increases are bounded at 0.5 and 0.25 KiB within the same total allowance."
+      "reason": "Measured total shell is 4,604,354 bytes, 5,058 over the existing cap: bound the increase at 5 KiB. game.js grows 4,937 bytes with a 5 KiB source step; the badge stylesheet grows 166 bytes within a 0.25 KiB step. Existing asset, runtime and network limits remain enforced. Reuse subscriptions and the clan tick; only an expired UTC allowance triggers a deduplicated read with one-minute failure backoff."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Records the owner-confirmed shared notification design, scope and preserved eligibility/clearing behavior. Documentation adds no runtime behavior; implementation and shared dependencies are covered above."
+      "reason": "Record the owner-confirmed ! for unquantified availability and gift/Treasury eligibility, parent count precedence and unchanged server rules. Documentation has no executable behavior; affected implementation is covered above."
     }
   ]
 }

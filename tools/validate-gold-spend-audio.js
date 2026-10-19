@@ -142,7 +142,7 @@ async function run() {
     Object.assign(f.context, {
       getOnlineApi: () => ({ sendClanGift: () => response.promise }),
       clanGiftActionInFlight: false, clanQuestClaimInFlightId: "",
-      captureAnimationAnchor: () => null, renderClanView() {}, rejectGameAction() {},
+      captureAnimationAnchor: () => null, renderClanView() {}, renderClanHudAccess() {}, rejectGameAction() {},
     });
     vm.runInContext(extract(game, "runClanSocialAction"), f.context);
     const pending = f.context.runClanSocialAction("send-gift");

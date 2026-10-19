@@ -101,7 +101,7 @@ assert(["chat-ledger-ui.css", "chat-ui.js", "chat-translation.js", "reward-ledge
   "assets/icons/chat-ledger-seal.svg", "assets/icons/hero-reward-crown.svg"]
   .reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 119 * 1024,
 "Chat and reward ledger shell files exceed their 119 KiB budget.");
-assert(normalizedTextBytes("notification-badges.css") <= 2 * 1024, "Shared notification styles exceed 2 KiB.");
+assert(normalizedTextBytes("notification-badges.css") <= 2.25 * 1024, "Shared notification styles exceed 2.25 KiB.");
 const skillEmblemFiles = fs.readdirSync(path.join(root, "assets/icons/skills")).filter(name => name.endsWith(".svg"));
 assert.equal(skillEmblemFiles.length, 8, "Keep the eight legacy skill emblems available to older clients.");
 for (const name of skillEmblemFiles) assert(statBytes(`assets/icons/skills/${name}`) <= 2 * 1024, `${name} exceeds its 2 KiB emblem budget.`);
@@ -237,7 +237,8 @@ const entrypointBudgets = {
   // Explicit location control classes, accessible labels and retained atlas context: at most 1 KiB over the prior cap.
   // Numeric badge markup adds 405 bytes (320 beyond remaining headroom).
   // Bound that source increase at 0.5 KiB within the shared shell allowance.
-  "game.js": (1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25 + 2 + 3 + 0.25 + 2 + 1 + 0.5) * 1024,
+  // Clan availability notices and scoped cooldown/day refresh add 4,937 bytes; bound at 5 KiB.
+  "game.js": (1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25 + 2 + 3 + 0.25 + 2 + 1 + 0.5 + 5) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   // Medal crown selectors add under 0.5 KiB; retain all other payload limits.

@@ -107,7 +107,7 @@ async function main() {
         modal.close();return {scroll:before};
       })()`);
       const profileNavigation = await evaluate(`(async () => {
-        const previousApi=getOnlineApi;
+        const previousApi=getOnlineApi,previousClanId=state.clanId;
         const callbacks={};
         const api={...previousApi(),isSignedIn:()=>true,
           loadPublicPlayerProfile:async uid=>({uid,displayName:'Refresh Ruler',clanId:''}),
@@ -116,7 +116,7 @@ async function main() {
           subscribeClanSocialState:(_id,handlers)=>{Object.assign(callbacks,handlers);return ()=>{};}};
         getOnlineApi=()=>api;
         try {
-          startClanSocialStateSubscription(api,'refresh-navigation');
+          state.clanId='refresh-navigation';startClanSocialStateSubscription(api,state.clanId);
           let revision=1;
           for(const open of [()=>showPublicPlayerProfile('refresh-ruler'),()=>showPublicClanDetails('refresh-clan')]) {
             showCityInfoModal(refreshQaHolding.id);
@@ -137,7 +137,7 @@ async function main() {
             if(!profile.isConnected)throw Error('Stronghold snapshot navigated away from a public profile');
           }
           return {loadingPreserved:true,profilesPreserved:true};
-        } finally {getOnlineApi=previousApi;modal.close();}
+        } finally {getOnlineApi=previousApi;state.clanId=previousClanId;modal.close();}
       })()`);
       await evaluate(`(${installBagFixture.toString()})()`);
       await wait("!!modalBody.querySelector('.ib-bag-shell')");
