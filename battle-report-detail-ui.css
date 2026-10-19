@@ -1,4 +1,11 @@
 /* Approved full Battle Report only; Scout and Reports list retain their own scopes. */
+/* Item identities use the same rarity palette as officer inventory and loadouts.
+   Missing historical identities keep the neutral generic icon treatment. */
+#modal.battle-report-detail-ledger .bonus-art.item[data-rarity="common"]{background:#d9dad6!important;border-color:#a1a59b!important}
+#modal.battle-report-detail-ledger .bonus-art.item[data-rarity="uncommon"]{background:#c7d2b4!important;border-color:#6f8753!important}
+#modal.battle-report-detail-ledger .bonus-art.item[data-rarity="rare"]{background:#bfced8!important;border-color:#56778f!important}
+#modal.battle-report-detail-ledger .bonus-art.item[data-rarity="epic"]{background:#d3c4da!important;border-color:#82618e!important}
+#modal.battle-report-detail-ledger .bonus-art.item[data-rarity="legendary"]{background:#e3c484!important;border-color:#a67935!important}
 #modal .npc-report-art{object-fit:contain}#modal .npc-name{text-decoration:none!important;cursor:default!important}
 #modal.battle-report-detail-ledger{display:block !important;font-weight:400 !important}
 #modal.battle-report-detail-ledger:not([open]){display:none !important}

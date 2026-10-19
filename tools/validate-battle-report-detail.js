@@ -95,6 +95,18 @@ assert.equal(context.normalizeBattleGearEffects({ attacker: { attackStrength: { 
 const escapedItem = ui.render({ ...options, left: { ...attacker, gearItems: [{ ...saved.attacker.items[0], gearName: '<img src=x onerror="bad()">', ownerName: '<script>bad()</script>' }] } });
 assert(escapedItem.includes("&lt;img") && !escapedItem.includes('<img src=x'));
 console.log("Individual item art, rarity, level, owner, applied power/recovery/repair, both perspectives and historical fallback passed.");
+// Report colors must describe the saved item, not the viewer's current loadout.
+for (const rarity of context.COMMON_GEAR.RARITIES) {
+  const definition = context.COMMON_GEAR.DEFINITIONS.find(d => d.buildingId === "gatehouse" && d.slot === "chest" && d.rarity === rarity);
+  const item = { ...saved.defender.items[0], gearKey: definition.gearKey, gearName: definition.gearName, rarity, level: 2 };
+  const entries = context.getBattleSideBonusEntries({ ...defender, gearOnly: true, gearItems: [item] });
+  assert.equal(entries[0].rarity, rarity);
+  const rendered = ui.render({ ...options, right: { ...defender, gearItems: [item] } });
+  assert(rendered.includes(`class="bonus-art item" data-rarity="${rarity}" src="${definition.art}"`));
+}
+const missingRarity = ui.render({ ...options, right: { ...defender, gearItems: [{ ...saved.defender.items[0], rarity: "" }] } });
+assert(missingRarity.includes('class="bonus-art item" data-rarity=""'), "An unrecorded rarity stays neutral.");
+assert(!html.includes('data-rarity='), "Aggregate historical gear bonuses must not invent item rarities.");
 const towerSnapshot = require("./validate-clan-tower-battle-reports").snapshot;
 for (const viewerUid of towerSnapshot.participantUids) {
   const before = JSON.stringify(towerSnapshot);
