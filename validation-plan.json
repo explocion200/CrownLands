@@ -41,6 +41,17 @@
         "tools/validate-marauder-rules.js"
       ],
       "reason": "Record the owner-confirmed override explicitly, including fivefold total payouts with five members, per-member drop probabilities, legacy departure protection and deployment pending. The immutable table is unchanged and validated for all 100 levels; no additional runtime paths arise from documentation."
+    },
+    {
+      "paths": [
+        "tools/asset-performance-budgets.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "The new boss departure policy and disclosures add 1,412 delivered offline-shell bytes over current main (4,605,742 total), 1,326 over its cap. Allow one bounded 2 KiB step and bound the related source group at 62 KiB (62,655 bytes). Keep all art, entry, requests and other performance limits unchanged; validate the delivered package as well as source totals."
     }
   ]
 }
