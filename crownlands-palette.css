@@ -1140,10 +1140,13 @@ input[type="range"] {
     box-shadow: none !important;
   }
 
+  /* Filled gear buttons own semantic rarity paint, like inventory artwork.
+     Layered !important rules otherwise override even the scoped gear styles. */
   :where(dialog, .profile-screen, .setup-card, .commander-panel)
     button:not(:where([aria-label^="Close"], .close-button, .close, .tg-close, .guild-close,
       [data-shield-cancel][aria-label], [data-economy-action="close"][aria-label],
       .cl-action-button, .island-map-icon, .estate-building-target, .estate-district, .inventory-slot, .flag-color-swatch,
+      .common-gear-building-modal :is(.tg-slot, .tg-item)[data-rarity]:not([data-rarity=""]),
       [data-flag-color], .player-name-link, .clan-identity-link, .clan-name-link,
       .clan-shield-editor *, .player-flag-editor *)) {
     color: var(--cl-text) !important;
