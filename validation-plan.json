@@ -1,45 +1,20 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "3c9fd3b8a7dfc2e1bfffaabefebccc4597454b70",
+  "baseCommit": "ecf2b1b04b2219802f832ad5543142160ac4dc82",
   "coverage": [
     {
       "paths": [
-        "barracks-gear-ui.js",
-        "common-gear-ui.js",
-        "common-gear.js",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "functions/common-gear.js",
-        "functions/estate-economy.js",
-        "functions/estate-service.js",
-        "functions/index.js",
-        "functions/test/emulator-estate-economy.js",
-        "functions/test/emulator-reset-gate.js",
-        "gatehouse-gear-ui.js",
-        "royal-stables-gear-ui.js",
-        "tools/test-estate-economy.js",
-        "tools/test-local-postgres-estate-quotes.js",
-        "tools/validate-common-gear.js",
-        "tools/validate-estate-economy-browser.js",
-        "tools/validate-gear-rarities.js",
-        "treasury-gear-ui.js",
-        "tools/test-local-postgres-estate-gear-gates.js",
-        "tools/validate-estate-gear-gates-browser.js"
+        "tools/local-migration/refresh-npc-rewards.js",
+        "tools/test-local-postgres-npc-reward-refresh.js",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [
-        "tools/test-estate-economy.js",
-        "tools/validate-common-gear.js",
-        "tools/validate-gear-rarities.js",
-        "tools/validate-gear-bonus-gameplay.js",
-        "tools/test-local-postgres-estate-quotes.js",
-        "tools/test-local-postgres-estate-gear-gates.js",
-        "tools/validate-estate-economy-browser.js",
-        "tools/validate-estate-gear-gates-browser.js",
-        "tools/validate-gear-rarity-backgrounds-browser.js",
-        "tools/validate-production-artifact.js",
-        "functions/test/emulator-estate-economy.js",
-        "functions/test/emulator-reset-gate.js"
+        "tools/test-local-postgres-npc-reward-refresh.js",
+        "tools/test-local-postgres-marauder-respawn.js",
+        "tools/validate-marauder-rules.js",
+        "functions/test/emulator-marauder-population.js"
       ],
-      "reason": "Enforce all eight completed producer levels before the next Hall upgrade and completed officer milestones for every new rarity promotion. Newly granted gear has server-owned building requirements; old items retain equip and same-rarity upgrade access. Rule tests cover all Hall levels, gear definitions/normalization and unaffected bonuses/prices. Actual PostgreSQL API tests exercise every officer and rarity boundary, strict promotion despite earned entitlements, atomic rejection, concurrent receipt replay and box flags. Existing PostgreSQL estate quote coverage protects JSONB comparisons, spending and all 20 building completions. Estate emulator tests cover claims, commissions, Guild grants, server authority and resource state; reset emulator verifies marker preservation with existing permanent inventory. Desktop and two landscape browser sizes cover prerequisite navigation, blocked/allowed equipment actions, distinct old/new stacks, unknown-state rejection, reachable controls and retained rarity artwork in all gear/report surfaces. Production artifact validation protects shared delivery. The specification records this explicitly approved rule change, including grandfathered owned items and preserved paid contracts."
+      "reason": "One-time operator maintenance retires only reviewed idle version-1 NPC identities in the current active realm and lets the installed population scheduler create version-2 replacements. Actual isolated PostgreSQL tests cover read-only planning, exact document/realm checks, public/private atomicity, active scouts/attacks and rallies, SERIALIZABLE concurrent-launch phantom protection, idempotent receipts, stale-plan rejection, unchanged player/archive data and cooldowns, and normal replacement. Existing PostgreSQL respawn and selected population emulator tests protect scheduler placement, fresh identities, cooldowns and caps. Fixed reward-rule tests protect the replacement version. No runtime server source, frontend layouts, assets, gameplay reward formulas or deployment policy changes; no additional visual checks are needed. The Master Specification records the explicitly requested one-time refresh exception and the previously verified local balance deployment."
     }
   ]
 }
