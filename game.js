@@ -33669,8 +33669,8 @@ async function returnClanReinforcement(reinforcementId) {
   const fallbackCopy = destination.usedMainCityFallback
     ? " The original source is no longer owned, so the troops will use the current Main City fallback."
     : " If that holding is captured before arrival, the troops will redirect to the current Main City.";
-  if (!window.confirm(
-    `${holderSendHome ? "Send these allied troops home" : "Recall these reinforcement troops"} to ${destination.name}?${fallbackCopy}`
+  if (holderSendHome && !window.confirm(
+    `Send these allied troops home to ${destination.name}?${fallbackCopy}`
   )) return false;
   setReinforcementActivityError(id);
   reinforcementReturnRequests.add(id);

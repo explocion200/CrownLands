@@ -1,71 +1,24 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "e3682f440e28fdeb0fe3c10de90ad84b139d2875",
+  "baseCommit": "217b5e7762c25869b1eb65c8430294cff914fc0e",
   "coverage": [
     {
       "paths": [
         "game.js",
-        "notification-badges.css",
-        "tools/validate-clan-action-notifications-browser.js"
+        "tools/validate-reinforcement-locations-browser.js"
       ],
       "tests": [
-        "tools/validate-clan-action-notifications-browser.js",
-        "tools/validate-clan-notifications-browser.js",
-        "tools/validate-clan-treasury-browser.js",
-        "tools/validate-clan-treasury-client.js",
-        "tools/validate-clan-ledger-ui.js",
-        "tools/validate-gold-spend-audio.js",
-        "tools/validate-ui-refresh-browser.js"
+        "tools/validate-reinforcement-locations-browser.js",
+        "tools/validate-clan-reinforcements.js"
       ],
-      "reason": "Clan HUD/Profile, reward navigation and gift/Treasury controls gain unquantified availability notices using confirmed current-clan/session data. Browser checks cover first gift vs unknown snapshot, active recipients, five-hour server-clock boundary, Gold and allowance limits, in-flight actions, failed/successful gifts, UTC expiry with bounded deduplicated reload, stale snapshots/receipts, numeric precedence, focused donation drafts and unchanged desktop/landscape button bounds. Existing clan tests cover application role filtering, counts and shield continuity; Treasury tests cover receipt/revision ordering, confirmation, duplicate donation, input and recovery. Shared social action/timer dependencies require audio and UI refresh checks. Server authority, economy and costs are unchanged, so emulator suites are not applicable."
-    },
-    {
-      "paths": [
-        "common-gear-ui.js",
-        "treasury-gear-ui.js",
-        "barracks-gear-ui.js",
-        "gatehouse-gear-ui.js",
-        "royal-stables-gear-ui.js",
-        "inner-city-estate.js",
-        "tools/validate-notification-badges-browser.js"
-      ],
-      "tests": [
-        "tools/validate-notification-badges-browser.js"
-      ],
-      "reason": "Replace only unquantified ready/new-building glyphs with !, retaining actual new-item counts and existing eligibility/clearing. The shared-badge browser fixture renders all four officer panels plus HUD/report/reward counts at desktop and two landscape sizes, checks white-on-burgundy circles and preserved dimensions. No equipment action, grouping, balance or building progression logic changes."
-    },
-    {
-      "paths": [
-        "tools/validate-clan-treasury-client.js",
-        "tools/validate-clan-ledger-ui.js",
-        "tools/validate-gold-spend-audio.js",
-        "tools/validate-ui-refresh-browser.js"
-      ],
-      "tests": [
-        "tools/validate-clan-treasury-client.js",
-        "tools/validate-clan-ledger-ui.js",
-        "tools/validate-gold-spend-audio.js",
-        "tools/validate-ui-refresh-browser.js"
-      ],
-      "reason": "Update isolated harness dependencies for the new HUD refresh and availability helpers; keep the existing ordinary rally-cap stub in the ledger fixture. Set/restore the current clan in the UI refresh fixture so real guarded social callbacks still exercise refreshes while public profiles are open. Preserve existing assertions and current-session action coverage."
-    },
-    {
-      "paths": [
-        "tools/asset-performance-budgets.js",
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "tests": [
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "reason": "Measured total shell is 4,604,354 bytes, 5,058 over the existing cap: bound the increase at 5 KiB. game.js grows 4,937 bytes with a 5 KiB source step; the badge stylesheet grows 166 bytes within a 0.25 KiB step. Existing asset, runtime and network limits remain enforced. Reuse subscriptions and the clan tick; only an expired UTC allowance triggers a deduplicated read with one-minute failure backoff."
+      "reason": "The shared stationed reinforcement return handler skips browser confirmation only for Recall. Real production button bindings are exercised at desktop and landscape sizes, proving immediate dispatch, in-flight duplicate suppression, disabled controls, failed-request preservation and retry, server acknowledgement/fallback messaging, sign-in checks, holding-details Recall and preserved Send Home confirmation. Existing browser checks retain compact desktop and two landscape layouts, Location/Recall ordering, cross-map navigation, pending/error states and focus/scroll behavior. Reinforcement validation covers unchanged source returns, capacity/privacy and callable wiring. No server-authoritative rules or data are modified, so emulator suites are not applicable."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the owner-confirmed ! for unquantified availability and gift/Treasury eligibility, parent count precedence and unchanged server rules. Documentation has no executable behavior; affected implementation is covered above."
+      "reason": "Records the owner's explicit replacement of the old confirmation requirement for recalling their own stationed troops, with server return routing, acknowledgement and other-player Send Home behavior preserved. Documentation has no runtime behavior; shared UI implementation and dependencies are covered above."
     }
   ]
 }

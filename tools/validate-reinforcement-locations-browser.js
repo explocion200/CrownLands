@@ -67,6 +67,7 @@ async function main() {
       window.supportOpen = () => { activeOperationsTab = "reinforcements"; showOutgoingAttacksModal(); };
       window.supportCenters = [];
       window.supportReturns = [];
+      window.supportOriginalReturn = returnClanReinforcement;
       returnClanReinforcement = id => { supportReturns.push(id); };
       const center = centerOnWorldPoint;
       centerOnWorldPoint = (point, map) => { supportCenters.push({ point: { x: point.x, y: point.y }, map }); return center(point, map); };
@@ -239,6 +240,71 @@ async function main() {
         switchOnlineIsland = saved.switchMap; centerOnWorldPoint = saved.center; renderArmies = saved.render; clearSelection = saved.clear; showToast = saved.toast;
       }
     });
+    // Exercise the real shared return handler through both production button surfaces.
+    for (const viewport of [{ width: 1440, height: 900 }, { width: 844, height: 390 }]) {
+      await client.send("Emulation.setDeviceMetricsOverride", { ...viewport, deviceScaleFactor: 1, mobile: false });
+      const recall = await evaluate(async () => {
+        const check = (value, message) => { if (!value) throw Error(message); };
+        const saved = { api: getOnlineApi, confirm: window.confirm, apply: applyServerArmyResult, adopt: adoptServerArmyMovement };
+        const calls = [], confirmations = [], adopted = [], applied = [];
+        let settle, fail, signedIn = true, confirmResult = false;
+        const own = { id: "immediate-recall", status: "stationed", ownerUid: "location-viewer", targetOwnerUid: "location-ally", targetId: supportFixture.to.id,
+          targetName: supportFixture.to.name, targetRegionId: supportFixture.region, troops: 250000,
+          reinforcementSourceId: supportFixture.from.id, reinforcementSourceRegionId: supportFixture.region, reinforcementSourceCityName: supportFixture.from.name };
+        const flush = () => new Promise(resolve => setTimeout(resolve, 0));
+        returnClanReinforcement = supportOriginalReturn;
+        getOnlineApi = () => ({ isSignedIn: () => signedIn, returnClanReinforcement: payload => {
+          calls.push(payload); return new Promise((resolve, reject) => { settle = resolve; fail = reject; });
+        } });
+        window.confirm = message => { confirmations.push(message); return confirmResult; };
+        applyServerArmyResult = result => applied.push(result);
+        adoptServerArmyMovement = movement => adopted.push(movement);
+        try {
+          onlineReinforcements = [own]; supportOpen();
+          const button = modalBody.querySelector('[data-return-clan-reinforcement="immediate-recall"]');
+          button.scrollIntoView({ block: "center" }); button.click();
+          check(calls.length === 1 && confirmations.length === 0, "Recall must submit on the first click without a popup.");
+          check(reinforcementReturnRequests.has(own.id), "Recall must lock the pending assignment.");
+          check(modalBody.querySelector('[data-return-clan-reinforcement="immediate-recall"]').disabled, "Pending Recall stays disabled.");
+          button.click(); await returnClanReinforcement(own.id);
+          check(calls.length === 1, "Rapid clicks must not send duplicate recall orders.");
+          fail(Error("Fixture return interrupted")); await flush();
+          check(onlineReinforcements.length === 1 && !reinforcementReturnRequests.has(own.id), "Failure must preserve troops and release the retry guard.");
+          check(getReinforcementActivityError(own.id).includes("interrupted"), "Recall failure must show retry feedback.");
+          check(applied.length === 0 && adopted.length === 0, "Failed Recall cannot create a return movement.");
+          modalBody.querySelector('[data-return-clan-reinforcement="immediate-recall"]').click();
+          check(calls.length === 2 && confirmations.length === 0, "Retry also submits directly.");
+          settle({ troops: own.troops, returnInitiatorRole: "contributor", movement: { id: "return-order", toName: "Main City fallback" } }); await flush();
+          check(!onlineReinforcements.length && adopted.length === 1 && applied.length === 1, "Successful Recall must adopt the server return once.");
+          check(toast.textContent.includes("Main City fallback"), "Server-confirmed fallback must remain visible after Recall.");
+
+          // Holding details use the same no-confirmation command and still require sign-in.
+          onlineReinforcements = [own]; modal.className = "";
+          modalBody.innerHTML = renderHoldingReinforcementPanel(supportFixture.to); bindHoldingReinforcementButtons();
+          signedIn = false; modalBody.querySelector('[data-return-clan-reinforcement="immediate-recall"]').click();
+          check(calls.length === 2, "Signed-out Recall must not dispatch."); signedIn = true;
+          modalBody.querySelector('[data-return-clan-reinforcement="immediate-recall"]').click();
+          check(calls.length === 3 && confirmations.length === 0, "Holding-details Recall must dispatch without confirmation.");
+          settle({ troops: own.troops, returnInitiatorRole: "contributor", returnDestination: { name: supportFixture.from.name } }); await flush();
+          check(!onlineReinforcements.length, "Holding-details acknowledgement must remove the stationed assignment.");
+
+          // This request changes Recall only; the owner still confirms sending another player's troops home.
+          const ally = { ...own, id: "send-home", ownerUid: "location-ally", targetOwnerUid: "location-viewer", targetId: supportFixture.from.id };
+          onlineReinforcements = [ally]; supportOpen();
+          modalBody.querySelector('[data-return-clan-reinforcement="send-home"]').click();
+          check(confirmations.length === 1 && calls.length === 3, "Canceled Send Home must keep its confirmation and assignment.");
+          confirmResult = true; modalBody.querySelector('[data-return-clan-reinforcement="send-home"]').click();
+          check(calls.length === 4, "Confirmed Send Home must still work.");
+          settle({ troops: ally.troops, returnInitiatorRole: "holder", movement: { id: "ally-return" } }); await flush();
+          check(adopted.length === 1, "Do not adopt an ally's return as the current player's army.");
+          return { directRecall: true, duplicateGuard: true, retry: true, holdingDetails: true, sendHomePreserved: true };
+        } finally {
+          getOnlineApi = saved.api; window.confirm = saved.confirm; applyServerArmyResult = saved.apply; adoptServerArmyMovement = saved.adopt;
+          modal.close();
+        }
+      });
+      console.log(`Validated immediate Recall at ${viewport.width}x${viewport.height}: ${JSON.stringify(recall)}.`);
+    }
     assert.deepEqual(errors, []);
     console.log(`Validated ${edgeCases}.`);
   } finally {
