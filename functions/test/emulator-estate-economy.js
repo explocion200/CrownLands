@@ -65,7 +65,7 @@ async function main() {
     {building:"smithy",requiredLevel:1,currentLevel:0},
   ]);
   assert.deepEqual(loaded.estate.buildingPrerequisites.sawmill,[{building:"foresters-lodge",requiredLevel:1,currentLevel:0}]);
-  await assert.rejects(quote({action:"fund",building:"workshop",count:1}),/Construct sawmill first/);
+  await assert.rejects(quote({action:"fund",building:"workshop",count:1}),/Construct sawmill to Level 1 first/);
   assert.equal((await db.collection(`players/${owner.uid}/estateQuotes`).get()).size,0,"Overview creates no spend quotes");
   assert.equal((await call("getEstateState",owner)).upgradeOverview,undefined,"Ordinary clock refreshes do not prepare realm readiness");
   assert.equal((await rest(owner, `players/${owner.uid}/estate/state`)).status, 200);
@@ -178,18 +178,62 @@ async function main() {
   await db.doc(`players/${owner.uid}/seasonRewards/pending-estate-test`).set({ uncommonGearBoxes: 1, claimed: false });
   loaded = await load(); assert(loaded.estate.entitlements.treasury >= 1, "Pending award must retain Uncommon entitlement");
   await db.doc(`players/${owner.uid}/seasonRewards/pending-estate-test`).delete();
-  // Promotion gates affect only unearned tiers, retaining fixed prices/two copies.
+  // Promotion gates use completed building levels even when inventory, chests,
+  // pending grants or legacy entitlements already include the destination tier.
   saved = E.initial(Date.now()); await stateRef.set(saved);
   const common = G.DEFINITIONS.find(d => d.buildingId === "barracks" && d.rarity === "common");
   const promotionGear = G.createDefaultState();
   for (const id of ["promotion_target", "promotion_material"])
     promotionGear.instances[id] = G.normalizeInstance({ instanceId: id, gearKey: common.gearKey, level: 5 });
+  promotionGear.instances.old_epic_piece = G.normalizeInstance({ instanceId:"old_epic_piece",gearKey:epic.gearKey,level:3 });
+  promotionGear.uncommonGearBoxes = 1;
+  saved.entitlements.barracks = 4; saved.chestEntitlement = 1; await stateRef.set(saved);
   await profileRef.update({ gear: promotionGear, gold: 10000000, goldFloat: 10000000 });
   await assert.rejects(call("upgradeCommonGear", owner, { instanceId: "promotion_target", requestId: "locked_promotion_001", cost: 850000, gearSchemaVersion: G.SCHEMA_VERSION }), /Level 25/);
-  assert.equal(Object.keys((await profileRef.get()).data().gear.instances).length, 2);
+  assert.equal(Object.keys((await profileRef.get()).data().gear.instances).length, 3);
   saved.levels.barracks = 25; saved.levels["great-hall"] = 25; await stateRef.set(saved);
   await call("upgradeCommonGear", owner, { instanceId: "promotion_target", requestId: "allowed_promotion_001", cost: 850000, gearSchemaVersion: G.SCHEMA_VERSION });
-  assert.equal(Object.keys((await profileRef.get()).data().gear.instances).length, 1);
+  assert.equal(Object.keys((await profileRef.get()).data().gear.instances).length, 2);
+  // All officer buildings enforce every rarity boundary for new equipment,
+  // including same-rarity upgrades. Existing gear remains equip/upgrade usable.
+  for (const building of Object.keys(G.BUILDINGS)) for (let tier=1;tier<G.RARITIES.length;tier++) {
+    const rarity=G.RARITIES[tier], threshold=[1,25,50,75,100][tier];
+    const definition=G.DEFINITIONS.find(d=>d.buildingId===building&&d.rarity===rarity&&d.slot==="head");
+    const owned=G.createDefaultState();
+    for(const id of ["new_target","new_material","old_target","old_material"])
+      owned.instances[id]=G.normalizeInstance({instanceId:id,gearKey:definition.gearKey,level:1,requiresBuildingLevel:id.startsWith("new")});
+    saved=E.initial(Date.now());saved.levels[building]=threshold-1;saved.entitlements[building]=4;
+    await stateRef.set(saved);await profileRef.update({gear:owned,gold:1e15,goldFloat:1e15});
+    const before=(await profileRef.get()).data(),estateBefore=(await stateRef.get()).data();
+    await assert.rejects(call("equipCommonGear",owner,{instanceId:"new_target",gearSchemaVersion:G.SCHEMA_VERSION}),new RegExp("Level "+threshold));
+    await assert.rejects(call("upgradeCommonGear",owner,{instanceId:"new_target",requestId:crypto.randomUUID(),cost:G.getUpgradeGoldCost(owned.instances.new_target),gearSchemaVersion:G.SCHEMA_VERSION}),new RegExp("Level "+threshold));
+    assert.deepEqual((await profileRef.get()).data(),before,"Denied gear actions cannot spend, equip, consume or settle");
+    assert.deepEqual((await stateRef.get()).data(),estateBefore);
+    await call("equipCommonGear",owner,{instanceId:"old_target",gearSchemaVersion:G.SCHEMA_VERSION});
+    await call("unequipCommonGear",owner,{instanceId:"old_target",gearSchemaVersion:G.SCHEMA_VERSION});
+    const oldUpgrade=await call("upgradeCommonGear",owner,{instanceId:"old_target",requestId:crypto.randomUUID(),cost:G.getUpgradeGoldCost(owned.instances.old_target),gearSchemaVersion:G.SCHEMA_VERSION});
+    assert.equal(oldUpgrade.currentUser.gear.instances[oldUpgrade.upgradedInstanceId].requiresBuildingLevel,undefined);
+    // Restore deterministic inputs: same-rarity matching may consume any
+    // unequipped copy, while access follows the selected target.
+    await profileRef.update({gear:owned});
+    saved.levels[building]=threshold;await stateRef.set(saved);
+    const equipped=await call("equipCommonGear",owner,{instanceId:"new_target",gearSchemaVersion:G.SCHEMA_VERSION});
+    assert.equal(equipped.currentUser.gear.equipped[building].head,"new_target");
+    const requestId=crypto.randomUUID();
+    const accepted=await call("upgradeCommonGear",owner,{instanceId:"new_target",requestId,cost:G.getUpgradeGoldCost(owned.instances.new_target),gearSchemaVersion:G.SCHEMA_VERSION});
+    assert.equal(accepted.currentUser.gear.instances[accepted.upgradedInstanceId].requiresBuildingLevel,true);
+    assert.equal(accepted.currentUser.gear.equipped[building].head,accepted.upgradedInstanceId);
+    assert((await call("upgradeCommonGear",owner,{instanceId:"new_target",requestId,gearSchemaVersion:G.SCHEMA_VERSION})).replayed);
+  }
+  // Box rewards are owned immediately, but receiving a chest does not unlock
+  // an officer's building level. Legacy item access is never widened by it.
+  saved=E.initial(Date.now());await stateRef.set(saved);
+  const boxes=G.createDefaultState();boxes.uncommonGearBoxes=1;
+  await profileRef.update({gear:boxes});
+  const opened=await call("openCommonGearBox",owner,{boxType:"uncommon",requestId:"gated_box_open",gearSchemaVersion:G.SCHEMA_VERSION});
+  const newUncommon=Object.values(opened.gear.instances).find(i=>i.rarity==="uncommon");
+  assert(newUncommon.requiresBuildingLevel);
+  await assert.rejects(call("equipCommonGear",owner,{instanceId:newUncommon.instanceId,gearSchemaVersion:G.SCHEMA_VERSION}),/Level 25/);
   // Tier-matched commissions; full inventory leaves the same pending item.
   saved = E.initial(Date.now()); for (const key in saved.levels) saved.levels[key] = 100;
   for (const key of E.KEYS) saved.stock[key] = 1e6;
@@ -208,6 +252,7 @@ async function main() {
   assert.equal(claimed.filter(r => r.replayed).length, 1);
   const inventory = Object.values((await profileRef.get()).data().gear.instances);
   assert.equal(inventory.length, 1); assert.equal(inventory[0].rarity, "legendary");
+  assert.equal(inventory[0].requiresBuildingLevel,true,"Commission results retain the building requirement");
   // Stable daily recruits, unlimited owned bench, bounded active roster.
   loaded = await load(); const offer = loaded.estate.recruitOffers.offers[0];
   await profileRef.update({ gold: 1e9, goldFloat: 1e9 });
@@ -483,6 +528,7 @@ async function main() {
   const guildGear = (await profileRef.get()).data().gear;
   assert.equal(Object.keys(guildGear.instances).length, 1);
   assert.equal(Object.values(guildGear.instances)[0].gearKey, common.gearKey);
+  assert.equal(Object.values(guildGear.instances)[0].requiresBuildingLevel,true,"Guild grants retain the building requirement");
   assert.equal(guildGear.newMarkers.barracks, true);
   console.log("Estate emulator passed: real Gold authority, current realm guards, durable receipts, two devices, persistence, migration, Gear, champions, legacy quests, Guild missions/private outcomes/claims, facilities and write rules.");
 }

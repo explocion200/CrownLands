@@ -261,7 +261,7 @@ function createEstateService({ db, HttpsError, runTransaction, assertCurrentPlay
               const gear = normalizeGear(economy.profileAfter);
               if (Object.keys(gear.instances).length >= G.INVENTORY_LIMIT) E.fail("Your Gear Bag is full. The item will wait safely.");
               const instanceId = "cg_guild_" + requestId;
-              gear.instances[instanceId] = G.normalizeInstance({ instanceId, gearKey: received.gearKey, level: 1, isNew: true, acquiredAtMs: now });
+              gear.instances[instanceId] = G.normalizeInstance({ instanceId, gearKey: received.gearKey, level: 1, isNew: true, acquiredAtMs: now, requiresBuildingLevel: true });
               gear.newMarkers[G.getDefinition(received.gearKey).buildingId] = true; gear.updatedAtMs = now;
               profileOverrides.gear = gear; details.instanceId = instanceId;
             }
@@ -281,7 +281,7 @@ function createEstateService({ db, HttpsError, runTransaction, assertCurrentPlay
             const gear = normalizeGear(economy.profileAfter);
             if (Object.keys(gear.instances).length >= G.INVENTORY_LIMIT) E.fail("Your Gear Bag is full. The commissioned item will wait safely.");
             const instanceId = "cg_estate_" + requestId;
-            gear.instances[instanceId] = G.normalizeInstance({ instanceId, gearKey: value.gearKey, level: 1, isNew: true, acquiredAtMs: now });
+            gear.instances[instanceId] = G.normalizeInstance({ instanceId, gearKey: value.gearKey, level: 1, isNew: true, acquiredAtMs: now, requiresBuildingLevel: true });
             gear.newMarkers[value.building] = true; gear.updatedAtMs = now;
             profileOverrides.gear = gear; details.instanceId = instanceId;
             delete state.commissions[value.building]; break;
@@ -351,8 +351,10 @@ function createEstateService({ db, HttpsError, runTransaction, assertCurrentPlay
   }
   async function prepareGearPromotion(tx, uid, building, rarity, now) {
     const account = await read(tx, uid, now);
-    if ((account.state.entitlements[building] || 0) < G.RARITIES.indexOf(rarity))
-      throw new HttpsError("failed-precondition", "Upgrade " + G.BUILDINGS[building].name + " to Level " + E.C.gearMilestones[G.RARITIES.indexOf(rarity)][0] + " to unlock this rarity. Existing earned Gear remains available.");
+    const requiredLevel = E.C.gearMilestones[G.RARITIES.indexOf(rarity)]?.[0];
+    if (!G.BUILDINGS[building] || !requiredLevel) throw new HttpsError("invalid-argument", "Unknown officer Gear rarity.");
+    if (account.state.levels[building] < requiredLevel)
+      throw new HttpsError("failed-precondition", "Upgrade " + G.BUILDINGS[building].name + " to Level " + requiredLevel + " to unlock " + rarity + " Gear. Current building Level " + account.state.levels[building] + ".");
     return account;
   }
   return { stateRef, championRef, receiptRef, load, quote, execute, bench, reports, prepareGearPromotion, save };

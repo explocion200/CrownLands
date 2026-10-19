@@ -12,6 +12,30 @@ assert.equal(G.COMMON_DEFINITIONS.length, 32);
 assert(G.COMMON_DEFINITIONS.every(d => d.rarity === "common"));
 assert.equal(fs.readFileSync(path.join(__dirname, "../common-gear.js"), "utf8").replace(/\r\n/g, "\n"),
   fs.readFileSync(path.join(__dirname, "../functions/common-gear.js"), "utf8").replace(/\r\n/g, "\n"));
+// Existing item access is preserved per item, not an account-wide entitlement
+// that can unlock newly acquired gear or another promotion.
+for (const definition of G.DEFINITIONS) {
+  const old = G.normalizeInstance({ instanceId:"old", gearKey:definition.gearKey, level:1 });
+  const fresh = G.normalizeInstance({ ...old, instanceId:"fresh", requiresBuildingLevel:true });
+  const tier = G.RARITIES.indexOf(definition.rarity), requiredLevel = [1,25,50,75,100][tier];
+  assert.equal(G.getBuildingRequirement(old),null);
+  assert.deepEqual(G.getBuildingRequirement(fresh),{buildingId:definition.buildingId,rarity:definition.rarity,requiredLevel});
+  const saved = G.normalizeState({instances:{old,fresh}});
+  assert.equal(G.getBuildingRequirement(saved.instances.old),null);
+  assert.equal(G.getBuildingRequirement(saved.instances.fresh).requiredLevel,requiredLevel);
+  for (const target of [old,fresh]) {
+    const state = G.normalizeState({instances:{[target.instanceId]:target,material:{...target,instanceId:"material"}}});
+    const merged = G.consumeUpgradeInputs(state,target.instanceId,"result",10);
+    assert.equal(Boolean(merged.upgradedInstance.requiresBuildingLevel),Boolean(target.requiresBuildingLevel),"Same-rarity upgrades retain the selected existing item's access");
+  }
+  if (tier < 4) {
+    const rarity = G.RARITIES[tier+1];
+    assert.equal(G.getBuildingRequirement(old,rarity).requiredLevel,[25,50,75,100][tier]);
+    const target = {...old,level:5};
+    const state = G.normalizeState({instances:{old:target,material:{...target,instanceId:"material"}}});
+    assert.equal(G.consumeUpgradeInputs(state,"old","promoted",10).upgradedInstance.requiresBuildingLevel,true);
+  }
+}
 // Independent approved prices cover every step and all 32 item families below.
 const expectedGold = [[100000,170000,300000,500000,850000],[1500000,2500000,4000000,7000000,50000000],[100000000,200000000,350000000,600000000,1000000000],[1500000000,2500000000,4000000000,6000000000,9000000000],[14000000000,22000000000,34000000000,50000000000,null]];
 for (const [rarityIndex, rarity] of G.RARITIES.entries()) {

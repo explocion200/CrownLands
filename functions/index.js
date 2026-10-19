@@ -15257,7 +15257,7 @@ exports.openCommonGearBox = onCall({ region: "us-central1", maxInstances: 30, in
       const definition = pool[crypto.randomInt(0, pool.length)];
       const instanceId = `cg_${nowMs.toString(36)}_${crypto.randomBytes(8).toString("hex")}`;
       gear.instances[instanceId] = COMMON_GEAR.normalizeInstance({
-        instanceId, gearKey: definition.gearKey, level: 1, isNew: true, acquiredAtMs: nowMs,
+        instanceId, gearKey: definition.gearKey, level: 1, isNew: true, acquiredAtMs: nowMs, requiresBuildingLevel: true,
       });
       gear.newMarkers[definition.buildingId] = true;
       instanceIds.push(instanceId);
@@ -15300,6 +15300,9 @@ async function mutateCommonGearLoadout(uid, request, mode) {
     const gear = normalizeCommonGear(economy.profileAfter);
     const instance = requireCommonGearInstance(gear, request.data?.instanceId);
     requireGearProgressionClient(request, instance);
+    const buildingRequirement = mode === "equip" ? COMMON_GEAR.getBuildingRequirement(instance) : null;
+    const estateGate = buildingRequirement ? await estateService.prepareGearPromotion(transaction, uid,
+      buildingRequirement.buildingId, buildingRequirement.rarity, nowMs) : null;
     if (mode === "equip") {
       const currentId = gear.equipped[instance.buildingId][instance.slot];
       if (currentId && gear.instances[currentId]) gear.instances[currentId].isEquipped = false;
@@ -15312,6 +15315,7 @@ async function mutateCommonGearLoadout(uid, request, mode) {
       instance.isEquipped = false;
     }
     gear.updatedAtMs = nowMs;
+    if (estateGate) estateService.save(transaction, uid, estateGate);
     writePreparedEconomy(transaction, economy, { gear });
     return createEconomyResponse(economy, { gear, bonuses: getCommonGearBonuses(gear) });
   });
@@ -15371,7 +15375,9 @@ exports.upgradeCommonGear = onCall({ region: "us-central1", maxInstances: 30, in
       });
     }
     if (economy.goldFloat < cost) throw new HttpsError("failed-precondition", "Not enough gold for this gear upgrade.");
-    const estateGate = requirement.promotion ? await estateService.prepareGearPromotion(transaction, uid, instance.buildingId, requirement.nextRarity, nowMs) : null;
+    const buildingRequirement = COMMON_GEAR.getBuildingRequirement(instance, requirement.promotion ? requirement.nextRarity : "");
+    const estateGate = buildingRequirement ? await estateService.prepareGearPromotion(transaction, uid,
+      buildingRequirement.buildingId, buildingRequirement.rarity, nowMs) : null;
     const resultInstanceId = `cg_up_${nowMs.toString(36)}_${crypto.randomBytes(8).toString("hex")}`;
     const upgrade = COMMON_GEAR.consumeUpgradeInputs(gear, instance.instanceId, resultInstanceId, nowMs);
     if (!upgrade) throw new HttpsError("internal", "The gear upgrade could not settle its inventory inputs.");

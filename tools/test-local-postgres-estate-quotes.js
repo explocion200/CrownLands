@@ -68,6 +68,11 @@ const G = require("../functions/common-gear");
     // bill once and completes through the normal settlement path.
     for (const building of Object.keys(E.initial(now).levels)) {
       await seed();
+      if (building === "great-hall") {
+        const value = (await state.get()).data();
+        for (const p of E.C.producers) value.levels[p.building] = value.levels["great-hall"];
+        await state.set(value);
+      }
       const q = await quote({ action: "fund", building, count: 1 });
       const initialStock = (await state.get()).data().stock;
       const result = await execute(q);

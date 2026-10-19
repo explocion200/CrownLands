@@ -479,6 +479,7 @@ async function main() {
       persistent_helm: {
         instanceId: "persistent_helm",
         gearKey: "barracks_head_common_01",
+        requiresBuildingLevel: true,
         buildingId: "barracks",
         slot: "head",
         rarity: "common",
@@ -988,6 +989,7 @@ async function main() {
       && profile.gear?.uncommonGearBoxes === 2
       && Object.keys(profile.gear?.instances || {}).length === 2
       && profile.gear?.instances?.persistent_helm?.level === 4
+      && profile.gear?.instances?.persistent_helm?.requiresBuildingLevel === true
       && profile.gear?.instances?.persistent_ledger?.level === 5
       && profile.gear?.instances?.persistent_ledger?.gearKey === "treasury_weapon_legendary_01"
       && profile.gear?.instances?.persistent_ledger?.gearKey === "treasury_weapon_legendary_01"

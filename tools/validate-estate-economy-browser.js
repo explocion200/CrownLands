@@ -75,7 +75,7 @@ async function main() {
     };
     const estate = E.initial(Date.now()); for (const key in estate.levels) estate.levels[key] = 24;
     estate.levels["great-hall"] = 25; for (const key of E.KEYS) estate.stock[key] = 10000;
-    const quotes = Object.fromEntries(E.C.buildings.map(b => [b.key,E.constructionQuote(estate,b.key,1)]));
+    const quotes = Object.fromEntries(E.C.buildings.map(b => [b.key,E.buildingPrerequisites(estate,b.key,estate.levels[b.key]+1).length ? null : E.constructionQuote(estate,b.key,1)]));
     const firstBuildEstate=structuredClone(estate);firstBuildEstate.levels.mine=0;
     const firstBuildQuote=E.constructionQuote(firstBuildEstate,'mine',1);
     const prerequisiteEstate=structuredClone(estate);
@@ -114,7 +114,7 @@ async function main() {
             return[p.building,{building:p.building,output:p.output,inputs:p.inputs,ratePerHour:rate,maxQuantity:max}];
           }));
           estate.buildingPrerequisites=Object.fromEntries(__estateTest.buildingRules.map(b=>[b.key,estate.levels[b.key]>=100?[]:
-            [...(b.key==='great-hall'?[]:[{building:'great-hall',requiredLevel:estate.levels[b.key]+1}]),...b.requires1.map(building=>({building,requiredLevel:1}))]
+            [...(b.key==='great-hall'?__estateTest.producerRules.map(p=>({building:p.building,requiredLevel:estate.levels[b.key]})):[{building:'great-hall',requiredLevel:estate.levels[b.key]+1}]),...b.requires1.map(building=>({building,requiredLevel:1}))]
               .map(row=>({...row,currentLevel:estate.levels[row.building]})).filter(row=>row.currentLevel<row.requiredLevel)]));
           estate.recruitOffers=__estateTest.offers||{offers:[]};
           return{estate,champions:__estateTest.champions||{},serverNowMs,upgradeOverview:structuredClone(__estateTest.overview)};
@@ -288,6 +288,23 @@ async function main() {
       fs.writeFileSync(path.join(output,'estate-directory-'+width+'.png'),Buffer.from(managementDirectoryCapture.data,'base64'));
       await click('[data-estate-directory-toggle]');
       assert(await evaluate(()=>[...document.querySelectorAll('.estate-upgrade-target')].every(e=>e.hidden)),"Overview stays clear");
+      // The Hall requires all eight completed producer levels. Its list stays
+      // reachable on short screens, and navigating requirements never spends.
+      const hallCommits=await evaluate(()=>__estateTest.commits.length);
+      await evaluate(()=>innerCastleEconomy.upgrade('great-hall'));
+      await wait(()=>document.querySelectorAll('.estate-building-prerequisites [data-economy-action="prerequisite"]').length===8);
+      assert.deepEqual((await evaluate(()=>[...document.querySelectorAll('.estate-building-prerequisites [data-id]')].map(b=>b.dataset.id))).sort(),E.C.producers.map(p=>p.building).sort());
+      assert.equal(await evaluate(()=>!!document.querySelector('[data-economy-action="fund"]')),false);
+      await evaluate(()=>document.querySelector('[data-economy-action="prerequisite"][data-id="windmill"]').scrollIntoView({block:'center'}));
+      assert(await evaluate(()=>{const e=document.querySelector('.estate-economy-content');return e.scrollWidth<=e.clientWidth+1;}));
+      const hallCapture=await client.send('Page.captureScreenshot',{format:'png'});
+      fs.writeFileSync(path.join(output,'hall-resource-requirements-'+width+'.png'),Buffer.from(hallCapture.data,'base64'));
+      await click('[data-economy-action="prerequisite"][data-id="windmill"]');
+      await wait(()=>document.querySelector('#estateEconomyTitle')?.textContent==='Windmill · Upgrade');
+      await click('[data-economy-action="prerequisiteBack"]');
+      await wait(()=>document.querySelectorAll('.estate-building-prerequisites [data-economy-action="prerequisite"]').length===8);
+      assert.equal(await evaluate(()=>__estateTest.commits.length),hallCommits);
+      await closeSheet();
       // Follow both a multi-branch first-build chain and a completed Hall-level
       // gate through the real controller/map bridge, without spending.
       const chainBefore=await evaluate(()=>{
