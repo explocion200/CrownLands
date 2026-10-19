@@ -416,7 +416,13 @@ async function main() {
   const rewarded=await Promise.all(users.slice(0,5).map(u=>db.doc('players/'+u.uid).get()));
   await Promise.all([0,1].map(()=>callFunction('resolveArmyOrder',users[0].token,{armyId:departing.movement.id})));
   assert((await db.doc('marauderBattles/'+departing.movement.id).get()).updateTime.isEqual(committed.updateTime));
-  for(const [i,u] of users.slice(0,5).entries())assert((await db.doc('players/'+u.uid).get()).updateTime.isEqual(rewarded[i].updateTime),'Duplicate settlement must not credit Gold, XP, items or boxes again');
+  // Clan/global-stat triggers can refresh profile metadata independently of settlement.
+  // Compare every reward-bearing field, not the whole document's update timestamp.
+  for(const [i,u] of users.slice(0,5).entries()){
+    const after=(await db.doc('players/'+u.uid).get()).data(),before=rewarded[i].data();
+    for(const field of ['gold','goldFloat','character','shopItems','gear','battleReports'])
+      strictEqual(JSON.stringify(after[field]),JSON.stringify(before[field]),'Duplicate settlement changed '+field);
+  }
   console.log('V2 callables: legacy/missing versions, fixed uncapped solo XP, solo wounds, five inbound slots, one-troop eligibility, full rewards even after total losses, legacy departure shares, rejected policy mismatch, boss recovery, personal drops and duplicate settlement passed.');
   console.log('Marauder combat passed: real callables, routes, scouting privacy, departure charge, duplicate launch/settlement, shield preservation, normal combat/returns, simultaneous arrivals, failed survivors, immutable spawn refunds, insufficient stamina and Firestore privacy.');
 }
