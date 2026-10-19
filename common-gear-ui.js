@@ -1485,7 +1485,7 @@ function renderCommonGearSlot(slotModel) {
   return `<button class="common-gear-slot${isSelected ? " selected" : ""}${equipped ? " filled" : " empty"}${isUpgradeReady ? " upgrade-ready" : ""}" type="button" data-gear-slot="${escapeHtml(slot)}" aria-pressed="${isSelected ? "true" : "false"}" aria-label="${escapeHtml(accessibleLabel)}">
     <span class="common-gear-slot-art" aria-hidden="true">${equippedDefinition ? renderCommonGearArtwork(equippedDefinition.art) : "+"}</span>
     <span class="common-gear-slot-copy"><b>${escapeHtml(label)}</b><small>${equipped ? `Level ${equipped.level}` : "Empty"}</small></span>
-    ${isUpgradeReady ? `<span class="notification-badge common-gear-upgrade-ready common-gear-slot-upgrade-ready" aria-label="Upgrade material ready">1</span>` : ""}
+    ${isUpgradeReady ? `<span class="notification-badge common-gear-upgrade-ready common-gear-slot-upgrade-ready" aria-label="Upgrade material ready">!</span>` : ""}
   </button>`;
 }
 
@@ -1498,7 +1498,7 @@ function renderCommonGearBagTile(group) {
     <span class="common-gear-bag-slot" aria-hidden="true">${escapeHtml(item.slot.charAt(0).toUpperCase())}</span>
     ${group.isNew ? `<span class="common-gear-bag-new notification-badge" aria-label="${group.newCount || 1} new equipment items">${group.newCount > 99 ? "99+" : group.newCount || 1}</span>` : ""}
     ${group.isEquipped ? `<span class="common-gear-bag-equipped" aria-label="Equipped">E</span>` : ""}
-    ${group.isUpgradeReady && !group.isEquipped ? `<span class="notification-badge common-gear-upgrade-ready common-gear-bag-upgrade-ready" aria-label="Upgrade material ready">1</span>` : ""}
+    ${group.isUpgradeReady && !group.isEquipped ? `<span class="notification-badge common-gear-upgrade-ready common-gear-bag-upgrade-ready" aria-label="Upgrade material ready">!</span>` : ""}
     ${renderCommonGearArtwork(def.art)}
     <span class="common-gear-bag-level">L${item.level}</span>
     ${group.count > 1 ? `<span class="common-gear-bag-count">×${group.count}</span>` : ""}

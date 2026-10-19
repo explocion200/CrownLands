@@ -142,7 +142,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       for (const building of ["treasury", "barracks", "gatehouse", "royal-stables"]) {
         await ev(`selectedCommonGearInstanceId=${JSON.stringify(building + "-a")};selectedCommonGearSlot='head';selectedCommonGearBagFilter='all';renderCommonGearBuilding(${JSON.stringify(building)});void 0`);
         await wait(`!!modal.querySelector('[data-${building}-officer]')`);
-        await circle("#modal .tg-ready", "1");
+        await circle("#modal .tg-ready", "!");
         await circle("#modal .tg-item-mark .notification-badge", "2");
         assert(await ev('modalBody.scrollWidth<=modalBody.clientWidth+1'), "Gear badge caused horizontal overflow");
         await shot(building + "-" + width);

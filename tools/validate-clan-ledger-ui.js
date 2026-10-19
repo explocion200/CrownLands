@@ -16,6 +16,7 @@ const context = vm.createContext({
   state:{clanId:"house",clanRole:"leader"},clanMembers:[{uid:"self",role:"leader",displayName:"Aldric"},{uid:"ally",role:"member",displayName:"Rowan"}],
   clanApplications:[{uid:"applicant",displayName:"Bryn"}],clanApplicationsError:"",clanUiLoading:false,
   activeClanRewardSection:"gifts",selectedClanRallyId:"",selectedClanMemberUid:"",clanLedgerConfirmationOpen:false,
+  getClanActionAvailability:()=>({gift:false,donate:false}),renderClanActionNotice:()=>"",
   renderClanGiftPanel:()=>"GIFT_CONTENT",renderClanQuestPanel:()=>"QUEST_CONTENT",renderClanTreasuryPanel:()=>"TREASURY_CONTENT",
   renderClanView:()=>{},clanContent:{querySelector:()=>null},focusClanNavigationButton:()=>{},setClanMobileSection:section=>actions.push(["section",section]),
   isClanSectionActive:()=>true,getCurrentOnlineUid:()=>"self",formatNumber:String,escapeHtml:value=>String(value).replaceAll('<','&lt;').replaceAll('"','&quot;'),
@@ -24,6 +25,7 @@ const context = vm.createContext({
   runClanAction:async(action,payload)=>actions.push([action,payload]),confirmClanLedgerAction:async()=>true,
   runClanSocialAction:(...args)=>actions.push(args),CLAN_RALLY_MIN_PARTICIPANTS:2,CLAN_RALLY_MAX_PARTICIPANTS:20,
   rallyActionRequests:new Set(),getRenderableArmies:()=>[],getOnlineArmyResolutionId:army=>army.id,isRecallHornEligible:()=>true,
+  getClanRallyMaximumParticipants:()=>20,
   getRegionLabel:()=>"The Crown Marches",formatDuration:String,
   getLastSelectedOwnedAttackCity:()=>({name:'<Alderwatch>',troops:600}),
 });
