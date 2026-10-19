@@ -4,6 +4,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 const { deleteMaintenanceDocuments } = require("../functions/maintenance-deletes");
+const { incomingArmyData } = require("../functions/notification-delivery");
 const read = file => fs.readFileSync(path.join(__dirname, "..", file), "utf8");
 const server = read("functions/index.js"), game = read("game.js");
 const section = (source, start, end) => source.slice(source.indexOf(start), source.indexOf(end, source.indexOf(start)));
@@ -53,15 +54,20 @@ async function main() {
   assert.equal(failures,1,"Unrelated failures must not cause a retry storm.");
 
   const selectedBatches = [];
+  const payloads = [];
   const tokens = ["ok", "retry", "invalid"].map(id => ({id,data:()=>({token:id+"-token"})}));
-  const pushContext = vm.createContext({safeString:value=>String(value||""),
+  const pushContext = vm.createContext({safeString:value=>String(value||""), incomingArmyData,
     db:{collection:()=>({where:()=>({limit:()=>({get:async()=>({empty:false,docs:tokens})})})})},
-    messaging:{async sendEach(messages){selectedBatches.push(messages.map(m=>m.token));return {successCount:1,responses:messages.map(m=>m.token==="ok-token"?{success:true}:m.token==="retry-token"?{success:false,error:{code:"messaging/server-unavailable"}}:{success:false,error:{code:"messaging/registration-token-not-registered"}})};}},
+    messaging:{async sendEach(messages){selectedBatches.push(messages.map(m=>m.token));payloads.push(...messages);return {successCount:1,responses:messages.map(m=>m.token==="ok-token"?{success:true}:m.token==="retry-token"?{success:false,error:{code:"messaging/server-unavailable"}}:{success:false,error:{code:"messaging/registration-token-not-registered"}})};}},
     isInvalidMessagingTokenError:error=>error?.code==="messaging/registration-token-not-registered",
     removeNotificationTokenDocs:async()=>{}, console,
   });
   vm.runInContext(section(server,"async function sendIncomingArmyNotification(","function queueIncomingArmyNotification("),pushContext);
-  const partial = await vm.runInContext('sendIncomingArmyNotification({defenderUid:"recipient"})',pushContext);
+  const partial = await vm.runInContext('sendIncomingArmyNotification({defenderUid:"recipient",kind:"attack",title:"Incoming army",troops:1200})',pushContext);
+  assert.equal(payloads[0].data.type,"incoming_army");
+  assert.equal(payloads[0].data.title,"Incoming army");
+  assert.equal(payloads[0].data.troops,"1200","The real notification helper must serialize troop counts for delivery.");
+  assert.equal(payloads[0].webpush.headers.Urgency,"high");
   assert.deepEqual(Array.from(partial.deliveredTokenIds),["ok"]);
   assert.deepEqual(Array.from(partial.completedTokenIds),["ok","invalid"]);
   assert.equal(partial.retryError.code,"messaging/server-unavailable","Partial failures must remain retryable.");

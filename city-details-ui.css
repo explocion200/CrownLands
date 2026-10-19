@@ -140,7 +140,10 @@
 #modal .cd-amounts { display: flex; margin-bottom: 9px; }
 #modal .cd-amounts button { flex: 1; border-radius: 0 !important; }
 #modal .cd-amounts button + button { border-left: 0 !important; }
-#modal .cd-amounts button[aria-pressed=true] { background: #665c3e !important; color: #fff6df !important; }
+/* Preserve the selected amount against the shared theme's button/hover paint. */
+@layer crownlands-theme {
+  #modal .cd-amounts button[aria-pressed=true] { background: #665c3e !important; color: #fff6df !important; }
+}
 #modal .cd-panel .cd-upgrade { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; min-height: 48px; padding: 10px 12px; background: var(--cd-moss) !important; border-color: #3c482f !important; color: #fff8e5 !important; text-align: left; }
 #modal .cd-panel .cd-upgrade:hover:not(:disabled) { background: #3b492e !important; }
 #modal .cd-panel .cd-upgrade:disabled { background: #d4c7a5 !important; border-color: #a59470 !important; color: #62583d !important; }

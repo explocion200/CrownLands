@@ -330,8 +330,8 @@ previewContext.innerCastleEconomy = null;
 assert.equal(previewContext.previewUpgrade(promotionTarget, [promotionTarget, promotionMaterial]).canUpgrade, false, "Missing building state never authorizes a promotion");
 assert.match(gearUi, /group\.isUpgradeReady = !group\.isEquipped[\s\S]{0,160}getCommonGearUpgradePreview\(group\.representative, instances, upgradeContext\)\.hasMatchingMaterial/, "Stored material-ready groups must receive alerts even when gold is missing.");
 assert.match(gearUi, /isUpgradeReady: Boolean\(equipped && getCommonGearUpgradePreview\(equipped, instances, upgradeContext\)\.hasMatchingMaterial\)/, "Equipped gear with a valid stored material must flag its loadout slot.");
-assert.match(gearUi, /group\.isUpgradeReady && !group\.isEquipped \? `<span class="common-gear-upgrade-ready common-gear-bag-upgrade-ready"/, "Equipped bag copies must not render the upgrade alert.");
-assert.match(gearUi, /isUpgradeReady \? `<span class="common-gear-upgrade-ready common-gear-slot-upgrade-ready"/, "Upgradeable equipped items must render the alert on their equipment slot.");
+assert.match(gearUi, /group\.isUpgradeReady && !group\.isEquipped \? `<span class="notification-badge common-gear-upgrade-ready common-gear-bag-upgrade-ready"/, "Only stored upgrade-ready bag copies render the shared notification badge.");
+assert.match(gearUi, /isUpgradeReady \? `<span class="notification-badge common-gear-upgrade-ready common-gear-slot-upgrade-ready"/, "Upgradeable equipped items must render the shared notification badge on their equipment slot.");
 
 assert.match(game, /equippedDefinition\.art/, "Equipped slots must render item artwork.");
 assert.match(gearUi, /renderCommonGearArtwork\(definition\.art, \{ detail: true, className: "common-gear-detail-art" \}\)/, "Selected gear must use its authoritative definition with framed detail artwork.");
