@@ -1284,17 +1284,17 @@ function createCommonGearUpgradeContext(instances) {
   return { counts, ids };
 }
 
-let commonGearEstateAccess = null;
+let gearEstateAccess = null;
 
 function getCommonGearBuildingAccess(instance, promotionRarity = "") {
   const requirement = COMMON_GEAR.getBuildingRequirement(instance, promotionRarity);
   if (!requirement) return { allowed: true, reason: "" };
-  const cached = commonGearEstateAccess?.state === state && commonGearEstateAccess.scope === getCommonGearActionScope()
-    ? commonGearEstateAccess.levels : null;
+  const cached = gearEstateAccess?.state === state && gearEstateAccess.scope === getCommonGearActionScope()
+    ? gearEstateAccess.levels : null;
   const level = innerCastleEconomy?.snapshot()?.estate?.levels?.[requirement.buildingId] ?? cached?.[requirement.buildingId];
   const name = COMMON_GEAR.BUILDINGS[requirement.buildingId].name;
   const allowed = Number.isInteger(level) && level >= requirement.requiredLevel;
-  return { allowed, reason: allowed ? "" : `${name} Level ${requirement.requiredLevel} required for ${titleCaseCommonGearLabel(requirement.rarity)} Gear. ${Number.isInteger(level) ? `Current building Level ${level}.` : "Building level unavailable. Reopen this screen to refresh."}` };
+  return { allowed, reason: allowed ? "" : `${name} Level ${requirement.requiredLevel} required for ${titleCaseCommonGearLabel(requirement.rarity)} Gear. ${Number.isInteger(level) ? `Current building Level ${level}.` : "Building level unavailable; reopen to refresh."}` };
 }
 
 function getCommonGearUpgradePreview(instance, instances = Object.values(state?.gear?.instances || {}), context = null) {
@@ -1965,7 +1965,7 @@ function showCommonGearBuilding(buildingId) {
   if (innerCastleEconomy) void innerCastleEconomy.refresh();
   else getOnlineApi()?.getEstateState?.().then(result => {
     if (state !== viewState || getCommonGearActionScope() !== viewSession || !result?.estate?.levels) return;
-    commonGearEstateAccess = { state: viewState, scope: viewSession, levels: result.estate.levels };
+    gearEstateAccess = { state: viewState, scope: viewSession, levels: result.estate.levels };
     if (isCommonGearBuildingOpen(buildingId)) renderCommonGearBuilding(buildingId);
   }).catch(() => {});
   getOnlineApi()?.viewCommonGearBuilding?.({ buildingId }).then(result => {
