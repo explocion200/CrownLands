@@ -69,7 +69,8 @@
         const active = sites.filter(site => site.job).sort((a,b) => (b.b.key === selected) - (a.b.key === selected));
         if (!active.length) { districts.forEach(e => e.classList.remove('estate-timer-obscured')); return; }
         const screen = viewport.getBoundingClientRect(), view = {width:viewport.clientWidth, height:viewport.clientHeight};
-        const sx = screen.width / view.width, sy = screen.height / view.height, overview = zoom < 2.5, width = 88, height = 40;
+        const sx = screen.width / view.width, sy = screen.height / view.height, overview = zoom < 2.5;
+        const detail = Math.max(0, Math.min(1, (zoom - 1) / 1.5)), width = 52 + 36 * detail, height = 28 + 12 * detail;
         // Use viewport layout pixels, including during the dialog's opening scale.
         const rect = e => { const r = e.getBoundingClientRect(); return {left:(r.left - screen.left)/sx, right:(r.right - screen.left)/sx, top:(r.top - screen.top)/sy, bottom:(r.bottom - screen.top)/sy}; };
         const overlaps = (a,b) => a.left < b.right + 2 && a.right > b.left - 2 && a.top < b.bottom + 2 && a.bottom > b.top - 2;
@@ -79,12 +80,13 @@
         // Interleaving those writes with reads forces a layout for every job.
         const artBoxes = new Map(active.map(site => [site, rect(host.querySelector(`[data-estate-site="${site.b.key}"]>img`))]));
         const districtBoxes = overview ? new Map(districts.map(e => [e, rect(e.querySelector('span'))])) : null;
+        if (layer.style.getPropertyValue('--estate-timer-detail') !== String(detail)) layer.style.setProperty('--estate-timer-detail', String(detail));
         districts.forEach(e => e.classList.remove('estate-timer-obscured'));
         for (const site of active) {
           const art = artBoxes.get(site), cx = (art.left + art.right) / 2;
           const box = {left:cx - width / 2, right:cx + width / 2, top:art.top - height - 6, bottom:art.top - 6};
-          // Keep one size and one building anchor at every zoom. The directory
-          // retains countdowns when their fixed map position is crowded/clipped.
+          // Shrink overview timers without moving their building anchor. The
+          // directory retains countdowns when that position is crowded/clipped.
           site.gauge.hidden = art.right < 0 || art.left > view.width || art.bottom < 0 || art.top > view.height || box.left < 6 || box.top < 6 || box.right > view.width - 6 || box.bottom > view.height - 6 || obstacles.some(o => overlaps(box,o));
           if (!site.gauge.hidden) {
             site.gauge.style.left = box.left + "px"; site.gauge.style.top = box.top + "px"; site.gauge.style.width = width + "px";

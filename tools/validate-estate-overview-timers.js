@@ -49,26 +49,31 @@ async function main() {
         });
         await frames();
         const check=()=>{
-          const view=document.querySelector('.estate-viewport').getBoundingClientRect(),boxes=[],hidden=[],overview=qaView.snapshot().zoom<2.5;
+          const zoom=qaView.snapshot().zoom,detail=Math.max(0,Math.min(1,(zoom-1)/1.5));
+          const view=document.querySelector('.estate-viewport').getBoundingClientRect(),boxes=[],hidden=[],overview=zoom<2.5;
+          const width=52+36*detail,height=28+12*detail;
           const overlap=(a,b)=>a.left<b.right+2&&a.right>b.left-2&&a.top<b.bottom+2&&a.bottom>b.top-2;
           const panels='.estate-camera-controls,.estate-map-hint,.estate-directory,.estate-detail,#fixtureControls';
           const obstacles=[...document.querySelectorAll(overview?panels:panels+',.estate-site>img,.estate-nameplate:not([hidden]),.estate-building-target:not([hidden]),.estate-upgrade-targets button:not([hidden])')].filter(e=>!e.hidden&&e.getClientRects().length).map(e=>e.getBoundingClientRect());
           for(const job of qaEstate.jobs){
             const gauge=document.querySelector('[data-estate-construction="'+job.building+'"]'),box=gauge.getBoundingClientRect();
             const art=document.querySelector('[data-estate-site="'+job.building+'"] img').getBoundingClientRect(),cx=(art.left+art.right)/2;
-            const anchored={left:cx-44,right:cx+44,top:art.top-46,bottom:art.top-6};
+            const anchored={left:cx-width/2,right:cx+width/2,top:art.top-height-6,bottom:art.top-6};
             const note=document.querySelector('#estateConstructionNote-'+job.building),entry=document.querySelector('[data-estate-directory-building="'+job.building+'"]');
             if(note.hidden||!note.textContent.includes(gauge.querySelector('[data-estate-time-left]').textContent)||entry.getAttribute('aria-describedby')!==note.id)throw Error('Missing live directory fallback: '+job.building);
             if(gauge.querySelector('i'))throw Error('Fixed timers must not need displacement leaders');
             if(gauge.hidden){hidden.push({key:job.building,box:anchored});continue;}
-            if(box.width!==88||box.height!==40)throw Error('Timer changed screen size: '+job.building);
+            if(Math.abs(box.width-width)>.1||Math.abs(box.height-height)>.1)throw Error('Timer did not follow compact zoom sizing: '+job.building);
             if(Math.abs(box.left-anchored.left)>.6||Math.abs(box.top-anchored.top)>.6)throw Error('Timer moved away from its building: '+job.building);
+            if(Math.abs(gauge.querySelector('svg').getBoundingClientRect().width-(44+44*detail))>.1)throw Error('Arc did not shrink with overview zoom');
             if(box.left<view.left+5||box.top<view.top+5||box.right>view.right-5||box.bottom>view.bottom-5)throw Error('Timer outside view: '+job.building);
             if(getComputedStyle(gauge).pointerEvents!=='none')throw Error('Timer intercepts map gestures');
             if(boxes.some(r=>overlap(box,r)))throw Error('Concurrent counters overlap');
             boxes.push(box);
             const text=gauge.querySelector('[data-estate-time-left]').getBoundingClientRect();
             if(text.left<view.left||text.right>view.right||text.top<view.top||text.bottom>view.bottom)throw Error('Countdown clipped');
+            if(text.left<box.left-.5||text.right>box.right+.5||text.bottom>box.bottom+1.1)throw Error('Countdown exceeds compact timer bounds: '+JSON.stringify({building:job.building,zoom,box:box.toJSON(),text:text.toJSON(),font:getComputedStyle(gauge.querySelector('span')).font}));
+            if(parseFloat(getComputedStyle(gauge.querySelector('span')).fontSize)<8)throw Error('Overview countdown became unreadably small');
             if(overview)for(const district of document.querySelectorAll('.estate-district:not([hidden])')){
               if(overlap(box,district.querySelector('span').getBoundingClientRect())&&getComputedStyle(district).visibility!=='hidden')throw Error('District covers active countdown');
             }
@@ -91,6 +96,16 @@ async function main() {
         }
         assert(overviewVisible>0,'Fit must show unobstructed projects');
         assert(inspectionVisible>=20,'Inspection must expose construction above sites');
+        // Continuous zoom, including the owner's nearly-max zoom example: keep
+        // the compact overview and original close-up size without a threshold jump.
+        await evaluate(()=>{qaJobs(['foresters-lodge']);qaView.select('foresters-lodge');document.querySelector('[data-estate-detail-close]').click();});
+        for(const zoom of [1,1.25,1.75,2.49,2.5,3.78,4,1]){
+          await evaluate(z=>{qaView.zoom(z);qaView.select('foresters-lodge');document.querySelector('[data-estate-detail-close]').click();if(z<2.5)qaView.zoom(z);},zoom);await frames();await evaluate(check);
+          if(zoom===1||zoom===3.78){
+            const capture=await client.send('Page.captureScreenshot',{format:'png'});
+            fs.writeFileSync(path.join(output,delivery+'-forester-'+zoom+'-'+width+'x'+height+'.png'),Buffer.from(capture.data,'base64'));
+          }
+        }
         for(const keys of [['great-hall','treasury','barracks'],['quarry','mine','foresters-lodge'],['alehouse','royal-stables','guild-master']]){
           await evaluate(ks=>{qaView.fit();qaJobs(ks);},keys);await frames();await evaluate(check);
         }
@@ -100,6 +115,7 @@ async function main() {
         assert.equal(await evaluate(()=>document.querySelector('[data-estate-construction="great-hall"] [data-estate-time-left]').textContent),'0:20');
         await evaluate(()=>{qaNow+=20000;qaView.updateResources();});
         assert(await evaluate(()=>qaEstate.jobs.every(j=>document.querySelector('[data-estate-construction="'+j.building+'"] [data-estate-time-left]').textContent==='Finishing…')));
+        await evaluate(check);
         await evaluate(()=>{qaJobs([]);qaView.fit();});await frames();
         assert(await evaluate(()=>![...document.querySelectorAll('.estate-construction-timer')].some(e=>!e.hidden)&&!document.querySelector('.estate-timer-obscured')),'Confirmed completion restores district labels');
         await evaluate(()=>{qaJobs(['quarry']);qaView.select('quarry');document.querySelector('[data-estate-detail-close]').click();});await frames();
@@ -117,7 +133,7 @@ async function main() {
         assert(await evaluate(()=>document.querySelector('[data-estate-construction="quarry"]').hidden),'Offscreen projects must not float on another site');
         await evaluate(()=>{qaView.fit();qaView.destroy();});
         assert.equal(await evaluate(()=>document.querySelectorAll('.estate-construction-timers,.estate-construction-note,.estate-timer-obscured').length),0);
-        results.push({delivery,width,height,sites:20,concurrentGroups:3,overviewVisible,inspectionVisible,fixedSizeAndAnchor:true,completion:true,zoomReturn:true,offscreen:true,cleanup:true});
+        results.push({delivery,width,height,sites:20,concurrentGroups:3,overviewVisible,inspectionVisible,compactZoomSizeAndFixedAnchor:true,completion:true,zoomReturn:true,offscreen:true,cleanup:true});
         console.log(`Estate overview construction timers passed: ${delivery} ${width}x${height}.`);
       }
     }

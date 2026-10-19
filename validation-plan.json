@@ -1,24 +1,28 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "b74fe4bc064f20809ce6dc8eb77f936cc7cb3990",
+  "baseCommit": "cbcbe31a1a01035b98581cc96a85a5ce65793764",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "tools/validate-notification-badges-browser.js"
+        "estate-economy-ui.js",
+        "estate-economy-ui.css",
+        "tools/validate-estate-overview-timers.js",
+        "tools/validate-estate-economy-browser.js"
       ],
       "tests": [
-        "tools/validate-notification-badges-browser.js",
-        "tools/validate-report-system.js"
+        "tools/validate-estate-overview-timers.js",
+        "tools/validate-estate-economy-browser.js",
+        "tools/validate-estate-refresh-browser.js",
+        "tools/validate-estate-camera-performance-browser.js"
       ],
-      "reason": "Removes the unread circle from the shared battle-report row renderer while retaining the Reports HUD count. The existing browser suite now opens the real Reports panel with new attack, defense and scout reports at desktop and two landscape sizes, checks that rows have no unread badge while the Reports control retains its capped count, and preserves new-this-visit highlighting. Shared badge styling, sizing and clearing remain covered by that suite. Report-system validation covers report rendering, navigation, retention, unread calculation/read watermark and live-arrival dependencies. No server-authoritative behavior or data changes; emulator suites are not applicable."
+      "reason": "Changes only construction-timer geometry: compact overview width/height, readable countdown text, smooth growth to the existing inspection size, and matching collision bounds. The overview browser suite checks all twenty buildings and concurrent projects in source and production builds at desktop and two landscape sizes, intermediate zooms through 4x, six-pixel artwork anchoring, text/viewport bounds, obstacle handling, completion, offscreen fallback and cleanup. Estate economy integration checks shared map controls, timing, Gear return and completion behavior. Refresh checks unchanged snapshots do not mutate timer DOM or add requests. Camera performance checks coalesced zoom/pan with active construction timers on source and built clients. No authoritative economy, server or data changes; emulator suites are not applicable."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Records the explicitly requested refinement to the shared notification design: report unread circles appear on the Reports tab/button, not each row. Documentation has no runtime behavior; the relevant implementation is covered above."
+      "reason": "Records the owner-requested compact overview timer presentation, superseding constant screen sizing while retaining close-up size, anchored placement and authoritative timing. Documentation has no runtime behavior; relevant dependencies are covered above."
     }
   ]
 }
