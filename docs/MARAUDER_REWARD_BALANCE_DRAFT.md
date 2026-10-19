@@ -1,187 +1,192 @@
 # Marauder reward balance draft
 
-This draft covers proposed Gold and Hero XP rewards, defending troops and item-drop chances for Marauder levels 1–69. Keep this draft local until the full reward package is drafted and approved for publication. This document does not change runtime rewards or the approved Master Specification.
+Solo Marauders cover levels 1–79, with a maximum item-drop chance of 70%. Clan bosses cover levels 80–100. This matches the current solo/boss classification and replaces the earlier suggested boundary at level 70. Keep this draft local until the complete balance package is ready for review and publication. Runtime behavior and the Master Specification are unchanged.
 
-## Fixed values by Marauder level
+## Fixed solo values
 
-Each Marauder level from 1 through 69 has one fixed set of full-strength defending troops, Gold, XP and item-drop chance, as listed below. The listed numbers are the draft balance values. Use a level lookup; do not recalculate them from the attacking player's level, XP bar, city levels, production, skills, equipment or bonuses. Future edits to city upgrade costs or Hero XP requirements must not automatically change these Marauder values. Changing them requires a deliberate balance revision.
+Each solo Marauder level has fixed full-strength defending troops, Gold, XP and item-drop chance. Use the table below as a level lookup. Player level, XP-bar progress, city levels, production, skills, equipment and bonuses do not alter these configured values. Future changes to city upgrade costs or Hero progression do not automatically change the table.
 
-A successful solo hunt awards the listed Gold and XP once, regardless of the player's Hero level. For this drafted range, do not apply the recipient-level battle XP cap to the Marauder XP payout. This supersedes the previous draft's cap-retention assumption and would replace the Master Specification's current Marauder-cap rule for levels 1–69 when the complete package is implemented. Other battles, levels 70–79 and bosses retain their current rules pending their own decisions.
+A victorious solo hunt pays the listed Gold and XP once. The drafted recipient-level XP-cap exemption now covers all solo levels 1–79; other battle types retain their current caps unless separately changed. This is a proposed change to the current Master Specification and live settlement, which still applies its existing cap. Player level can neither increase nor reduce the listed solo payout. Existing Hero level-up Gold, troops and skill points still apply.
 
-Troops means the enemy's full-strength starting defenders, not troops awarded to the player. Preserve surviving defender losses after failed attacks; the fixed starting count applies to fresh spawns. Failed or canceled hunts do not award these victory rewards. The existing item pool and item-selection weights, stamina, ordinary combat mechanics and Hero level-up rewards remain unchanged. The item-drop frequency is drafted below.
+Defenders are the enemy's starting army, not a troop reward. Failed attacks retain their existing surviving-defender behavior. Failed or canceled hunts pay no victory rewards. Keep 10 stamina per hunt, the existing item pool and weights, combat mechanics, respawn rules and once-only settlement.
 
-## Gold calculation used for this draft
+## Calculations used to choose the fixed values
 
-The fixed Gold values were calculated once as one fifth of the standard Gold cost to upgrade a regular city from level L to L + 1, rounded down to whole Gold:
+Gold remains one fifth of the undiscounted regular-city cost from level L to L + 1, rounded down. XP remains one fifth of the full Hero requirement from level L to L + 1, rounded down. These are one-time derivations from the documented source revision, not runtime dependencies on the player's state.
 
-`Gold = floor(standardCityUpgradeCost(L) / 5)`
+- `Gold[L] = floor(standardCityUpgradeCost(L) / 5)`
+- `XP[L] = floor(getXpRequiredForLevel(L) / 5)`
 
-For example, a level 20 Marauder references the level 20 to 21 city upgrade. Use the price before player skill, equipment or other discounts so each level has the same reward for every player. These references explain how the fixed values were selected; they are not runtime dependencies. The requested one-fifth relationship replaces the existing geometric Gold anchors if the complete package is later approved.
+The current Hero requirement through level 25 is `floor(150 + 65 * L + 35 * L ** 2.05)`; above 25 it is `floor(27469 * 1.1 ** (L - 25))`, subject to the existing safe-integer bound. Five rewards provide approximately one corresponding level's requirement, with up to four units missing due to rounding. Defeating a higher-level Marauder can award multiple Hero levels; those indirect rewards remain part of the overall economy review.
 
-The main table covers the previously requested levels 1–69. Levels 70–79 are an extension for review only; applying the formula to that range is still pending. Bosses at levels 80–100 are outside this draft. Stamina and combat mechanics are unchanged. The troop, XP and item-drop changes below cover levels 1–69 only.
+Gold and XP for levels 1–69 preserve their previous drafted numbers. Levels 70–79 now have a complete fixed solo entry, replacing the earlier review-only extension.
 
-## XP calculation used for this draft
+## Solo defending troops
 
-The fixed XP values were calculated once as one fifth of the XP required for a Hero at level L to advance to L + 1, rounded down to whole XP:
-
-`XP = floor(getXpRequiredForLevel(L) / 5)`
-
-The reference is the full requirement for that single Hero level, not cumulative lifetime XP or the player's remaining XP-bar gap. As with the Gold draft, match the Marauder's level to the reference Hero level. A Marauder's reward stays fixed for all players; Hero level does not increase or decrease the listed payout.
-
-Keep the existing Hero progression curve: through level 25, the requirement is `floor(150 + 65 * L + 35 * L ** 2.05)`; above 25, it is `floor(27469 * 1.1 ** (L - 25))`, subject to the current safe-integer bound. Player levels and stored XP are not changed. This draft replaces the Master Specification's fixed Marauder XP anchors for levels 1–69 only.
-
-The fixed XP payout uses no recipient-level reduction for Marauders 1–69. At the current progression curve, five victories against a Marauder matching the Hero's starting level give approximately that full level's requirement, with at most four XP missing due to rounding. Leveling up does not change that Marauder's payout. A lower-level Hero defeating a higher-level Marauder receives the full listed XP and may gain multiple levels. Existing level-up Gold, troops and skill points still apply and belong in the complete balance review.
-
-## Defending troops
-
-The owner requested a maximum of 1,000,000 defending troops at level 69. For this draft, preserve the existing level 1–40 counts and stretch the geometric growth from 100,000 at level 40 to 1,000,000 at level 69. This proposed interpolation keeps early opponents unchanged and makes later levels increase steadily without reaching the cap early.
+To extend the previous solo curve, this draft moves the same 1,000,000-troop maximum from level 69 to level 79. This is the working interpretation of recalculating the solo range. Preserve existing level 1–40 defenders, then grow geometrically from 100,000 at level 40 to 1,000,000 at level 79.
 
 | Level anchor | Draft defending troops |
 | ---: | ---: |
 | 1 | 100 |
 | 20 | 10,000 |
 | 40 | 100,000 |
-| 69 | 1,000,000 |
+| 79 | 1,000,000 |
 
-For levels 41–68, use `floor(100000 * 10 ** ((level - 40) / 29))`; level 69 is exactly 1,000,000. Levels 1–40 retain the current geometric interpolation between their anchors. The cap applies to full-strength counts within this drafted level 1–69 range. Level 70–79 troop balancing and boss balancing remain pending; no population level range is changed.
+For levels 41–78 use `floor(100000 * 10 ** ((L - 40) / 39))`; level 79 is exactly 1,000,000. Freeze the resulting integers in the level table. The current live level-79 count is 10,000,000, so the proposed maximum is 90% lower.
 
-This replaces the Master Specification's current level-60 anchor of 1,000,000 defenders within the draft. The live level-69 count is 2,976,351; the proposed 1,000,000 is approximately 66.4% lower. The Master Specification and runtime remain unchanged until the complete package is ready.
+## Solo item-drop chance
 
-## Item-drop chance
+Keep the draft's 1% starting chance and spread the increase evenly to the requested 70% maximum at level 79. Round to the nearest 0.01 percentage point, stored as whole basis points: `itemChanceBps[L] = 100 + round(6900 * (L - 1) / 78)`. One basis point is 0.01%; 7,000 basis points is exactly 70%. These fixed chances replace the previous level-as-percent draft.
 
-The owner specified a 69% chance of an item drop at Marauder level 69. The proposed intermediate curve is one percentage point per level: level 1 is 1%, level 20 is 20%, and level 69 is 69%. Treat this level-based progression as part of the draft for review; only the level-69 endpoint was explicitly specified. Store the listed chance with the fixed values for each level.
+Each victory rolls once for at most one item. A level-79 win has a 70% chance of one item and a 30% chance of none. The chance is independent of player strength, troop count and previous drops. Preserve server-owned rolls and once-only settlement; retries cannot reroll or duplicate items. Gold and XP are awarded on victory regardless of the item result.
 
-For drafted levels 1–69, `itemDropChance = level / 100`. Each successful hunt has one chance to drop at most one item. Level 69 therefore has a 69% chance of exactly one item and a 31% chance of no item. Chances do not depend on the player, the number of troops sent or previous drops. A failed or canceled hunt awards no item. Preserve server-owned random draws and once-only settlement so retries cannot reroll the result or duplicate an item.
+The current live solo curve runs from 2% to 10%; replacing it needs the coordinated balance release. A successful drop still chooses one consumable from this unchanged weighted pool:
 
-This draft replaces the current Master Specification's solo drop curve only for levels 1–69. At level 69, the existing chance is approximately 8.97%; at level 1 it is 2%. Levels 70–79 and bosses retain their current rules pending separate balancing; their eventual transition needs review before the full package is released.
-
-Keep the current weighted consumable pool. A successful drop selects one item using the weights below, rather than rolling separately for every item.
-
-| Item | Share of successful drops | Chance per level 69 victory |
+| Item | Share of successful drops | Chance per level 79 solo victory |
 | --- | ---: | ---: |
-| War Drums | 35% | 24.15% |
-| Veil of Silence | 25% | 17.25% |
-| Swift March Order | 18% | 12.42% |
-| Royal Tax Decree | 12% | 8.28% |
-| Recall Horn | 8% | 5.52% |
-| Peace Shield | 2% | 1.38% |
+| War Drums | 35% | 24.50% |
+| Veil of Silence | 25% | 17.50% |
+| Swift March Order | 18% | 12.60% |
+| Royal Tax Decree | 12% | 8.40% |
+| Recall Horn | 8% | 5.60% |
+| Peace Shield | 2% | 1.40% |
 
-The last column totals 69%; the remaining 31% is no item. Item quantities remain one per successful drop. The player receives the fixed Gold and XP on victory whether or not the item roll succeeds.
+The final column totals 70%; the remaining 30% is no item.
 
-## Balance effect
+## Fixed solo values for levels 1 through 79
 
-Level 1 falls from 100 to 5 Gold and level 20 falls from 5,000 to 537 Gold. Level 69 falls from 1,488,175 to 1,180,872 Gold. Five wins provide approximately one standard same-level city upgrade; rounding can leave a shortfall of up to four Gold. These totals exclude troop losses, other income and player upgrade discounts.
-
-XP changes from 20 to 50 at level 1, from 500 to 3,542 at level 20, and from 15,434 to 364,041 at level 69. Gold rewards and the previously drafted troop curve remain unchanged.
-
-## Fixed values for levels 1 through 69
-
-All Gold and XP values below are the full victory payout. Defenders are the full-strength spawn count. Item chance is the probability of one item on victory. These values are fixed independently of the attacking player.
+Gold and XP are full solo victory payouts. Troops are full-strength starting defenders.
 
 | Marauder level | Defending troops | Gold | XP | Item chance |
 | ---: | ---: | ---: | ---: | ---: |
 | 1 | 100 | 5 | 50 | 1% |
-| 2 | 127 | 7 | 84 | 2% |
-| 3 | 162 | 10 | 135 | 3% |
-| 4 | 206 | 14 | 202 | 4% |
-| 5 | 263 | 20 | 284 | 5% |
-| 6 | 335 | 26 | 383 | 6% |
-| 7 | 428 | 35 | 499 | 7% |
-| 8 | 545 | 45 | 631 | 8% |
-| 9 | 695 | 59 | 779 | 9% |
-| 10 | 885 | 74 | 945 | 10% |
-| 11 | 1,128 | 93 | 1,127 | 11% |
-| 12 | 1,438 | 116 | 1,327 | 12% |
-| 13 | 1,832 | 143 | 1,543 | 13% |
-| 14 | 2,335 | 175 | 1,777 | 14% |
-| 15 | 2,976 | 213 | 2,028 | 15% |
-| 16 | 3,792 | 258 | 2,296 | 16% |
-| 17 | 4,832 | 314 | 2,581 | 17% |
-| 18 | 6,158 | 375 | 2,884 | 18% |
-| 19 | 7,847 | 449 | 3,204 | 19% |
-| 20 | 10,000 | 537 | 3,542 | 20% |
-| 21 | 11,220 | 640 | 3,897 | 21% |
-| 22 | 12,589 | 757 | 4,270 | 22% |
-| 23 | 14,125 | 896 | 4,660 | 23% |
-| 24 | 15,848 | 1,056 | 5,068 | 24% |
-| 25 | 17,782 | 1,243 | 5,493 | 25% |
-| 26 | 19,952 | 1,464 | 6,043 | 26% |
-| 27 | 22,387 | 1,713 | 6,647 | 27% |
-| 28 | 25,118 | 2,008 | 7,312 | 28% |
-| 29 | 28,183 | 2,347 | 8,043 | 29% |
-| 30 | 31,622 | 2,740 | 8,847 | 30% |
-| 31 | 35,481 | 3,191 | 9,732 | 31% |
-| 32 | 39,810 | 3,712 | 10,705 | 32% |
-| 33 | 44,668 | 4,315 | 11,776 | 33% |
-| 34 | 50,118 | 5,013 | 12,954 | 34% |
-| 35 | 56,234 | 5,813 | 14,249 | 35% |
-| 36 | 63,095 | 6,731 | 15,674 | 36% |
-| 37 | 70,794 | 7,784 | 17,241 | 37% |
-| 38 | 79,432 | 9,005 | 18,966 | 38% |
-| 39 | 89,125 | 10,398 | 20,862 | 39% |
-| 40 | 100,000 | 12,002 | 22,948 | 40% |
-| 41 | 108,263 | 13,840 | 25,243 | 41% |
-| 42 | 117,210 | 15,937 | 27,768 | 42% |
-| 43 | 126,896 | 18,349 | 30,545 | 43% |
-| 44 | 137,382 | 21,116 | 33,599 | 44% |
-| 45 | 148,735 | 24,273 | 36,959 | 45% |
-| 46 | 161,026 | 27,885 | 40,655 | 46% |
-| 47 | 174,332 | 32,014 | 44,721 | 47% |
-| 48 | 188,739 | 36,738 | 49,193 | 48% |
-| 49 | 204,335 | 42,137 | 54,112 | 49% |
-| 50 | 221,221 | 48,288 | 59,523 | 50% |
-| 51 | 239,502 | 55,670 | 65,476 | 51% |
-| 52 | 259,294 | 65,402 | 72,023 | 52% |
-| 53 | 280,721 | 77,474 | 79,226 | 53% |
-| 54 | 303,919 | 92,211 | 87,148 | 54% |
-| 55 | 329,034 | 109,993 | 95,863 | 55% |
-| 56 | 356,224 | 131,299 | 105,449 | 56% |
-| 57 | 385,662 | 156,750 | 115,994 | 57% |
-| 58 | 417,531 | 186,994 | 127,594 | 58% |
-| 59 | 452,035 | 222,843 | 140,353 | 59% |
-| 60 | 489,390 | 265,185 | 154,389 | 60% |
-| 61 | 529,831 | 315,101 | 169,828 | 61% |
-| 62 | 573,615 | 373,804 | 186,810 | 62% |
-| 63 | 621,016 | 442,716 | 205,491 | 63% |
-| 64 | 672,335 | 523,447 | 226,041 | 64% |
-| 65 | 727,895 | 617,870 | 248,645 | 65% |
-| 66 | 788,046 | 728,178 | 273,509 | 66% |
-| 67 | 853,167 | 856,799 | 300,860 | 67% |
-| 68 | 923,670 | 1,006,615 | 330,946 | 68% |
-| 69 | 1,000,000 | 1,180,872 | 364,041 | 69% |
+| 2 | 127 | 7 | 84 | 1.88% |
+| 3 | 162 | 10 | 135 | 2.77% |
+| 4 | 206 | 14 | 202 | 3.65% |
+| 5 | 263 | 20 | 284 | 4.54% |
+| 6 | 335 | 26 | 383 | 5.42% |
+| 7 | 428 | 35 | 499 | 6.31% |
+| 8 | 545 | 45 | 631 | 7.19% |
+| 9 | 695 | 59 | 779 | 8.08% |
+| 10 | 885 | 74 | 945 | 8.96% |
+| 11 | 1,128 | 93 | 1,127 | 9.85% |
+| 12 | 1,438 | 116 | 1,327 | 10.73% |
+| 13 | 1,832 | 143 | 1,543 | 11.62% |
+| 14 | 2,335 | 175 | 1,777 | 12.50% |
+| 15 | 2,976 | 213 | 2,028 | 13.38% |
+| 16 | 3,792 | 258 | 2,296 | 14.27% |
+| 17 | 4,832 | 314 | 2,581 | 15.15% |
+| 18 | 6,158 | 375 | 2,884 | 16.04% |
+| 19 | 7,847 | 449 | 3,204 | 16.92% |
+| 20 | 10,000 | 537 | 3,542 | 17.81% |
+| 21 | 11,220 | 640 | 3,897 | 18.69% |
+| 22 | 12,589 | 757 | 4,270 | 19.58% |
+| 23 | 14,125 | 896 | 4,660 | 20.46% |
+| 24 | 15,848 | 1,056 | 5,068 | 21.35% |
+| 25 | 17,782 | 1,243 | 5,493 | 22.23% |
+| 26 | 19,952 | 1,464 | 6,043 | 23.12% |
+| 27 | 22,387 | 1,713 | 6,647 | 24% |
+| 28 | 25,118 | 2,008 | 7,312 | 24.88% |
+| 29 | 28,183 | 2,347 | 8,043 | 25.77% |
+| 30 | 31,622 | 2,740 | 8,847 | 26.65% |
+| 31 | 35,481 | 3,191 | 9,732 | 27.54% |
+| 32 | 39,810 | 3,712 | 10,705 | 28.42% |
+| 33 | 44,668 | 4,315 | 11,776 | 29.31% |
+| 34 | 50,118 | 5,013 | 12,954 | 30.19% |
+| 35 | 56,234 | 5,813 | 14,249 | 31.08% |
+| 36 | 63,095 | 6,731 | 15,674 | 31.96% |
+| 37 | 70,794 | 7,784 | 17,241 | 32.85% |
+| 38 | 79,432 | 9,005 | 18,966 | 33.73% |
+| 39 | 89,125 | 10,398 | 20,862 | 34.62% |
+| 40 | 100,000 | 12,002 | 22,948 | 35.50% |
+| 41 | 106,081 | 13,840 | 25,243 | 36.38% |
+| 42 | 112,533 | 15,937 | 27,768 | 37.27% |
+| 43 | 119,377 | 18,349 | 30,545 | 38.15% |
+| 44 | 126,638 | 21,116 | 33,599 | 39.04% |
+| 45 | 134,339 | 24,273 | 36,959 | 39.92% |
+| 46 | 142,510 | 27,885 | 40,655 | 40.81% |
+| 47 | 151,177 | 32,014 | 44,721 | 41.69% |
+| 48 | 160,371 | 36,738 | 49,193 | 42.58% |
+| 49 | 170,125 | 42,137 | 54,112 | 43.46% |
+| 50 | 180,472 | 48,288 | 59,523 | 44.35% |
+| 51 | 191,448 | 55,670 | 65,476 | 45.23% |
+| 52 | 203,091 | 65,402 | 72,023 | 46.12% |
+| 53 | 215,443 | 77,474 | 79,226 | 47% |
+| 54 | 228,546 | 92,211 | 87,148 | 47.88% |
+| 55 | 242,446 | 109,993 | 95,863 | 48.77% |
+| 56 | 257,191 | 131,299 | 105,449 | 49.65% |
+| 57 | 272,833 | 156,750 | 115,994 | 50.54% |
+| 58 | 289,426 | 186,994 | 127,594 | 51.42% |
+| 59 | 307,029 | 222,843 | 140,353 | 52.31% |
+| 60 | 325,702 | 265,185 | 154,389 | 53.19% |
+| 61 | 345,510 | 315,101 | 169,828 | 54.08% |
+| 62 | 366,524 | 373,804 | 186,810 | 54.96% |
+| 63 | 388,815 | 442,716 | 205,491 | 55.85% |
+| 64 | 412,462 | 523,447 | 226,041 | 56.73% |
+| 65 | 437,547 | 617,870 | 248,645 | 57.62% |
+| 66 | 464,158 | 728,178 | 273,509 | 58.50% |
+| 67 | 492,388 | 856,799 | 300,860 | 59.38% |
+| 68 | 522,334 | 1,006,615 | 330,946 | 60.27% |
+| 69 | 554,102 | 1,180,872 | 364,041 | 61.15% |
+| 70 | 587,801 | 1,383,329 | 400,445 | 62.04% |
+| 71 | 623,550 | 1,618,274 | 440,490 | 62.92% |
+| 72 | 661,474 | 1,890,702 | 484,539 | 63.81% |
+| 73 | 701,703 | 2,206,170 | 532,993 | 64.69% |
+| 74 | 744,380 | 2,571,209 | 586,292 | 65.58% |
+| 75 | 789,652 | 2,993,242 | 644,921 | 66.46% |
+| 76 | 837,677 | 3,480,661 | 709,414 | 67.35% |
+| 77 | 888,623 | 4,043,230 | 780,355 | 68.23% |
+| 78 | 942,668 | 4,691,949 | 858,391 | 69.12% |
+| 79 | 1,000,000 | 5,439,559 | 944,230 | 70% |
 
-## Levels 70 through 79 for review
+## Boss brainstorm for levels 80 through 100
 
-These rows show the proposed Gold formula beyond the original requested range. They are not an approved scope extension. Troops in this section are current live counts for reference only; new troop, XP and item-drop curves above level 69 have not been drafted.
+The following are proposals for discussion, not approved boss balance rules. Keep the existing Core-only boss placement, at least two clan participants and maximum of 20. Solo levels 70–79 remain in New Lands. No spawn-boundary or world-data migration is proposed.
 
-| Marauder level | Current troops only | City upgrade cost | Current Gold | Draft Gold | Change |
-| ---: | ---: | ---: | ---: | ---: | ---: |
-| 70 | 3,359,818 | 6,916,648 | 1,679,909 | 1,383,329 | -17.7% |
-| 71 | 3,792,690 | 8,091,374 | 1,896,345 | 1,618,274 | -14.7% |
-| 72 | 4,281,332 | 9,453,510 | 2,140,666 | 1,890,702 | -11.7% |
-| 73 | 4,832,930 | 11,030,852 | 2,416,465 | 2,206,170 | -8.7% |
-| 74 | 5,455,594 | 12,856,049 | 2,727,797 | 2,571,209 | -5.7% |
-| 75 | 6,158,482 | 14,966,211 | 3,079,241 | 2,993,242 | -2.8% |
-| 76 | 6,951,927 | 17,403,309 | 3,475,963 | 3,480,661 | +0.1% |
-| 77 | 7,847,599 | 20,216,150 | 3,923,799 | 4,043,230 | +3.0% |
-| 78 | 8,858,667 | 23,459,748 | 4,429,333 | 4,691,949 | +5.9% |
-| 79 | 10,000,000 | 27,197,796 | 5,000,000 | 5,439,559 | +8.8% |
+### Meaningful contributions
+
+Require every participant to bring effective attack power of at least 5% of the boss's configured full-strength defense. Do not use 5% of the rally total, so another member joining does not raise that participant's minimum. Also require no individual to contribute more than 70% of the assembled rally's total attack power; other members must collectively contribute at least 30%. For two people, 70/30 or 50/50 qualifies, while 99/1 does not. Combat bonuses count toward effective attack power.
+
+Show the required troops for each member's own combat bonuses, their contribution share, forecast losses and estimated payout before launch. Validate assembled membership and contributions before spending stamina, with all launch checks atomic. If members withdraw during assembly, recheck readiness. At least two members does not itself guarantee victory. Stronger members may reduce their committed force or wait for more help if the 70% limit prevents launch; this restriction needs playtesting with unequal-strength clans.
+
+### Fixed pools with a rally premium
+
+Start with 2,000,000 defenders at level 80 and double every five boss levels, reaching 32,000,000 at level 100. For intermediate levels the proposed calculation is `floor(2000000 * 16 ** ((L - 80) / 20))`. Rewards use the revised level-79 solo as their reference, with a 25% premium per configured defender:
+
+`bossPool = floor(level79SoloReward * bossDefenders / 1000000 * 1.25)`
+
+Calculate Gold and XP separately, then freeze each boss level's totals. This is a first balance estimate, not evidence that the rewards cover every player's losses. Bosses do not grow stronger when more members join, and additional members do not increase the total Gold or XP pool.
+
+| Boss level | Defending troops | Total Gold pool | Total XP pool | Personal item chance |
+| ---: | ---: | ---: | ---: | ---: |
+| 80 | 2,000,000 | 13,598,897 | 2,360,575 | 80% |
+| 85 | 4,000,000 | 27,197,795 | 4,721,150 | 85% |
+| 90 | 8,000,000 | 54,395,590 | 9,442,300 | 90% |
+| 95 | 16,000,000 | 108,791,180 | 18,884,600 | 95% |
+| 100 | 32,000,000 | 217,582,360 | 37,769,200 | 100% |
+
+Gold and XP are shared totals for the victorious rally, not per-member awards. Divide them by each member's snapshotted effective attack-power contribution with integer remainder handling that preserves the total. A 70/30 split receives 70% and 30%; the leader gets no automatic extra share. To preserve those exact payouts, the proposed boss rule would exempt these shares from the recipient-level XP cap, as in the solo draft. That additional boss-cap change is part of this brainstorm only.
+
+At level 80, two equal contributors would each receive approximately 6,799,448 Gold and 1,180,287 XP, with any remaining whole unit assigned once. The premium is 25% above one level-79 solo payout per person, while the full boss has twice the defenders.
+
+### Personal item rolls
+
+Propose one personal roll for each qualifying participant: level 80 gives 80%, level 85 gives 85%, and level 100 guarantees one item per participant. Reuse the same weighted consumable pool and at most one item per participant. This replaces the current single-item maximum for the entire victorious boss rally; it deliberately increases total item output with meaningful participation. Failed or canceled hunts receive no items.
+
+### Review before choosing boss values
+
+Compare attack bonuses, expected losses, casualty recovery, stamina and replacement time for two-member and larger rallies at every tier. Test the 5% contribution floor and 70% ceiling against both strong and developing clan members. Account for indirect Hero level-up rewards and total item output. Also review weakened bosses after failed attacks: the live rules preserve surviving defenders and only the victorious rally earns loot, so a finishing rally can face less risk than the configured full-strength pool suggests. The full-strength minimum contributions remain in this proposal; no additional wound, healing or earlier-damage payout policy is approved.
 
 ## Sources and verification
 
-Calculated from repository base `439e9083b87c6a3f5d29e205ef64706270b3bee7`:
+The calculation source is repository base `439e9083b87c6a3f5d29e205ef64706270b3bee7`:
 
-- [City upgrade calculation](../functions/index.js): `getCityUpgradeCost`, `getCityUpgradeTargetHours`, and passive Gold production helpers.
-- [Hero XP calculation](../functions/index.js): `getXpRequiredForLevel`, `getBattleXpLevelCapRate`, `capBattleXpForHeroLevel` and the Marauder settlement cap call. The [client progression calculation](../game.js) supplies matching level requirements.
-- [Economy configuration](../functions/economy-config.json): the city production and upgrade curves.
-- [Current Marauder rewards](../functions/marauder-rules.js): `balance`, Gold/XP/defender anchors, `ITEMS` weights and item selection in `rewards`.
-- [Battle guide calculator](../battle-guide-calculations.js): independent existing implementation used to cross-check every city cost.
-- [Master Specification](CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md): Camps and World Objectives, Marauders and Clan Bosses.
+- [Server](../functions/index.js): city upgrade costs, Hero level requirements, current XP caps, boss readiness, contribution snapshots and casualty allocation.
+- [Client](../game.js): matching Hero XP requirements.
+- [Economy configuration](../functions/economy-config.json) and [battle guide calculator](../battle-guide-calculations.js): independent city-cost cross-check.
+- [Marauder rules](../functions/marauder-rules.js): current troops, weighted item pool, allocation and rewards.
+- [Master Specification](CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md): current solo/boss boundary, combat, rally eligibility, rewards and persistence.
 
-The 69 fixed Gold values and ten additional Gold calculations for review agree with the source-revision server functions and battle guide calculator. The relevant installed server functions, constants, economy configuration and Marauder reward module match the repository inputs. All proposed Gold amounts are positive, strictly increase with level, and satisfy the one-fifth rule with whole-Gold rounding.
+All 79 solo Gold costs match the extracted server functions and battle guide. All 79 Hero requirements match server and client. Relevant installed functions, constants, economy configuration and the Marauder module match those inputs. Gold/XP preserve the previous level 1–69 draft; early defenders preserve levels 1–40. Every proposed solo value increases with level, the troop maximum is exactly 1,000,000 at 79, and chances start at 1% and end at 70% without exceeding the cap. The six item weights sum to 100%; weighted level-79 drops total 70%.
 
-The live troop reference values were verified against the current server reward module and its installed copy. All 69 proposed troop counts are positive whole numbers, increase strictly with level and stay at or below 1,000,000. Levels 1–40 are unchanged, and level 69 reaches exactly 1,000,000. Gold calculations are unchanged by this troop revision.
-
-The 69 fixed XP values were verified against matching server/client level requirements and the installed server inputs at the documented source revision. They are positive whole numbers, increase strictly and equal one fifth of those full same-level requirements rounded down. The fixed table preserves every previously drafted troop, Gold and XP number. The cap exemption is a draft policy change only; the live settlement still applies its existing recipient-level cap.
-
-All 69 proposed drop chances equal their Marauder level as a percentage, increase by one percentage point, stay within 0–100%, and end at exactly 69%. The fixed troop, Gold and XP values were preserved. The six existing item weights sum to 100%; their unconditional level-69 probabilities sum to 69%, with 31% no drop. The item pool and its installed copy match. These are draft calculations, not a live drop-system change.
+All 21 proposed boss levels were checked for increasing positive integer defenders and pools, exact endpoint values and 80–100% personal item chances. Integer arithmetic calculates reward pools without floating-point payout rounding. These are arithmetic and document checks only; no runtime, battle simulation, production mutation, merge or publication has occurred.

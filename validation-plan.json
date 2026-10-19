@@ -7,7 +7,7 @@
         "docs/MARAUDER_REWARD_BALANCE_DRAFT.md"
       ],
       "tests": [],
-      "reason": "Documentation-only held fixed Marauder balance draft. No runtime, Master Specification or production changes. Validate one unique row for each level 1–69; preserve all previously verified troop, Gold and XP values and the one-million level-69 defender maximum. Check draft item chance equals level percent with exact 69% endpoint and all probabilities bounded. Preserve the existing six-item pool, weights, one-item limit and once-only victory settlement; verify weights total 100% and level-69 weighted chances total 69%, with 31% no drop. Verify relevant installed rules match. Formula descriptions are historical derivations, not runtime player dependencies; the draft XP cap exemption remains documented. Higher-level and boss decisions remain pending. Browser, build and emulator suites do not apply to this documentation."
+      "reason": "Documentation-only held solo balance and boss brainstorm. No runtime, Master Specification or production changes. Verify 79 solo rows against extracted server/client requirements and guide costs, installed source/config parity, preserved level 1–69 Gold/XP and level 1–40 troops. Check increasing defenders capped at exactly one million at 79, fixed drop basis points from 1% to 70%, and unchanged weighted item pool. Verify 21 proposed boss calculations from 2M at 80 to 32M at 100, shared Gold/XP pools derived with exact integer arithmetic and a 25% premium, and 80–100% per-participant item chances. Review the proposed contribution floor, ceiling, cap exemption, unequal clan strengths and weakened-boss risk as unapproved brainstorming. No browser, build or emulator suite applies to this document."
     }
   ]
 }
