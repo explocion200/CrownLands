@@ -77,7 +77,7 @@ async function main() {
         const data = { summary: getKingdomSummary(), xp: state.character.xp, xpRequired: getXpRequiredForLevel(state.character.level), completed: 3, claimable: 2, format: formatNumber };
         CrownlandsPlayerProfileUI.update(data); const badge = profileView.querySelector(".ready-count");
         CrownlandsPlayerProfileUI.update({ ...data, claimable: 3 });
-        const liveBadge = badge.isConnected && badge.textContent === "3 Ready" && label.isConnected;
+        const liveBadge = badge.isConnected && badge.textContent === "3" && badge.getAttribute("aria-label") === "3 achievements ready to claim" && label.isConnected;
         CrownlandsPlayerProfileUI.update({ ...data, claimable: 0 });
         return { retained, updated, livePopup, liveBadge, clearedBadge: !badge.isConnected && label.isConnected };
       });

@@ -70,8 +70,9 @@
       }
       let badge = button.querySelector(".ready-count");
       if (count) {
-        if (!badge) { badge = document.createElement("span"); badge.className = "ready-count"; button.append(badge); }
-        setTextIfChanged(badge, `${count} Ready`);
+        if (!badge) { badge = document.createElement("span"); badge.className = "ready-count notification-badge"; button.append(badge); }
+        setTextIfChanged(badge, count > 99 ? "99+" : String(count));
+        setAttrIfChanged(badge, "aria-label", `${count} achievements ready to claim`);
       } else badge?.remove();
       setAttrIfChanged(button, "aria-label", `View Achievements${count ? ` · ${count} Ready` : ""}`);
     }

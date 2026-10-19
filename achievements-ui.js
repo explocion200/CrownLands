@@ -57,7 +57,7 @@ function render(viewOptions={}){
   const entries=sorted();
   if(!entries.some(a=>a.id===selected))selected=entries[0]?.id||'';
   const completed=state.achievements.filter(complete).length, collected=state.achievements.filter(claimed).length, claimable=state.achievements.filter(ready).length;
-  $('completedCount').textContent=`${completed} / 40 complete`;$('claimedCount').textContent=`${collected} / 40`;$('readyCount').textContent=`${claimable} ready to claim`;$('seasonProgress').style.width=completed/40*100+'%';
+  $('completedCount').textContent=`${completed} / 40 complete`;$('claimedCount').textContent=`${collected} / 40`;$('readyCount').innerHTML=claimable ? `<span class="notification-badge" aria-label="${claimable} rewards ready to claim">${claimable > 99 ? '99+' : claimable}</span> <span>ready to claim</span>` : 'No rewards ready';$('seasonProgress').style.width=completed/40*100+'%';
 
   if(mode==='expired')$('readyCount').textContent='Rewards expired';
   else if(mode==='loading')$('readyCount').textContent='Checking rewards';

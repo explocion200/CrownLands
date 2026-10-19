@@ -42,6 +42,7 @@ function getNotificationOpenUrl(notificationData = {}) {
 // bounded runtime cache. Keep installation focused on the playable shell.
 const STATIC_CACHE_URLS = [
   "/location-buttons.css?v=20261018-location-r1",
+  "/notification-badges.css?v=20261019-notifications-r1",
   "/main-screen-art-ui.css?v=20261016-bottom-labeled-r1",
   "/app-entry.js",
   "/player-journey.js?v=20260920-journey-r1",

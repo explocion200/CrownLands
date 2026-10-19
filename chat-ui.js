@@ -388,6 +388,7 @@
     let errors = { global: "", clan: "" };
     let received = { global: false, clan: false };
     let unread = { global: false, clan: false };
+    let privateUnread = 0, privateUnreadMore = false;
     let lastReadAtMs = { global: null, clan: null };
     let quickMessageLimit = CHAT_QUICK_MESSAGE_LIMIT;
     let quickPreviewVisible = false;
@@ -653,12 +654,29 @@
     }
 
     function renderUnread() {
-      const anyUnread = unread.global || unread.clan;
-      elements.unread.hidden = !anyUnread;
+      const counts = Object.fromEntries(CHAT_CHANNELS.map(name => [name, unread[name]
+        ? messages[name].filter(message => message.createdAtMs > (Number(lastReadAtMs[name]) || 0)).length : 0]));
+      const total = counts.global + counts.clan + privateUnread;
+      const update = (node, count, label, more = false) => {
+        const text = count > 99 ? "99+" : String(count) + (more ? "+" : "");
+        if (node.hidden !== (count === 0)) node.hidden = count === 0;
+        if (node.textContent !== text) node.textContent = text;
+        if (node.getAttribute("aria-label") !== label) node.setAttribute("aria-label", label);
+      };
+      update(elements.unread, total, `${counts.global} unread Global messages, ${counts.clan} unread Clan messages, ${privateUnread}${privateUnreadMore ? " or more" : ""} unread private conversations`, privateUnreadMore);
       elements.tabs.forEach(tab => {
         const indicator = tab.querySelector(".chat-tab-unread");
-        if (indicator) indicator.hidden = !unread[tab.dataset.chatChannel];
+        if (indicator) {
+          const count = counts[tab.dataset.chatChannel];
+          update(indicator, count, `${count} unread ${tab.dataset.chatChannel === "global" ? "Global" : "Clan"} messages`);
+        }
       });
+    }
+
+    function setPrivateUnread(count, more = false) {
+      privateUnread = Number.isFinite(Number(count)) ? Math.max(0, Math.floor(Number(count))) : 0;
+      privateUnreadMore = privateUnread > 0 && Boolean(more);
+      renderUnread();
     }
 
     function renderQuick() {
@@ -960,6 +978,7 @@
         errors = { global: "", clan: "" };
         received = { global: false, clan: false };
         unread = { global: false, clan: false };
+        privateUnread = 0; privateUnreadMore = false;
         lastReadAtMs = { global: loadLastRead("global"), clan: loadLastRead("clan") };
       }
       if (freshSession) {
@@ -1017,6 +1036,7 @@
       errors = { global: "", clan: "" };
       received = { global: false, clan: false };
       unread = { global: false, clan: false };
+      privateUnread = 0; privateUnreadMore = false;
       lastReadAtMs = { global: null, clan: null };
       if (resetSession) {
         elements.input.value = "";
@@ -1133,7 +1153,7 @@
     selectChannel("global", { focus: false });
     renderUnread();
     renderComposer();
-    return Object.freeze({ start, updateClan, dispose, diagnostics, setMode, selectChannel,
+    return Object.freeze({ start, updateClan, dispose, diagnostics, setMode, selectChannel, setPrivateUnread,
       setTranslationLanguage: value => translation?.setLanguage(value === "device" ? deviceLanguage() : translationApi.preferredLanguage([value])),
     });
   }
@@ -1167,6 +1187,7 @@
     init,
     start: context => init()?.start(context),
     updateClan: clanId => init()?.updateClan(clanId),
+    setPrivateUnread: (count, more) => singleton?.setPrivateUnread(count, more),
     dispose: () => singleton?.dispose(),
     diagnostics: () => singleton?.diagnostics() || null,
   });

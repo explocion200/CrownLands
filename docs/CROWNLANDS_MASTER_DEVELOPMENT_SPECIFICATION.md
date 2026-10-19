@@ -2258,6 +2258,12 @@ The held Core-expansion Functions, rules, indexes, and web client were deployed 
 - Movement HUD, Reports, Chat, and modal layers must stack predictably.
 - Reduced-motion and performance-sensitive behavior must be respected where animation exists.
 
+### Confirmed shared notification badges — October 19, 2026
+
+The owner selected the chat's compact burgundy circle with a white number as the notification style throughout the game. Use one shared 20 px circular treatment with a thin muted-gold border for HUD alerts, chat channels/private conversations, reports, clan alerts, claimable rewards and new-equipment/upgrade-ready markers. Cap displayed counts at `99+`; retain the underlying count and descriptive accessible label. A boolean notice represents one outstanding alert, not an invented item or message quantity. Hide badges when no alert remains. Preserve button targets, panel dimensions, existing notification eligibility, role restrictions, read/claim clearing and gameplay rules.
+
+The Chat HUD combines unread Global/Clan messages and unread private conversations in one badge so indicators cannot overlap. Keep separate descriptive counts in its accessible label and each channel's own badge. The existing text-free chat dots, reward exclamation marks and notification-only New labels are superseded by the numbered treatment. Resource quantities, player/building levels, combat timers, item rarity and equipped/locked status, decorative achievement emblems and operating-system notifications retain their own presentation. This approval does not establish deployment.
+
 ### Confirmed report and action artwork — October 14, 2026
 
 Use five matching transparent ink-and-watercolor illustrations based on the owner's medieval kingdom map: sealed dispatch for Reports, crossed swords for Attack, shield for Defense, hooded Scout and castle for Realm Activity. Apply them throughout the corresponding HUD, tabs, report rows and details, action controls, troop-order headings, incoming threats, Help and report notification artwork. Preserve dimensions, accessible names, outcome text/colors and controls. Saved heraldry, map units, objective artwork, named skills and equipment keep their distinct identities. This presentation change does not alter combat or report rules and does not establish deployment. Prompts and asset hashes are recorded in `docs/art-sources/report-actions/`.

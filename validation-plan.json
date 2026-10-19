@@ -1,20 +1,83 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "ecf2b1b04b2219802f832ad5543142160ac4dc82",
+  "baseCommit": "bc36102bf6530f17f608b3b8946c4cfcd7522cca",
   "coverage": [
     {
       "paths": [
-        "tools/local-migration/refresh-npc-rewards.js",
-        "tools/test-local-postgres-npc-reward-refresh.js",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "notification-badges.css",
+        "index.html",
+        "game.js",
+        "chat-ui.js",
+        "social-ui.js",
+        "social-ui.css",
+        "tools/validate-notification-badges-browser.js"
       ],
       "tests": [
-        "tools/test-local-postgres-npc-reward-refresh.js",
-        "tools/test-local-postgres-marauder-respawn.js",
-        "tools/validate-marauder-rules.js",
-        "functions/test/emulator-marauder-population.js"
+        "tools/validate-notification-badges-browser.js",
+        "tools/validate-chat.js",
+        "tools/validate-social-browser.js",
+        "tools/validate-clan-notifications-browser.js"
       ],
-      "reason": "One-time operator maintenance retires only reviewed idle version-1 NPC identities in the current active realm and lets the installed population scheduler create version-2 replacements. Actual isolated PostgreSQL tests cover read-only planning, exact document/realm checks, public/private atomicity, active scouts/attacks and rallies, SERIALIZABLE concurrent-launch phantom protection, idempotent receipts, stale-plan rejection, unchanged player/archive data and cooldowns, and normal replacement. Existing PostgreSQL respawn and selected population emulator tests protect scheduler placement, fresh identities, cooldowns and caps. Fixed reward-rule tests protect the replacement version. No runtime server source, frontend layouts, assets, gameplay reward formulas or deployment policy changes; no additional visual checks are needed. The Master Specification records the explicitly requested one-time refresh exception and the previously verified local balance deployment."
+      "reason": "Shared numeric circle styles and renderer wiring affect HUD movement/report/clan/reward counts and Global, Clan and private unread indicators. Real-browser fixtures cover desktop and two landscape sizes, badge geometry and contrast under optional themes, exact/capped counts, combined private/public HUD state, read and account clearing, and unchanged button bounds. Existing chat/social and clan notification tests cover session lifecycle, read signals, role filtering and reviewed application clearing. No server authority or message delivery behavior changes."
+    },
+    {
+      "paths": [
+        "achievements-ui.js",
+        "player-profile-ui.js",
+        "tools/validate-ui-stutter-browser.js",
+        "tools/validate-reward-window-layout-browser.js"
+      ],
+      "tests": [
+        "tools/validate-notification-badges-browser.js",
+        "tools/validate-ui-stutter-browser.js",
+        "tools/validate-reward-window-layout-browser.js"
+      ],
+      "reason": "Claimable reward summaries and profile alerts reuse the shared badge. Test live badge updates and removal without replacing focused controls, reward-window navigation and desktop/landscape layout, including the existing shared modal dependencies. Check that the optional achievement theme does not retain a second pill around the shared numeric circle."
+    },
+    {
+      "paths": [
+        "common-gear-ui.js",
+        "treasury-gear-ui.js",
+        "barracks-gear-ui.js",
+        "gatehouse-gear-ui.js",
+        "royal-stables-gear-ui.js",
+        "inner-city-estate.js"
+      ],
+      "tests": [
+        "tools/validate-notification-badges-browser.js",
+        "tools/validate-gear-inventory-browser.js"
+      ],
+      "reason": "Equipment grouping now exposes the actual new-item count; new/upgrade-ready and estate notice markup use the shared style. Browser checks exercise all four real officer screens at desktop and two landscape sizes and verify multiple new copies per stack. Existing large-inventory test protects grouping performance and amount of shared economy work. Equipment eligibility, upgrade/equip actions and building rules are unchanged; no emulator changes are required."
+    },
+    {
+      "paths": [
+        "service-worker.js",
+        "tools/build-production-client.js",
+        "tools/generate-release-manifest.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "tests": [
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Ship and precache the new stylesheet, include it in client build identity, and require it in the validated production artifact. The targeted workflow also builds the client and validates references and asset budgets; no backend or publisher installation is changed."
+    },
+    {
+      "paths": [
+        "tools/asset-performance-budgets.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Measure the complete delivered shell against main: the feature adds at most 4,465 bytes, leaving at most a 3,035-byte cap overage. Bound it by 3 KiB, constrain the new CSS to 2 KiB and allow the 749-byte chat sub-budget overage within 1 KiB. Preserve all image, runtime and network budgets. Artifact validation shares the total shell cap; no limits are disabled. The game and gear entrypoint markup increases are bounded at 0.5 and 0.25 KiB within the same total allowance."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
+      "tests": [],
+      "reason": "Records the owner-confirmed shared notification design, scope and preserved eligibility/clearing behavior. Documentation adds no runtime behavior; implementation and shared dependencies are covered above."
     }
   ]
 }
