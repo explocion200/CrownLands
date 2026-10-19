@@ -1,14 +1,14 @@
-# Marauder reward balance draft
+# Approved Marauder reward balance — version 2
 
-Solo Marauders cover levels 1–79, with a maximum item-drop chance of 70%. Clan bosses cover levels 80–100. This matches the current solo/boss classification and replaces the earlier suggested boundary at level 70. Keep this draft local until the complete balance package is ready for review and publication. Runtime behavior and the Master Specification are unchanged.
+Solo Marauders cover levels 1–79, with a maximum item-drop chance of 70%. Clan bosses cover levels 80–100. This matches the current solo/boss classification and replaces the earlier suggested boundary at level 70. The owner approved the complete October 19 revision for implementation. The fixed tables and rules below define balance version 2. Implementation and validation do not establish deployment; the home-server backend must be installed and verified before the matching static release can publish. Existing version-1 spawns and armies keep their original rules.
 
-**October 19 balance revision:** Keep the requested solo Gold/XP formulas, one-million solo defender maximum at 79, five-player boss design reference, two-to-five boss participants, 70% solo consumable ceiling and 60–90% boss Gear Box chances. Ease solo levels 11–78, replace the 80M boss endpoint with 40M, derive boss XP from same-level Hero progression, tighten contributions and propose limited Uncommon box upgrades plus boss recovery after a failed rally. These are the revised working recommendations under the owner's request to balance the draft; exact new rules remain unpublished and subject to review as one package.
+**Approved October 19:** Keep the solo Gold/XP formulas, one-million solo defender maximum at 79, five-player boss design reference, two-to-five boss participants, 70% solo consumable ceiling and 60–90% boss Gear Box chances. Ease solo levels 11–78, use the 40M boss endpoint, derive boss XP from same-level Hero progression, enforce meaningful contributions, allow conditional Uncommon box upgrades and restore bosses after failed rallies.
 
 ## Fixed solo values
 
 Each solo Marauder level has fixed full-strength defending troops, Gold, XP and item-drop chance. Use the table below as a level lookup. Player level, XP-bar progress, city levels, production, skills, equipment and bonuses do not alter these configured values. Future changes to city upgrade costs or Hero progression do not automatically change the table.
 
-A victorious solo hunt pays the listed Gold and XP once. The drafted recipient-level XP-cap exemption now covers all solo levels 1–79; other battle types retain their current caps unless separately changed. This is a proposed change to the current Master Specification and live settlement, which still applies its existing cap. Player level can neither increase nor reduce the listed solo payout. Existing Hero level-up Gold, troops and skill points still apply.
+A victorious solo hunt pays the listed Gold and XP once. The drafted recipient-level XP-cap exemption now covers all solo levels 1–79; other battle types retain their current caps unless separately changed. This approved exemption supersedes version 1 for new spawns only; other battles retain their caps. Player level can neither increase nor reduce the listed solo payout. Existing Hero level-up Gold, troops and skill points still apply.
 
 Defenders are the enemy's starting army, not a troop reward. Failed solo attacks retain their existing surviving-defender behavior; the boss-only recovery proposal is separate below. Failed or canceled hunts pay no victory rewards. Keep 10 stamina per hunt, the existing consumable pool and weights, combat calculation, respawn delays and once-only settlement.
 
@@ -35,7 +35,7 @@ Keep the previous draft's 1,000,000-troop maximum at level 79 and preserve exist
 | 40 | 50,000 |
 | 79 | 1,000,000 |
 
-Use each anchor exactly. Between adjacent anchors `(a, A)` and `(b, B)` above level 10, use `floor(A * (B / A) ** ((L - a) / (b - a)))`. Levels 1–10 retain the source Marauder module's values. Freeze all resulting integers in the level table. The source release's level-79 count is 10,000,000, so the proposed maximum remains 90% lower than that source value. No live NPC has been changed.
+Use each anchor exactly. Between adjacent anchors `(a, A)` and `(b, B)` above level 10, use `floor(A * (B / A) ** ((L - a) / (b - a)))`. Levels 1–10 retain the source Marauder module's values. Freeze all resulting integers in the level table. The source release's level-79 count is 10,000,000, so the approved maximum remains 90% lower than that source value. No live NPC has been changed.
 
 ## Solo item-drop chance
 
@@ -144,7 +144,7 @@ Gold and XP are full solo victory payouts. Troops are full-strength starting def
 
 ## Revised boss draft for levels 80 through 100
 
-Bosses remain in Core maps. Use five players including the leader as the balance reference, with two to five unique clan members allowed to launch. Other rally types and their limits remain unchanged. These proposals replace the earlier boss brainstorm, not the current runtime or Master Specification.
+Bosses remain in Core maps. Use five players including the leader as the balance reference, with two to five unique clan members allowed to launch. Other rally types and their limits remain unchanged. These approved rules supersede the earlier brainstorm for version-2 spawns only.
 
 ### Fixed five-player defenders
 
@@ -166,7 +166,7 @@ Change boss XP to five reference players each earning one quarter of the full sa
 
 Compute both pools with integer arithmetic and freeze the level values below. These are one-time reference calculations, not dependencies on players' current levels, production or XP-bar progress. Gold remains proportional to the full-strength combat burden; XP no longer grows from 22.7% to 54.1% of the matching Hero requirement per equal contributor. Five equal contributors receive approximately 25% each, subject only to integer remainder allocation. Solo XP stays at approximately 20% of its same-level requirement.
 
-Gold and XP are shared totals. Divide each by departure-snapshotted effective attack power using deterministic largest-remainder allocation; the leader gets no extra share. The proposed NPC XP-cap exemption remains necessary to deliver these fixed shares and is not a change to other battle types. A smaller winning party divides the same pools: the 25% comparison is for five equal contributors, not a universal cap per player. Two equal contributors receive approximately 62.5% of the same-level requirement each, reflecting the greater individual burden. More members cannot increase the Gold/XP pool.
+Gold and XP are shared totals. Divide each by departure-snapshotted effective attack power using deterministic largest-remainder allocation; the leader gets no extra share. The approved NPC XP-cap exemption remains necessary to deliver these fixed shares and is not a change to other battle types. A smaller winning party divides the same pools: the 25% comparison is for five equal contributors, not a universal cap per player. Two equal contributors receive approximately 62.5% of the same-level requirement each, reflecting the greater individual burden. More members cannot increase the Gold/XP pool.
 
 | Boss level | Defending troops | Total Gold pool | Total XP pool | Consumable chance per player | Any Gear Box chance per player |
 | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -196,7 +196,7 @@ With five equal contributors, level 80 awards each 6,799,448 Gold and 1,298,316 
 
 ### Participation and contribution limits
 
-Replace the earlier 5%-of-defense minimum and universal 70% maximum with these proposed launch requirements. Let D be configured full-strength defense, S the assembled rally's total effective attack power, and P one member's effective attack power:
+Replace the earlier 5%-of-defense minimum and universal 70% maximum with these approved launch requirements. Let D be configured full-strength defense, S the assembled rally's total effective attack power, and P one member's effective attack power:
 
 - Two to five unique clan members including the leader, with inbound and assembled members sharing the same five reserved slots.
 - Every participant supplies at least 10% of D and at least 10% of S: `10 * P >= D` and `10 * P >= S`.
@@ -219,7 +219,7 @@ Solos retain one consumable roll and no Gear Boxes. For bosses, each qualifying 
 
 Keep the requested independent 60–90% Gear Box roll: `gearBoxChanceBps[L] = 6000 + 150 * (L - 80)`. At most one box per qualifying participant, independent of whether a consumable drops. A player can receive both. A boss victory never guarantees a box, even at level 100.
 
-To give higher bosses a modest equipment-quality benefit, propose a second, conditional rarity roll only when the box roll succeeds:
+To give higher bosses a modest equipment-quality benefit, use a second, conditional rarity roll only when the box roll succeeds:
 
 `uncommonGivenBoxBps[L] = 50 * (L - 80)`
 
@@ -235,17 +235,17 @@ That is a 0–10% chance to replace the Common Box with one Uncommon Box, increa
 
 At level 100 the mutually exclusive results are 81% Common Box, 9% Uncommon Box and 10% no box. The independent consumable is guaranteed at that level. With five members, level 80 averages three Common Boxes per win; level 100 averages 4.05 Common and 0.45 Uncommon Boxes, still only 4.5 boxes and 13.5 equipment pieces total on average. An individual victory can award at most five boxes in total, not five of each rarity.
 
-An Uncommon Level-1 piece normally takes 32 matching Common Level-1 inputs and 6,010,000 crafting Gold along the full path. Therefore one Uncommon Box represents 34 Common Level-1 material equivalents, although random families/slots make this only a material-count comparison, not guaranteed usable upgrades. The proposed level-100 full-party average is 27.45 material equivalents versus nine at level 80. This is stronger than Common-only rewards without matching the eight-fold defender increase entirely through permanent gear. Higher bosses primarily offer more Gold/XP per stamina; easier bosses may remain more efficient for Common pieces per troop lost.
+An Uncommon Level-1 piece normally takes 32 matching Common Level-1 inputs and 6,010,000 crafting Gold along the full path. Therefore one Uncommon Box represents 34 Common Level-1 material equivalents, although random families/slots make this only a material-count comparison, not guaranteed usable upgrades. The approved level-100 full-party average is 27.45 material equivalents versus nine at level 80. This is stronger than Common-only rewards without matching the eight-fold defender increase entirely through permanent gear. Higher bosses primarily offer more Gold/XP per stamina; easier bosses may remain more efficient for Common pieces per troop lost.
 
-Do not overlook persistent output: twelve successful level-100 fights with sufficient troops and targets would average 1.08 Uncommon Boxes and 32.4 total equipment pieces per participant. This is a theoretical daily-recovery scenario, not observed gameplay or a promised attainable rate. It excludes additional paid-refill/banked-stamina hunts. The modest rarity chance still materially expands the previous Daily Login-only Uncommon Box source and must be reviewed before release; there is no new daily drop cap in this draft.
+Do not overlook persistent output: twelve successful level-100 fights with sufficient troops and targets would average 1.08 Uncommon Boxes and 32.4 total equipment pieces per participant. This is a theoretical daily-recovery scenario, not observed gameplay or a promised attainable rate. It excludes additional paid-refill/banked-stamina hunts. The modest rarity chance still materially expands the previous Daily Login-only Uncommon Box source under the owner’s October 19 approval; there is no new daily drop cap.
 
 ### Full-strength bosses after a failed rally
 
-Propose a boss-only recovery rule: after a failed, non-canceled combat, restore that same boss to its configured full-strength defenders atomically with settlement before another arrival resolves. Keep the actual combat losses in the failed rally's report, explain the boss recovery, and award that failed attempt no loot. Preserve the boss's identity, level and reward configuration. Scouts, canceled marches and retries cannot cause a separate heal or modify a different spawn.
+Use this approved boss-only recovery rule: after a failed, non-canceled combat, restore that same boss to its configured full-strength defenders atomically with settlement before another arrival resolves. Keep the actual combat losses in the failed rally's report, explain the boss recovery, and award that failed attempt no loot. Preserve the boss's identity, level and reward configuration. Scouts, canceled marches and retries cannot cause a separate heal or modify a different spawn.
 
 This makes every new successful boss attempt pay the full combat risk instead of allowing a different clan or a token follow-up army to collect the full pool from a nearly defeated boss. Do not add exclusive clan claims or historical damage payouts in this version. Failed solo attacks continue to leave surviving defenders. Defeated bosses still use the existing 30-minute respawn delay. A later army finding the boss already defeated follows the existing unavailable-target return/refund rules.
 
-This deliberately changes the Master Specification's persistent boss wounds. It also means an underpowered clan cannot chip down a boss over several losing attempts. Show the rule in scouting, rally preparation and the defeat report. The owner must review this tradeoff with the complete draft before implementation.
+This deliberately changes the Master Specification's persistent boss wounds. It also means an underpowered clan cannot chip down a boss over several losing attempts. Show the rule in scouting, rally preparation and the defeat report. The owner approved this tradeoff with the complete package on October 19.
 
 ## Offline combat and economy checks
 
@@ -267,9 +267,9 @@ The solo revision also halves gross losses at levels 20 and 40. With no bonuses 
 
 ## Review and eventual implementation boundaries
 
-The revised package preserves the requested solo formulas and drop endpoints while trading lower defenders for a controlled boss XP curve and stricter participation. Remaining review points are actual troop replacement times, low-level Heroes earning large fixed NPC XP and level-up rewards, unequal clan composition, persistent equipment growth and the loss of boss attrition tactics. The XP exemption, two-to-five boss limit, personal loot, NPC Gear Box sources including Uncommon, and failed-boss recovery differ from the current Master Specification; this draft records those differences without silently replacing confirmed live rules.
+The revised package preserves the requested solo formulas and drop endpoints while trading lower defenders for a controlled boss XP curve and stricter participation. Remaining review points are actual troop replacement times, low-level Heroes earning large fixed NPC XP and level-up rewards, unequal clan composition, persistent equipment growth and the loss of boss attrition tactics. The XP exemption, two-to-five boss limit, personal loot, NPC Gear Box sources including Uncommon, and failed-boss recovery differ from the current Master Specification; the October 19 Master Specification amendment confirms these differences for version 2 while retaining version-1 compatibility.
 
-If the package is later approved, use immutable versioned NPC balance values on new/replacement spawns. Do not rewrite existing NPCs or armies in flight: their defender counts, XP rules, loot rules and failed-battle behavior must remain consistent with their recorded version through settlement. Preserve server-owned random rolls and atomic once-only grants; retries must not reroll a box, rarity or consumable, duplicate rewards, heal a later spawn or change credited shares. Existing inventory limits must retain awards safely when immediate opening is unavailable. No implementation, migration, data edit, population action, push, PR, merge or publication is authorized by this held draft alone.
+For the approved package, use immutable versioned NPC balance values on new/replacement spawns. Do not rewrite existing NPCs or armies in flight: their defender counts, XP rules, loot rules and failed-battle behavior must remain consistent with their recorded version through settlement. Preserve server-owned random rolls and atomic once-only grants; retries must not reroll a box, rarity or consumable, duplicate rewards, heal a later spawn or change credited shares. Existing inventory limits must retain awards safely when immediate opening is unavailable. Implementation is authorized. Ready pull requests may merge under the owner’s standing approval. Protected backend installation and production-data changes still require their applicable authorization; no bulk NPC rewrite or new database backup is part of this release.
 
 ## Sources and verification
 
@@ -283,4 +283,4 @@ The calculation source remains repository base `439e9083b87c6a3f5d29e205ef647062
 
 All 79 solo Gold/XP/item entries preserve the prior draft and match their calculation sources. Defenders increase at every level, preserve 1–10 and 79, and are lower at every level 11–78. All 21 boss rows have increasing positive integer defenders, Gold and XP, exact 5M/40M endpoints, approximately 25% matching-level Hero XP per equal five-way share, preserved 80–100% consumables and 60–90% box odds. The 0–10% conditional Uncommon curve, mutually exclusive box outcomes, expected piece/material counts and five-box maximum were checked separately.
 
-Offline calculations covered 1,200 current-combat scenarios, reward-pool conservation for equal two-to-five parties and an unequal five-person party, and accepted/rejected contribution examples. No runtime code was edited. No production access, private-player inspection, browser test, emulator suite, server restart or publication occurred in this revision. Earlier installed-source comparisons remain historical; these calculations do not claim a fresh production audit or prove live gameplay balance.
+Offline calculations covered 1,200 current-combat scenarios, reward-pool conservation for equal two-to-five parties and an unequal five-person party, and accepted/rejected contribution examples. That earlier arithmetic-only revision did not edit runtime code or deploy anything. Implementation validation is recorded separately in the pull request. Earlier installed-source comparisons remain historical; these calculations do not claim a fresh production audit or prove live gameplay balance.

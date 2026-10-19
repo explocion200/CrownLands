@@ -195,6 +195,19 @@ async function main(built = false) {
       await ev("openMarauderDetails('boss-size-fixture')");await checkInfo('boss',width,height);
       await ev('modal.close()');records.push({kind:'npcControls',width,height,wheel});
     }
+    for(const [width,height] of [[1440,900],[844,390],[568,320]]){
+      await client.send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
+      await ev("applyOnlineMarauders([{...huntQA.visualSolo,level:79,name:'Marauder Lv. 79',balanceVersion:2},{...huntQA.visualBoss,level:100,name:'Clan Boss Lv. 100',balanceVersion:2}],getActiveMapRegionId())");
+      for(const kind of ['solo','boss']){
+        await ev(`openMarauderDetails(${kind==='solo'?'huntQA.visualSolo.id':'huntQA.visualBoss.id'})`);
+        assert(await ev("modalBody.textContent.includes('Fixed NPC XP; no Hero-level cap.')"));
+        if(kind==='boss')assert(await ev("modalBody.textContent.includes('90%') && modalBody.textContent.includes('10%') && modalBody.textContent.includes('restores the boss') && modalBody.textContent.includes('2–5 members')"));
+        await checkInfo(kind,width,height);
+      }
+      records.push({kind:'balance-v2',width,height});
+    }
+    await ev('applyOnlineMarauders([huntQA.visualSolo,huntQA.visualBoss],getActiveMapRegionId());selectMarauder(huntQA.target.id)');
+    await wait("!!document.querySelector('[data-marauder-spawn-id=fixture-spawn] .wheel-scout')");
     // Pending scouts cannot be duplicated, and a changed spawn cancels the route.
     await ev(`(()=>{const qa=huntQA;qa.preferred=findPreferredAttackSource;qa.routeRequest=requestAuthoritativeOrderRoute;qa.scoutLaunch=launchScoutMission;
       findPreferredAttackSource=()=>({city:qa.source});qa.scoutCalls=0;qa.routes=0;qa.notices=[];qa.reject=rejectGameAction;rejectGameAction=m=>qa.notices.push(m);
@@ -400,6 +413,11 @@ async function main(built = false) {
     assert(!await ev('modal.open'));
     await ev("bossReadiness.set('rally-fixture',{checkedAtMs:Date.now(),participants:[{uid:'ally',ready:false}],combatForecast:{status:'unavailable'}})");
     assert(await ev("renderBossReadiness({id:'rally-fixture',participants:[{uid:'ally',ownerName:'Ally'}]}).includes('Ally: Needs stamina')"));
+    await ev("bossReadiness.set('balance-v2',{rallyUpdatedAtMs:10,participants:[],contribution:{eligible:false,maxSharePercent:40,members:[{uid:'ally',attackPower:100,minimumPower:4000000,sharePercent:1,eligible:false,reason:'Needs at least 10% of full defense.',gold:100,xp:20,estimatedLosses:10}]},combatForecast:{status:'scouted',attackPower:100,defensePower:40000000,estimatedAttackerLosses:10}})");
+    assert(await ev("(()=>{const html=renderBossReadiness({id:'balance-v2',targetBalanceVersion:2,updatedAtMs:10,participants:[{uid:'ally',ownerName:'Ally'}]});return html.includes('maximum 40%')&&html.includes('On victory:')&&html.includes('Estimated losses:')&&html.includes('expected to lose')})()"));
+    assert(await ev("renderBossReadiness({id:'balance-v2',targetBalanceVersion:2,updatedAtMs:11}).includes('This rally changed')"));
+    assert(await ev("getClanRallyMaximumParticipants({targetType:'marauder',balanceVersion:2})===5 && getClanRallyMaximumParticipants({targetType:'marauder',targetBalanceVersion:1})===20 && getClanRallyMaximumParticipants({targetType:'city'})===20"));
+    assert(await ev("renderLegacyBattleReportDetail({type:'attack',targetType:'marauder',cityName:'Boss',marauderLevel:100,regionId:huntQA.target.regionId,outcome:'victory',summary:'Victory',sentTroops:200,attackerLosses:30,survivors:170,defendersLeft:0,goldAwarded:100,xpAwarded:20,itemAwarded:'recall_horn',gearBoxAwarded:'uncommon'},{tone:'victory',label:'VICTORY'}).includes('Uncommon Gear Box')"));
     // Full-size enemy finder uses fresh all-map reads, never the visited-map cache.
     await ev(`(() => {
       modal.close(); const qa=huntQA; qa.searchCalls=[];qa.searchRows=[];qa.searchError=false;

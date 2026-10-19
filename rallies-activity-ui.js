@@ -111,7 +111,7 @@ function renderClanRallyOperationPanel(rallies = []) {
     const participants = Array.isArray(rally.participants) ? rally.participants : [];
     const count = participants.filter(person => ["assembled", "inbound"].includes(person.status)).length || participants.length;
     const name = escapeHtml(rally.targetName || rally.targetId || "Objective");
-    return `<button class="rally-pick" data-activity-rally="${escapeHtml(rally.id)}" type="button" aria-pressed="${rally.id === selected.id}" aria-label="${name}, ${identity.label}"><img src="${identity.art}" alt=""><strong>${name}</strong><small>${escapeHtml(getRegionLabel(rally.targetRegionId))}<span class="pick-kind"> · ${identity.type}</span></small><span class="pick-meta"><span class="status-pill ${identity.state}">${identity.label}</span><span>${count} / ${CLAN_RALLY_MAX_PARTICIPANTS}</span></span></button>`;
+    return `<button class="rally-pick" data-activity-rally="${escapeHtml(rally.id)}" type="button" aria-pressed="${rally.id === selected.id}" aria-label="${name}, ${identity.label}"><img src="${identity.art}" alt=""><strong>${name}</strong><small>${escapeHtml(getRegionLabel(rally.targetRegionId))}<span class="pick-kind"> · ${identity.type}</span></small><span class="pick-meta"><span class="status-pill ${identity.state}">${identity.label}</span><span>${count} / ${getClanRallyMaximumParticipants(rally)}</span></span></button>`;
   }).join("")}</nav></aside>${renderClanRallyCard(selected, true)}</div>`;
 }
 
@@ -131,10 +131,10 @@ function renderRalliesActivityCard(rally, context) {
   if (forming && ownParticipant && !leader) {
     note = "Your contribution is committed. The creator or Clan Leader gives the launch order.";
     controls = command("withdraw", "Withdraw", "danger");
-  } else if (forming && !ownParticipant && !leader && activeParticipants.length < CLAN_RALLY_MAX_PARTICIPANTS) {
+  } else if (forming && !ownParticipant && !leader && activeParticipants.length < getClanRallyMaximumParticipants(rally)) {
     note = escapeHtml(getClanRallyJoinHint());
     controls = command("join", "Join Rally", "primary");
-  } else if (forming && activeParticipants.length >= CLAN_RALLY_MAX_PARTICIPANTS) note = `This rally is full. All ${CLAN_RALLY_MAX_PARTICIPANTS} participant places are occupied.`;
+  } else if (forming && activeParticipants.length >= getClanRallyMaximumParticipants(rally)) note = `This rally is full. All ${getClanRallyMaximumParticipants(rally)} participant places are occupied.`;
   else if (launched && leader) {
     note = !horns ? "A Recall Horn is needed to recall this army." : canRecall ? "Recall the combined army for 1 Recall Horn." : "This rally cannot be recalled at its current march state.";
     controls = command("recall", `${renderItemIcon(getShopItemById(RECALL_HORN_ITEM_ID))}Recall · 1 Horn`, "danger", !canRecall || horns < 1);
@@ -151,7 +151,7 @@ function renderRalliesActivityCard(rally, context) {
     <div class="rally-scroll" tabindex="0" aria-label="Rally information and all participants"><div class="rally-overview"><div class="rally-meta"><div><small>Rally creator</small>${renderPlayerNameLink(rally.leaderUid, rally.leaderName || "Ruler")}</div><div><small>Assembly city</small>${renderRallyAssemblyLink(rally)}</div></div>
     <div class="muster-totals ${Math.max(force, inboundTroops) > 9999999 ? "large" : ""}"><div><small>${recalling ? "Returning troops" : launched ? "Marching troops" : "Assembled troops"}</small><strong>${formatMarchesNumber(force)}</strong></div><div><small>Incoming troops</small><strong>${formatMarchesNumber(inboundTroops)}</strong></div><div><small>${forming ? "Rulers ready" : "Rulers in rally"}</small><strong class="ready-total">${forming ? `${ready} / ${activeParticipants.length}` : count}</strong></div></div></div>
     ${rally.targetType === "marauder" ? renderBossReadiness(rally) : ""}
-    <div class="muster-heading"><h4>The muster</h4><span>${count} / ${CLAN_RALLY_MAX_PARTICIPANTS} rulers${forming ? ` · ${minimumParticipants} Ready required` : ""}</span></div>
+    <div class="muster-heading"><h4>The muster</h4><span>${count} / ${getClanRallyMaximumParticipants(rally)} rulers${forming ? ` · ${minimumParticipants} Ready required` : ""}</span></div>
     <table class="muster-table" aria-label="Rally participants"><thead><tr><th scope="col">Ruler</th><th scope="col">Troops</th><th scope="col">Status</th></tr></thead><tbody>${participants.map((person, index) => {
       const label = getClanRallyParticipantStatusLabel(rally, person);
       const statusClass = label === "Returning" ? "returning" : label === "Marching" ? "marching" : person.status === "inbound" ? "inbound" : "ready";
