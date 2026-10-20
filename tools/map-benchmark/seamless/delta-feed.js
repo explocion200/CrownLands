@@ -40,14 +40,14 @@
       const inside = item.kind === "troop" ? item.sections.some(id => ids.includes(id)) : ids.includes(item.sectionId);
       if (inside && !objects.has(item.key) && !marches.has(item.key)) removed.add(item.key);
     }
-    return { revision: packet.revision, epoch: packet.epoch, serverTime: packet.serverTime, scriptHealthy: packet.scriptHealthy, removed: [...removed],
+    return { authoritative: true, revision: packet.revision, epoch: packet.epoch, serverTime: packet.serverTime, scriptHealthy: packet.scriptHealthy, removed: [...removed],
       sections: ids.map(id => ({ id, objects: [...objects.values()].filter(o => o.sectionId === id) })), marches: [...marches.values()], routes: [...routes.values()] };
   }
   class DeltaFeed extends AreaFeed {
     constructor(changed, load) { super(changed, load); this.cursor = null; this.cursorIds = ""; this.snapshots = 0; this.deltas = 0; this.bytes = 0; this.authExpired = false; }
     set(ids) {
       const next = [...new Set(ids)].slice(0, 16).sort();
-      if (JSON.stringify(next) !== JSON.stringify(this.ids)) { this.cursor = null; this.cursorIds = ""; }
+      if (JSON.stringify(next) !== JSON.stringify(this.ids)) { this.cursor = null; this.cursorIds = ""; this.data = { ...this.data, authoritative: false }; }
       super.set(next);
     }
     async refresh() {

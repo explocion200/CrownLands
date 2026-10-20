@@ -148,7 +148,10 @@
         const epochChanged = stageThree && data.epoch && data.epoch !== feedEpoch;
         if (data.epoch) feedEpoch = data.epoch;
         if (stageThree && Number.isFinite(data.serverTime)) serverTimeOffset = data.serverTime - data.receivedAt;
-        if (data.authExpired || data.removed?.includes(selected)) { selected = null; selectedSnapshot = null; following = null; }
+        const inspectedSections = selectedSnapshot?.kind === "troop" ? selectedSnapshot.sections : [selectedSnapshot?.sectionId];
+        const inspectedAreaLoaded = data.authoritative && inspectedSections.some(id => data.sections.some(s => s.id === id));
+        const inspectedMissing = inspectedAreaLoaded && !data.sections.some(s => s.objects.some(o => o.key === selected)) && !data.marches.some(m => m.key === selected);
+        if (data.authExpired || data.removed?.includes(selected) || inspectedMissing) { selected = null; selectedSnapshot = null; following = null; }
         if (data.removed?.includes(following)) following = null;
         scene.objects = data.sections.flatMap(s => s.objects); objects.clear(); scene.objects.forEach(o => objects.set(o.key, o));
         const routes = new Map(data.routes.map(r => [r.id, r.points]));

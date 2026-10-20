@@ -56,6 +56,13 @@ async function main() {
     await servers[0].realm.change([{ key: row.key }]); await evaluate(() => seamlessPreview.refresh()); await settle();
     assert.equal((await snapshot()).selected, null); assert.equal(await evaluate(() => document.getElementById("inspector").hidden), true);
     await servers[0].realm.change([{ key: row.key, row }]); await evaluate(() => seamlessPreview.refresh()); await settle();
+    await click(`[data-key=${JSON.stringify(castle.key)}]`); assert.equal((await snapshot()).selected, castle.key);
+    await evaluate(() => seamlessPreview.view(724, 543)); await settle();
+    await servers[0].realm.change([{ key: row.key }]);
+    assert.equal((await snapshot()).selected, castle.key, "Unloaded selection should retain last-received details");
+    await evaluate(o => seamlessPreview.view(o.x, o.y), castle); await settle();
+    assert.equal((await snapshot()).selected, null, "Returning snapshot must clear a selected city deleted while unloaded");
+    await servers[0].realm.change([{ key: row.key, row }]); await evaluate(() => seamlessPreview.refresh()); await settle();
     // Authenticated march interpolation and following cross a section join.
     const march = await evaluate(() => seamlessPreview.scene.marches[0]);
     await evaluate(m => { seamlessPreview.view(m.position.x, m.position.y); seamlessPreview.select(m.key); }, march); await settle(); await click("#follow");
