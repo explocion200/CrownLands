@@ -64,24 +64,22 @@
     const active = context, scope = generation, clanId = String(active.getClanId() || "");
     const ref = { kind: target.kind, id: target.id, regionId: target.regionId,
       ...(target.kind === "marauder" ? { spawnId: target.spawnId } : {}) };
-    let channel = "global", busy = false, pending = null, recipientVersion = 0;
+    let channel = "global", busy = false, pending = null, recipientVersion = 0, recipientUid = "";
     const dialog = node("dialog", undefined, "chat-location-share"), heading = node("header");
     picker = dialog;
     dialog.setAttribute("aria-labelledby", "chatLocationShareTitle");
     const title = node("h2", "Share location"); title.id = "chatLocationShareTitle";
     const close = node("button", "×"); close.type = "button"; close.setAttribute("aria-label", "Close share location");
     close.addEventListener("click", () => dialog.close()); heading.append(title, close);
-    const form = node("form"), preview = node("p", undefined, "chat-location-preview");
+    const form = node("form"), fields = node("div", undefined, "chat-location-fields"), preview = node("p", undefined, "chat-location-preview");
     const image = node("img"); image.src = art; image.alt = "";
     preview.append(image, node("strong", target.name || "Selected location"), node("span", target.mapName || ""));
     const channels = node("div", undefined, "chat-location-channels");
     channels.setAttribute("role", "group"); channels.setAttribute("aria-label", "Share destination");
-    const recipients = node("div", undefined, "chat-location-recipients"), select = node("select");
-    select.setAttribute("aria-label", "Private message recipient");
-    const placeholder = node("option", "Choose a recipient"); placeholder.value = ""; select.append(placeholder);
+    const recipients = node("fieldset", undefined, "chat-location-recipients"), list = node("div", undefined, "chat-location-contact-list");
     const more = node("button", "Load more contacts"); more.type = "button"; more.hidden = true;
     const help = node("small", "Choose a friend or an existing conversation.");
-    recipients.append(select, more, help); recipients.hidden = true;
+    recipients.append(node("legend", "Choose a recipient"), list, more, help); recipients.hidden = true;
     const label = node("label", "Note (optional)"), note = node("textarea");
     note.rows = 2; note.maxLength = 250; note.setAttribute("aria-label", "Optional location note"); label.append(note);
     const status = node("p", "", "chat-location-status"); status.setAttribute("role", "status");
@@ -102,7 +100,17 @@
           cursors[kind] = page.next || null;
           for (const row of page.rows || []) if (!row.unavailable && row.peerUid && !contacts.has(row.peerUid)) {
             contacts.set(row.peerUid, row);
-            const option = node("option", row.player?.name || "Ruler"); option.value = row.peerUid; select.append(option);
+            const choice = node("label", undefined, "chat-location-recipient"), radio = node("input");
+            radio.type = "radio"; radio.name = "chat-location-recipient"; radio.value = row.peerUid;
+            const name = node("span", row.player?.name || "Ruler"); name.title = name.textContent;
+            // A name-row tap selects its radio; it must not trigger map fullscreen entry.
+            choice.addEventListener("pointerup", event => event.stopPropagation());
+            radio.addEventListener("change", () => {
+              if (!radio.checked || busy) return;
+              recipientUid = radio.value;
+              list.querySelectorAll("label").forEach(item => item.classList.toggle("is-selected", item === choice));
+            });
+            choice.append(radio, name); list.append(choice);
           }
         }
         more.hidden = Object.values(cursors).every(value => value === null);
@@ -129,29 +137,29 @@
       if (Array.from(note.value.trim()).length > (channel === "private" ? 1000 : 250)) {
         status.textContent = `Shorten the note to ${channel === "private" ? "1,000" : "250"} characters for this chat.`; return;
       }
-      if (channel === "private" && !select.value) { status.textContent = "Choose who should receive this location."; return; }
+      if (channel === "private" && !recipientUid) { status.textContent = "Choose who should receive this location."; return; }
       if (channel === "clan" && String(active.getClanId() || "") !== clanId) { status.textContent = "Your clan changed. Close this window and choose the destination again."; return; }
       const payload = { text: note.value.trim(), location: ref, ...(channel === "private"
-        ? { action: "send", peerUid: select.value } : { channel, ...(channel === "clan" ? { expectedClanId: clanId } : {}) }) };
+        ? { action: "send", peerUid: recipientUid } : { channel, ...(channel === "clan" ? { expectedClanId: clanId } : {}) }) };
       const signature = JSON.stringify(payload);
       if (!pending || pending.signature !== signature) pending = { signature, requestId: root.crypto.randomUUID() };
-      busy = true; form.querySelectorAll("button,textarea,select").forEach(item => { item.disabled = true; });
+      busy = true; form.querySelectorAll("button,textarea,input").forEach(item => { item.disabled = true; });
       status.textContent = "Sharing…";
       try {
         const result = channel === "private" ? await active.api.social({ ...payload, requestId: pending.requestId })
           : await active.api.sendChatMessage({ ...payload, requestId: pending.requestId });
         if (!valid()) return;
         if (!result.ok) throw Error("Location could not be shared. Please retry.");
-        dialog.close(); active.onToast(`Location shared to ${channel === "private" ? select.selectedOptions[0].textContent : channel === "clan" ? "Clan Chat" : "Global Chat"}.`);
+        dialog.close(); active.onToast(`Location shared to ${channel === "private" ? contacts.get(recipientUid)?.player?.name || "Ruler" : channel === "clan" ? "Clan Chat" : "Global Chat"}.`);
       } catch (error) { if (valid()) status.textContent = error.message || "Could not share. Retry to check the same message."; }
       finally {
         busy = false;
-        form.querySelectorAll("button,textarea,select").forEach(item => { item.disabled = false; });
+        form.querySelectorAll("button,textarea,input").forEach(item => { item.disabled = false; });
         channels.querySelector('[data-channel="clan"]').disabled = !clanId;
       }
     });
     dialog.addEventListener("close", () => { recipientVersion++; dialog.remove(); if (picker === dialog) picker = null; });
-    form.append(preview, channels, recipients, label, status, footer); dialog.append(heading, form);
+    fields.append(preview, channels, recipients, label, status); form.append(fields, footer); dialog.append(heading, form);
     root.document.body.append(dialog); dialog.showModal();
   }
   root.CrownlandsChatLocations = Object.freeze({ normalize, start, stop, mountLink, addShareButton, open });

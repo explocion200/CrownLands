@@ -1113,6 +1113,20 @@ input[type="range"] {
    Layer priority defeats old per-window !important paint without changing
    layout, hidden controls, artwork, heraldry or semantic map/action colors. */
 @layer crownlands-theme {
+  /* Inline locations must override legacy filled-button paint and child ink.
+     The mini-chat has a dark surface; full chat uses parchment. */
+  :is(#chatDialog, #quickChat) .chat-location-link {
+    color: var(--cl-text) !important;
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    opacity: 1 !important;
+    outline-color: currentColor !important;
+    & :is(strong, small) { color: inherit !important; text-shadow: none !important; }
+  }
+  #quickChat .chat-location-link { color: var(--cl-text-light) !important; }
+
   :is(dialog:not(.modal), .modal-card, .profile-screen, .setup-card, .online-login, .login-game-info, .rotate-warning > div,
     .commander-panel, .guild-window, .estate-economy-dialog, .stamina-panel,
     .crown-payments-dialog, .peace-shield-order-dialog, #emailAuthDialog,

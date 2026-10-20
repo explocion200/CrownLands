@@ -1,54 +1,19 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "29e7fd4ae029bbbd4de394d9f35eb54ecff9428a",
+  "baseCommit": "acd46e5307295af63ce88998a8a274e02664be1a",
   "coverage": [
-    {
-      "paths": [
-        "functions/chat-locations.js",
-        "functions/chat.js",
-        "functions/index.js",
-        "functions/social.js",
-        "functions/test/chat-location-scenarios.js",
-        "functions/test/emulator-chat-locations.js",
-        "tools/test-local-postgres-chat-locations.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-chat-locations.js",
-        "tools/test-local-postgres-social.js",
-        "tools/validate-chat-send-scheduling.js",
-        "tools/validate-chat.js",
-        "functions/test/emulator-chat-locations.js",
-        "functions/test/emulator-chat.js",
-        "functions/test/emulator-social.js",
-        "functions/test/emulator-chat-translation.js"
-      ],
-      "reason": "Canonical server-owned location snapshots and on-demand resolution extend existing Global/Clan and private message callables. Exercise all eight current Core target categories, exact NPC spawn identity, moved castles, previous seasons, inactive maps, forged/private fields, clan revocation, private membership/blocks/requests, 24-hour/90-day retention, reporting, idempotent retries and unchanged cooldowns. Real callable scenarios run in isolated PostgreSQL and Core emulators. Existing chat/social/translation suites cover the shared send signatures, transaction/read ordering, request limits and authoritative text-only translation dependencies. No schema/index or production data migration."
-    },
     {
       "paths": [
         "chat-locations-ui.js",
         "chat-locations.css",
-        "chat-ui.js",
-        "social-ui.js",
-        "firebaseClient.js",
-        "game.js",
-        "marauders-ui.js",
-        "tools/validate-chat-locations-browser.js",
-        "tools/validate-chat.js"
+        "tools/validate-chat-locations-browser.js"
       ],
       "tests": [
         "tools/validate-chat-locations-browser.js",
-        "tools/validate-social-browser.js",
-        "tools/validate-chat-reward-ledgers-browser.js",
         "tools/validate-chat.js",
-        "tools/validate-chat-translation.js",
-        "tools/validate-report-location-navigation.js",
-        "tools/validate-holding-details-ui.js",
-        "tools/test-local-chat-client.js",
-        "functions/test/emulator-chat-locations.js",
-        "functions/test/emulator-chat.js"
+        "tools/validate-chat-translation.js"
       ],
-      "reason": "Integrate compact location links and an explicit channel/recipient picker in current target panels. Check desktop and landscape sizes, matching chat typography, bounded controls, optional notes, safe inert rendering, private/global draft preservation, recipient routing, retry identity and stale-account responses. Exercise navigation with armed orders and map-load failure; preserve existing profile links and manual translation while avoiding per-message lookups. Holding-details checks cover shared target-panel mounts; existing report navigation and local chat client tests cover the map-loading and message transport dependencies. Emulator location and chat suites validate the server authority and message contract consumed by firebaseClient.js, including canonical attachment fields and rejected client-supplied target data."
+      "reason": "Replace the native recipient select with explicitly selected, keyboard/touch accessible in-game radio rows, preserving pagination, deduplication, retry feedback and recipient routing. Recipient name taps must not bubble into map fullscreen entry and cover the dialog. Verify bounded row height, scrolling and reachable Share/Cancel at desktop and three landscape sizes, inert long names, mandatory choice, message retry identity, existing drafts and navigation. Check computed link paint and at least 4.5:1 conservative contrast in Global, Clan, private and mini-chat across resting/hover/focus/loading states. Existing chat and note-translation tests protect the shared link renderer dependencies; server calls and authorization remain unchanged."
     },
     {
       "paths": [
@@ -57,51 +22,30 @@
       "tests": [
         "tools/validate-crownlands-palette.js",
         "tools/validate-chat-locations-browser.js",
-        "tools/validate-social-browser.js"
+        "tools/validate-social-browser.js",
+        "tools/validate-chat-reward-ledgers-browser.js"
       ],
-      "reason": "Register only the new share destination controls with the central selected-tab paint, and exclude compact map links from generic filled-button paint. Verify selected-state contrast and existing Global/Clan/Messages/Friends typography without altering other game controls."
+      "reason": "Give only location links explicit paint in the existing authoritative theme layer so legacy blue button gradients and child typography cannot override their readable foreground. Preserve light mini-chat ink on its dark background. Browser computed paint and existing social/ledger layout checks protect adjacent profile links, chat tabs and controls."
     },
     {
       "paths": [
-        "index.html",
-        "service-worker.js",
         "tools/asset-performance-budgets.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/build-production-client.js",
-        "tools/generate-release-manifest.js"
+        "tools/validate-asset-performance-budgets.js"
       ],
       "tests": [
-        "tools/test-local-production-client.js",
         "tools/validate-asset-performance-budgets.js",
-        "tools/validate-production-artifact.js",
-        "tools/validate-pwa-entry-routing.js",
-        "tools/validate-chat-locations-browser.js",
-        "tools/validate-chat.js"
+        "tools/validate-production-artifact.js"
       ],
-      "reason": "Ship and fingerprint the location component and stylesheet, load before message normalization and cache through the existing service worker. Production build/artifact validation plus opt-in local packaging and PWA routing checks protect existing home-server deployment behavior. Measure and bound the 19,174-byte shell addition, 905-byte chat ledger addition and 2,858-byte game wiring addition; enforce separate 12/4 KiB caps for the new component/styles while preserving image, request and frame budgets. No new external service, API export or release contract change."
-    },
-    {
-      "paths": [
-        "functions/test/run-emulator-gates.js"
-      ],
-      "tests": [
-        "tools/test-change-risk-classifier.js",
-        "tools/test-targeted-validation.js",
-        "tools/test-safe-update-pipeline.js",
-        "tools/validate-release-gate.js",
-        "functions/test/emulator-chat-locations.js"
-      ],
-      "reason": "Select the new location callable suite against the active Core topology and current-season fixture. Validate targeted suite selection and workflow checks because the shared emulator runner changes."
+      "reason": "Bound the measured inline-list and explicit-contrast source growth with a 5 KiB stylesheet cap and one additional KiB of aggregate shell headroom. Keep all artwork, request, frame and dependency budgets unchanged; verify the actual production package."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [
-        "tools/test-local-postgres-chat-locations.js",
         "tools/validate-chat-locations-browser.js"
       ],
-      "reason": "Record the explicitly approved map-location draft and narrow extension to text-only chat, unchanged privacy/retention rules, stale-target behavior, compact presentation and coordinated backend/client release requirement. Mark implementation pending until live verification."
+      "reason": "Record the confirmed in-game recipient list and readable inline-link design. Correct base sharing status using the already verified PR 644 live build; leave this static refinement pending its own deployment evidence. No gameplay or backend contract changes."
     }
   ]
 }

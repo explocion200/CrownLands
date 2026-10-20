@@ -104,7 +104,9 @@ assert(["chat-ledger-ui.css", "chat-ui.js", "chat-translation.js", "reward-ledge
   .reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 120 * 1024,
 "Chat and reward ledger shell files exceed their 120 KiB budget.");
 assert(normalizedTextBytes("chat-locations-ui.js") <= 12 * 1024, "Location sharing controls exceed 12 KiB.");
-assert(normalizedTextBytes("chat-locations.css") <= 4 * 1024, "Location sharing styles exceed 4 KiB.");
+// The in-game recipient list and fixed footer add 1,297 CSS bytes; bound the
+// complete stylesheet at 5 KiB, with no added image or runtime dependency.
+assert(normalizedTextBytes("chat-locations.css") <= 5 * 1024, "Location sharing styles exceed 5 KiB.");
 assert(normalizedTextBytes("notification-badges.css") <= 2.25 * 1024, "Shared notification styles exceed 2.25 KiB.");
 const skillEmblemFiles = fs.readdirSync(path.join(root, "assets/icons/skills")).filter(name => name.endsWith(".svg"));
 assert.equal(skillEmblemFiles.length, 8, "Keep the eight legacy skill emblems available to older clients.");
