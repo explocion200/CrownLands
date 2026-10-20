@@ -12,7 +12,9 @@ nav{display:flex;align-items:center;gap:6px}
 #zoom{font:12px system-ui;min-width:42px;text-align:center}
 #viewport{flex:1;position:relative;overflow:hidden;touch-action:none;cursor:grab;user-select:none;outline:none;contain:strict}
 #viewport.dragging{cursor:grabbing}
-#world{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform;width:4344px;height:3258px;background:#a2a05b}
+/* Let the browser rasterize at the current zoom. A permanent will-change hint
+   caches the whole world at its first scale, blurring sprites and text on zoom. */
+#world{position:absolute;left:0;top:0;transform-origin:0 0;width:4344px;height:3258px;background:#a2a05b}
 #terrain,#objects,#marches{position:absolute;inset:0;pointer-events:none}
 .tile{position:absolute;background:#a4a15d;overflow:visible}
 .tile>img{position:absolute;left:-2px;top:-2px;width:calc(100% + 4px);height:calc(100% + 4px);display:block;pointer-events:none}

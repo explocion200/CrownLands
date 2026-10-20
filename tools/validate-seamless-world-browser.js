@@ -29,7 +29,7 @@ async function main() {
   const snapshot = () => evaluate(() => seamlessPreview.snapshot());
   const nextFrame = () => evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve(true)))));
   const settle = async () => { await nextFrame(); await waitFor(() => seamlessPreview.snapshot().assets.pending === 0); await nextFrame(); };
-  const resize = async ({ width, height }) => { await cdp.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false }); await sleep(50); };
+  const resize = async ({ width, height, deviceScaleFactor = 1 }) => { await cdp.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor, mobile: false }); await sleep(50); };
   const navigate = async url => { await cdp.send("Page.navigate", { url }); await sleep(80); await waitFor(() => !!window.seamlessPreview); };
   const rect = selector => evaluate(selector => { const r = document.querySelector(selector)?.getBoundingClientRect(); return r ? { x: r.x, y: r.y, width: r.width, height: r.height } : null; }, selector);
   const screenshot = async name => { const image = await cdp.send("Page.captureScreenshot", { format: "png" }); fs.writeFileSync(path.join(output, name), Buffer.from(image.data, "base64")); };
@@ -119,6 +119,57 @@ async function main() {
       assert.equal(await evaluate(() => document.querySelector("#name").textContent), item.name);
       await click("#close");
     }
+    // Compare actual zoomed sprite pixels with the same native image drawn at
+    // its final screen size, without a scaled ancestor. This catches Chrome
+    // retaining a low-scale world raster even though the source has detail.
+    const sharpness = [];
+    for (const deviceScaleFactor of [1, 2]) {
+      await resize({ width: 1440, height: 900, deviceScaleFactor });
+      await click("#fit"); await settle(); await click("#home"); await settle();
+      const castle = await evaluate(() => seamlessPreview.scene.objects.find(o => o.kind === "castle" && o.sectionId === seamlessPreview.scene.homeSectionId && o.asset.includes("city-city-")));
+      await evaluate(o => { seamlessPreview.time(0); seamlessPreview.view(o.x, o.y, SeamlessModel.limits(seamlessPreview.snapshot().size).max); }, castle);
+      await settle(); await mouse.move(5, 10);
+      const selector = `[data-key=${JSON.stringify(castle.key)}]`;
+      const bounds = await rect(selector), s = await snapshot();
+      near(bounds.width, 56 * s.camera.zoom); near(bounds.height, 56 * s.camera.zoom);
+      assert.ok(await evaluate(selector => { const n = document.querySelector(selector); return n.firstChild.naturalWidth >= n.getBoundingClientRect().width * devicePixelRatio; }, selector), "Castle must have enough native pixels at maximum zoom, including high-DPI displays");
+      await screenshot(`castle-zoom-${deviceScaleFactor}x.png`);
+      // Capture the untouched viewport. A clipped screenshot or a style write
+      // on the real sprite can force a new raster and conceal the regression.
+      const actual = (await cdp.send("Page.captureScreenshot", { format: "png" })).data;
+      await evaluate(selector => {
+        const n = document.querySelector(selector), r = n.getBoundingClientRect(), reference = new Image();
+        reference.id = "qa-native-reference"; reference.src = n.firstChild.src;
+        reference.style.cssText = `position:fixed;left:${r.x}px;top:${r.y}px;width:${r.width}px;height:${r.height}px;object-fit:contain;z-index:100;pointer-events:none`;
+        document.body.append(reference); return reference.decode();
+      }, selector);
+      await nextFrame();
+      const reference = (await cdp.send("Page.captureScreenshot", { format: "png" })).data;
+      const energy = await evaluate(async ({ samples, bounds }) => {
+        const values = [];
+        for (const data of samples) {
+          const bitmap = new Image(); bitmap.src = `data:image/png;base64,${data}`; await bitmap.decode();
+          const canvas = document.createElement("canvas"); canvas.width = bitmap.width; canvas.height = bitmap.height;
+          const ctx = canvas.getContext("2d", { willReadFrequently: true }); ctx.drawImage(bitmap, 0, 0);
+          const scale = bitmap.width / innerWidth, width = Math.floor(bounds.width * scale), height = Math.floor(bounds.height * scale);
+          const pixels = ctx.getImageData(Math.floor(bounds.x * scale), Math.floor(bounds.y * scale), width, height).data;
+          let total = 0, count = 0;
+          // Ignore screenshot rounding at the outer edges.
+          for (let y = 3; y < height - 3; y++) for (let x = 3; x < width - 3; x++) for (let c = 0; c < 3; c++) {
+            const i = (y * width + x) * 4 + c;
+            total += Math.abs(pixels[i] - pixels[i + 4]) + Math.abs(pixels[i] - pixels[i + width * 4]); count += 2;
+          }
+          values.push(total / count); bitmap.removeAttribute("src"); canvas.width = canvas.height = 0;
+        }
+        return { actual: values[0], reference: values[1], ratio: values[0] / values[1] };
+      }, { samples: [actual, reference], bounds });
+      sharpness.push({ deviceScaleFactor, ...energy });
+      assert.ok(energy.reference > 2 && energy.ratio >= .85, `Zoom raster lost native sprite detail: ${JSON.stringify(sharpness.at(-1))}`);
+      await evaluate(() => document.getElementById("qa-native-reference").remove());
+    }
+    fs.writeFileSync(path.join(output, "zoom-sharpness.json"), JSON.stringify(sharpness, null, 2) + "\n");
+    console.log(`Zoom clarity: native-size detail retained at 1x/2x display density (${sharpness.map(s => s.ratio.toFixed(2)).join(", ")}).`);
+    await resize({ width: 1440, height: 900 });
     const target = await evaluate(() => seamlessPreview.scene.objects.find(o => o.kind === "tower"));
     await evaluate(o => { const s = seamlessPreview.snapshot(); seamlessPreview.view(o.x, o.y, SeamlessModel.limits(s.size).max); }, target);
     const objectSelector = `[data-key=${JSON.stringify(target.key)}]`;

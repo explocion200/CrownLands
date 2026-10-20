@@ -2,7 +2,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const M = require("./model");
-const { spreadCities } = require("./layout");
+const { spreadCities, CASTLE_SIZE } = require("./layout");
 const ROOT = path.resolve(__dirname, "../../..");
 const read = file => JSON.parse(fs.readFileSync(path.join(ROOT, file), "utf8"));
 
@@ -37,7 +37,7 @@ function createSeamlessFixture(crowded = false) {
     const positions = spreadCities(section, obstacles);
     section.definition.cities.forEach((city, i) => {
       const stage = 1 + i % 5;
-      add(section, city, "castle", catalog.mapPresentation.cityStageAssets[stage], 42, 42, city.x - 21, city.y - 21, i, positions.get(city.id));
+      add(section, city, "castle", catalog.mapPresentation.cityStageAssets[stage], CASTLE_SIZE, CASTLE_SIZE, city.x - CASTLE_SIZE / 2, city.y - CASTLE_SIZE / 2, i, positions.get(city.id));
     });
     section.art.landmarks.forEach((item, i) => {
       const original = [...section.definition.camps, ...section.definition.strongholds].find(o => o.id === item.id);
