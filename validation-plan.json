@@ -44,9 +44,11 @@
         "tools/validate-chat-translation.js",
         "tools/validate-report-location-navigation.js",
         "tools/validate-holding-details-ui.js",
-        "tools/test-local-chat-client.js"
+        "tools/test-local-chat-client.js",
+        "functions/test/emulator-chat-locations.js",
+        "functions/test/emulator-chat.js"
       ],
-      "reason": "Integrate compact location links and an explicit channel/recipient picker in current target panels. Check desktop and landscape sizes, matching chat typography, bounded controls, optional notes, safe inert rendering, private/global draft preservation, recipient routing, retry identity and stale-account responses. Exercise navigation with armed orders and map-load failure; preserve existing profile links and manual translation while avoiding per-message lookups. Holding-details checks cover shared target-panel mounts; existing report navigation and local chat client tests cover the map-loading and message transport dependencies."
+      "reason": "Integrate compact location links and an explicit channel/recipient picker in current target panels. Check desktop and landscape sizes, matching chat typography, bounded controls, optional notes, safe inert rendering, private/global draft preservation, recipient routing, retry identity and stale-account responses. Exercise navigation with armed orders and map-load failure; preserve existing profile links and manual translation while avoiding per-message lookups. Holding-details checks cover shared target-panel mounts; existing report navigation and local chat client tests cover the map-loading and message transport dependencies. Emulator location and chat suites validate the server authority and message contract consumed by firebaseClient.js, including canonical attachment fields and rejected client-supplied target data."
     },
     {
       "paths": [
