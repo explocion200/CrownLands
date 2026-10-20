@@ -59,6 +59,21 @@
         "tools/validate-camp-map-banners-browser.js"
       ],
       "reason": "Record the explicitly approved artwork replacement, source images and generation prompts. Pin source/delivery hashes and four exact retired-path mappings used by build sync. Verify all active game presentations and preserve archived art and the unrelated knight castle decoration."
+    },
+    {
+      "paths": [
+        "docs/SAFE_UPDATE_WORKFLOW.md",
+        "tools/prepare-pr.js",
+        "tools/safe-update-lib.js",
+        "tools/test-safe-update-pipeline.js"
+      ],
+      "tests": [
+        "tools/test-safe-update-pipeline.js",
+        "tools/test-change-risk-classifier.js",
+        "tools/test-targeted-validation.js",
+        "tools/validate-release-gate.js"
+      ],
+      "reason": "Required to complete the owner-requested deletion of the four replaced camp assets: the old audit unconditionally blocked any deletion after explicit review. Add only an exact per-file, per-run acknowledgement, recorded in the exact-head receipt and PR audit. Test default rejection, partial and invalid/wildcard paths, scope blockers, missing CLI arguments, stale receipt and main protection; keep generated-artifact, selected-validation and CI requirements unchanged."
     }
   ]
 }
