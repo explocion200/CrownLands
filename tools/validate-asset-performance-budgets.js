@@ -34,6 +34,9 @@ const thumbnailManifest = JSON.parse(read("assets/worlds/world_01/thumbnail-mani
 
 const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
 assert(statBytes("assets/icons/camp-type-flags-v1.svg") <= 3 * 1024, "Four camp type flags must remain within 3 KiB.");
+for (const type of ["gold", "troops", "items", "deed"]) {
+  assert(statBytes(`assets/icons/camps/camp-${type}-v2.webp`) <= 6 * 1024, "Each painted camp flag must remain within 6 KiB.");
+}
 // Preserve the complete offline game shell while allowing the shared WCAG
 // contrast layer to grow by no more than one tightly bounded 64 KiB step.
 // The shared flag renderer and Main's layout runtime add under 16 KiB to the

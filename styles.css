@@ -1785,7 +1785,7 @@ input {
 .camp-node .camp-map-banner {
   bottom: calc(100% - 12px);
 }
-.camp-type-flag { display: block; width: 42px; height: 53px; }
+.camp-type-flag { display: block; width: 42px; height: 53px; object-fit: contain; }
 .gold-camp-active-timer {
   display: flex;
   align-items: baseline;

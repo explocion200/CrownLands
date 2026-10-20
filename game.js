@@ -29346,11 +29346,10 @@ function renderCitiesUncached(force = false) {
       campNode.style.setProperty("--deed-hold-progress", `${getRewardCampHoldProgress(camp) * 100}%`);
       const campHtml = `
         <img class="camp-art${camp.flipX ? " map-art-flip-x" : ""}" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" decoding="async" />
-        ${camp.ownerUid ? `<span class="camp-owner-marker" aria-hidden="true">${renderCityOwnerFlag(camp)}</span>` : ""}
         ${deedHold && camp.ownerUid ? `<span class="deed-hold-ring" aria-hidden="true"><span class="deed-hold-seal">D</span></span>` : ""}
         <span class="camp-map-banner city-label player-city-label">
           <span class="player-city-banner">
-            <svg class="camp-type-flag" viewBox="0 0 48 60" aria-hidden="true" focusable="false"><use href="assets/icons/camp-type-flags-v1.svg#${campConfig.type}"></use></svg>
+            <img class="camp-type-flag" src="assets/icons/camps/camp-${campConfig.type}-v2.webp" width="42" height="53" alt="" draggable="false" decoding="async" />
             <span class="player-city-data">
               <span class="city-ruler-row"><strong class="city-ruler-name">${escapeHtml(camp.ownerUid ? getCityOwnerDisplayName(camp) : "Neutral camp")}</strong></span>
               <strong class="city-name">${escapeHtml(camp.name)}</strong>
@@ -29365,7 +29364,6 @@ function renderCitiesUncached(force = false) {
         campNode.innerHTML = campHtml;
         campNode._renderContent = campHtml;
       }
-      applyCityOwnerFlags(campNode, camp);
     } else {
       campNode.tabIndex = -1;
       campNode.setAttribute("aria-hidden", "true");

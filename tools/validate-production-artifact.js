@@ -413,9 +413,17 @@ assert(guildModules.reduce((n,file)=>n+fs.statSync(path.join(dist,file)).size,0)
 const worker=fs.readFileSync(path.join(dist,"service-worker.js"),"utf8");
 assert(!worker.includes("assets/guild-master/")&&!guildModules.some(file=>worker.includes(file)),"Guild assets must remain outside installation precaching");
 const guildFeatureBudget=guildArtBudget+guildModuleBudget;
+// Four requested painted camp flags add 21,716 bytes. Keep their 24 KiB
+// allowance isolated from the existing client and installation-shell budgets.
+const campFlagPaths = ["gold", "troops", "items", "deed"].map(type => `assets/icons/camps/camp-${type}-v2.webp`).sort();
+const campFlagFiles = files.filter(file => path.relative(dist, file).replace(/\\/g, "/").startsWith("assets/icons/camps/"));
+const campFlagArtBudget = 24 * 1024;
+assert.deepEqual(campFlagFiles.map(file => path.relative(dist, file).replace(/\\/g, "/")).sort(), campFlagPaths, "Ship exactly four camp type banners");
+assert(campFlagFiles.every(file => fs.statSync(file).size <= 6 * 1024), "Each camp banner must remain within 6 KiB");
+assert(!worker.includes("assets/icons/camps/"), "Camp type banners must load on demand");
 const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget + halloweenMapTransitionBudget + animatedMapBatsBudget + troopsHelmetArtworkBudget + liveCrownPurchaseBudget + crownShopTabBudget + estateArtBudget + estateModuleBudget + guildFeatureBudget;
-if (baseClientBytes > baseClientBudget) {
-  throw new Error(`Base production artifact exceeds ${(baseClientBudget / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
+if (baseClientBytes > baseClientBudget + campFlagArtBudget) {
+  throw new Error(`Base production artifact exceeds ${((baseClientBudget + campFlagArtBudget) / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
 if (preparedWorldBytes > 35 * 1024 * 1024) {
   throw new Error(`Prepared Core-expansion world exceeds 35 MiB (${(preparedWorldBytes / 1024 / 1024).toFixed(2)} MiB).`);
