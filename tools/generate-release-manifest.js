@@ -103,7 +103,7 @@ function createManifest() {
     ...listFiles(path.join(root, "assets/icons/skills"), file => /\.(?:svg|webp)$/.test(file))
       .map(file => path.relative(root, file).replace(/\\/g, "/")),
     "assets/icons/reward-daily-login-r1.svg", "assets/icons/reward-daily-quests-r1.svg", "assets/icons/reward-achievements-r1.svg",
-    "assets/icons/citadel-crown-r1.webp",
+    "assets/icons/citadel-crown-r1.webp", "assets/icons/camp-type-flags-v1.svg",
     ...["gold", "troops", "items", "deed"].map(type => `assets/icons/camps/camp-${type}-v2.webp`),
     "clan-shop-ui.js", "clan-shop-ui.css", "help-handbook-content.js", "help-handbook-ui.js", "help-handbook-ui.css", "daily-login-ui.js", "daily-login-ui.css", "index.html", "styles.css", "city-details-ui.js", "city-details-ui.css", "city-list-ui.css", "holding-tower-ui.css", "interface-theme.css", "common-gear-ui.css", "manuscript-prototype.css", "ui-contrast-correction.css", "profile-theme.css", "crownlands-palette.css", "action-buttons.css", "mobile-viewport.css", "chat.css", "chat-ui.js", "chat-locations-ui.js", "chat-locations.css", "social-ui.js", "social-ui.css", "game.js", "holding-tower-ui.js", "camp-details-ui.js", "camp-details-ui.css", "clan-tower-details-ui.js", "clan-tower-details-ui.css", "base-cities.js", "common-gear.js", "common-gear-ui.js", "inner-city-estate.js", "inner-city-estate.css", "instant-economy-actions.js", "firebaseClient.js", "email-auth-ui.js", "animation-manager.js", "audio-manager.js",
     "service-worker.js", "firebase-messaging-sw.js", "manifest.webmanifest",

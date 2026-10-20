@@ -18,7 +18,6 @@
     },
     {
       "paths": [
-        "assets/icons/camp-type-flags-v1.svg",
         "assets/icons/camps/camp-gold-v2.webp",
         "assets/icons/camps/camp-troops-v2.webp",
         "assets/icons/camps/camp-items-v2.webp",
@@ -31,7 +30,7 @@
         "tools/validate-asset-performance-budgets.js",
         "tools/validate-production-artifact.js"
       ],
-      "reason": "Replace the obsolete vector sprite with four versioned generated WebP banners, preserve alpha and package them through the icon directory and fingerprint manifest. Cap each lazy-loaded artwork file at 12 KiB without increasing install-shell or other budgets. Verify 168x212 runtime images, actual browser loading, transparency, the fixed display slot and complete production artifact."
+      "reason": "Use four versioned generated WebP banners in place of the old vector sprite, preserving alpha and packaging through the icon directory and fingerprint manifest. Keep the old tiny sprite available for cached older clients. Cap each new lazy-loaded artwork file at 12 KiB without increasing install-shell or other budgets. Verify 168x212 runtime images, actual browser loading, transparency, the fixed display slot and complete production artifact."
     },
     {
       "paths": [
