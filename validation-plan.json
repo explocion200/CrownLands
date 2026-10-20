@@ -30,7 +30,7 @@
         "tools/validate-asset-performance-budgets.js",
         "tools/validate-production-artifact.js"
       ],
-      "reason": "Use four versioned generated WebP banners in place of the old vector sprite, preserving alpha and packaging through the icon directory and fingerprint manifest. Keep the old tiny sprite available for cached older clients. Cap each new lazy-loaded artwork file at 12 KiB without increasing install-shell or other budgets. Verify 168x212 runtime images, actual browser loading, transparency, the fixed display slot and complete production artifact."
+      "reason": "Use four versioned generated WebP banners in place of the old vector sprite, preserving alpha and packaging through the icon directory and fingerprint manifest. Keep the old tiny sprite available for cached older clients. Cap each new lazy-loaded artwork file at 6 KiB without increasing install-shell or other budgets. Verify 84x106 runtime images, actual browser loading, transparency, the fixed display slot and complete production artifact."
     },
     {
       "paths": [

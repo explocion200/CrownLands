@@ -60,7 +60,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       return results;
     });
     for (const flag of flagAssets) {
-      assert.equal(flag.width, 168); assert.equal(flag.height, 212);
+      assert.equal(flag.width, 84); assert.equal(flag.height, 106);
       assert(flag.transparent > 0 && flag.nearOpaque > flag.width * flag.height * .3, JSON.stringify(flag));
     }
     for (const [width, height] of [[1440,900], [844,390], [568,320]]) {
@@ -87,7 +87,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
           return { text:label.innerText, above:r.bottom <= a.top + 13 * zoom,
             inside:r.left>=0 && r.right<=innerWidth && r.top>=0 && r.bottom<=innerHeight,
             width:label.offsetWidth, height:label.offsetHeight, flag:n.querySelector(".camp-type-flag").getAttribute("src"),
-            flagLoaded:n.querySelector(".camp-type-flag").complete && n.querySelector(".camp-type-flag").naturalWidth === 168,
+            flagLoaded:n.querySelector(".camp-type-flag").complete && n.querySelector(".camp-type-flag").naturalWidth === 84,
             ownerFlags:n.querySelectorAll(".camp-owner-marker").length,
             timerHidden:timer.hidden, timer:timer.innerText, hasDeedRing:Boolean(n.querySelector(".deed-hold-ring")),
             bounds:r.toJSON(), art:a.toJSON() };
