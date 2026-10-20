@@ -22,11 +22,12 @@ async function main() {
       const o = scene.objects.find(o => o.key === M.identity(s.id, city.id));
       assert.equal(o.id, city.id); assert.deepEqual(o.local, { x: city.x, y: city.y });
       assert.deepEqual(M.worldToLocal(s, o), o.previewLocal);
-      assert.deepEqual(o.artLocal, { x: city.x - 21, y: city.y - 21, width: 42, height: 42 });
+      assert.deepEqual(o.artLocal, { x: city.x - 28, y: city.y - 28, width: 56, height: 56 });
+      assert.equal(o.width, 56); assert.equal(o.height, 56);
       assert.ok(o.previewLocal.x >= 54 && o.previewLocal.x <= s.width - 54 && o.previewLocal.y >= 54 && o.previewLocal.y <= s.height - 54);
-      close(o.left + 21, o.x); close(o.top + 21, o.y);
+      close(o.left + 28, o.x); close(o.top + 28, o.y);
       const roads = clearance.maps.find(m => m.id === s.id).roads;
-      for (const [x, y, width] of roads.flat()) assert.ok(Math.hypot(o.previewLocal.x - x, o.previewLocal.y - y) >= 38 + width / 2, `Castle overlaps road: ${s.id}/${o.id}`);
+      for (const [x, y, width] of roads.flat()) assert.ok(Math.hypot(o.previewLocal.x - x, o.previewLocal.y - y) >= 48 + width / 2, `Castle overlaps road: ${s.id}/${o.id}`);
     }
     for (const art of summary.artPresentation.landmarks) {
       const o = scene.objects.find(o => o.key === M.identity(s.id, art.id));

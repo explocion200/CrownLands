@@ -1,6 +1,7 @@
 "use strict";
 // Private display coordinates only. Catalog coordinates remain the travel truth.
-const EDGE = 54, SPACING = 88, STEP = 18, CITY_RADIUS = 30;
+const CASTLE_SIZE = 56, EDGE = 54, SPACING = 88, STEP = 18;
+const CITY_RADIUS = Math.ceil(Math.SQRT2 * CASTLE_SIZE / 2), OBSTACLE_GAP = CASTLE_SIZE / 2 + 10;
 function spreadCities(section, obstacles) {
   const cities = section.definition.cities;
   const xs = cities.map(c => c.x), ys = cities.map(c => c.y);
@@ -15,7 +16,7 @@ function spreadCities(section, obstacles) {
   }
   const candidates = [];
   for (let y = EDGE; y <= section.height - EDGE; y += STEP) for (let x = EDGE; x <= section.width - EDGE; x += STEP) {
-    if (obstacles.some(o => x > o.x - 31 && x < o.x + o.width + 31 && y > o.y - 31 && y < o.y + o.height + 31)) continue;
+    if (obstacles.some(o => x > o.x - OBSTACLE_GAP && x < o.x + o.width + OBSTACLE_GAP && y > o.y - OBSTACLE_GAP && y < o.y + o.height + OBSTACLE_GAP)) continue;
     const bx = Math.floor(x / bucketSize), by = Math.floor(y / bucketSize);
     let blocked = false;
     for (let dy = -1; dy <= 1 && !blocked; dy++) for (let dx = -1; dx <= 1 && !blocked; dx++) {
@@ -42,4 +43,4 @@ function spreadCities(section, obstacles) {
   }
   return placed;
 }
-module.exports = { spreadCities, EDGE, SPACING, CITY_RADIUS };
+module.exports = { spreadCities, CASTLE_SIZE, EDGE, SPACING, CITY_RADIUS };

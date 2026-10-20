@@ -1,36 +1,14 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "d12baf9e20ad42e51fbe156fe6ec31be9f8b8c09",
+  "baseCommit": "846682bf5b733bd81f8bbfb541ad0654228113d0",
   "coverage": [
     {
       "paths": [
-        "tools/map-benchmark/seamless/assets.js",
-        "tools/map-benchmark/seamless/build-terrain.js",
         "tools/map-benchmark/seamless/fixtures.js",
         "tools/map-benchmark/seamless/layout.js",
         "tools/map-benchmark/seamless/preview.css",
-        "tools/map-benchmark/seamless/preview.js",
-        "tools/validate-seamless-world.js",
         "tools/validate-seamless-world-browser.js",
-        "tools/map-benchmark/seamless/terrain/core-v2-aurum-keep-m1-p0-thumb.webp",
-        "tools/map-benchmark/seamless/terrain/core-v2-aurum-keep-m1-p0.webp",
-        "tools/map-benchmark/seamless/terrain/core-v2-crown-citadel-p0-p0-thumb.webp",
-        "tools/map-benchmark/seamless/terrain/core-v2-crown-citadel-p0-p0.webp",
-        "tools/map-benchmark/seamless/terrain/core-v2-greybanner-hold-p0-m1-thumb.webp",
-        "tools/map-benchmark/seamless/terrain/core-v2-greybanner-hold-p0-m1.webp",
-        "tools/map-benchmark/seamless/terrain/core-v2-north-support-p0-m2-thumb.webp",
-        "tools/map-benchmark/seamless/terrain/core-v2-north-support-p0-m2.webp",
-        "tools/map-benchmark/seamless/terrain/core-v2-north-west-holding-tower-m1-m1-thumb.webp",
-        "tools/map-benchmark/seamless/terrain/core-v2-north-west-holding-tower-m1-m1.webp",
-        "tools/map-benchmark/seamless/terrain/core-v2-relic-camp-north-west-m1-m2-thumb.webp",
-        "tools/map-benchmark/seamless/terrain/core-v2-relic-camp-north-west-m1-m2.webp",
-        "tools/map-benchmark/seamless/terrain/core-v2-relic-camp-west-north-m2-m1-thumb.webp",
-        "tools/map-benchmark/seamless/terrain/core-v2-relic-camp-west-north-m2-m1.webp",
-        "tools/map-benchmark/seamless/terrain/core-v2-warband-camp-m2-m2-thumb.webp",
-        "tools/map-benchmark/seamless/terrain/core-v2-warband-camp-m2-m2.webp",
-        "tools/map-benchmark/seamless/terrain/core-v2-west-support-m2-p0-thumb.webp",
-        "tools/map-benchmark/seamless/terrain/core-v2-west-support-m2-p0.webp",
-        "tools/map-benchmark/seamless/terrain/manifest.json"
+        "tools/validate-seamless-world.js"
       ],
       "tests": [
         "tools/validate-seamless-world.js",
@@ -38,7 +16,7 @@
         "tools/validate-map-benchmark.js",
         "tools/validate-production-artifact.js"
       ],
-      "reason": "Verify preserved catalog identities/source coordinates, deterministic full-section city placement and clearance against roads, scenery, objectives and neighboring cities. Validate terrain source/output hashes, all 12 full/thumbnail pixel joins and corner samples, all nine painted road networks, real desktop/touch interaction, overview city visibility, delayed/failed private artwork recovery, bounded assets/DOM/listeners and normal/crowded performance. The shared loopback harness keeps its existing fixture behavior; production build/artifact validation proves tools and private terrain stay excluded. No backend or authoritative gameplay changes; no emulator suite applies."
+      "reason": "Private 56-pixel castle footprints affect fixture generation, deterministic placement, road/corner clearance, cross-section spacing and hit targets. Removing the world raster hint affects all sprites, labels and zoom rendering. Validate preserved catalog identities, all 540 enlarged castles, all seams/corners, desktop and landscape mouse/touch interaction, DPR 1/2 screenshot detail against native-size artwork after overview/zoom, bounded loading/DOM and normal/crowded frame times. Existing benchmark regression and production artifact validation prove loopback harness compatibility and exclusion from published game packages. No gameplay/backend/data contract changes; no emulator suites apply."
     },
     {
       "paths": [
@@ -49,7 +27,7 @@
         "tools/validate-seamless-world.js",
         "tools/validate-seamless-world-browser.js"
       ],
-      "reason": "Document the owner-approved private display-layout and seam-art refinement, its separation from live coordinates/artwork, reproducible authoring, tested bounds and measured performance limitations. This does not authorize Stage 2 production integration."
+      "reason": "Record the owner-approved private castle visibility refinement, proven compositor blur cause, screenshot sharpness evidence, retained terrain resolution limits and current measured performance. This neither activates Stage 2 nor changes live coordinates or artwork."
     }
   ]
 }
