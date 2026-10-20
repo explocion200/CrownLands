@@ -65,16 +65,20 @@
       "paths": [
         "index.html",
         "service-worker.js",
+        "tools/asset-performance-budgets.js",
+        "tools/validate-asset-performance-budgets.js",
         "tools/build-production-client.js",
         "tools/generate-release-manifest.js"
       ],
       "tests": [
         "tools/test-local-production-client.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js",
         "tools/validate-pwa-entry-routing.js",
         "tools/validate-chat-locations-browser.js",
         "tools/validate-chat.js"
       ],
-      "reason": "Ship and fingerprint the location component and stylesheet, load before message normalization and cache through the existing service worker. Production build/artifact validation plus opt-in local packaging and PWA routing checks protect existing home-server deployment behavior. No new external service, API export or release contract change."
+      "reason": "Ship and fingerprint the location component and stylesheet, load before message normalization and cache through the existing service worker. Production build/artifact validation plus opt-in local packaging and PWA routing checks protect existing home-server deployment behavior. Measure and bound the 19,174-byte shell addition, 905-byte chat ledger addition and 2,858-byte game wiring addition; enforce separate 12/4 KiB caps for the new component/styles while preserving image, request and frame budgets. No new external service, API export or release contract change."
     },
     {
       "paths": [
