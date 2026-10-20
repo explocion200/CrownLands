@@ -10,6 +10,7 @@ const root = path.resolve(__dirname, "..");
 const W = 1448, H = 1086;
 const assetRoot = "assets/worlds/core-expansion-v1";
 const source = "docs/art-sources/clean-map-ground/ground.png";
+const roadMaterial = "docs/art-sources/blended-dirt-roads/dirt-material.png";
 const read = file => JSON.parse(fs.readFileSync(path.join(root, file), "utf8"));
 const hash = bytes => crypto.createHash("sha256").update(bytes).digest("hex");
 const write = (file, value) => fs.writeFileSync(path.join(root, file), `${JSON.stringify(value, null, 2)}\n`);
@@ -33,29 +34,36 @@ function ribbon(points) {
   return shapes.join("");
 }
 
-function roadsSvg(roads) {
+function roadsSvg(roads, material, seed = 0) {
+  const phase = (seed % 65536) / 1000;
+  // Uneven, translucent shoulders stay inside the existing road envelope. The
+  // underlying meadow shows between worn dirt patches; there is no outline.
+  const shoulders = [[1, 32], [.97, 100], [.91, 181], [.84, 232], [.73, 255]].map(([scale, shade]) => {
+    const painted = roads.map(points => ribbon(points.map(([x, y, width]) => {
+      const wear = Math.max(0, .8 + .65 * Math.sin(x * .61 + y * .37 + phase)
+        + .35 * Math.sin(x * 1.37 - y * .83 - phase));
+      return [x, y, width * scale - wear];
+    }))).join("");
+    return `<g fill="rgb(${shade},${shade},${shade})">${painted}</g>`;
+  }).join("");
   const tracks = roads.flatMap(points => [-1, 1].map(side => {
     const line = points.map(([x, y, width], i) => {
       const before = points[Math.max(0, i - 1)], after = points[Math.min(points.length - 1, i + 1)];
       const dx = after[0] - before[0], dy = after[1] - before[1], len = Math.hypot(dx, dy) || 1;
       return `${n(x + side * dy / len * width * .22)},${n(y - side * dx / len * width * .22)}`;
     }).join(" ");
-    return `<polyline points="${line}" fill="none" stroke="#8a743f" stroke-width=".65" opacity=".26"/>`;
+    return `<polyline points="${line}" fill="none" stroke="#8a743f" stroke-width=".8" stroke-dasharray="3 29 7 41" stroke-dashoffset="${seed % 29}" opacity=".12"/>`;
   })).join("");
   return Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
     <defs>
-      <g id="network" fill="white">${roads.map(ribbon).join("")}</g>
-      <mask id="road"><use href="#network"/></mask>
-      <mask id="interior"><g fill="white">${roads.map(points => ribbon(points.map(([x, y, width]) => [x, y, width - 1.6]))).join("")}</g></mask>
-      <pattern id="grain" width="19" height="17" patternUnits="userSpaceOnUse">
-        <path d="M1 3l2 .4M11 8l1.4-.5M5 14l2-.3" stroke="#786337" stroke-width=".55" opacity=".21"/>
-        <path d="M7 5l2 .4M14 14l2-.2" stroke="#f5df9c" stroke-width=".7" opacity=".4"/>
+      <mask id="road">${shoulders}</mask>
+      <pattern id="earth" width="384" height="384" patternUnits="userSpaceOnUse" x="${seed % 384}" y="${(seed >>> 8) % 384}">
+        <image href="data:image/png;base64,${material.toString("base64")}" width="384" height="384"/>
       </pattern>
     </defs>
     <g mask="url(#road)">
-      <rect width="${W}" height="${H}" fill="#95824b"/>
-      <rect width="${W}" height="${H}" fill="#d1b875" mask="url(#interior)"/>
-      <rect width="${W}" height="${H}" fill="url(#grain)"/>
+      <rect width="${W}" height="${H}" fill="#c8ae70"/>
+      <rect width="${W}" height="${H}" fill="url(#earth)" opacity=".65"/>
       ${tracks}
     </g>
   </svg>`);
@@ -65,6 +73,7 @@ async function build() {
   const catalog = read(`${assetRoot}/region-catalog.json`);
   const proof = read("tools/map-art/clearance.json");
   const receipt = read(`${assetRoot}/illustrated-art-receipt.json`);
+  const material = await sharp(path.join(root, roadMaterial)).resize(384, 384).png().toBuffer();
   const selected = process.argv.find(arg => arg.startsWith("--map="))?.slice(6);
   if (selected && !proof.maps.some(map => map.id === selected)) throw new Error(`Unknown map ${selected}`);
   for (const [index, map] of proof.maps.entries()) {
@@ -76,7 +85,7 @@ async function build() {
     // Avoid identical small texture marks between maps while keeping the same palette.
     if (previous.seed & 1) terrain.flop();
     if (previous.seed & 2) terrain.flip();
-    const bytes = await terrain.composite([{ input: roadsSvg(map.roads) }])
+    const bytes = await terrain.composite([{ input: roadsSvg(map.roads, material, previous.seed) }])
       .webp({ quality: 64, effort: 6 }).toBuffer();
     fs.writeFileSync(path.join(root, summary.mapAsset), bytes);
     const scenery = [];
@@ -95,6 +104,7 @@ async function build() {
     style: "clean-meadow-connected-roads-v2", source, sourceSha256: hash(fs.readFileSync(path.join(root, source))),
     roadSamples: "tools/map-art/clearance.json", roadSamplesSha256: hash(fs.readFileSync(path.join(root, "tools/map-art/clearance.json"))),
     delivery: "1448x1086 WebP quality 64; thumbnails 362x272 quality 82",
+    roadSurface: { style: "blended-painted-dirt-v1", source: roadMaterial, sourceSha256: hash(fs.readFileSync(path.join(root, roadMaterial))) },
   };
   write(`${assetRoot}/illustrated-art-receipt.json`, receipt);
   require("./sync-core-expansion-assets").syncCoreExpansionAssets();

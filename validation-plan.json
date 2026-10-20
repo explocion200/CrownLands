@@ -1,17 +1,9 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "51e546a942eeabf2d738d56135022701498fc8db",
+  "baseCommit": "e8d9c2d00c12c161525112d24a7465304ff5e159",
   "coverage": [
     {
       "paths": [
-        "assets/worlds/core-expansion-v1/art/camp-deed-v2-09c90a1ca416.webp",
-        "assets/worlds/core-expansion-v1/art/camp-deed-v3-b5657b5ff8ca.webp",
-        "assets/worlds/core-expansion-v1/art/camp-gold-v2-99f2fc668829.webp",
-        "assets/worlds/core-expansion-v1/art/camp-gold-v3-e7760be842cd.webp",
-        "assets/worlds/core-expansion-v1/art/camp-items-v2-de5d02289ae1.webp",
-        "assets/worlds/core-expansion-v1/art/camp-items-v3-06c7762449d6.webp",
-        "assets/worlds/core-expansion-v1/art/camp-troops-v2-a509413035b9.webp",
-        "assets/worlds/core-expansion-v1/art/camp-troops-v3-a73f84e01840.webp",
         "assets/worlds/core-expansion-v1/build-receipt.json",
         "assets/worlds/core-expansion-v1/illustrated-art-receipt.json",
         "assets/worlds/core-expansion-v1/maps/core-v2-aurum-keep-m1-p0.webp",
@@ -97,18 +89,6 @@
         "assets/worlds/core-expansion-v1/maps/new-lands-l02-p032.webp",
         "assets/worlds/core-expansion-v1/region-catalog.js",
         "assets/worlds/core-expansion-v1/region-catalog.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-deed-camp-east-north-p2-m1.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-deed-camp-north-east-p1-m2.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-deed-camp-south-west-m1-p2.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-deed-camp-west-south-m2-p1.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-gold-camp-north-east-p2-m2.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-gold-camp-south-west-m2-p2.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-relic-camp-east-south-p2-p1.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-relic-camp-north-west-m1-m2.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-relic-camp-south-east-p1-p2.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-relic-camp-west-north-m2-m1.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-warband-camp-m2-m2.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-warband-camp-south-east-p2-p2.json",
         "assets/worlds/core-expansion-v1/thumbnails/core-v2-aurum-keep-m1-p0.webp",
         "assets/worlds/core-expansion-v1/thumbnails/core-v2-crown-citadel-p0-p0.webp",
         "assets/worlds/core-expansion-v1/thumbnails/core-v2-deed-camp-east-north-p2-m1.webp",
@@ -190,24 +170,12 @@
         "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p030.webp",
         "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p031.webp",
         "assets/worlds/core-expansion-v1/thumbnails/new-lands-l02-p032.webp",
-        "docs/art-sources/clean-map-ground/deed-landscape.png",
-        "docs/art-sources/clean-map-ground/gold-desktop.png",
-        "docs/art-sources/clean-map-ground/ground.png",
-        "docs/art-sources/clean-map-ground/preserved-inputs.json",
-        "docs/art-sources/clean-map-ground/prompts.json",
-        "docs/art-sources/clean-map-ground/refinement-prompt.txt",
-        "docs/art-sources/clean-map-ground/relic-window.png",
-        "docs/visual-qa/camp-artwork-v3/assets.json",
-        "docs/visual-qa/camp-artwork-v3/camp-deed.png",
-        "docs/visual-qa/camp-artwork-v3/camp-gold.png",
-        "docs/visual-qa/camp-artwork-v3/camp-items.png",
-        "docs/visual-qa/camp-artwork-v3/camp-troops.png",
+        "docs/art-sources/blended-dirt-roads/desktop.png",
+        "docs/art-sources/blended-dirt-roads/dirt-material.png",
+        "docs/art-sources/blended-dirt-roads/landscape.png",
         "tools/build-clean-map-ground.js",
-        "tools/sync-core-expansion-assets.js",
-        "tools/validate-camp-artwork.js",
         "tools/validate-camp-map-banners-browser.js",
-        "tools/validate-clean-map-ground.js",
-        "tools/validate-illustrated-map-art.js"
+        "tools/validate-clean-map-ground.js"
       ],
       "tests": [
         "tools/validate-clean-map-ground.js",
@@ -215,16 +183,18 @@
         "tools/validate-camp-artwork.js",
         "tools/validate-camp-map-banners-browser.js"
       ],
-      "reason": "Client-only art replacement spans all 81 prepared map backgrounds/thumbnails, four camp sources and optimized sprites, lazy region references, shared catalog projection and authoring receipts. Verify connected canonical road envelopes/exits/entrances, actual encoded road pixels, NPC road regeneration, unchanged gameplay/server hashes and city/scenery clearance; verify alpha floors and shared camp art across desktop/mobile map, atlas, windows and snapshots. Production build and existing download/cache budgets run automatically. No server authority, rules or data changed, so no emulator suite applies."
+      "reason": "Client-only dirt-road texture refinement affects 81 prepared backgrounds and thumbnails, browser cache version, receipt hashes and the offline composer. Check canonical connectivity/edge exits/objective entrances, preserved gameplay inputs and NPC paths, encoded soil pixels across every map, city/scenery clearance, shared catalog/atlas/camp presentation on desktop and landscape phones, and exact artwork provenance. Production build and cache/download budgets run automatically. No server authority or data changes, so no emulator suite applies."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/art-sources/clean-map-ground/README.md",
-        "docs/visual-qa/camp-artwork-v3/README.md"
+        "docs/art-sources/blended-dirt-roads/README.md",
+        "docs/art-sources/blended-dirt-roads/prompt.txt",
+        "docs/art-sources/blended-dirt-roads/refinement-prompt.txt",
+        "docs/art-sources/clean-map-ground/README.md"
       ],
       "tests": [],
-      "reason": "Document the owner-confirmed presentation, image generation provenance, reproducible asset pipeline and preservation constraints. No executable behavior in these prose files; corresponding assets and tools are covered above."
+      "reason": "Document the owner-confirmed dirt-road appearance and reproducible image-generation prompts, provenance and visual evidence. Prose introduces no executable behavior; corresponding artwork/composer dependencies are covered above."
     }
   ]
 }

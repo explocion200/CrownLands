@@ -118,7 +118,9 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         for(const road of map.roads)for(const [x,y] of road){
           const at=(Math.min(1085,Math.max(0,Math.round(y)))*1448+Math.min(1447,Math.max(0,Math.round(x))))*4;
           const [r,g,b]=pixels.slice(at,at+3);total++;
-          if(!(r>=185&&b>=96&&r>g+10&&g>b+45))missed++;
+          // Painted earth includes darker grit; distinguish its subdued tan
+          // chroma from the much greener/yellower meadow, not one flat RGB fill.
+          if(!(r>g+12&&g>b+25&&g-b<75&&r+g+b>290))missed++;
         }
         checks.push({id:map.id,width:img.naturalWidth,height:img.naturalHeight,total,missed});
       }

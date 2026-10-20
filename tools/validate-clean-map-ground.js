@@ -16,6 +16,8 @@ const proof = json("tools/map-art/clearance.json");
 assert.equal(receipt.groundPresentation.style, "clean-meadow-connected-roads-v2");
 assert.equal(hash(read(receipt.groundPresentation.source)), receipt.groundPresentation.sourceSha256);
 assert.equal(hash(read(receipt.groundPresentation.roadSamples)), receipt.groundPresentation.roadSamplesSha256);
+assert.equal(receipt.groundPresentation.roadSurface.style, "blended-painted-dirt-v1");
+assert.equal(hash(read(receipt.groundPresentation.roadSurface.source)), receipt.groundPresentation.roadSurface.sourceSha256);
 assert.equal(receipt.maps.length, 81);
 assert.equal(new Set(receipt.maps.map(map => map.backgroundSha256)).size, 81);
 assert.equal(new Set(receipt.maps.map(map => map.roadGeometrySha256)).size, 81);
