@@ -6,6 +6,7 @@ const http = require("node:http");
 const path = require("node:path");
 
 const { createFixture, SCENARIOS } = require("./fixtures.js");
+const { createSeamlessFixture } = require("./seamless/fixtures.js");
 const { CORE_EXPANSION_RUNTIME_BUDGET, LEGACY_RUNTIME_BUDGET } = require("./budgets.js");
 
 const ROOT_DIR = process.env.CROWNLANDS_BENCHMARK_ROOT
@@ -153,6 +154,7 @@ function resolveStaticPath(pathname) {
 function createMapBenchmarkServer() {
   const requests = [];
   const fixtures = new Map();
+  const seamlessFixtures = new Map();
   const server = http.createServer(async (request, response) => {
     const hostHeader = String(request.headers.host || "");
     if (!hostHeader.startsWith("127.0.0.1:") && hostHeader !== "127.0.0.1") {
@@ -160,6 +162,23 @@ function createMapBenchmarkServer() {
       return;
     }
     const requestUrl = new URL(request.url || "/", `http://${hostHeader || HOST}`);
+    // Separate private entry; never imports the live client or its mock account.
+    if (requestUrl.pathname === "/__benchmark__/seamless/" || requestUrl.pathname === "/__benchmark__/seamless/fixture") {
+      requests.push({ at: new Date().toISOString(), method: request.method, path: requestUrl.pathname, scenarioId: "seamless" });
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        send(response, 405, "Method not allowed", "text/plain; charset=utf-8");
+        return;
+      }
+      const headers = { "content-security-policy": "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" };
+      try {
+        if (requestUrl.pathname.endsWith("/fixture")) {
+          const crowded = requestUrl.searchParams.get("crowded") === "true";
+          if (!seamlessFixtures.has(crowded)) seamlessFixtures.set(crowded, createSeamlessFixture(crowded));
+          send(response, 200, JSON.stringify(seamlessFixtures.get(crowded)), "application/json; charset=utf-8", headers);
+        } else send(response, 200, fs.readFileSync(path.join(__dirname, "seamless/index.html")), "text/html; charset=utf-8", headers);
+      } catch (_error) { send(response, 500, "Private preview fixture unavailable", "text/plain; charset=utf-8", headers); }
+      return;
+    }
     const scenarioId = getScenarioId(requestUrl, request);
     if (!fixtures.has(scenarioId)) fixtures.set(scenarioId, createFixture(scenarioId));
     const baseFixture = fixtures.get(scenarioId);
