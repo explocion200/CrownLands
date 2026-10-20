@@ -212,6 +212,7 @@ function openMarauderDetails(id) {
   if (!target) { showToast("That enemy is no longer available."); return; }
   modal.className = "modal marauder-modal"; modalTitle.textContent = target.name;
   modalBody.innerHTML = renderMarauderDetailsPanel(target);
+  mountChatLocationShare(target, "marauder");
   if (!modal.open) modal.showModal();
   modalBody.querySelectorAll("[data-npc-action]").forEach(button => button.addEventListener("click", async () => {
     if (getMarauderById(id)?.spawnId !== target.spawnId) { showToast("This spawn has changed. Choose the new enemy."); return; }

@@ -41,7 +41,7 @@ function identity(uid, profile = {}) {
     clanTag: String(profile.clanTag || "").slice(0, 5) };
 }
 function createService({ db, fail = (code, message) => Object.assign(Error(message), { code }), now = Date.now,
-  getRealm = () => ({}), memberPath = uid => `gameServers/crownlands/members/${uid}` }) {
+  getRealm = () => ({}), memberPath = uid => `gameServers/crownlands/members/${uid}`, locations = null }) {
   const invalid = () => fail("invalid-argument", "Choose a valid social action.");
   const deny = () => fail("permission-denied", "This conversation is unavailable.");
   const snapshotData = snapshot => snapshot.exists ? snapshot.data() : null;
@@ -62,10 +62,12 @@ function createService({ db, fail = (code, message) => Object.assign(Error(messa
     if (!validUid(uid)) throw fail("unauthenticated", "Sign in to use Friends and Messages.");
     if (request.auth?.token?.firebase?.sign_in_provider === "password" && request.auth.token.email_verified !== true) throw deny();
     if (!input || typeof input !== "object" || Array.isArray(input)) throw invalid();
-    const fields = ["action", "peerUid", "conversationId", "choice", "text", "requestId", "kind", "cursor", "beforeSeq", "throughSeq", "uids", "enabled", "messageId", "reason",
+    const fields = ["action", "peerUid", "conversationId", "choice", "text", "requestId", "kind", "cursor", "beforeSeq", "throughSeq", "uids", "enabled", "messageId", "reason", "location",
       "clientReleaseId", "clientWorldId", "clientResetGeneration", "clientRealmShardId", "clientApiContractHash", "activeSessionId"];
     if (Object.keys(input).some(key => !fields.includes(key))) throw invalid();
     const action = input.action;
+    const locationRef = input.location === undefined ? null : require("./chat-locations").reference(input.location, fail);
+    if (locationRef && (action !== "send" || !locations)) throw invalid();
     return db.runTransaction(async tx => {
       const [config, ownProfile, storedAccount] = await reads(tx, [CONFIG, `players/${uid}`, accountPath(uid)]);
       if (action === "status") return { enabled: config?.enabled === true, version: 1, privateAlerts: storedAccount?.privateAlerts === true, serverNowMs: time };
@@ -124,6 +126,12 @@ function createService({ db, fail = (code, message) => Object.assign(Error(messa
       if (!peerProfile) throw deny();
       const peerAccount = peerAccountData || {}, boxes = { [uid]: ownInbox || {}, [peer]: peerInbox || {} };
       if (action === "relation") return { ...relation(pair, uid, time), player: identity(peer, peerProfile), serverNowMs: time };
+      if (action === "resolveLocation") {
+        if (!locations || !/^[a-f0-9]{40}$/.test(input.messageId || "")) throw invalid();
+        const message = snapshotData(await tx.get(db.doc(messagePath(id, input.messageId))));
+        if (!message || message.expiresAtMs <= time || !pair.uids.includes(message.senderUid)) throw deny();
+        return locations.resolve(tx, message.location);
+      }
       if (action === "history") {
         let query = db.collection(`${pairPath(id)}/privateMessages`).where("expiresAtMs", ">", time).orderBy("expiresAtMs", "desc").orderBy("sequence", "desc").limit(PAGE + 1);
         if (input.beforeSeq != null) {
@@ -158,7 +166,7 @@ function createService({ db, fail = (code, message) => Object.assign(Error(messa
       if (!["friend", "conversation", "block", "send"].includes(action)) throw invalid();
       if (typeof input.requestId !== "string" || !/^[A-Za-z0-9_-]{12,96}$/.test(input.requestId)) throw invalid();
       const requestKey = hash(JSON.stringify([uid, input.requestId])), receiptRef = db.doc(`${accountPath(uid)}/socialReceipts/${requestKey}`);
-      const signature = hash(JSON.stringify([action, id, input.choice ?? null, input.text ?? null, input.enabled ?? null]));
+      const signature = hash(JSON.stringify([action, id, input.choice ?? null, input.text ?? null, input.enabled ?? null, ...(locationRef ? [locationRef] : [])]));
       const receipt = snapshotData(await tx.get(receiptRef));
       if (receipt) {
         if (receipt.signature !== signature) throw invalid();
@@ -201,7 +209,7 @@ function createService({ db, fail = (code, message) => Object.assign(Error(messa
           assertSending(account, restriction, time);
           if (typeof input.text !== "string") throw invalid();
           const text = input.text.replace(/\r\n?/g, "\n").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/g, "").trim();
-          if (!text || Array.from(text).length > MAX_TEXT) throw fail("invalid-argument", "Private messages must contain 1–1,000 characters.");
+          if ((!text && !locationRef) || Array.from(text).length > MAX_TEXT) throw fail("invalid-argument", "Write a message or share a location; notes can contain up to 1,000 characters.");
           if (account.lastSendAtMs > time - COOLDOWN) throw fail("resource-exhausted", "Wait 3 seconds between private messages.");
           if (pair.friend.status === "accepted") pair.conversation = { status: "accepted" };
           if (pair.conversation.status !== "accepted") {
@@ -212,7 +220,8 @@ function createService({ db, fail = (code, message) => Object.assign(Error(messa
           account.lastSendAtMs = time; pair.sequence += 1;
           const messageTime = Math.max(time, pair.lastMessageAtMs || 0);
           message = { id: requestKey, sequence: pair.sequence, senderUid: uid, senderDisplayName: identity(uid, ownProfile).name,
-            text, createdAtMs: messageTime, expiresAtMs: messageTime + RETENTION };
+            text, ...(locationRef ? { location: await locations.snapshot(tx, locationRef) } : {}),
+            createdAtMs: messageTime, expiresAtMs: messageTime + RETENTION };
           boxes[peer].lastIncomingSeq = pair.sequence; boxes[peer].lastIncomingAtMs = time;
           pair.lastMessageAtMs = messageTime;
         }

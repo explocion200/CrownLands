@@ -1,39 +1,78 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "1341647119956feeea53a65d702cfb71513205c9",
+  "baseCommit": "29e7fd4ae029bbbd4de394d9f35eb54ecff9428a",
   "coverage": [
     {
       "paths": [
+        "functions/chat-locations.js",
+        "functions/chat.js",
         "functions/index.js",
-        "functions/holding-towers.js",
-        "firestore.indexes.json",
-        "functions/test/emulator-holding-tower-donation-concurrency.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/treasury-donation-scenarios.js",
-        "tools/test-local-postgres-treasury.js",
-        "tools/validate-holding-towers.js"
+        "functions/social.js",
+        "functions/test/chat-location-scenarios.js",
+        "functions/test/emulator-chat-locations.js",
+        "tools/test-local-postgres-chat-locations.js"
       ],
       "tests": [
-        "tools/validate-holding-towers.js",
-        "tools/test-local-postgres-treasury.js",
-        "functions/test/emulator-holding-tower-donation-concurrency.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-holding-tower-rules.js"
+        "tools/test-local-postgres-chat-locations.js",
+        "tools/test-local-postgres-social.js",
+        "tools/validate-chat-send-scheduling.js",
+        "tools/validate-chat.js",
+        "functions/test/emulator-chat-locations.js",
+        "functions/test/emulator-chat.js",
+        "functions/test/emulator-social.js",
+        "functions/test/emulator-chat-translation.js"
       ],
-      "reason": "Replace production-derived Treasury allowance with 250 million personal Gold per UTC day. Aggregate existing current-day/current-realm clan usage once, preserve over-cap totals, persist server-only player/day usage across clan or season changes, and use player-scoped receipts to make new donation retries safe across clan changes. Exercise actual callables against both PostgreSQL and emulators for atomic cap/Gold races, duplicate operations, disbanding, rejected amounts, UTC isolation, legacy receipt replay, current membership and private counter/receipt access. Run Tower lifecycle and rules because the shared pure helper and Treasury balance support upgrades, repair and spending. Added composite index matches the narrowly scoped legacy import query; no world-layout, permission-rule or SQL schema changes."
+      "reason": "Canonical server-owned location snapshots and on-demand resolution extend existing Global/Clan and private message callables. Exercise all eight current Core target categories, exact NPC spawn identity, moved castles, previous seasons, inactive maps, forged/private fields, clan revocation, private membership/blocks/requests, 24-hour/90-day retention, reporting, idempotent retries and unchanged cooldowns. Real callable scenarios run in isolated PostgreSQL and Core emulators. Existing chat/social/translation suites cover the shared send signatures, transaction/read ordering, request limits and authoritative text-only translation dependencies. No schema/index or production data migration."
     },
     {
       "paths": [
-        "clan-treasury-ui.js",
+        "chat-locations-ui.js",
+        "chat-locations.css",
+        "chat-ui.js",
+        "social-ui.js",
+        "firebaseClient.js",
         "game.js",
-        "tools/validate-clan-treasury-browser.js"
+        "marauders-ui.js",
+        "tools/validate-chat-locations-browser.js",
+        "tools/validate-chat.js"
       ],
       "tests": [
-        "tools/validate-clan-treasury-browser.js",
-        "tools/validate-clan-treasury-client.js",
-        "tools/validate-clan-action-notifications-browser.js"
+        "tools/validate-chat-locations-browser.js",
+        "tools/validate-social-browser.js",
+        "tools/validate-chat-reward-ledgers-browser.js",
+        "tools/validate-chat.js",
+        "tools/validate-chat-translation.js",
+        "tools/validate-report-location-navigation.js",
+        "tools/validate-holding-details-ui.js",
+        "tools/test-local-chat-client.js"
       ],
-      "reason": "Display fixed allowance, actual donated totals and reset countdown using existing server-aligned clan timer. Verify desktop and three landscape sizes, scrolling, reachable confirmation, max constrained by personal Gold or remaining allowance, legacy over-cap state, retries and draft preservation. Existing Treasury client and action badge tests cover shared response/revision/session ordering, midnight refresh and notification availability; no new timer or polling endpoint."
+      "reason": "Integrate compact location links and an explicit channel/recipient picker in current target panels. Check desktop and landscape sizes, matching chat typography, bounded controls, optional notes, safe inert rendering, private/global draft preservation, recipient routing, retry identity and stale-account responses. Exercise navigation with armed orders and map-load failure; preserve existing profile links and manual translation while avoiding per-message lookups. Holding-details checks cover shared target-panel mounts; existing report navigation and local chat client tests cover the map-loading and message transport dependencies."
+    },
+    {
+      "paths": [
+        "crownlands-palette.css"
+      ],
+      "tests": [
+        "tools/validate-crownlands-palette.js",
+        "tools/validate-chat-locations-browser.js",
+        "tools/validate-social-browser.js"
+      ],
+      "reason": "Register only the new share destination controls with the central selected-tab paint, and exclude compact map links from generic filled-button paint. Verify selected-state contrast and existing Global/Clan/Messages/Friends typography without altering other game controls."
+    },
+    {
+      "paths": [
+        "index.html",
+        "service-worker.js",
+        "tools/build-production-client.js",
+        "tools/generate-release-manifest.js"
+      ],
+      "tests": [
+        "tools/test-local-production-client.js",
+        "tools/validate-pwa-entry-routing.js",
+        "tools/validate-chat-locations-browser.js",
+        "tools/validate-chat.js"
+      ],
+      "reason": "Ship and fingerprint the location component and stylesheet, load before message normalization and cache through the existing service worker. Production build/artifact validation plus opt-in local packaging and PWA routing checks protect existing home-server deployment behavior. No new external service, API export or release contract change."
     },
     {
       "paths": [
@@ -44,18 +83,19 @@
         "tools/test-targeted-validation.js",
         "tools/test-safe-update-pipeline.js",
         "tools/validate-release-gate.js",
-        "functions/test/emulator-holding-tower-donation-concurrency.js"
+        "functions/test/emulator-chat-locations.js"
       ],
-      "reason": "Run the Treasury callable regression in the current Core topology and prepare its current-season fixture, matching the production release contract. The previous synthetic transaction test did not need a realm. Cover suite selection, affected-test classification and the safe release pipeline because this changes the shared emulator runner."
+      "reason": "Select the new location callable suite against the active Core topology and current-season fixture. Validate targeted suite selection and workflow checks because the shared emulator runner changes."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [
-        "tools/validate-holding-towers.js"
+        "tools/test-local-postgres-chat-locations.js",
+        "tools/validate-chat-locations-browser.js"
       ],
-      "reason": "Record the explicitly approved fixed cap and cross-clan daily limit, transition behavior and reset countdown; supersede only the old production snapshot rule and label backend deployment pending."
+      "reason": "Record the explicitly approved map-location draft and narrow extension to text-only chat, unchanged privacy/retention rules, stale-target behavior, compact presentation and coordinated backend/client release requirement. Mark implementation pending until live verification."
     }
   ]
 }

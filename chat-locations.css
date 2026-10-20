@@ -1,0 +1,53 @@
+/* Shared locations use the existing chat line, without enlarging its typography. */
+#chatDialog .chat-message-line .chat-location-link,
+#quickChat .mini-row .chat-location-link,
+#chatDialog .social-message .chat-location-link {
+  display: inline; width: auto; max-width: 100%; min-width: 0; min-height: 0;
+  margin: 0 0 0 .3em; padding: 0; border: 0; background: transparent;
+  color: #773d43; font: inherit; line-height: inherit; text-align: left;
+  white-space: normal; overflow-wrap: anywhere; cursor: pointer; vertical-align: baseline;
+  box-shadow: none;
+}
+.chat-location-link img { width: 1.3em; height: 1.3em; object-fit: contain; vertical-align: middle; margin-right: .2em; }
+.chat-location-link strong { font: inherit; font-weight: 700; }
+.chat-location-link small { font: inherit; color: #685e48; }
+.chat-location-link:hover strong { text-decoration: underline; }
+.chat-location-link:focus-visible { outline: 2px solid #773d43; outline-offset: 2px; }
+.chat-location-link:disabled { opacity: .6; cursor: progress; }
+.chat-location-share-button { font: inherit; padding: .3em .65em; min-height: 30px; }
+.chat-location-map-marker { position: absolute; transform: translate(-50%, -50%); border: 2px solid #f8d36a; border-radius: 50%; box-shadow: 0 0 0 3px #71383e99; pointer-events: none; z-index: 40; }
+.chat-location-share {
+  box-sizing: border-box; width: min(520px, calc(100vw - 20px)); max-width: calc(100vw - 20px);
+  max-height: calc(100dvh - 20px); margin: auto; padding: 0; overflow: auto;
+  background: #eee2c2; color: #3c3424; border: 3px double #ac8b57; font: 14px/1.35 Georgia, serif;
+}
+.chat-location-share::backdrop { background: #15100788; }
+.chat-location-share * { box-sizing: border-box; }
+.chat-location-share header { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #71383e; color: #f7edcd; padding: 8px 12px; }
+.chat-location-share h2 { font: 700 20px Georgia, serif; margin: 0; }
+.chat-location-share form { display: grid; gap: 10px; padding: 12px; }
+.chat-location-share button, .chat-location-share select, .chat-location-share textarea {
+  font: inherit; color: inherit; border: 1px solid #b09a70; background: #f5ecd5;
+  border-radius: 2px; padding: 6px 10px; min-height: 32px; max-width: 100%;
+}
+.chat-location-share header button { color: #f7edcd; background: transparent; font-size: 20px; padding: 0 8px; }
+.chat-location-preview { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; }
+.chat-location-preview img { width: 30px; height: 30px; object-fit: contain; }
+.chat-location-preview strong, .chat-location-preview span { overflow-wrap: anywhere; }
+.chat-location-preview span { color: #685e48; font-size: 12px; }
+.chat-location-channels { display: flex; gap: 6px; }
+.chat-location-channels button { flex: 1; min-width: 0; }
+.chat-location-share .chat-location-channels button[aria-pressed="true"] { background: #71383e; color: #fff1d3; }
+.chat-location-share label { display: grid; gap: 4px; margin: 0; color: #3c3424; font: inherit; text-transform: none; text-shadow: none; }
+.chat-location-share textarea { width: 100%; resize: vertical; min-height: 44px; }
+.chat-location-recipients:not([hidden]) { display: grid; gap: 4px; }
+.chat-location-recipients select { width: 100%; }
+.chat-location-share footer { display: flex; justify-content: flex-end; gap: 8px; }
+.chat-location-status { margin: 0; overflow-wrap: anywhere; }
+.chat-location-status:empty { display: none; }
+.chat-location-share button:disabled { opacity: .55; }
+@media (max-height: 420px) {
+  .chat-location-share form { gap: 6px; padding: 8px 10px; }
+  .chat-location-share header { padding: 5px 10px; }
+  .chat-location-share textarea { height: 38px; min-height: 38px; }
+}

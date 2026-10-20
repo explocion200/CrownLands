@@ -1147,7 +1147,7 @@ input[type="range"] {
       [data-shield-cancel][aria-label], [data-economy-action="close"][aria-label],
       .cl-action-button, .island-map-icon, .estate-building-target, .estate-district, .inventory-slot, .flag-color-swatch,
       .common-gear-building-modal :is(.tg-slot, .tg-item)[data-rarity]:not([data-rarity=""]),
-      [data-flag-color], .player-name-link, .clan-identity-link, .clan-name-link,
+      [data-flag-color], .player-name-link, .clan-identity-link, .clan-name-link, .chat-location-link,
       .clan-shield-editor *, .player-flag-editor *)) {
     color: var(--cl-text) !important;
     background: var(--cl-panel-raised) !important;
@@ -1212,7 +1212,7 @@ input[type="range"] {
   :is(.profile-tabs, .profile-subtabs, .skill-preset-tabs, .battle-report-filters,
     .leaderboard-tabs-header, .daily-reward-tabs, .camp-info-tabs, .citadel-info-tabs,
     .clan-section-nav, .clan-browser-nav, .active-operations-tabs, .cd-tabs,
-    .chat-tabs, .section-nav, .tabs-bar, .clan-building-tabs, .filters, .ib-categories,
+    .chat-tabs, .chat-location-channels, .section-nav, .tabs-bar, .clan-building-tabs, .filters, .ib-categories,
     .player-flag-editor__tabs, .clan-shield-editor-tabs,
     #royalShopSections, .guild-window > nav) {
     color: var(--cl-text) !important;

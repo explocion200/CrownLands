@@ -20762,10 +20762,48 @@ function assertChatRestrictionAllowsSend(restrictionSnap, nowMs = Date.now()) {
   }
 }
 
+const chatLocations = require("./chat-locations").createService({
+  fail: (code, message) => new HttpsError(code, message),
+  realm: () => ({ worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, realmShardId: getCurrentRealmShardId() }),
+  readTarget: async (transaction, reference) => {
+    if (!isCoreExpansionTopologyActive()) return null;
+    const regionId = requireKnownWorldRegionId(reference.regionId);
+    if (regionId !== reference.regionId) return null;
+    const expansion = await transaction.get(coreExpansionStateRef());
+    if (!getActiveServerRegionIds(expansion.data()).has(regionId)) return null;
+    const map = getServerCatalogRegion(regionId);
+    let ref, base;
+    if (reference.kind === "tower") {
+      base = HOLDING_TOWERS.getTowerDefinition(reference.id);
+      if (!base || base.regionId !== regionId) return null;
+      base = { ...base, ...serverImagePointToWorld(regionId, { x: base.reservedX, y: base.reservedY }) };
+      ref = holdingTowerRef(reference.id);
+    } else {
+      ref = db.doc(`islands/${getOnlineIslandId(regionId)}/${reference.kind === "marauder" ? "marauders" : reference.kind === "camp" ? "camps" : "cities"}/${reference.id}`);
+      if (reference.kind !== "marauder") {
+        const seed = getAuthoritativeIslandSeed(regionId);
+        base = (reference.kind === "camp" ? seed.camps : seed.cities).find(row => row.id === reference.id);
+        if (!base) return null;
+      }
+    }
+    const snap = await transaction.get(ref), stored = snap.data();
+    if (!stored || stored.worldId !== ONLINE_WORLD_ID || stored.resetGeneration !== RESET_GENERATION
+      || REALM_TOPOLOGY.normalizeRealmShardId(stored.realmShardId) !== getCurrentRealmShardId()) return null;
+    const target = { ...base, ...stored };
+    return { name: target.name, mapName: map.name, x: target.x, y: target.y,
+      level: target.level, relocatedAtMs: target.relocatedAtMs, spawnId: target.spawnId, status: target.status,
+      label: reference.kind === "marauder" ? target.classification === "boss" ? "Clan boss" : "Marauder"
+        : reference.kind === "tower" ? "Clan Tower" : reference.kind === "camp" ? "Camp"
+        : isCrownCitadel(target) ? "Crown Citadel" : isStronghold(target) ? "Stronghold"
+        : getOwnerUid(target) ? "Castle" : "NPC city" };
+  },
+});
+
 const socialService = require("./social").createService({ db,
   fail: (code, message) => new HttpsError(code, message),
   getRealm: () => ({ resetGeneration: RESET_GENERATION, worldId: ONLINE_WORLD_ID }),
   memberPath: uid => `gameServers/${GAME_SERVER_DOCUMENT_ID}/members/${uid}`,
+  locations: chatLocations,
 });
 exports.social = timedCallable("social", { region: "us-central1", maxInstances: 20, invoker: "public" }, request => {
   requireAuth(request);
@@ -20820,11 +20858,26 @@ exports.sendChatMessage = timedCallable("sendChatMessage", {
   const uid = request.auth?.uid || "";
   if (!uid) throw new HttpsError("unauthenticated", "Sign in before using Crownlands chat.");
   requireCompatibleClient(request.data || {});
+  if (request.data?.action === "resolveLocation") {
+    const payload = request.data;
+    if (!["global", "clan"].includes(payload.channel) || !/^[a-f0-9]{40}$/.test(payload.messageId || "")) {
+      throw new HttpsError("invalid-argument", "Choose a shared chat location.");
+    }
+    return db.runTransaction(async transaction => {
+      const access = await authorizeChatTranslation(transaction, request, payload);
+      const message = (await transaction.get(db.doc(`${access.messageCollection}/${payload.messageId}`))).data();
+      if (!message || !access.isVisible(message, Date.now())) throw new HttpsError("permission-denied", "That chat message is no longer available.");
+      return chatLocations.resolve(transaction, message.location);
+    });
+  }
+  if (request.data?.action !== undefined) throw new HttpsError("invalid-argument", "Choose a valid chat action.");
   assertChatPayloadDoesNotSpoofIdentity(request.data || {});
 
   const channel = CHAT.normalizeChatChannel(request.data?.channel);
   if (!channel) throw new HttpsError("invalid-argument", "Choose Global or Clan Chat.");
-  const validatedText = CHAT.normalizeChatText(request.data?.text);
+  const locationRef = request.data?.location === undefined ? null
+    : require("./chat-locations").reference(request.data.location, (code, message) => new HttpsError(code, message));
+  const validatedText = CHAT.normalizeChatText(request.data?.text, Boolean(locationRef));
   if (!validatedText.ok) throw new HttpsError("invalid-argument", validatedText.reason);
   const requestId = CHAT.normalizeChatRequestId(request.data?.requestId);
   if (!requestId) throw new HttpsError("invalid-argument", "A valid chat request ID is required.");
@@ -20850,7 +20903,10 @@ exports.sendChatMessage = timedCallable("sendChatMessage", {
     assertChatRestrictionAllowsSend(restrictionSnap, nowMs);
 
     const clanId = channel === "clan" ? safeString(profile.clanId, 128) : "";
-    const signature = CHAT.chatRequestSignature({ uid, channel, clanId, text: validatedText.text });
+    if (request.data?.expectedClanId !== undefined && request.data.expectedClanId !== clanId) {
+      throw new HttpsError("permission-denied", "Your clan changed. Choose the chat destination again.");
+    }
+    const signature = CHAT.chatRequestSignature({ uid, channel, clanId, text: validatedText.text, location: locationRef });
     if (requestSnap.exists) {
       const receipt = requestSnap.data() || {};
       if (safeString(receipt.signature, 80) !== signature) {
@@ -20914,6 +20970,7 @@ exports.sendChatMessage = timedCallable("sendChatMessage", {
       senderUid: uid,
       senderDisplayName,
       text: validatedText.text,
+      ...(locationRef ? { location: await chatLocations.snapshot(transaction, locationRef) } : {}),
       status: "visible",
       createdAtMs: nowMs,
     };
