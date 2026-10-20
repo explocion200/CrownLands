@@ -34,6 +34,9 @@ async function main() {
     assert.ok(first.marches.upsert.every(m => !other.marches.upsert.some(o => o.key === m.key)), "Another player's army was exposed");
     assert.ok(!JSON.stringify(first).match(/"(?:viewers|localPassword|passwordHash|email|token)"/));
     let data = applyPacket(empty(), first, ids, null), cursor = { epoch: first.epoch, revision: first.revision };
+    const switched = await read(ids, cursor, b); assert.equal(switched.kind, "snapshot"); assert.notEqual(switched.epoch, first.epoch);
+    assert.ok(switched.marches.upsert.every(m => !first.marches.upsert.some(o => o.key === m.key)));
+    assert.equal(applyPacket(data, switched, ids, cursor).viewer, "sample-alder");
     const unchanged = await read(ids, cursor); assert.equal(unchanged.kind, "delta"); assert.equal(unchanged.objects.upsert.length + unchanged.marches.upsert.length + unchanged.routes.length, 0);
     const castle = server.realm.initial.find(r => r.kind === "object" && r.body.kind === "castle" && ids.includes(r.sections[0]));
     const stationary = data.sections.flatMap(s => s.objects).find(o => o.key !== castle.key);

@@ -117,6 +117,15 @@ async function main() {
       console.log(`Authenticated preview ${width}×${height} ${crowded?'crowded':'normal'} ${rate}x: ${result.fps} FPS, p95 ${result.frameP95}ms.`);
     }
     await cdp.send("Emulation.setCPUThrottlingRate", { rate:1 }); await login(0);
+    await evaluate(o => { seamlessPreview.view(o.x,o.y); seamlessPreview.select(o.key); }, castle); await settle(); assert.equal((await snapshot()).selected,castle.key);
+    await evaluate(() => seamlessPreview.view(724,543)); await settle();
+    // Another tab can replace a port's cookie. The old tab must discard even
+    // unloaded private inspector state when the principal changes.
+    await evaluate(async credential => { const r=await fetch("./login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(credential)}); if(!r.ok) throw Error("Fixture account switch failed"); },servers[0].credentials[1]);
+    await evaluate(() => seamlessPreview.refresh()); await settle(); assert.equal((await snapshot()).selected,null);
+    assert.ok((await snapshot()).feed.epoch.endsWith(":sample-alder"));
+    const allowedB=await servers[0].realm.read("sample-alder",(await snapshot()).feed.ids);
+    assert.deepEqual(await evaluate(() => seamlessPreview.scene.marches.map(m=>m.key).sort()),allowedB.marches.upsert.map(m=>m.key).sort());
     await servers[0].store.pool.query(`DELETE FROM ${servers[0].store.schema}.auth_sessions`);
     await evaluate(() => seamlessPreview.refresh()); await waitFor(() => seamlessPreview.snapshot().feed.authExpired);
     assert.equal((await snapshot()).feed.objects,0); assert.equal((await snapshot()).feed.marches,0); assert.equal((await snapshot()).selected,null);

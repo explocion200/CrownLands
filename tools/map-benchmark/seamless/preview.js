@@ -22,7 +22,7 @@
       const path = M.preparePath(points);
       return { ...m, points, path, position: points[0], bounds: { left: Math.min(...points.map(p => p.x)), top: Math.min(...points.map(p => p.y)), right: Math.max(...points.map(p => p.x)), bottom: Math.max(...points.map(p => p.y)) } };
     }
-    let marches = scene.marches.map(m => prepareMarch(m, m.points)), activeMarches = marches, feed = null, feedEpoch = null, selectedSnapshot = null;
+    let marches = scene.marches.map(m => prepareMarch(m, m.points)), activeMarches = marches, feed = null, feedEpoch = null, feedViewer = null, selectedSnapshot = null;
     const byMarch = new Map(marches.map(m => [m.key, m]));
     const nodes = new Map(), terrain = new Map();
     let size, camera, selected = null, following = null, dirty = true, raf = 0, lastFrame = 0;
@@ -145,13 +145,15 @@
     if (fullCatalog) {
       const Feed = stageThree ? window.SeamlessDeltaFeed.DeltaFeed : window.SeamlessFeed.AreaFeed;
       feed = new Feed(data => {
+        const principalChanged = stageThree && feedViewer && data.viewer && data.viewer !== feedViewer;
+        if (data.viewer) feedViewer = data.viewer;
         const epochChanged = stageThree && data.epoch && data.epoch !== feedEpoch;
         if (data.epoch) feedEpoch = data.epoch;
         if (stageThree && Number.isFinite(data.serverTime)) serverTimeOffset = data.serverTime - data.receivedAt;
         const inspectedSections = selectedSnapshot?.kind === "troop" ? selectedSnapshot.sections : [selectedSnapshot?.sectionId];
         const inspectedAreaLoaded = data.authoritative && inspectedSections.some(id => data.sections.some(s => s.id === id));
         const inspectedMissing = inspectedAreaLoaded && !data.sections.some(s => s.objects.some(o => o.key === selected)) && !data.marches.some(m => m.key === selected);
-        if (data.authExpired || data.removed?.includes(selected) || inspectedMissing) { selected = null; selectedSnapshot = null; following = null; }
+        if (principalChanged || data.authExpired || data.removed?.includes(selected) || inspectedMissing) { selected = null; selectedSnapshot = null; following = null; }
         if (data.removed?.includes(following)) following = null;
         scene.objects = data.sections.flatMap(s => s.objects); objects.clear(); scene.objects.forEach(o => objects.set(o.key, o));
         const routes = new Map(data.routes.map(r => [r.id, r.points]));

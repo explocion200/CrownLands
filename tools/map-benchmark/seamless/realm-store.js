@@ -69,12 +69,13 @@ class FixtureRealm {
   async read(uid, ids, cursor) {
     if (!["sample-rowan", "sample-alder"].includes(uid)) throw Error("Not a fixture realm member");
     ids = this.validIds(ids);
+    const viewerEpoch = this.epoch + ":" + uid;
     const client = await this.store.pool.connect(), s = this.schema;
     try {
       // Snapshot and journal watermark must describe the same committed state.
       await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
       const revision = (await client.query(`SELECT revision FROM ${s}.world_meta`)).rows[0].revision;
-      let delta = cursor?.epoch === this.epoch && Number.isSafeInteger(cursor.revision) && cursor.revision >= Math.max(0, revision - RETAIN) && cursor.revision <= revision;
+      let delta = cursor?.epoch === viewerEpoch && Number.isSafeInteger(cursor.revision) && cursor.revision >= Math.max(0, revision - RETAIN) && cursor.revision <= revision;
       let events = [];
       if (delta) {
         events = (await client.query(`SELECT * FROM ${s}.world_events WHERE revision > $1 ORDER BY revision,key LIMIT $2`, [cursor.revision, MAX_EVENTS + 1])).rows;
@@ -82,7 +83,7 @@ class FixtureRealm {
       }
       const rows = delta ? [] : (await client.query(`SELECT * FROM ${s}.world_rows WHERE sections && $1::text[] AND (kind='object' OR $2=ANY(viewers)) ORDER BY key`, [ids, uid])).rows;
       await client.query("COMMIT");
-      const result = { kind: delta ? "delta" : "snapshot", epoch: this.epoch, revision, fromRevision: delta ? cursor.revision : null, ids, serverTime: (this.clock() - this.started) / 1000,
+      const result = { kind: delta ? "delta" : "snapshot", epoch: viewerEpoch, viewer: uid, revision, fromRevision: delta ? cursor.revision : null, ids, serverTime: (this.clock() - this.started) / 1000,
         objects: { upsert: [], remove: [] }, marches: { upsert: [], remove: [] }, routes: [] };
       const latest = new Map();
       if (delta) for (const event of events) {

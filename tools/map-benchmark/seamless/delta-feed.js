@@ -6,10 +6,10 @@
   "use strict";
   const { AreaFeed } = base;
   function applyPacket(previous, packet, ids, cursor) {
-    if (!["snapshot", "delta"].includes(packet.kind) || typeof packet.epoch !== "string" || !Number.isSafeInteger(packet.revision) || packet.revision < 0
+    if (!["snapshot", "delta"].includes(packet.kind) || typeof packet.epoch !== "string" || typeof packet.viewer !== "string" || !Number.isSafeInteger(packet.revision) || packet.revision < 0
         || !Number.isFinite(packet.serverTime) || packet.serverTime < 0 || JSON.stringify(packet.ids) !== JSON.stringify([...ids].sort())) throw Error("Invalid area envelope");
     const delta = packet.kind === "delta";
-    if (delta && (!cursor || packet.epoch !== cursor.epoch || packet.fromRevision !== cursor.revision || packet.revision < cursor.revision)) throw Error("Invalid delta cursor");
+    if (delta && (!cursor || packet.viewer !== previous.viewer || packet.epoch !== cursor.epoch || packet.fromRevision !== cursor.revision || packet.revision < cursor.revision)) throw Error("Invalid delta cursor");
     if (cursor?.epoch === packet.epoch && packet.revision < cursor.revision) throw Error("Obsolete area revision");
     const objects = new Map(delta ? previous.sections.flatMap(s => s.objects).map(o => [o.key, o]) : []);
     const marches = new Map(delta ? previous.marches.map(m => [m.key, m]) : []);
@@ -40,7 +40,7 @@
       const inside = item.kind === "troop" ? item.sections.some(id => ids.includes(id)) : ids.includes(item.sectionId);
       if (inside && !objects.has(item.key) && !marches.has(item.key)) removed.add(item.key);
     }
-    return { authoritative: true, revision: packet.revision, epoch: packet.epoch, serverTime: packet.serverTime, scriptHealthy: packet.scriptHealthy, removed: [...removed],
+    return { authoritative: true, viewer: packet.viewer, revision: packet.revision, epoch: packet.epoch, serverTime: packet.serverTime, scriptHealthy: packet.scriptHealthy, removed: [...removed],
       sections: ids.map(id => ({ id, objects: [...objects.values()].filter(o => o.sectionId === id) })), marches: [...marches.values()], routes: [...routes.values()] };
   }
   class DeltaFeed extends AreaFeed {
