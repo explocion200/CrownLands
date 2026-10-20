@@ -4298,6 +4298,7 @@ function renderHoldingTowerModal(tower) {
   const upgradeInput = modalBody.querySelector("[data-tower-upgrade-count]");
   if (upgradeInput?.options && [...upgradeInput.options].some(option => option.value === upgradeCount)) upgradeInput.value = upgradeCount;
   bindHoldingTowerControls(tower);
+  mountChatLocationShare(tower, "tower");
 }
 
 async function refreshHoldingTower(towerId = selectedHoldingTowerId, { subscribe = false, includeShop = true } = {}) {
@@ -16729,6 +16730,8 @@ function startOnlineChat() {
   const uid = getCurrentOnlineUid();
   if (!state || !uid || !api?.isSignedIn?.() || !isOnlineWorldActive()) return false;
   getChatController()?.start({ api, uid, clanId: state.clanId || "" });
+  window.CrownlandsChatLocations?.start({ api, uid, getClanId: () => state?.clanId || "",
+    onToast: showToast, navigate: focusSharedChatLocation });
   void window.CrownlandsSocial?.start({ api, uid, flagRenderer: FlagRenderer });
   return true;
 }
@@ -16738,8 +16741,50 @@ function updateOnlineChatClan(clanId = "") {
 }
 
 function disposeOnlineChat(options = {}) {
+  window.CrownlandsChatLocations?.stop();
   window.CrownlandsSocial?.stop();
   window.CrownlandsChat?.dispose?.(options);
+}
+
+function mountChatLocationShare(target, kind = "city") {
+  if (!isOnlineWorldActive() || !target) return;
+  const regionId = target.regionId || getCityRegionId(target);
+  const container = modalBody.querySelector(".cd-actions, .holding-footer, .tower-footer, .camp-details-footer")
+    || modalBody.firstElementChild;
+  window.CrownlandsChatLocations?.addShareButton(container, {
+    kind, id: target.id, regionId, spawnId: target.spawnId, name: target.name, mapName: getRegionLabel(regionId),
+  });
+}
+
+async function focusSharedChatLocation(location) {
+  const session = getOnlineSessionRequestScope();
+  getChatController()?.minimizeForLocation();
+  if (modal.open) modal.close();
+  if (location.regionId !== getActiveMapRegionId() && !await switchOnlineIsland(location.regionId)) {
+    throw new Error("Could not open that map. Reopen chat to retry.");
+  }
+  if (session !== getOnlineSessionRequestScope()) return;
+  // Selecting a shared target must never complete an armed troop order.
+  sendMode = false; selectedSourceId = null; selectedTargetId = null;
+  selectedTowerMapId = ""; holdingTowerSendContext = null; activeRallyOrderContext = null;
+  scoutNearbySourceId = null; regroupSourceId = null;
+  const target = location.kind === "tower" ? getHoldingTowerVisual(location.id)
+    : location.kind === "marauder" ? getMarauderById(location.id)
+    : location.kind === "camp" ? getCampTargetById(location.id) : cityById(location.id);
+  if (target && Number(target.x) === location.x && Number(target.y) === location.y
+    && (location.kind !== "marauder" || target.spawnId === location.spawnId && target.status === "active")) {
+    if (location.kind === "tower") await selectClanTowerOnMap(location.id);
+    else if (location.kind === "marauder") selectMarauder(location.id);
+    else if (location.kind === "camp") selectRewardCamp(location.id);
+    else selectCity(location.id);
+  } else renderSelectionChangeNow();
+  if (session !== getOnlineSessionRequestScope() || !centerOnWorldPoint(location, location.regionId)) return;
+  const marker = document.createElement("span"), point = worldToMapPoint(location);
+  marker.className = "chat-location-map-marker"; marker.setAttribute("aria-hidden", "true");
+  marker.style.left = `${point.x}px`; marker.style.top = `${point.y}px`;
+  marker.style.width = marker.style.height = `${48 / zoom}px`;
+  cityLayer.append(marker); setTimeout(() => marker.remove(), 4000);
+  showToast(`Viewing ${location.name} · ${location.mapName}`);
 }
 
 function queueOnlineIdentityRepair() {
@@ -30637,6 +30682,7 @@ function showRewardCampInfoModal(campId) {
     onClose: () => modal.close(), estimatedRewards: () => getRewardCampEstimatedRewards(config),
     powerTier: getCurrentRewardCampPowerTier,
   });
+  mountChatLocationShare(camp, "camp");
   refreshRewardCampProgressPanel(camp.id, config);
   void refreshOwnedCampDefense(camp);
 }
@@ -33523,6 +33569,7 @@ function mountStrongholdDetails(city) {
     accessNote: isClanAllyCity(city) ? "Clan ally holding · Recall your stationed troops from Clan reinforcements."
       : "Scout reports govern private troop and defense information.",
   });
+  mountChatLocationShare(city);
 }
 
 function strongholdInfoPanelMarkup(stronghold, overviewMarkup) {
@@ -33925,6 +33972,7 @@ function showCityInfoModal(cityId) {
     if (!stronghold) {
       modalTitle.textContent = city.name;
       bindCityDetailsPanel(city);
+      mountChatLocationShare(city);
       renderCombatTimers();
       restoreDetails();
     }
@@ -34011,6 +34059,7 @@ function showCityInfoModal(cityId) {
     onboardingMarkup: renderOnboardingTip("upgrade", city, "info"),
   });
   bindCityDetailsPanel(city);
+  mountChatLocationShare(city);
   modalBody.querySelector("#changeMainCityBtn")?.addEventListener("click", () => {
     void changeMainCity(city.id);
   });

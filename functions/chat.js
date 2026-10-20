@@ -17,7 +17,7 @@ function normalizeChatRequestId(value = "") {
   return /^[a-zA-Z0-9_-]{12,96}$/.test(requestId) ? requestId : "";
 }
 
-function normalizeChatText(value) {
+function normalizeChatText(value, allowEmpty = false) {
   if (typeof value !== "string") return { ok: false, reason: "Message text is required." };
   const text = value
     .replace(/\r\n?/g, "\n")
@@ -26,17 +26,17 @@ function normalizeChatText(value) {
     .replace(/\t/g, " ")
     .trim();
   const length = Array.from(text).length;
-  if (!length) return { ok: false, reason: "Enter a message before sending." };
+  if (!length && !allowEmpty) return { ok: false, reason: "Enter a message before sending." };
   if (length > CHAT_MESSAGE_MAX_LENGTH) {
     return { ok: false, reason: `Messages can be up to ${CHAT_MESSAGE_MAX_LENGTH} characters.` };
   }
   return { ok: true, text, length };
 }
 
-function chatRequestSignature({ uid = "", channel = "", clanId = "", text = "" } = {}) {
+function chatRequestSignature({ uid = "", channel = "", clanId = "", text = "", location } = {}) {
   return crypto
     .createHash("sha256")
-    .update(JSON.stringify([String(uid), String(channel), String(clanId), String(text)]))
+    .update(JSON.stringify([String(uid), String(channel), String(clanId), String(text), ...(location ? [location] : [])]))
     .digest("hex");
 }
 

@@ -97,10 +97,14 @@ const { MAX_INSTALL_PRECACHE_BYTES } = require("./asset-performance-budgets");
 // Shared numeric unread counts add 1,409 bytes to the 120,172-byte main baseline.
 // Bound the 749-byte overage at 1 KiB, and the new shared badge stylesheet at
 // 2 KiB. No image assets, runtime dependencies or polling are added.
+// Compact shared locations and draft/scroll preservation add 905 bytes to the
+// 121,581-byte ledger baseline; bound this at one additional KiB.
 assert(["chat-ledger-ui.css", "chat-ui.js", "chat-translation.js", "reward-ledger-ui.js", "reward-ledger-ui.css",
   "assets/icons/chat-ledger-seal.svg", "assets/icons/hero-reward-crown.svg"]
-  .reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 119 * 1024,
-"Chat and reward ledger shell files exceed their 119 KiB budget.");
+  .reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 120 * 1024,
+"Chat and reward ledger shell files exceed their 120 KiB budget.");
+assert(normalizedTextBytes("chat-locations-ui.js") <= 12 * 1024, "Location sharing controls exceed 12 KiB.");
+assert(normalizedTextBytes("chat-locations.css") <= 4 * 1024, "Location sharing styles exceed 4 KiB.");
 assert(normalizedTextBytes("notification-badges.css") <= 2.25 * 1024, "Shared notification styles exceed 2.25 KiB.");
 const skillEmblemFiles = fs.readdirSync(path.join(root, "assets/icons/skills")).filter(name => name.endsWith(".svg"));
 assert.equal(skillEmblemFiles.length, 8, "Keep the eight legacy skill emblems available to older clients.");
@@ -238,7 +242,8 @@ const entrypointBudgets = {
   // Numeric badge markup adds 405 bytes (320 beyond remaining headroom).
   // Bound that source increase at 0.5 KiB within the shared shell allowance.
   // Clan availability notices and scoped cooldown/day refresh add 4,937 bytes; bound at 5 KiB.
-  "game.js": (1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25 + 2 + 3 + 0.25 + 2 + 1 + 0.5 + 5) * 1024,
+  // Location entry points and safe cross-map focusing add 2,858 source bytes.
+  "game.js": (1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25 + 2 + 3 + 0.25 + 2 + 1 + 0.5 + 5 + 3) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   // Medal crown selectors add under 0.5 KiB; retain all other payload limits.

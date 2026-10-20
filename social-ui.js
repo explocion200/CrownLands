@@ -228,19 +228,20 @@
       const time = element("time", sentAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
       time.dateTime = sentAt.toISOString(); time.title = sentAt.toLocaleString(); time.setAttribute("aria-label", time.title);
       row.append(sender);
-      const text = element("p", message.text); text.dir = "auto";
+      const text = element("p"), noteText = element("span", message.text); text.dir = "auto"; text.append(noteText);
+      root.CrownlandsChatLocations?.mountLink(text, message.location, { channel: "private", conversationId: current.id, messageId: message.id });
       const tools = element("div", null, "social-row-actions");
       const translate = button("Translate", () => run(async () => {
-        if (translate.dataset.translated) { text.textContent = message.text; translate.textContent = "Translate"; delete translate.dataset.translated; attribution.hidden = true; return; }
+        if (translate.dataset.translated) { noteText.textContent = message.text; translate.textContent = "Translate"; delete translate.dataset.translated; attribution.hidden = true; return; }
         const scope = generation, version = viewVersion, id = current.id;
         const language = String(root.navigator.language || "en").split("-")[0];
         const result = await api.translateChatMessages({ channel: "private", conversationId: id, messageIds: [message.id], targetLanguage: language, operation: "translate" });
         if (scope !== generation || version !== viewVersion || !row.isConnected) return;
         const translated = result.translations?.find(item => item.id === message.id) || result.messages?.find(item => item.id === message.id);
         if (!translated?.text) throw Error("Translation unavailable. Please retry.");
-        text.textContent = translated.text; translate.textContent = "Show original"; translate.dataset.translated = "true"; attribution.hidden = false;
+        noteText.textContent = translated.text; translate.textContent = "Show original"; translate.dataset.translated = "true"; attribution.hidden = false;
       }, translate)); translate.title = "Sends this message text to Google Translation when clicked.";
-      tools.append(translate);
+      if (message.text?.trim()) tools.append(translate);
       if (message.senderUid !== uid) tools.append(button("Report", () => reportMessage(row, message)));
       tools.append(element("small", "Translate sends only this message to Google Translation.", "social-translation-note"));
       const menu = element("details", null, "social-message-menu"), summary = element("summary", "⋯"); summary.setAttribute("aria-label", "Message actions"); menu.append(summary, tools);

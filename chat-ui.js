@@ -39,6 +39,7 @@
       senderUid: String(raw.senderUid || "").slice(0, 128),
       senderDisplayName: String(raw.senderDisplayName || "Ruler").trim().slice(0, 18) || "Ruler",
       text: String(raw.text || "").slice(0, 1000),
+      ...(raw.location ? { location: raw.location } : {}),
       createdAtMs: Math.max(0, Math.floor(Number(raw.createdAtMs) || 0)),
       status: String(raw.status || "visible").slice(0, 24),
     };
@@ -311,7 +312,13 @@
     colon.textContent = ": ";
     const body = documentRef.createElement("span");
     body.className = "chat-message-text";
-    body.textContent = message.text;
+    const note = documentRef.createElement("span");
+    note.className = "chat-message-note";
+    note.textContent = message.text;
+    body.append(note);
+    documentRef.defaultView?.CrownlandsChatLocations?.mountLink(body, message.location, {
+      channel: message.channel, ...(message.channel === "clan" ? { clanId: message.channelId } : {}), messageId: message.id,
+    });
     const time = documentRef.createElement("time");
     time.dateTime = message.createdAtMs ? new Date(message.createdAtMs).toISOString() : "";
     time.textContent = message.createdAtMs
@@ -609,6 +616,7 @@
       if (mode === "full" && channel === targetChannel) renderMessages();
     }
 
+    let returnFromLocation = false;
     function setMode(nextMode) {
       const normalizedMode = CHAT_MODES.includes(nextMode) ? nextMode : "closed";
       mode = normalizedMode;
@@ -619,7 +627,8 @@
       elements.toggle.setAttribute("aria-label", mode === "closed" ? "Open chat" : "Collapse chat");
       if (mode === "full") {
         if (!elements.dialog.open) elements.dialog.showModal();
-        selectChannel(channel, { focus: false, forceBottom: true });
+        if (!returnFromLocation) selectChannel(channel, { focus: false, forceBottom: true });
+        returnFromLocation = false;
       } else if (elements.dialog.open) {
         dialogCloseTarget = mode;
         elements.dialog.close();
@@ -709,7 +718,11 @@
         const text = documentRef.createElement("span");
         text.textContent = displayMessage(message).text;
         text.dir = "auto";
-        line.append(name, documentRef.createTextNode(" "), text); row.append(line);
+        line.append(name, documentRef.createTextNode(" "), text);
+        windowRef?.CrownlandsChatLocations?.mountLink(line, message.location, {
+          channel: message.channel, ...(message.channel === "clan" ? { clanId: message.channelId } : {}), messageId: message.id,
+        });
+        row.append(line);
         renderMessageTools(row, message, displayMessage(message));
         elements.quickMessages.append(row);
         if (focusedId === message.id) row.querySelector("button")?.focus({ preventScroll: true });
@@ -747,7 +760,8 @@
         const result = displayMessage(message), body = row.querySelector(".chat-message-text");
         row.classList.toggle("is-own", message.senderUid === uid);
         row.classList.toggle("is-translated", result.state === "translated");
-        if (body.textContent !== result.text) body.textContent = result.text;
+        const note = body.querySelector(".chat-message-note");
+        if (note.textContent !== result.text) note.textContent = result.text;
         if (body.dir !== "auto") body.dir = "auto";
         renderMessageTools(row, message, result);
         if (body.dataset.translationState !== result.state) body.dataset.translationState = result.state;
@@ -1016,6 +1030,7 @@
     }
 
     function dispose(options = {}) {
+      returnFromLocation = false;
       sessionGeneration += 1;
       activeSend = null;
       sending = false;
@@ -1154,6 +1169,7 @@
     renderUnread();
     renderComposer();
     return Object.freeze({ start, updateClan, dispose, diagnostics, setMode, selectChannel, setPrivateUnread,
+      minimizeForLocation: () => { returnFromLocation = true; setMode("quick"); },
       setTranslationLanguage: value => translation?.setLanguage(value === "device" ? deviceLanguage() : translationApi.preferredLanguage([value])),
     });
   }

@@ -193,7 +193,7 @@ const renderedLine = rendered.children[0];
 assert.equal(renderedLine.className, "chat-message-line");
 assert.equal(renderedLine.children[0].textContent, "<script>name</script>".slice(0, 18));
 assert.equal(renderedLine.children[1].textContent, ": ", "The sender colon must remain inline with the clickable player name.");
-assert.equal(renderedLine.children[2].textContent, unsafeText, "Message text was not rendered as inert inline text content.");
+assert.equal(renderedLine.children[2].children[0].textContent, unsafeText, "Message text was not rendered as inert inline text content.");
 renderedLine.children[0].listeners.click();
 assert.equal(openedSenderUid, "attacker", "Inline compact layout removed the existing sender profile action.");
 

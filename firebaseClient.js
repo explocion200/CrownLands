@@ -1242,6 +1242,7 @@
       senderUid: String(data.senderUid || "").slice(0, 128),
       senderDisplayName: cleanPlayerName(data.senderDisplayName || "Ruler"),
       text: String(data.text || "").slice(0, 1000),
+      ...(window.CrownlandsChatLocations?.normalize(data.location) ? { location: window.CrownlandsChatLocations.normalize(data.location) } : {}),
       createdAtMs: Math.max(0, timestampToMs(data.createdAtMs || data.createdAt)),
       status: String(data.status || "visible").slice(0, 24),
     };
