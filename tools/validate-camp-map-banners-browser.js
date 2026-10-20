@@ -40,9 +40,29 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       WORLD_CAMPS.length = 0; WORLD_CAMPS_BY_ID.clear(); onlineCampStates.clear();
       requestDueRewardCampPayout = async () => false;
     });
-    const sprite = await ev('fetch("/assets/icons/camp-type-flags-v1.svg").then(r => {if (!r.ok) throw Error("Missing flags"); return r.text();})');
-    for (const type of ["gold", "troops", "items", "deed"]) assert(sprite.includes(`id="${type}"`));
-    assert(!/<script|<image|https?:\/\/(?!www.w3.org)/i.test(sprite), "Flags must be self-contained vector artwork");
+    const flagAssets = await ev(async () => {
+      const results = [];
+      for (const type of ["gold", "troops", "items", "deed"]) {
+        const img = new Image();
+        img.src = `/assets/icons/camps/camp-${type}-v2.webp`;
+        await img.decode();
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d"); ctx.drawImage(img, 0, 0);
+        const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        let transparent = 0, nearOpaque = 0;
+        for (let i = 3; i < pixels.length; i += 4) {
+          if (pixels[i] === 0) transparent++;
+          if (pixels[i] >= 245) nearOpaque++;
+        }
+        results.push({type, width:img.naturalWidth, height:img.naturalHeight, transparent, nearOpaque});
+      }
+      return results;
+    });
+    for (const flag of flagAssets) {
+      assert.equal(flag.width, 168); assert.equal(flag.height, 212);
+      assert(flag.transparent > 0 && flag.nearOpaque > flag.width * flag.height * .3, JSON.stringify(flag));
+    }
     for (const [width, height] of [[1440,900], [844,390], [568,320]]) {
       await client.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
       for (const [i, mode] of ["neutral", "player", "rival", "contested"].entries()) {
@@ -66,14 +86,16 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
             r = label.getBoundingClientRect(), a = art.getBoundingClientRect();
           return { text:label.innerText, above:r.bottom <= a.top + 13 * zoom,
             inside:r.left>=0 && r.right<=innerWidth && r.top>=0 && r.bottom<=innerHeight,
-            width:label.offsetWidth, height:label.offsetHeight, flag:n.querySelector(".camp-type-flag use").getAttribute("href"),
-            ownerFlags:n.querySelectorAll(".camp-owner-marker .city-kingdom-flag").length,
+            width:label.offsetWidth, height:label.offsetHeight, flag:n.querySelector(".camp-type-flag").getAttribute("src"),
+            flagLoaded:n.querySelector(".camp-type-flag").complete && n.querySelector(".camp-type-flag").naturalWidth === 168,
+            ownerFlags:n.querySelectorAll(".camp-owner-marker").length,
             timerHidden:timer.hidden, timer:timer.innerText, hasDeedRing:Boolean(n.querySelector(".deed-hold-ring")),
             bounds:r.toJSON(), art:a.toJSON() };
         });
         assert(layout.above && layout.inside && layout.width<=220 && layout.height<=54, JSON.stringify(layout));
-        assert(layout.flag.endsWith("#" + ["gold","troops","items","deed"][i]));
-        assert.equal(layout.timerHidden, mode==="neutral"); assert.equal(layout.ownerFlags, mode==="neutral"?0:1);
+        assert(layout.flag.endsWith(`camp-${["gold","troops","items","deed"][i]}-v2.webp`));
+        assert(layout.flagLoaded, "Camp flag did not load");
+        assert.equal(layout.timerHidden, mode==="neutral"); assert.equal(layout.ownerFlags, 0, "Small owner flag must remain removed");
         assert.equal(layout.hasDeedRing, i===3);
         if(mode==="contested") assert(/contested/i.test(layout.timer));
         // Compare against an actual castle in the same scene: sharing a few
@@ -146,8 +168,8 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       }
     }
     assert.deepEqual(errors, []);
-    fs.writeFileSync(path.join(output,"results.json"),JSON.stringify({results,errors},null,2));
-    console.log("Camp banners: exact castle typography/spacing/information bars, four Core types, desktop/landscape, owner flags, neutral/held/contested/reset, countdown reuse, selection and zoom passed.");
+    fs.writeFileSync(path.join(output,"results.json"),JSON.stringify({results,flagAssets,errors},null,2));
+    console.log("Camp banners: painted transparent type flags, no small owner flag, exact castle typography/spacing/information bars, desktop/landscape, neutral/held/contested/reset, countdown reuse, selection and zoom passed.");
   } finally {
     if(client){await client.send("Browser.close").catch(()=>{});client.close();}
     if(browser){if(!await waitForProcessExit(browser.browserProcess))browser.browserProcess.kill();await removeBrowserProfile(browser.profilePath);}
