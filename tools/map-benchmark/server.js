@@ -7,6 +7,7 @@ const path = require("node:path");
 
 const { createFixture, SCENARIOS } = require("./fixtures.js");
 const { createSeamlessFixture } = require("./seamless/fixtures.js");
+const { createCatalogFeed } = require("./seamless/catalog-feed.js");
 const { CORE_EXPANSION_RUNTIME_BUDGET, LEGACY_RUNTIME_BUDGET } = require("./budgets.js");
 
 const ROOT_DIR = process.env.CROWNLANDS_BENCHMARK_ROOT
@@ -151,10 +152,11 @@ function resolveStaticPath(pathname) {
   return resolved.startsWith(`${ROOT_DIR}${path.sep}`) ? resolved : null;
 }
 
-function createMapBenchmarkServer() {
+function createMapBenchmarkServer({ clock = Date.now } = {}) {
   const requests = [];
   const fixtures = new Map();
   const seamlessFixtures = new Map();
+  const catalogFeeds = new Map(), startedAt = clock();
   const server = http.createServer(async (request, response) => {
     const hostHeader = String(request.headers.host || "");
     if (!hostHeader.startsWith("127.0.0.1:") && hostHeader !== "127.0.0.1") {
@@ -163,7 +165,7 @@ function createMapBenchmarkServer() {
     }
     const requestUrl = new URL(request.url || "/", `http://${hostHeader || HOST}`);
     // Separate private entry; never imports the live client or its mock account.
-    if (requestUrl.pathname === "/__benchmark__/seamless/" || requestUrl.pathname === "/__benchmark__/seamless/fixture") {
+    if (["/__benchmark__/seamless/", "/__benchmark__/seamless/fixture", "/__benchmark__/seamless/catalog", "/__benchmark__/seamless/areas"].includes(requestUrl.pathname)) {
       requests.push({ at: new Date().toISOString(), method: request.method, path: requestUrl.pathname, scenarioId: "seamless" });
       if (request.method !== "GET" && request.method !== "HEAD") {
         send(response, 405, "Method not allowed", "text/plain; charset=utf-8");
@@ -171,7 +173,18 @@ function createMapBenchmarkServer() {
       }
       const headers = { "content-security-policy": "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" };
       try {
-        if (requestUrl.pathname.endsWith("/fixture")) {
+        if (requestUrl.pathname.endsWith("/catalog") || requestUrl.pathname.endsWith("/areas")) {
+          const crowded = requestUrl.searchParams.get("crowded") === "true";
+          if (!catalogFeeds.has(crowded)) catalogFeeds.set(crowded, createCatalogFeed(crowded));
+          const feed = catalogFeeds.get(crowded);
+          if (requestUrl.pathname.endsWith("/catalog")) send(response, 200, JSON.stringify(feed.manifest), "application/json; charset=utf-8", headers);
+          else {
+            let payload;
+            try { payload = feed.read((requestUrl.searchParams.get("ids") || "").split(","), Math.max(0, Math.floor((clock() - startedAt) / 5000))); }
+            catch (_error) { send(response, 400, "Choose 1–16 catalog sections", "text/plain; charset=utf-8", headers); return; }
+            send(response, 200, JSON.stringify(payload), "application/json; charset=utf-8", headers);
+          }
+        } else if (requestUrl.pathname.endsWith("/fixture")) {
           const crowded = requestUrl.searchParams.get("crowded") === "true";
           if (!seamlessFixtures.has(crowded)) seamlessFixtures.set(crowded, createSeamlessFixture(crowded));
           send(response, 200, JSON.stringify(seamlessFixtures.get(crowded)), "application/json; charset=utf-8", headers);

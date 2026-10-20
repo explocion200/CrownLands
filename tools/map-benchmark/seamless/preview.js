@@ -1,19 +1,31 @@
 /* Local-only demonstration: no live client, identity, subscriptions or orders. */
 (async function () {
   "use strict";
-  if (location.hostname !== "127.0.0.1") throw new Error("Private preview requires loopback.");
-  const M = window.SeamlessModel, $ = id => document.getElementById(id);
+  // Only the separate, allowlisted, expiring phone server supplies this origin.
+  const phoneOrigin = document.querySelector('meta[name="crownlands-private-preview-origin"]')?.content;
+  if (location.hostname !== "127.0.0.1" && phoneOrigin !== location.origin) throw new Error("Private preview requires loopback or the temporary phone test server.");
+  const $ = id => document.getElementById(id);
   const viewport = $("viewport"), world = $("world"), objectsLayer = $("objects"), marchesLayer = $("marches");
   try {
-    const response = await fetch(`/__benchmark__/seamless/fixture?crowded=${new URLSearchParams(location.search).get("crowded") === "1"}`, { credentials: "omit" });
+    const params = new URLSearchParams(location.search), fullCatalog = params.get("catalog") === "full", crowded = params.get("crowded") === "1";
+    const response = await fetch(`/__benchmark__/seamless/${fullCatalog ? "catalog" : "fixture"}?crowded=${crowded}`, { credentials: "omit" });
     if (!response.ok) throw new Error("Fixture unavailable");
     const scene = await response.json();
+    const M = window.SeamlessModel.forWorld(scene);
+    scene.objects ||= []; scene.marches ||= [];
+    world.style.width = `${scene.width}px`; world.style.height = `${scene.height}px`;
+    world.classList.toggle("full-catalog", fullCatalog);
+    viewport.setAttribute("aria-label", `${scene.sections.length}-section private world. Drag to explore, scroll or pinch to zoom. Select to inspect.`);
     const objects = new Map(scene.objects.map(o => [o.key, o]));
-    const marches = scene.marches.map(m => ({ ...m, path: M.preparePath(m.points), position: m.points[0] }));
+    function prepareMarch(m, points) {
+      const path = M.preparePath(points);
+      return { ...m, points, path, position: points[0], bounds: { left: Math.min(...points.map(p => p.x)), top: Math.min(...points.map(p => p.y)), right: Math.max(...points.map(p => p.x)), bottom: Math.max(...points.map(p => p.y)) } };
+    }
+    let marches = scene.marches.map(m => prepareMarch(m, m.points)), activeMarches = marches, feed = null, selectedSnapshot = null;
     const byMarch = new Map(marches.map(m => [m.key, m]));
     const nodes = new Map(), terrain = new Map();
     let size, camera, selected = null, following = null, dirty = true, raf = 0, lastFrame = 0;
-    let sceneTime = 0, frozenTime = null, lastInspectorSection = "", lastPlan = "";
+    let sceneTime = 0, frozenTime = null, lastInspectorSection = "", lastPlan = "", plannedCamera = null, plannedAt = 0;
     const frameTimes = [], workTimes = [], pointers = new Map();
     let gesture = null, dragged = false, clickKey = null, suppressClick = false, listenerCount = 0;
     const cleanups = [];
@@ -31,7 +43,7 @@
     }
     for (const section of scene.sections) {
       const tile = document.createElement("div"); tile.className = "tile"; tile.dataset.section = section.id;
-      tile.style.cssText = `left:${section.x}px;top:${section.y}px;width:${section.width}px;height:${section.height}px`;
+      tile.style.cssText = `left:${section.x}px;top:${section.y}px;width:${section.width}px;height:${section.height}px;--gutter:${section.gutter ?? 2}px`;
       const thumb = new Image(), full = new Image(); thumb.alt = ""; full.alt = "";
       full.className = "full-terrain";
       const label = document.createElement("span"); label.className = "section-label"; label.textContent = section.name;
@@ -55,13 +67,14 @@
     }
     function sectionAt(point) { return scene.sections.find(s => point.x >= s.x && point.x < s.x + s.width && point.y >= s.y && point.y < s.y + s.height); }
     function refreshInspector() {
-      const item = objects.get(selected) || byMarch.get(selected);
+      const item = objects.get(selected) || byMarch.get(selected) || (selectedSnapshot?.key === selected ? selectedSnapshot : null);
       $("inspector").hidden = !item;
       if (!item) return;
+      selectedSnapshot = item;
       $("kind").textContent = item.kind === "troop" ? "Sample march · read only" : `${item.kind} · read only`;
       $("name").textContent = item.name;
       const sectionName = item.kind === "troop" ? sectionAt(item.position)?.name : item.sectionName;
-      $("section").textContent = sectionName || "Preview edge"; lastInspectorSection = sectionName;
+      $("section").textContent = `${sectionName || "Preview edge"}${fullCatalog && (feed?.failed || (!objects.has(selected) && !byMarch.has(selected))) ? " · last received" : ""}`; lastInspectorSection = sectionName;
       $("owner").textContent = item.owner;
       $("troops").textContent = `${item.troops.toLocaleString()} sample troops`;
       $("follow").hidden = item.kind !== "troop";
@@ -95,7 +108,7 @@
         const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
         camera = M.zoomAt(gesture.camera, size, gesture.midpoint, gesture.camera.zoom * distance / gesture.distance, midpoint);
       } else camera = M.clamp({ ...gesture.camera, x: gesture.camera.x - dx / gesture.camera.zoom, y: gesture.camera.y - dy / gesture.camera.zoom }, size);
-      dirty = true;
+      // The camera moves every frame; visibility reconciliation uses the margin.
     });
     function endPointer(event) {
       if (!pointers.has(event.pointerId)) return;
@@ -127,7 +140,24 @@
     for (const [id, factor] of [["plus", 1.25], ["minus", 0.8]]) on($(id), "click", () => { camera = M.zoomAt(camera, size, center(), camera.zoom * factor); dirty = true; });
     on($("close"), "click", () => { selected = null; cancelFollow(); dirty = true; refreshInspector(); });
     on($("follow"), "click", () => { following = following === selected ? null : selected; dirty = true; refreshInspector(); });
-    on($("retry"), "click", () => { assets.retry(); dirty = true; });
+    on($("retry"), "click", () => { assets.retry(); feed?.refresh(); dirty = true; });
+    if (fullCatalog) {
+      feed = new window.SeamlessFeed.AreaFeed(data => {
+        scene.objects = data.sections.flatMap(s => s.objects); objects.clear(); scene.objects.forEach(o => objects.set(o.key, o));
+        const routes = new Map(data.routes.map(r => [r.id, r.points]));
+        marches = data.marches.map(m => {
+          const old = byMarch.get(m.key); return old ? { ...old, troops: m.troops } : prepareMarch(m, routes.get(m.routeId));
+        });
+        if (following && !marches.some(m => m.key === following) && byMarch.has(following)) marches.push(byMarch.get(following));
+        byMarch.clear(); marches.forEach(m => byMarch.set(m.key, m)); scene.marches = marches;
+        refreshInspector(); dirty = true;
+      }, async (ids, signal) => {
+        const response = await fetch(`/__benchmark__/seamless/areas?crowded=${crowded}&ids=${encodeURIComponent(ids.join(","))}`, { signal, credentials: "omit" });
+        if (!response.ok) throw new Error(`Area HTTP ${response.status}`); return response.json();
+      });
+      const poll = setInterval(() => { if (!document.hidden) feed.refresh(); }, 5000); cleanups.push(() => clearInterval(poll));
+      on(window, "online", () => feed.refresh());
+    }
     const observer = new ResizeObserver(resize); observer.observe(viewport); resize();
     function renderScene() {
       const view = M.visible(camera, size, 75), exact = M.visible(camera, size);
@@ -135,46 +165,61 @@
       const ordered = [...scene.sections].sort((a, b) => Math.hypot(a.x + 724 - camera.x, a.y + 543 - camera.y) - Math.hypot(b.x + 724 - camera.x, b.y + 543 - camera.y));
       const visibleSections = ordered.filter(s => M.intersects(exact, s.x, s.y, s.width, s.height));
       const fullSections = overview ? [] : [...visibleSections, ...ordered.filter(s => !visibleSections.includes(s))].slice(0, 4);
-      const visibleObjects = scene.objects.filter(o => (!overview || o.kind !== "scenery") && M.intersects(view, o.left, o.top, o.width, o.height));
-      const visibleMarches = marches.filter(m => M.intersects(view, m.position.x - 18, m.position.y - 18, 36, 36));
-      const requests = ordered.map((s, i) => ({ path: s.thumbnail, kind: "thumbnail", priority: visibleSections.includes(s) ? i : 100 + i }));
+      const nearby = ordered.filter(s => visibleSections.includes(s) || visibleSections.some(v => Math.abs(v.gridX - s.gridX) <= 1 && Math.abs(v.gridY - s.gridY) <= 1)).slice(0, 16);
+      feed?.set(overview ? [] : nearby.map(s => s.id));
+      const visibleObjects = scene.objects.filter(o => (!overview || (!fullCatalog && o.kind !== "scenery")) && M.intersects(view, o.left, o.top, o.width, o.height));
+      const visibleMarches = overview && fullCatalog ? [] : activeMarches.filter(m => M.intersects(view, m.position.x - 18, m.position.y - 18, 36, 36));
+      const requests = (fullCatalog ? (overview ? [] : nearby) : ordered).map((s, i) => ({ path: s.thumbnail, kind: "thumbnail", priority: visibleSections.includes(s) ? i : 100 + i }));
+      if (fullCatalog) requests.push({ path: scene.overviewAsset, kind: "overview", priority: 0 });
       fullSections.forEach((s, i) => requests.push({ path: s.terrain, kind: "full", priority: visibleSections.includes(s) ? 10 + i : 150 + i }));
       [...new Set([...visibleObjects, ...visibleMarches].map(o => o.asset))].forEach((path, i) => requests.push({ path, kind: "sprite", priority: 30 + i }));
       const plan = JSON.stringify(requests);
       if (plan !== lastPlan) { assets.update(requests); lastPlan = plan; }
+      if (fullCatalog) setImage($("catalog-overview"), scene.overviewAsset);
       for (const section of scene.sections) {
         const tile = terrain.get(section.id); setImage(tile.thumb, section.thumbnail); setImage(tile.full, section.terrain);
         // Scale labels without relaying out text on every zoom frame. Authored
         // matching gutters cover fractional sampling without stretching terrain.
-        tile.tile.lastChild.style.transform = `translateX(-50%) scale(${Math.max(1, 11 / (20 * camera.zoom))})`;
+        const labelScale = Math.max(1, 11 / (20 * camera.zoom));
+        tile.tile.lastChild.style.transform = `translateX(-50%) scale(${labelScale})`;
+        const tinyOverview = fullCatalog && overview && section.width * camera.zoom < 90;
+        tile.tile.lastChild.hidden = tinyOverview && section.id !== scene.homeSectionId;
+        tile.tile.lastChild.style.maxWidth = fullCatalog && overview && !tinyOverview ? `${section.width * .9 / labelScale}px` : "";
       }
       const visibleKeys = new Set([...visibleObjects, ...visibleMarches].map(o => o.key));
       for (const [key, node] of nodes) if (!visibleKeys.has(key)) { node.remove(); nodes.delete(key); }
       for (const item of [...visibleObjects, ...visibleMarches]) {
         const node = nodes.get(item.key) || createObject(item); setImage(node.firstChild, item.asset);
         node.classList.toggle("selected", item.key === selected);
+        if (item.kind === "troop") { const pixels = `${Math.max(22, 36 * camera.zoom)}px`; if (node.style.width !== pixels) { node.style.width = pixels; node.style.height = pixels; } }
       }
       world.classList.toggle("close-view", camera.zoom >= M.limits(size).home);
       world.classList.toggle("overview", overview);
+      marchesLayer.classList.toggle("overview", overview);
       $("zoom").textContent = `${Math.round(camera.zoom / M.limits(size).home * 100)}%`;
       const stats = assets.stats();
-      $("load-status").textContent = stats.failed ? `${stats.failed} image(s) unavailable · navigation ready` : `${overview ? "Overview" : `${stats.full}/4 detailed sections`} · ${scene.crowded ? "Crowded" : "Normal"} sample`;
-      $("retry").hidden = !stats.failed;
+      $("load-status").textContent = stats.failed ? `${stats.failed} image(s) unavailable · navigation ready` : feed?.failed ? "Area updates interrupted · retrying" : `${overview ? `Overview${fullCatalog ? " · 81 sections" : ""}` : `${stats.full}/4 detailed sections`} · ${scene.crowded ? "Crowded" : "Normal"} sample`;
+      $("retry").hidden = !stats.failed && !feed?.failed;
     }
     function frame(now) {
       const start = performance.now();
       if (lastFrame && !document.hidden) { frameTimes.push(now - lastFrame); if (frameTimes.length > 900) frameTimes.shift(); }
       sceneTime = frozenTime ?? now / 1000;
-      for (const march of marches) {
+      const view = M.visible(camera, size, 100);
+      activeMarches = marches.filter(m => m.key === following || M.intersects(view, m.bounds.left, m.bounds.top, m.bounds.right - m.bounds.left, m.bounds.bottom - m.bounds.top));
+      for (const march of activeMarches) {
         const distance = (sceneTime * march.speed + march.path.length * march.phase) % (march.path.length * 2);
         march.position = M.along(march.path, distance <= march.path.length ? distance : march.path.length * 2 - distance);
       }
-      if (following) { const m = byMarch.get(following); camera = M.clamp({ ...camera, ...m.position }, size); dirty = true; }
-      // Static scene visibility updates on camera changes; moving nodes use a
-      // short cadence so patrols enter/leave the viewport without rebuilding it.
-      if (dirty || Math.floor(now / 120) !== Math.floor(lastFrame / 120)) { renderScene(); dirty = false; }
+      if (following) { const m = byMarch.get(following); camera = M.clamp({ ...camera, ...m.position }, size); }
+      // Camera transforms remain frame-synchronous. Reconcile the larger scene
+      // only when its 75px culling margin or zoom changes require it, or every
+      // 120ms for moving patrols. Asset/feed/selection changes still refresh now.
+      const moved = !plannedCamera || Math.hypot(camera.x - plannedCamera.x, camera.y - plannedCamera.y) * camera.zoom > 32;
+      const zoomed = !plannedCamera || Math.abs(camera.zoom / plannedCamera.zoom - 1) > 0.03;
+      if (dirty || moved || zoomed || now - plannedAt >= 120) { renderScene(); dirty = false; plannedCamera = { ...camera }; plannedAt = now; }
       world.style.transform = `translate3d(${size.width / 2 - camera.x * camera.zoom}px,${size.height / 2 - camera.y * camera.zoom}px,0) scale(${camera.zoom})`;
-      for (const march of marches) { const node = nodes.get(march.key); if (node) { node.style.transform = `translate3d(${march.position.x}px,${march.position.y}px,0) translate(-50%,-50%) scale(${Math.max(1, 22 / (36 * camera.zoom))})`; } }
+      for (const march of activeMarches) { const node = nodes.get(march.key); if (node) { const p = M.project(camera, march.position, size); node.style.transform = `translate3d(${p.x}px,${p.y}px,0) translate(-50%,-50%)`; } }
       const selectedMarch = byMarch.get(selected);
       if (selectedMarch && sectionAt(selectedMarch.position)?.name !== lastInspectorSection) refreshInspector();
       workTimes.push(performance.now() - start); if (workTimes.length > 900) workTimes.shift();
@@ -182,12 +227,12 @@
     }
     on(document, "visibilitychange", () => { lastFrame = 0; });
     raf = requestAnimationFrame(frame);
-    on(window, "pagehide", () => { cancelAnimationFrame(raf); observer.disconnect(); assets.dispose(); cleanups.forEach(fn => fn()); });
+    on(window, "pagehide", () => { cancelAnimationFrame(raf); observer.disconnect(); assets.dispose(); feed?.dispose(); cleanups.forEach(fn => fn()); });
     // Deliberately present only in this loopback document, for deterministic QA.
     window.seamlessPreview = {
-      scene, home, select,
-      snapshot: () => ({ camera: { ...camera }, size: { ...size }, selected, following, assets: assets.stats(), nodes: nodes.size, listeners: listenerCount, frameTimes: [...frameTimes], workTimes: [...workTimes], marches: marches.map(m => ({ key: m.key, position: m.position })) }),
-      view: (x, y, zoom) => { cancelFollow(); camera = M.clamp({ x, y, zoom: zoom ?? camera.zoom }, size); dirty = true; },
+      scene, home, select, refresh: () => feed?.refresh(),
+      snapshot: () => ({ camera: { ...camera }, size: { ...size }, selected, following, assets: assets.stats(), feed: feed?.stats(), nodes: nodes.size, listeners: listenerCount, frameTimes: [...frameTimes], workTimes: [...workTimes], marches: marches.map(m => ({ key: m.key, position: m.position })) }),
+      view: (x, y, zoom) => { cancelFollow(); camera = M.clamp({ x, y, zoom: zoom ?? camera.zoom }, size); },
       time: value => { frozenTime = value; dirty = true; },
       resetMetrics: () => { frameTimes.length = 0; workTimes.length = 0; }
     };

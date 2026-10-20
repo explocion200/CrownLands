@@ -1,33 +1,52 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "846682bf5b733bd81f8bbfb541ad0654228113d0",
+  "baseCommit": "d5b43e60b254763263e2f205cad9d2a3e0178b8c",
   "coverage": [
     {
       "paths": [
+        "tools/map-benchmark/seamless/assets.js",
         "tools/map-benchmark/seamless/fixtures.js",
-        "tools/map-benchmark/seamless/layout.js",
+        "tools/map-benchmark/seamless/index.html",
+        "tools/map-benchmark/seamless/model.js",
         "tools/map-benchmark/seamless/preview.css",
-        "tools/validate-seamless-world-browser.js",
-        "tools/validate-seamless-world.js"
+        "tools/map-benchmark/seamless/preview.js",
+        "tools/map-benchmark/seamless/terrain/manifest.json",
+        "tools/map-benchmark/server.js",
+        "tools/map-benchmark/seamless/build-catalog-overview.js",
+        "tools/map-benchmark/seamless/catalog-feed.js",
+        "tools/map-benchmark/seamless/feed.js",
+        "tools/map-benchmark/seamless/terrain/catalog-overview.json",
+        "tools/map-benchmark/seamless/terrain/catalog-overview.webp",
+        "tools/validate-seamless-catalog-browser.js",
+        "tools/validate-seamless-catalog.js",
+        "tools/map-benchmark/seamless/phone-server.js",
+        "tools/validate-seamless-phone-preview.js"
       ],
       "tests": [
         "tools/validate-seamless-world.js",
         "tools/validate-seamless-world-browser.js",
+        "tools/validate-seamless-catalog.js",
+        "tools/validate-seamless-catalog-browser.js",
         "tools/validate-map-benchmark.js",
-        "tools/validate-production-artifact.js"
+        "tools/validate-production-artifact.js",
+        "tools/validate-seamless-phone-preview.js"
       ],
-      "reason": "Private 56-pixel castle footprints affect fixture generation, deterministic placement, road/corner clearance, cross-section spacing and hit targets. Removing the world raster hint affects all sprites, labels and zoom rendering. Validate preserved catalog identities, all 540 enlarged castles, all seams/corners, desktop and landscape mouse/touch interaction, DPR 1/2 screenshot detail against native-size artwork after overview/zoom, bounded loading/DOM and normal/crowded frame times. Existing benchmark regression and production artifact validation prove loopback harness compatibility and exclusion from published game packages. No gameplay/backend/data contract changes; no emulator suites apply."
+      "reason": "Full-catalog private fixtures affect camera bounds, original identity/coordinates, city placement, terrain provenance, bounded image/area residency, selection and troop following. Validate every one of the 81 definitions, 3720 cities, 144 joins and 64 corners; synthetic versioned ownership/troop updates, stale response rejection, slow/offline/reconnect, repeated full-world visits with GC heap/DOM/listener bounds, overview eviction and desktop/landscape touch. Shared renderer changes require the original nine-section seam/road, zoom sharpness, exact selection and interaction regression. Shared loopback server and image scheduler require existing map benchmark regression; production artifact validation proves all tool-only code/assets are excluded from shipping. No production APIs, gameplay authority, data contracts or emulator behavior change. The optional Android home-Wi-Fi test endpoint must bind a private interface, expose only explicit scene assets and fictional read-only endpoints, reject arbitrary repository/live paths and cross-origin/foreign-host requests, render through its exact origin, and expire automatically. The unrestricted benchmark server remains loopback-only."
     },
     {
       "paths": [
         "docs/CONTINUOUS_WORLD_PROTOTYPE.md",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/CONTINUOUS_WORLD_STAGE_TWO_TESTS.md"
       ],
       "tests": [
         "tools/validate-seamless-world.js",
-        "tools/validate-seamless-world-browser.js"
+        "tools/validate-seamless-world-browser.js",
+        "tools/validate-seamless-catalog.js",
+        "tools/validate-seamless-catalog-browser.js",
+        "tools/validate-seamless-phone-preview.js"
       ],
-      "reason": "Record the owner-approved private castle visibility refinement, proven compositor blur cause, screenshot sharpness evidence, retained terrain resolution limits and current measured performance. This neither activates Stage 2 nor changes live coordinates or artwork."
+      "reason": "Document the explicitly authorized private Stage 2 tests, measured results and remaining physical-device, bandwidth, renderer and artwork limits. Preserve distinction between prepared catalog sections and active live maps, and between fictional test transport and authenticated multiplayer. No production release or gameplay rule changes."
     }
   ]
 }

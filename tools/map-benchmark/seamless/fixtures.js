@@ -6,20 +6,25 @@ const { spreadCities, CASTLE_SIZE } = require("./layout");
 const ROOT = path.resolve(__dirname, "../../..");
 const read = file => JSON.parse(fs.readFileSync(path.join(ROOT, file), "utf8"));
 
-function createSeamlessFixture(crowded = false) {
+function createSeamlessFixture(crowded = false, fullCatalog = false) {
   const contract = read("functions/release-config.json");
   if (contract.worldTopology !== "core-expansion-v1") throw new Error("Preview requires the current Core topology.");
   const catalog = read("assets/worlds/core-expansion-v1/region-catalog.json");
   const clearance = read("tools/map-art/clearance.json");
   const halloween = read("assets/optimized/halloween-map-layouts-v3.json");
-  const sections = catalog.regions.filter(r => r.gridX >= -2 && r.gridX <= 0 && r.gridY >= -2 && r.gridY <= 0).map(r => {
+  const regions = catalog.regions.filter(r => fullCatalog || (r.gridX >= -2 && r.gridX <= 0 && r.gridY >= -2 && r.gridY <= 0));
+  const minX = Math.min(...regions.map(r => r.gridX)), minY = Math.min(...regions.map(r => r.gridY));
+  const sections = regions.map(r => {
     const definition = read(r.regionDefinitionPath);
     if (definition.width !== M.TILE.width || definition.height !== M.TILE.height) throw new Error("Unexpected section footprint.");
-    return { id: r.id, name: r.name, gridX: r.gridX, gridY: r.gridY, ...M.offset(r), width: definition.width, height: definition.height,
-      terrain: `tools/map-benchmark/seamless/terrain/${r.id}.webp`, thumbnail: `tools/map-benchmark/seamless/terrain/${r.id}-thumb.webp`, definition, art: r.artPresentation,
+    const privateArt = fs.existsSync(path.join(ROOT, `tools/map-benchmark/seamless/terrain/${r.id}.webp`));
+    return { id: r.id, name: r.name, gridX: r.gridX, gridY: r.gridY, x: (r.gridX - minX) * M.TILE.width, y: (r.gridY - minY) * M.TILE.height, width: definition.width, height: definition.height,
+      terrain: privateArt ? `tools/map-benchmark/seamless/terrain/${r.id}.webp` : r.mapAsset,
+      thumbnail: privateArt ? `tools/map-benchmark/seamless/terrain/${r.id}-thumb.webp` : r.thumbnailAsset,
+      gutter: privateArt ? 2 : 0, cityCount: definition.cities.length, definition, art: r.artPresentation,
       roads: clearance.maps.find(m => m.id === r.id).roads };
   });
-  if (sections.length !== 9) throw new Error("Preview requires nine unique Core sections.");
+  if (sections.length !== (fullCatalog ? catalog.regions.length : 9)) throw new Error("Unexpected preview section count.");
   const objects = [];
   const owners = ["Lady Rowan · sample", "Sir Alder · sample", "House Ember · sample", "Neutral · sample"];
   function add(section, raw, kind, asset, width, height, left, top, index, previewLocal = { x: raw.x, y: raw.y }) {
@@ -70,13 +75,21 @@ function createSeamlessFixture(crowded = false) {
       asset: "assets/icons/skills/atlas-v1/marchOrders.webp" });
   }
   const at = (x, y) => sections.find(s => s.gridX === x && s.gridY === y);
-  for (let i = -2; i <= 0; i++) seamRoute(at(-2, i), at(-1, i), "east", "west");
-  for (let i = -2; i <= 0; i++) seamRoute(at(i, -2), at(i, -1), "south", "north");
+  if (fullCatalog) {
+    for (const s of sections) {
+      if (at(s.gridX + 1, s.gridY)) seamRoute(s, at(s.gridX + 1, s.gridY), "east", "west");
+      if (at(s.gridX, s.gridY + 1)) seamRoute(s, at(s.gridX, s.gridY + 1), "south", "north");
+    }
+  } else {
+    for (let i = -2; i <= 0; i++) seamRoute(at(-2, i), at(-1, i), "east", "west");
+    for (let i = -2; i <= 0; i++) seamRoute(at(i, -2), at(i, -1), "south", "north");
+  }
   if (crowded) {
     const originals = [...marches];
-    for (let i = 6; i < 240; i++) { const m = originals[i % 6]; marches.push({ ...m, id: `sample-crowded-${i}`, key: M.identity(m.sectionId, `sample-crowded-${i}`), name: `Crowded patrol ${i + 1}`, phase: (i * 0.61803398875) % 1 }); }
+    for (let i = originals.length; i < (fullCatalog ? originals.length * 12 : 240); i++) { const m = originals[i % originals.length]; marches.push({ ...m, id: `sample-crowded-${i}`, key: M.identity(m.sectionId, `sample-crowded-${i}`), name: `Crowded patrol ${i + 1}`, phase: (i * 0.61803398875) % 1 }); }
   }
-  return { topology: contract.worldTopology, label: "Private prototype — sample data", crowded, width: M.WORLD.width, height: M.WORLD.height,
+  return { topology: contract.worldTopology, label: "Private prototype — sample data", crowded, fullCatalog,
+    width: (Math.max(...regions.map(r => r.gridX)) - minX + 1) * M.TILE.width, height: (Math.max(...regions.map(r => r.gridY)) - minY + 1) * M.TILE.height,
     homeSectionId: at(-1, -1).id, sections: sections.map(({ definition, art, roads, ...s }) => s), objects, marches };
 }
 module.exports = { createSeamlessFixture };

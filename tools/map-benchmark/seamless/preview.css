@@ -16,8 +16,12 @@ nav{display:flex;align-items:center;gap:6px}
    caches the whole world at its first scale, blurring sprites and text on zoom. */
 #world{position:absolute;left:0;top:0;transform-origin:0 0;width:4344px;height:3258px;background:#a2a05b}
 #terrain,#objects,#marches{position:absolute;inset:0;pointer-events:none}
+#marches{contain:layout paint;z-index:2}
+#catalog-overview{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.full-catalog .tile{background:transparent}
+.full-catalog.overview .section-label{max-width:240px;overflow:hidden;text-overflow:ellipsis}
 .tile{position:absolute;background:#a4a15d;overflow:visible}
-.tile>img{position:absolute;left:-2px;top:-2px;width:calc(100% + 4px);height:calc(100% + 4px);display:block;pointer-events:none}
+.tile>img{position:absolute;left:calc(-1 * var(--gutter,2px));top:calc(-1 * var(--gutter,2px));width:calc(100% + 2 * var(--gutter,2px));height:calc(100% + 2 * var(--gutter,2px));display:block;pointer-events:none}
 .section-label{position:absolute;left:50%;top:28px;transform:translateX(-50%);font-size:20px;transform-origin:50% 0;letter-spacing:2px;font-variant:small-caps;white-space:nowrap;color:#433f27;background:#eaddb3ba;padding:4px 14px;border-radius:3px;pointer-events:none;z-index:4}
 .object{position:absolute;display:block;padding:0;border:0;background:none;border-radius:0;min-height:0;pointer-events:auto}
 .object:hover{background:none;filter:brightness(1.1)}
@@ -27,7 +31,7 @@ nav{display:flex;align-items:center;gap:6px}
 .object .tag{position:absolute;top:95%;left:50%;transform:translateX(-50%);font-size:12px;white-space:nowrap;color:#342d20;background:#eddfb8ed;padding:2px 5px;border-radius:2px;pointer-events:none}
 .object.castle .tag{display:none}
 #world.close-view .object.castle:hover .tag,#world.close-view .object.castle.selected .tag{display:block}
-.object.troop{width:36px;height:36px;background:#e7d6ad;border:2px solid #72363a;border-radius:50%;transform:translate(-50%,-50%);z-index:3;box-shadow:0 2px 3px #0005}
+.object.troop{width:36px;height:36px;background:#e7d6ad;border:2px solid #72363a;border-radius:50%;transform:translate(-50%,-50%);will-change:transform;z-index:3;box-shadow:0 2px 3px #0005}
 .object.troop img{border-radius:50%}
 .object.troop .tag{display:none}
 .object.troop.selected .tag{display:block}
@@ -61,3 +65,4 @@ nav button{padding:4px 6px}
 
 
 #world.overview .object .tag{display:none}
+#marches.overview .object .tag{display:none}
