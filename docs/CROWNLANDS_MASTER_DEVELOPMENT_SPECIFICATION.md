@@ -1487,6 +1487,7 @@ The historical release evidence and version-1 rules below remain relevant to ret
 ### Camps
 
 - **Confirmed October 20, 2026 — camp map banners:** Place the camp name, controller identity and existing public hold timer above the camp artwork using the compact player-castle banner layout. Give Gold, Warband, Relic and Deed camps distinct heraldic type flags so category remains recognizable in neutral and held states. Keep the holder’s personal flag separate from the fixed type emblem. Preserve camp selection, scouting, orders, timer authority, Deed progress, rewards and map positions. This presentation change requires verified client publication before it is called live.
+- **Same-day display clarification:** Copy the actual player-castle name display, including its shared name typography and spacing: ruler identity above the smaller location name, with the camp hold timer using the castle information-bar style. Retain the camp-type flag and existing camp artwork anchor; do not maintain separate camp name sizes or padding. The initial banner release was verified live as PR #646; this exact-style correction requires its own publication verification.
 
 - Four Camp categories are live: Gold, Warband/Troop, Relic, and Deed. **Status:** `LIVE — ALL PUBLISHED CHANNELS`.
 - A neutral Camp starts with 20,000 defenders, has no wall, and gives each defender `1.00` defense with no personal skill or objective bonus. **Status:** `LIVE — ALL PUBLISHED CHANNELS` based on current audited rules.

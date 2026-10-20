@@ -29348,13 +29348,13 @@ function renderCitiesUncached(force = false) {
         <img class="camp-art${camp.flipX ? " map-art-flip-x" : ""}" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" decoding="async" />
         ${camp.ownerUid ? `<span class="camp-owner-marker" aria-hidden="true">${renderCityOwnerFlag(camp)}</span>` : ""}
         ${deedHold && camp.ownerUid ? `<span class="deed-hold-ring" aria-hidden="true"><span class="deed-hold-seal">D</span></span>` : ""}
-        <span class="camp-map-banner player-city-label">
+        <span class="camp-map-banner city-label player-city-label">
           <span class="player-city-banner">
             <svg class="camp-type-flag" viewBox="0 0 48 60" aria-hidden="true" focusable="false"><use href="assets/icons/camp-type-flags-v1.svg#${getRewardCampConfig(camp).type}"></use></svg>
             <span class="player-city-data">
-              <strong class="city-ruler-name">${escapeHtml(camp.name)}</strong>
-              <span class="camp-map-controller">${escapeHtml(camp.ownerUid ? getCityOwnerDisplayName(camp) : "Neutral camp")}</span>
-              <span class="gold-camp-active-timer" ${camp.ownerUid ? "" : "hidden"}>
+              <span class="city-ruler-row"><strong class="city-ruler-name">${escapeHtml(camp.ownerUid ? getCityOwnerDisplayName(camp) : "Neutral camp")}</strong></span>
+              <strong class="city-name">${escapeHtml(camp.name)}</strong>
+              <span class="gold-camp-active-timer city-army-count" ${camp.ownerUid ? "" : "hidden"}>
                 <small>${camp.state === "contested" ? "Contested" : "Active"}</small>
                 <strong>${camp.payoutPending ? countdown > 0 ? formatDuration(countdown) : "Payout ready" : "Securing"}</strong>
               </span>

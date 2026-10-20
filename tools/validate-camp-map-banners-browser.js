@@ -76,6 +76,36 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         assert.equal(layout.timerHidden, mode==="neutral"); assert.equal(layout.ownerFlags, mode==="neutral"?0:1);
         assert.equal(layout.hasDeedRing, i===3);
         if(mode==="contested") assert(/contested/i.test(layout.timer));
+        // Compare against an actual castle in the same scene: sharing a few
+        // class names is not enough if camp-specific overrides change the UI.
+        const comparison = await ev(() => {
+          const camp = cityLayer.querySelector(".camp-map-banner");
+          const castle = cityLayer.querySelector(".city-node.player .player-city-label");
+          if (!castle) throw Error("Player-castle reference missing");
+          const paint = (root, selector, properties) => {
+            const style = getComputedStyle(root.querySelector(selector));
+            return Object.fromEntries(properties.map(p => [p, style[p]]));
+          };
+          const text = ["fontFamily", "fontSize", "fontWeight", "lineHeight", "letterSpacing", "color", "textShadow", "padding"];
+          const checks = [
+            [".city-ruler-name", text], [".city-name", text],
+            [".player-city-banner", ["display", "columnGap", "alignItems"]],
+            [".player-city-data", ["display", "rowGap", "justifyItems", "alignContent"]],
+            [".city-army-count", ["fontFamily", "fontSize", "fontWeight", "lineHeight", "padding", "minWidth"]],
+          ];
+          const target = getCampTargetById(campBannerQa.current.id);
+          return {
+            pairs: checks.map(([selector, properties]) => ({selector, camp:paint(camp, selector, properties), castle:paint(castle, selector, properties)})),
+            name: camp.querySelector(".city-name").textContent, expectedName: target.name,
+            ruler: camp.querySelector(".city-ruler-name").textContent,
+            expectedRuler: target.ownerUid ? getCityOwnerDisplayName(target) : "Neutral camp",
+            rows: [...camp.querySelector(".player-city-data").children].map(n => n.className),
+          };
+        });
+        for (const pair of comparison.pairs) assert.deepEqual(pair.camp, pair.castle, `Castle display mismatch: ${pair.selector}`);
+        assert.equal(comparison.name, comparison.expectedName);
+        assert.equal(comparison.ruler, comparison.expectedRuler);
+        assert.deepEqual(comparison.rows, ["city-ruler-row", "city-name", "gold-camp-active-timer city-army-count"]);
         const click = await ev(() => {
           const n=cityLayer.querySelector(".camp-map-banner"), r=n.getBoundingClientRect();
           return {x:r.x+r.width/2,y:r.y+r.height/2};
@@ -106,7 +136,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         });
         assert.equal(await ev('document.querySelectorAll(".camp-owner-marker").length'),0,"Stale owner flag after neutral reset");
         assert(await ev('cityLayer.querySelector(".gold-camp-active-timer").hidden'));
-        results.push({width,height,mode,...layout});
+        results.push({width,height,mode,...layout,castleStyleMatch:true});
       }
       // Both ends of normal map zoom retain an anchored, selectable type banner.
       for(const z of [.4,1]) {
@@ -117,7 +147,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     }
     assert.deepEqual(errors, []);
     fs.writeFileSync(path.join(output,"results.json"),JSON.stringify({results,errors},null,2));
-    console.log("Camp banners: four Core types, desktop/landscape, owner flags, neutral/held/contested/reset, countdown reuse, selection and zoom passed.");
+    console.log("Camp banners: exact castle typography/spacing/information bars, four Core types, desktop/landscape, owner flags, neutral/held/contested/reset, countdown reuse, selection and zoom passed.");
   } finally {
     if(client){await client.send("Browser.close").catch(()=>{});client.close();}
     if(browser){if(!await waitForProcessExit(browser.browserProcess))browser.browserProcess.kill();await removeBrowserProfile(browser.profilePath);}

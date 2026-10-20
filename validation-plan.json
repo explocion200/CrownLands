@@ -1,12 +1,11 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "cda140fc31ecc69290bbe8dbacead64bd07544af",
+  "baseCommit": "ddcb4cf26f5a3e078718f5428349ba10343110c2",
   "coverage": [
     {
       "paths": [
         "game.js",
         "styles.css",
-        "assets/icons/camp-type-flags-v1.svg",
         "tools/validate-camp-map-banners-browser.js"
       ],
       "tests": [
@@ -14,23 +13,9 @@
         "tools/validate-city-map-reconciliation-browser.js",
         "tools/validate-map-zoom-smoothness-browser.js",
         "tools/validate-player-flags.js",
-        "tools/validate-reward-camp-lifecycle.js",
-        "tools/validate-holding-details-ui.js"
+        "tools/validate-reward-camp-lifecycle.js"
       ],
-      "reason": "Use the existing castle banner layout above current Core realm camps, with distinct fixed Gold/Warband/Relic/Deed pennants, controller identity and the existing public hold timer. Exercise all four types with neutral, owned, rival and contested states, owner reset, timer-only DOM reuse, Deed ring preservation, actual mouse/touch selection and zoom at desktop and landscape phone sizes. Shared renderer reconciliation and hit testing protect neighboring city nodes and interactions. Player-flag and camp lifecycle/detail checks protect ownership identity, timer and reward/action dependencies. Server rules, gameplay data and API behavior are unchanged, so no emulator suites are required."
-    },
-    {
-      "paths": [
-        "tools/generate-release-manifest.js",
-        "tools/asset-performance-budgets.js",
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "tests": [
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-production-artifact.js",
-        "tools/validate-camp-map-banners-browser.js"
-      ],
-      "reason": "Fingerprint and package the versioned, self-contained SVG sprite while keeping it out of install precache. Limit all four flags to 3 KiB and allow 512 bytes of aggregate shell headroom for the measured 400 net byte source increase; leave other budgets unchanged. Production artifact checks and browser fetch/render verify asset availability and integration."
+      "reason": "Replace the remaining camp-specific name sizing, padding and row order with actual player-castle label, ruler-row, location-name and information-bar classes. Compare computed typography, spacing and bar metrics against a real castle at desktop and landscape-phone sizes; preserve four type flags, owner flags, camp anchoring, neutral/held/contested/reset states, timer-only updates and mouse/touch selection. Shared renderer and zoom checks protect city labels, visibility and hit testing now that camps also use city-label. Existing flag and camp lifecycle checks protect reused owner and timer dependencies. This changes presentation only, with no server logic or authoritative data change, so emulator suites are unnecessary. Production build and asset budgets remain required by the static gate."
     },
     {
       "paths": [
@@ -39,7 +24,7 @@
       "tests": [
         "tools/validate-camp-map-banners-browser.js"
       ],
-      "reason": "Record the owner's confirmed castle-style camp display and distinct camp-type flags without changing rewards, rules or authoritative timers. Publication status remains conditional on verification of this client release."
+      "reason": "Record the owner's explicit clarification to copy the actual castle name display, rather than camp-specific sizing. Document the already verified initial PR 646 release and keep the correction conditional on its own publication verification."
     }
   ]
 }

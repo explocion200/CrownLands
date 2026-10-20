@@ -1782,57 +1782,20 @@ input {
 .camp-node.supportable .camp-art {
   filter: drop-shadow(0 0 8px rgba(83, 226, 137, .95));
 }
-.camp-map-banner {
-  position: absolute;
-  left: 50%;
+.camp-node .camp-map-banner {
   bottom: calc(100% - 12px);
-  width: max-content;
-  max-width: 220px;
-  transform: translateX(-50%);
-  z-index: 7;
-  text-align: left;
 }
-.camp-map-banner * { pointer-events: none; }
-.camp-map-banner .player-city-banner { grid-template-columns: 42px minmax(0, 1fr); gap: 3px; }
 .camp-type-flag { display: block; width: 42px; height: 53px; }
-.camp-map-banner .player-city-data { min-width: 0; gap: 3px; }
-.camp-map-banner .city-ruler-name { max-width: 175px; }
-.camp-map-controller {
-  max-width: 175px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: #fff0c7;
-  font-size: .64rem;
-  line-height: 1;
-  text-shadow: -1px -1px #080808, 1px -1px #080808, -1px 1px #080808, 1px 1px #080808;
-}
 .gold-camp-active-timer {
   display: flex;
   align-items: baseline;
-  justify-content: center;
   gap: 5px;
-  padding: 4px 6px;
-  color: var(--cl-text-bright);
-  background: var(--cl-burgundy);
-  font-family: "Cinzel", Georgia, serif;
-  line-height: 1;
-  white-space: nowrap;
   pointer-events: none;
 }
 .gold-camp-active-timer[hidden] {
   display: none;
 }
-.gold-camp-active-timer small {
-  color: #f1bf63;
-  font-size: .48rem;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-.gold-camp-active-timer strong {
-  font-size: .62rem;
-  text-shadow: 0 1px 2px #000;
-}
+.gold-camp-active-timer :is(small, strong) { font: inherit; }
 .gold-camp-action-wheel {
   position: absolute;
   z-index: 30;
@@ -7986,6 +7949,7 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
   filter: drop-shadow(0 0 8px rgba(146, 161, 116, .95)) drop-shadow(0 0 18px rgba(102, 122, 74, .82));
 }
 .camp-node.player .gold-camp-active-timer { color: var(--cl-text); background: var(--cl-player-owned); }
+.camp-node.enemy .gold-camp-active-timer { color: var(--cl-text-bright); background: var(--cl-burgundy); }
 .camp-node.clan-ally .gold-camp-active-timer { background: var(--cl-clan); }
 .camp-node .gold-camp-active-timer :is(small, strong) { color: inherit; text-shadow: none; }
 .holding-reinforcement-panel {
