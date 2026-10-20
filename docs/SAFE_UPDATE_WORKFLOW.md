@@ -52,6 +52,15 @@ pnpm run prepare-pr
 
 `prepare-pr` fetches GitHub again, stops if the branch is behind `origin/main`, audits and classifies the complete branch diff (`origin/main...HEAD`), confirms Node 22, runs selected local static checks and applicable build validation, records a local receipt for the exact commit and selected tests, pushes without force, and creates or updates the pull request. It never merges or deploys production.
 
+For a deletion explicitly requested by the owner, first review the complete diff,
+replacement references and affected tests. Then acknowledge each exact deleted
+path with `pnpm run prepare-pr --reviewed-deletion assets/path/to/retired.webp`.
+Repeat the option for each reviewed deletion. There is no directory, wildcard
+or blanket approval; missing or non-deleted paths stop preparation. The review
+is recorded in the PR audit and exact-commit receipt. All other scope, generated
+artifact, validation, current-main and push checks still apply. A changed commit
+requires preparation again.
+
 ## Select tests for this change
 
 Normal updates test changed or added behavior and affected shared dependencies. Editing a large shared file such as `game.js` or `functions/index.js` no longer automatically runs the entire game suite.

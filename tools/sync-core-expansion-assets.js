@@ -32,6 +32,18 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
+// Camp paintings are client presentation. Keep the installed server's world
+// contract untouched while projecting its original asset references into the
+// current browser catalog and lazy region definitions.
+const campArtwork = readJson(path.join(root, "docs/visual-qa/camp-artwork-v2/assets.json")).assets;
+const campAssetReplacements = new Map(campArtwork.map(asset => [asset.replaces, asset.output]));
+function projectCampArtwork(value) {
+  if (typeof value === "string") return campAssetReplacements.get(value) || value;
+  if (Array.isArray(value)) return value.map(projectCampArtwork);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, projectCampArtwork(item)]));
+}
+
 function createAssetReceipt(catalog) {
   const relativePaths = new Set();
   for (const region of Array.isArray(catalog.regions) ? catalog.regions : []) {
@@ -63,24 +75,25 @@ function validateOrWrite(filePath, expected, label, checkOnly) {
 }
 
 function syncCoreExpansionAssets({ checkOnly = false } = {}) {
-  const catalog = readJson(paths.serverCatalog);
+  const catalog = projectCampArtwork(readJson(paths.serverCatalog));
   const layout = readJson(paths.serverLayout);
   const receipt = readJson(paths.receipt);
   const assets = createAssetReceipt(catalog);
   const assetVersion = hash(assets).slice(0, 12);
   const nextCatalog = { ...catalog, assetVersion };
-  const nextLayout = { ...layout, assetVersion };
   const nextReceipt = {
     ...receipt,
     assetVersion,
     catalogHash: hash(nextCatalog),
-    worldLayoutHash: hash(nextLayout),
+    worldLayoutHash: hash(layout),
     assets,
   };
 
-  validateOrWrite(paths.serverCatalog, stableJson(nextCatalog), "Server Core-expansion catalog", checkOnly);
   validateOrWrite(paths.browserJsonCatalog, stableJson(nextCatalog), "Browser Core-expansion JSON catalog", checkOnly);
-  validateOrWrite(paths.serverLayout, stableJson(nextLayout), "Server Core-expansion layout", checkOnly);
+  for (const map of layout.maps.filter(map => map.camps?.length)) {
+    const regionPath = path.join(root, "assets/worlds/core-expansion-v1/regions", `${map.id}.json`);
+    validateOrWrite(regionPath, stableJson(projectCampArtwork(readJson(regionPath))), `${map.id} camp artwork`, checkOnly);
+  }
   validateOrWrite(paths.receipt, stableJson(nextReceipt), "Core-expansion build receipt", checkOnly);
   validateOrWrite(
     paths.browserCatalog,
@@ -101,4 +114,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { createAssetReceipt, syncCoreExpansionAssets };
+module.exports = { createAssetReceipt, projectCampArtwork, syncCoreExpansionAssets };

@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "generator": "built-in image_gen",
+  "delivery": "384px WebP, quality 86, original transparent canvas preserved",
+  "assets": [
+    {
+      "type": "troops",
+      "source": "docs/visual-qa/camp-artwork-v2/camp-troops.png",
+      "sourceSha256": "3130487546a4cc107b0f7e7f040709fb87357e27d20a0c1376df4e4dbf74fa01",
+      "output": "assets/worlds/core-expansion-v1/art/camp-troops-v2-a509413035b9.webp",
+      "sha256": "a509413035b93f223bcb0aa71cab50867af697991163284946738fa7c0b0b430",
+      "bytes": 50500,
+      "width": 384,
+      "height": 384,
+      "replaces": "assets/worlds/core-expansion-v1/art/camp-warband-2bb9352998c8.webp"
+    },
+    {
+      "type": "items",
+      "source": "docs/visual-qa/camp-artwork-v2/camp-items.png",
+      "sourceSha256": "55d7818877f5b37624aee4264854135d84a5c1586a23c322682ae223bbb601d3",
+      "output": "assets/worlds/core-expansion-v1/art/camp-items-v2-de5d02289ae1.webp",
+      "sha256": "de5d02289ae15fb3424ebadbf8cbee166367c59345aa82fa0e095ed4b51d417b",
+      "bytes": 46922,
+      "width": 384,
+      "height": 384,
+      "replaces": "assets/worlds/core-expansion-v1/art/camp-brightmere-6916ecf1850c.webp"
+    },
+    {
+      "type": "deed",
+      "source": "docs/visual-qa/camp-artwork-v2/camp-deed.png",
+      "sourceSha256": "cfc4ab8a6f7a44591ab2e3f377b7c79d2020eb07be2d13c44cc1ffcf4b30566c",
+      "output": "assets/worlds/core-expansion-v1/art/camp-deed-v2-09c90a1ca416.webp",
+      "sha256": "09c90a1ca416aa3eb343b8913582fe76338af81e012ade6d5f3b31c1daaf8c5e",
+      "bytes": 54270,
+      "width": 384,
+      "height": 384,
+      "replaces": "assets/worlds/core-expansion-v1/art/camp-brambleford-59426d2cd404.webp"
+    },
+    {
+      "type": "gold",
+      "source": "docs/visual-qa/camp-artwork-v2/camp-gold.png",
+      "sourceSha256": "fd8e99916619676ecc0c09ff39d2b4615ee1694ef9c483e75ca1ad64d2436e32",
+      "output": "assets/worlds/core-expansion-v1/art/camp-gold-v2-99f2fc668829.webp",
+      "sha256": "99f2fc66882929c6387c94e9952a3093f4b4a8d0918b2a61f6aaddeebbb8317e",
+      "bytes": 40014,
+      "width": 384,
+      "height": 384,
+      "replaces": "assets/worlds/core-expansion-v1/art/camp-gold-d9ba98b26c61.webp"
+    }
+  ]
+}

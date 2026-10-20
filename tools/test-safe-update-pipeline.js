@@ -6,6 +6,7 @@ const { spawnSync } = require("node:child_process");
 const {
   auditBranch,
   isGeneratedPath,
+  markdownAudit,
   normalizeFeatureName,
   normalizeRepoPath,
   pathMatchesScope,
@@ -55,7 +56,8 @@ try {
   git(seed, ["config", "user.name", "Crownlands Test"]);
   git(seed, ["config", "user.email", "test@example.invalid"]);
   fs.writeFileSync(path.join(seed, "README.md"), "safe update test\n", "utf8");
-  git(seed, ["add", "README.md"]);
+  fs.writeFileSync(path.join(seed, "obsolete.txt"), "superseded source\n", "utf8");
+  git(seed, ["add", "README.md", "obsolete.txt"]);
   git(seed, ["commit", "-m", "seed"]);
   git(seed, ["branch", "-M", "main"]);
   git(seed, ["remote", "add", "origin", remote]);
@@ -104,6 +106,28 @@ try {
   result = run(process.execPath, [prePushCheck, "origin", remote], { cwd: workspace, input: mainPushInput });
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /Direct pushes.*main.*blocked/);
+
+  // An intentional deletion needs an exact per-run acknowledgement. Broad,
+  // stale or partial acknowledgements must not remove the default blocker.
+  git(workspace, ["rm", "README.md", "obsolete.txt"]);
+  git(workspace, ["commit", "-m", "remove superseded source"]);
+  assert.match(auditBranch(workspace).blockers.join("\n"), /Deleted files require explicit review/);
+  for (const file of [".", "*.md", "missing.md", "feature.txt"]) {
+    const audit = auditBranch(workspace, { reviewedDeletions: [file] });
+    assert.match(audit.blockers.join("\n"), /exact currently deleted files/);
+    assert.match(audit.blockers.join("\n"), /Deleted files require explicit review/);
+  }
+  assert.match(auditBranch(workspace, { reviewedDeletions: ["README.md"] }).blockers.join("\n"), /explicit review: obsolete.txt/);
+  const reviewed = auditBranch(workspace, { reviewedDeletions: ["README.md", "obsolete.txt"] });
+  assert.deepEqual(reviewed.blockers, []);
+  assert.match(markdownAudit(reviewed), /Deleted files: explicitly reviewed: `README.md`/);
+  assert.match(auditBranch(workspace, { scopes: ["tools"], reviewedDeletions: ["README.md"] }).blockers.join("\n"), /outside the declared feature scope/);
+  result = run(process.execPath, [prePushCheck, "origin", remote], { cwd: workspace, input: pushInput });
+  assert.notEqual(result.status, 0, "The earlier preparation receipt cannot authorize a new deletion commit");
+  assert.match(result.stderr, /changed after validation/);
+  const missingPath = run(process.execPath, [path.join(toolsRoot, "prepare-pr.js"), "--reviewed-deletion"], { cwd: workspace });
+  assert.notEqual(missingPath.status, 0);
+  assert.match(missingPath.stderr, /requires one exact deleted file path/);
 
   git(temporaryRoot, ["clone", remote, updater]);
   git(updater, ["config", "user.name", "Crownlands Test"]);

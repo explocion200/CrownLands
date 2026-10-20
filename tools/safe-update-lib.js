@@ -305,7 +305,12 @@ function auditBranch(repoRoot, options = {}) {
   if (mergeCommits.length) blockers.push(`Merge commits are present: ${mergeCommits.map(value => value.slice(0, 12)).join(", ")}`);
 
   const deletions = changedFiles.filter(item => item.status.startsWith("D"));
-  if (deletions.length) blockers.push(`Deleted files require explicit review: ${deletions.map(item => item.path).join(", ")}`);
+  const reviewedDeletions = [...new Set((options.reviewedDeletions || []).map(normalizeRepoPath))];
+  const deletedPaths = new Set(deletions.map(item => item.path));
+  const invalidReviews = reviewedDeletions.filter(file => !deletedPaths.has(file));
+  if (invalidReviews.length) blockers.push(`Reviewed deletions must name exact currently deleted files: ${invalidReviews.join(", ")}`);
+  const unreviewedDeletions = deletions.filter(item => !reviewedDeletions.includes(item.path));
+  if (unreviewedDeletions.length) blockers.push(`Deleted files require explicit review: ${unreviewedDeletions.map(item => item.path).join(", ")}`);
 
   const generatedFiles = changedFiles.filter(item => isGeneratedPath(item.path));
   if (generatedFiles.length) blockers.push(`Generated or local artifacts are included: ${generatedFiles.map(item => item.path).join(", ")}`);
@@ -333,7 +338,7 @@ function auditBranch(repoRoot, options = {}) {
     warnings.push(`Possible full-file reversion: ${finding}.`);
   }
 
-  return { branch, baseRef, behind, ahead, commits, changedFiles, blockers, warnings, added, deleted, scopes };
+  return { branch, baseRef, behind, ahead, commits, changedFiles, blockers, warnings, added, deleted, scopes, reviewedDeletions };
 }
 
 function printAudit(audit) {
@@ -403,7 +408,7 @@ function markdownAudit(audit) {
     `- Diff size: +${audit.added}/-${audit.deleted}`,
     `- Declared scope: ${audit.scopes.length ? audit.scopes.map(value => `\`${value}\``).join(", ") : "not provided; changed files listed for review"}`,
     "- Merge commits: none",
-    "- Deleted files: none",
+    `- Deleted files: ${audit.reviewedDeletions?.length ? `explicitly reviewed: ${audit.reviewedDeletions.map(file => `\`${file}\``).join(", ")}` : "none"}`,
     "- Generated artifacts: none",
     "",
     "### Review notes",

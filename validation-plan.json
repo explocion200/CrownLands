@@ -1,29 +1,79 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "9945740f94be1181117f92dc5c1db513e4a4ae6f",
+  "baseCommit": "f7ac18da5ed109d917387a9892b0d14392f98f74",
   "coverage": [
     {
       "paths": [
+        "assets/worlds/core-expansion-v1/art/camp-brambleford-59426d2cd404.webp",
+        "assets/worlds/core-expansion-v1/art/camp-brightmere-6916ecf1850c.webp",
+        "assets/worlds/core-expansion-v1/art/camp-deed-v2-09c90a1ca416.webp",
+        "assets/worlds/core-expansion-v1/art/camp-gold-d9ba98b26c61.webp",
+        "assets/worlds/core-expansion-v1/art/camp-gold-v2-99f2fc668829.webp",
+        "assets/worlds/core-expansion-v1/art/camp-items-v2-de5d02289ae1.webp",
+        "assets/worlds/core-expansion-v1/art/camp-troops-v2-a509413035b9.webp",
+        "assets/worlds/core-expansion-v1/art/camp-warband-2bb9352998c8.webp",
+        "assets/worlds/core-expansion-v1/build-receipt.json",
+        "assets/worlds/core-expansion-v1/region-catalog.js",
+        "assets/worlds/core-expansion-v1/region-catalog.json",
+        "assets/worlds/core-expansion-v1/regions/core-v2-deed-camp-east-north-p2-m1.json",
+        "assets/worlds/core-expansion-v1/regions/core-v2-deed-camp-north-east-p1-m2.json",
+        "assets/worlds/core-expansion-v1/regions/core-v2-deed-camp-south-west-m1-p2.json",
+        "assets/worlds/core-expansion-v1/regions/core-v2-deed-camp-west-south-m2-p1.json",
+        "assets/worlds/core-expansion-v1/regions/core-v2-gold-camp-north-east-p2-m2.json",
+        "assets/worlds/core-expansion-v1/regions/core-v2-gold-camp-south-west-m2-p2.json",
+        "assets/worlds/core-expansion-v1/regions/core-v2-relic-camp-east-south-p2-p1.json",
+        "assets/worlds/core-expansion-v1/regions/core-v2-relic-camp-north-west-m1-m2.json",
+        "assets/worlds/core-expansion-v1/regions/core-v2-relic-camp-south-east-p1-p2.json",
+        "assets/worlds/core-expansion-v1/regions/core-v2-relic-camp-west-north-m2-m1.json",
+        "assets/worlds/core-expansion-v1/regions/core-v2-warband-camp-m2-m2.json",
+        "assets/worlds/core-expansion-v1/regions/core-v2-warband-camp-south-east-p2-p2.json",
         "game.js",
-        "styles.css",
-        "tools/validate-camp-map-banners-browser.js"
+        "tools/sync-core-expansion-assets.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-camp-artwork.js",
+        "tools/validate-camp-map-banners-browser.js",
+        "tools/validate-core-expansion-release.js"
       ],
       "tests": [
+        "tools/validate-camp-artwork.js",
         "tools/validate-camp-map-banners-browser.js",
-        "tools/validate-city-map-reconciliation-browser.js",
-        "tools/validate-player-flags.js",
+        "tools/validate-core-expansion-release.js",
+        "tools/validate-core-expansion-topology.js",
         "tools/validate-reward-camp-lifecycle.js"
       ],
-      "reason": "Reuse the actual castle owner-column frame for held camps and remove the full-slot flag stretch. Compare computed frame shape, padding, layout and inset flag dimensions/border/symbol size with a real castle at desktop and landscape-mobile sizes. Check unchanged 42x53 slot, relationship-color parity with the existing camp timer, no invented city level, neutral artwork, holder identity/flag edits, captures/transfers/resets, timer DOM reuse, selection and zoom. Shared city renderer, player flag and camp lifecycle validators protect affected dependencies. Production/asset gates remain required. Presentation only: no backend, authority, rewards or player-data changes, so no emulator suites apply."
+      "reason": "Replace four active Core camp images and delete only their superseded sprites. Verify exact hashes and bounded lazy delivery, all map/atlas/details/held-camp/order previews, server refreshes retaining new paintings but accepting positions, pre-map stale snapshots, unchanged castle flags, click/touch, timers and zoom at desktop and landscape-mobile sizes. Core asset sync projects only four presentation paths; reverse-projection equality and canonical lazy-map data protect all gameplay values. Core release/topology and reward lifecycle tests protect shared catalog/loader and camp dependencies. Production build, artifact, lint and asset budgets remain required. No server code, server catalog/layout, installed runtime, authority or data changes, so no emulator suite applies."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/visual-qa/camp-artwork-v2/README.md",
+        "docs/visual-qa/camp-artwork-v2/assets.json",
+        "docs/visual-qa/camp-artwork-v2/camp-deed.png",
+        "docs/visual-qa/camp-artwork-v2/camp-gold.png",
+        "docs/visual-qa/camp-artwork-v2/camp-items.png",
+        "docs/visual-qa/camp-artwork-v2/camp-troops.png",
+        "docs/visual-qa/camp-artwork-v2/prompts.json"
       ],
       "tests": [
+        "tools/validate-camp-artwork.js",
         "tools/validate-camp-map-banners-browser.js"
       ],
-      "reason": "Record the explicitly requested castle-style pointed frame and inset flag proportions, preserving held/neutral flag selection and the compact footprint. Reference verified PR 649 behavior and keep this visual refinement conditional on its own publication verification."
+      "reason": "Record the explicitly approved artwork replacement, source images and generation prompts. Pin source/delivery hashes and four exact retired-path mappings used by build sync. Verify all active game presentations and preserve archived art and the unrelated knight castle decoration."
+    },
+    {
+      "paths": [
+        "docs/SAFE_UPDATE_WORKFLOW.md",
+        "tools/prepare-pr.js",
+        "tools/safe-update-lib.js",
+        "tools/test-safe-update-pipeline.js"
+      ],
+      "tests": [
+        "tools/test-safe-update-pipeline.js",
+        "tools/test-change-risk-classifier.js",
+        "tools/test-targeted-validation.js",
+        "tools/validate-release-gate.js"
+      ],
+      "reason": "Required to complete the owner-requested deletion of the four replaced camp assets: the old audit unconditionally blocked any deletion after explicit review. Add only an exact per-file, per-run acknowledgement, recorded in the exact-head receipt and PR audit. Test default rejection, partial and invalid/wildcard paths, scope blockers, missing CLI arguments, stale receipt and main protection; keep generated-artifact, selected-validation and CI requirements unchanged."
     }
   ]
 }

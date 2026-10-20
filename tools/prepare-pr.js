@@ -23,7 +23,7 @@ const {
 } = require("./safe-update-lib");
 
 function parseArgs(args) {
-  const options = { checkOnly: false, forceFull: false, scopes: [] };
+  const options = { checkOnly: false, forceFull: false, scopes: [], reviewedDeletions: [] };
   for (let index = 0; index < args.length; index += 1) {
     const value = args[index];
     if (value === "--check-only") {
@@ -34,11 +34,15 @@ function parseArgs(args) {
       if (!args[index + 1]) throw new SafetyError("--scope requires a repository path.");
       options.scopes.push(normalizeRepoPath(args[index + 1]));
       index += 1;
+    } else if (value === "--reviewed-deletion") {
+      if (!args[index + 1] || args[index + 1].startsWith("--")) throw new SafetyError("--reviewed-deletion requires one exact deleted file path.");
+      options.reviewedDeletions.push(normalizeRepoPath(args[++index]));
     } else {
       throw new SafetyError(`Unknown option: ${value}`);
     }
   }
   options.scopes = [...new Set(options.scopes)];
+  options.reviewedDeletions = [...new Set(options.reviewedDeletions)];
   return options;
 }
 
@@ -105,7 +109,8 @@ function main() {
 
   const metadata = readFeatureMetadata(repoRoot, branch);
   const scopes = options.scopes.length ? options.scopes : (metadata?.scopes || []);
-  const audit = auditBranch(repoRoot, { baseRef: "origin/main", scopes });
+  const auditOptions = { baseRef: "origin/main", scopes, reviewedDeletions: options.reviewedDeletions };
+  const audit = auditBranch(repoRoot, auditOptions);
   printAudit(audit);
   const classification = runRiskBasedValidation(repoRoot, {
     baseRef: "origin/main",
@@ -113,7 +118,7 @@ function main() {
   });
   assertClean(repoRoot);
   fetchOrigin(repoRoot);
-  const finalAudit = auditBranch(repoRoot, { baseRef: "origin/main", scopes });
+  const finalAudit = auditBranch(repoRoot, auditOptions);
   finalAudit.validation = classification;
   printAudit(finalAudit);
 
@@ -122,6 +127,7 @@ function main() {
     head: revision(repoRoot, "HEAD"),
     originMain: revision(repoRoot, "origin/main"),
     scopes,
+    reviewedDeletions: finalAudit.reviewedDeletions,
     validationTier: classification.tier,
     validationForcedFull: classification.forcedFull,
     validationPhase: classification.validationPhase,

@@ -249,7 +249,9 @@ const entrypointBudgets = {
   // Bound that source increase at 0.5 KiB within the shared shell allowance.
   // Clan availability notices and scoped cooldown/day refresh add 4,937 bytes; bound at 5 KiB.
   // Location entry points and safe cross-map focusing add 2,858 source bytes.
-  "game.js": (1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25 + 2 + 3 + 0.25 + 2 + 1 + 0.5 + 5 + 3) * 1024,
+  // Preserve new camp paintings across old server snapshots: at most 1 KiB.
+  // Aggregate shell, artwork, request and installation limits stay unchanged.
+  "game.js": (1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25 + 2 + 3 + 0.25 + 2 + 1 + 0.5 + 5 + 3 + 1) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   // Medal crown selectors add under 0.5 KiB; retain all other payload limits.

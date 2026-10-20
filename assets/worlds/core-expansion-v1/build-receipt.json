@@ -8,7 +8,7 @@
   "preparedSecondLayerMapCount": 32,
   "newLandsCityCount": 2240,
   "objectiveCount": 17,
-  "catalogHash": "5689ed1fd03d9f6a3cd406b0dc4c795e4016eb4f594002a87cc1181d25893702",
+  "catalogHash": "8dbebd799a2fe5046ecac9f750472f5b54c63fd9c5d9c615a32759b0574389fd",
   "worldLayoutHash": "743658affd7757c2c6ebf09080ff1ceb90afd73c5ff4511ec94a6acfa62e42b0",
   "assets": {
     "assets/worlds/core-expansion-v1/maps/core-v2-warband-camp-m2-m2.webp": {
@@ -35,9 +35,9 @@
       "bytes": 17736,
       "sha256": "e8c670bc6084a1795dfd25d19f45b205cba4c63b24b1e34fa87b4107aac3c77a"
     },
-    "assets/worlds/core-expansion-v1/art/camp-warband-2bb9352998c8.webp": {
-      "bytes": 25746,
-      "sha256": "2bb9352998c8a310b87e65b1202b093e459283e04f51f6a6b8bdc39764497d12"
+    "assets/worlds/core-expansion-v1/art/camp-troops-v2-a509413035b9.webp": {
+      "bytes": 50500,
+      "sha256": "a509413035b93f223bcb0aa71cab50867af697991163284946738fa7c0b0b430"
     },
     "assets/worlds/core-expansion-v1/art/city-shack-7acf6bfddaa7.webp": {
       "bytes": 21050,
@@ -67,9 +67,9 @@
       "bytes": 14894,
       "sha256": "96a17758da1bf82d090374a37d98419488ee355927b15e597ca028cdce8cfe6b"
     },
-    "assets/worlds/core-expansion-v1/art/camp-brightmere-6916ecf1850c.webp": {
-      "bytes": 28872,
-      "sha256": "6916ecf1850cacb855517133ef6fcdd3d5d0763bc5083718288fed156ff6bb26"
+    "assets/worlds/core-expansion-v1/art/camp-items-v2-de5d02289ae1.webp": {
+      "bytes": 46922,
+      "sha256": "de5d02289ae15fb3424ebadbf8cbee166367c59345aa82fa0e095ed4b51d417b"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-north-support-p0-m2.webp": {
       "bytes": 140636,
@@ -91,9 +91,9 @@
       "bytes": 20318,
       "sha256": "35ab7e8f422854b4981754c498f6963b34cc3ef95130f56bbc6b8b0e7d2bd0d7"
     },
-    "assets/worlds/core-expansion-v1/art/camp-brambleford-59426d2cd404.webp": {
-      "bytes": 31720,
-      "sha256": "59426d2cd404f2f58ac349ce9d46c163b4426d9e6f070bbeb0b66f0ee0bcb84f"
+    "assets/worlds/core-expansion-v1/art/camp-deed-v2-09c90a1ca416.webp": {
+      "bytes": 54270,
+      "sha256": "09c90a1ca416aa3eb343b8913582fe76338af81e012ade6d5f3b31c1daaf8c5e"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-gold-camp-north-east-p2-m2.webp": {
       "bytes": 156740,
@@ -103,9 +103,9 @@
       "bytes": 15862,
       "sha256": "1f098f7f509c138b1cdd72f4f183526b166d8b239e7b2d3679132989b762006a"
     },
-    "assets/worlds/core-expansion-v1/art/camp-gold-d9ba98b26c61.webp": {
-      "bytes": 26236,
-      "sha256": "d9ba98b26c6106376a069531090c21e4cd351355ff761cf444c4751a917311ac"
+    "assets/worlds/core-expansion-v1/art/camp-gold-v2-99f2fc668829.webp": {
+      "bytes": 40014,
+      "sha256": "99f2fc66882929c6387c94e9952a3093f4b4a8d0918b2a61f6aaddeebbb8317e"
     },
     "assets/worlds/core-expansion-v1/maps/core-v2-relic-camp-west-north-m2-m1.webp": {
       "bytes": 219706,
@@ -776,5 +776,5 @@
       "sha256": "55b6e78efe25aa9e1cc5da94f27b5dcf8cf9a969c34f41e419b9c4f01ffff6b5"
     }
   },
-  "assetVersion": "2d0983ce5812"
+  "assetVersion": "870efecb1a16"
 }
