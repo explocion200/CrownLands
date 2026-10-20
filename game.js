@@ -25611,6 +25611,7 @@ function refreshClanActionNotifications() {
     refreshClanTreasuryViews();
   }
   const nowMs = getClanQuestServerNowMs();
+  window.CrownlandsClanTreasuryUi?.updateCountdown?.(clanContent, clanTreasuryStatus, nowMs);
   if (clanTreasuryStatus?.utcDate && clanTreasuryStatus.utcDate !== getUtcDateKeyAtMs(nowMs)
       && !clanTreasuryRequest && !clanTreasuryLoading && nowMs >= clanTreasuryResetRetryAtMs) {
     clanTreasuryResetRetryAtMs = nowMs + 60000;
@@ -26996,14 +26997,14 @@ async function donateClanTreasuryFromPanel() {
 
 function bindClanTreasuryPanel(root = clanContent) {
   window.CrownlandsClanTreasuryUi?.bind(root, {
-    status: clanTreasuryStatus, personal: state?.gold,
+    status: clanTreasuryStatus, personal: state?.gold, nowMs: getClanQuestServerNowMs(),
     loading: clanTreasuryLoading, busy: clanTreasuryActionInFlight,
   }, clanTreasuryView, () => void loadClanTreasuryStatus({ force: true }));
 }
 
 function renderClanTreasuryPanel() {
   return window.CrownlandsClanTreasuryUi.render({
-    status: clanTreasuryStatus, personal: state?.gold,
+    status: clanTreasuryStatus, personal: state?.gold, nowMs: getClanQuestServerNowMs(),
     loading: clanTreasuryLoading, busy: clanTreasuryActionInFlight,
   }, clanTreasuryView);
 }

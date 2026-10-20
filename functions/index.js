@@ -6157,13 +6157,33 @@ function clanTreasuryRef(clanId = "") {
   return id ? db.doc(`clans/${id}/treasury/${RESET_GENERATION}`) : null;
 }
 
-function clanTreasuryUsageRef(clanId = "", uid = "", utcDate = "") {
-  const id = safeString(clanId, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
-  const playerUid = safeString(uid, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
-  const day = safeString(utcDate, 10).replace(/[^0-9-]/g, "");
-  return id && playerUid && day
-    ? db.doc(`clans/${id}/treasuryUsage/${RESET_GENERATION}_${day}_${playerUid}`)
-    : null;
+function clanTreasuryUsageRef(uid = "", utcDate = "") {
+  return db.doc(`players/${uid}/clanTreasuryDaily/${utcDate}`);
+}
+
+async function readClanTreasuryDonationUsage(transaction, uid, utcDate) {
+  const usageRef = clanTreasuryUsageRef(uid, utcDate);
+  const snapshot = await transaction.get(usageRef);
+  if (snapshot.exists) {
+    const usage = snapshot.data();
+    if (usage.uid !== uid || usage.donationDayUtc !== utcDate || usage.version !== 1) {
+      throw new HttpsError("failed-precondition", "Daily donation usage could not be verified.");
+    }
+    return { usageRef, usage };
+  }
+  // Import only this player's current-day/current-realm old clan counters once.
+  // The new player/day counter survives clan changes, disbanding and season reset.
+  const oldUsage = await transaction.get(db.collectionGroup("treasuryUsage")
+    .where("uid", "==", uid).where("donationDayUtc", "==", utcDate)
+    .where("worldId", "==", ONLINE_WORLD_ID).where("resetGeneration", "==", RESET_GENERATION)
+    .where("realmShardId", "==", getCurrentRealmShardId()));
+  let donatedToday = 0;
+  for (const row of oldUsage.docs) {
+    if (!/^clans\/[^/]+\/treasuryUsage\/[^/]+$/.test(row.ref.path)) continue;
+    donatedToday += HOLDING_TOWERS.normalizeDonationUsage(row.data(), utcDate).donatedToday;
+    if (!Number.isSafeInteger(donatedToday)) throw new HttpsError("out-of-range", "Daily donations exceed the supported range.");
+  }
+  return { usageRef, usage: { uid, version: 1, donationDayUtc: utcDate, donatedToday } };
 }
 
 function clanTreasuryReceiptRef(clanId = "", operationId = "") {
@@ -6202,15 +6222,6 @@ function createHoldingTowerTreasuryPatch(treasury = {}, overrides = {}, nowMs = 
     updatedAtMs: nowMs,
     updatedAt: FieldValue.serverTimestamp(),
   };
-}
-
-function getCurrentHoldingTowerDonationUsage(snapshot = null) {
-  const raw = snapshot?.exists ? snapshot.data() || {} : {};
-  return safeString(raw.worldId, 120) === ONLINE_WORLD_ID
-    && safeString(raw.resetGeneration, 120) === RESET_GENERATION
-    && REALM_TOPOLOGY.normalizeRealmShardId(raw.realmShardId) === getCurrentRealmShardId()
-    ? raw
-    : {};
 }
 
 function getReinforcementTargetKey(targetType = "city", regionId = "", targetId = "") {
@@ -22363,31 +22374,18 @@ exports.getClanTreasuryStatus = timedCallable(
       const clanId = safeString(profile.clanId, 128);
       if (!clanId) throw new HttpsError("failed-precondition", "Join a clan to view its Treasury.");
       const treasuryRef = clanTreasuryRef(clanId);
-      const usageRef = clanTreasuryUsageRef(clanId, uid, HOLDING_TOWERS.getUtcDateKey(nowMs));
-      const [clanSnap, memberSnap, treasurySnap, usageSnap] = await Promise.all([
+      const [clanSnap, memberSnap, treasurySnap] = await Promise.all([
         transaction.get(db.doc(`clans/${clanId}`)),
         transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
         transaction.get(treasuryRef),
-        transaction.get(usageRef),
       ]);
       if (!clanSnap.exists || clanSnap.data()?.status !== "active" || !memberSnap.exists) {
         throw new HttpsError("permission-denied", "Your clan membership is no longer active.");
       }
       assertCurrentClan(clanSnap.data() || {});
       const utcDate = HOLDING_TOWERS.getUtcDateKey(nowMs);
-      const usageRaw = getCurrentHoldingTowerDonationUsage(usageSnap);
-      const usage = HOLDING_TOWERS.normalizeDonationUsage(usageRaw, utcDate);
-      let currentRawBaseGoldPerHour = usage.rawGoldPerHourSnapshot || 0;
-      if (!usage.locked) {
-        const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
-        const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
-        currentRawBaseGoldPerHour = stats.baseGoldPerHour;
-      }
-      const allowance = HOLDING_TOWERS.getDonationAllowanceForUsage(
-        usageRaw,
-        currentRawBaseGoldPerHour,
-        utcDate
-      );
+      const { usage } = await readClanTreasuryDonationUsage(transaction, uid, utcDate);
+      const allowance = HOLDING_TOWERS.getDonationAllowanceForUsage(usage, utcDate);
       return {
         ok: true,
         clanId,
@@ -22409,7 +22407,7 @@ exports.donateClanTreasuryGold = timedCallable(
     const uid = requireAuth(request);
     assertHoldingTowerWorldActive();
     const nowMs = Date.now();
-    const amount = Math.floor(safeNumber(request.data?.amount, 0));
+    const amount = Number(request.data?.amount);
     if (!Number.isSafeInteger(amount) || amount <= 0) {
       throw new HttpsError("invalid-argument", "Choose a positive whole-Gold donation.");
     }
@@ -22423,35 +22421,33 @@ exports.donateClanTreasuryGold = timedCallable(
       if (!clanId) throw new HttpsError("failed-precondition", "Join a clan before donating Gold.");
       const treasuryRef = clanTreasuryRef(clanId);
       const utcDate = HOLDING_TOWERS.getUtcDateKey(nowMs);
-      const usageRef = clanTreasuryUsageRef(clanId, uid, utcDate);
+      const playerReceiptRef = db.doc(`players/${uid}/clanTreasuryReceipts/${operationId}`);
       const receiptRef = clanTreasuryReceiptRef(clanId, operationId);
-      const [clanSnap, memberSnap, treasurySnap, usageSnap, receiptSnap] = await Promise.all([
+      const [clanSnap, memberSnap, treasurySnap, receiptSnap, playerReceiptSnap] = await Promise.all([
         transaction.get(db.doc(`clans/${clanId}`)),
         transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
         transaction.get(treasuryRef),
-        transaction.get(usageRef),
         transaction.get(receiptRef),
+        transaction.get(playerReceiptRef),
       ]);
       if (!clanSnap.exists || clanSnap.data()?.status !== "active" || !memberSnap.exists) {
         throw new HttpsError("permission-denied", "Your clan membership is no longer active.");
       }
       assertCurrentClan(clanSnap.data() || {});
-      const duplicate = holdingTowerReceiptResult(receiptSnap);
-      if (duplicate) return { ...duplicate, duplicate: true };
-      const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
-      const usageRaw = getCurrentHoldingTowerDonationUsage(usageSnap);
-      const usage = HOLDING_TOWERS.normalizeDonationUsage(usageRaw, utcDate);
-      let currentRawBaseGoldPerHour = usage.rawGoldPerHourSnapshot || 0;
-      if (!usage.locked) {
-        const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
-        currentRawBaseGoldPerHour = stats.baseGoldPerHour;
+      const { usageRef, usage } = await readClanTreasuryDonationUsage(transaction, uid, utcDate);
+      const duplicateSnap = playerReceiptSnap.exists ? playerReceiptSnap : receiptSnap;
+      const duplicate = holdingTowerReceiptResult(duplicateSnap);
+      if (duplicate) {
+        if (duplicateSnap.data().actorUid !== uid) throw new HttpsError("permission-denied", "This donation receipt belongs to another player.");
+        return { ...duplicate, duplicate: true, allowance: HOLDING_TOWERS.getDonationAllowanceForUsage(usage, utcDate),
+          utcDate, resetsAtMs: HOLDING_TOWERS.getNextUtcDayStartMs(nowMs), serverTimeMs: nowMs };
       }
+      const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
       const treasury = normalizeClanTreasury(treasurySnap);
       let donation;
       try {
         donation = HOLDING_TOWERS.applyTreasuryDonation({
-          usage: usageRaw,
-          currentRawBaseGoldPerHour,
+          usage,
           donationDayUtc: utcDate,
           amount,
           personalGold: economy.goldFloat,
@@ -22459,7 +22455,7 @@ exports.donateClanTreasuryGold = timedCallable(
         });
       } catch (error) {
         if (error?.message === "daily-donation-cap-exceeded") {
-          throw new HttpsError("resource-exhausted", "That donation exceeds today's locked 12-hour raw-production allowance.");
+          throw new HttpsError("resource-exhausted", "That donation exceeds your remaining 250,000,000 Gold daily allowance across all clans.");
         }
         if (error?.message === "insufficient-personal-gold") {
           throw new HttpsError("failed-precondition", "Not enough personal Gold for that donation.");
@@ -22479,6 +22475,7 @@ exports.donateClanTreasuryGold = timedCallable(
         revision: treasury.revision + 1,
         allowance: donation.allowance,
         utcDate,
+        resetsAtMs: HOLDING_TOWERS.getNextUtcDayStartMs(nowMs),
         serverTimeMs: nowMs,
       };
       writePreparedEconomy(transaction, economy, {
@@ -22493,16 +22490,13 @@ exports.donateClanTreasuryGold = timedCallable(
         clanId,
         uid,
         donationDayUtc: donation.usage.donationDayUtc,
-        rawGoldPerHourSnapshot: donation.usage.rawGoldPerHourSnapshot,
         dailyDonationCap: donation.usage.dailyDonationCap,
         donatedToday: donation.usage.donatedToday,
-        snapshotEstablishedAtMs: usage.locked
-          ? Math.max(0, Math.floor(safeNumber(usageRaw.snapshotEstablishedAtMs, nowMs)))
-          : nowMs,
+        version: 1,
         updatedAtMs: nowMs,
         updatedAt: FieldValue.serverTimestamp(),
       });
-      transaction.create(receiptRef, {
+      const receipt = {
         worldId: ONLINE_WORLD_ID,
         resetGeneration: RESET_GENERATION,
         realmShardId: getCurrentRealmShardId(),
@@ -22514,13 +22508,14 @@ exports.donateClanTreasuryGold = timedCallable(
         result,
         createdAtMs: nowMs,
         createdAt: FieldValue.serverTimestamp(),
-      });
+      };
+      transaction.create(receiptRef, receipt);
+      transaction.create(playerReceiptRef, receipt);
       writeClanAudit(transaction, clanId, uid, "treasury_donation", {
         operationId,
         amount,
         balance: donation.treasury.balance,
         donationDayUtc: donation.usage.donationDayUtc,
-        rawGoldPerHourSnapshot: donation.usage.rawGoldPerHourSnapshot,
       }, nowMs);
       return result;
     }, "donateClanTreasuryGold");

@@ -284,7 +284,7 @@ async function main() {
   await db.doc(`players/${member.uid}`).update({gold:1e9,goldFloat:1e9,economyUpdatedAtMs:Date.now()});
   const emptyTreasury = await call("getClanTreasuryStatus",member);
   assert.equal(emptyTreasury.treasury.balance,0);
-  assert(emptyTreasury.allowance.remaining >= 20_000_000,"The donation fixture needs enough raw production allowance.");
+  assert.equal(emptyTreasury.allowance.remaining,250_000_000,"Every member must receive the fixed daily allowance.");
   const donationPayload = {amount:20_000_000,operationId:`donation_${randomUUID()}`};
   const donation = await call("donateClanTreasuryGold",member,donationPayload);
   assert.equal(donation.balance,20_000_000);

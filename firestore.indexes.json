@@ -1,6 +1,17 @@
 {
   "indexes": [
     {
+      "collectionGroup": "treasuryUsage",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "uid", "order": "ASCENDING" },
+        { "fieldPath": "donationDayUtc", "order": "ASCENDING" },
+        { "fieldPath": "worldId", "order": "ASCENDING" },
+        { "fieldPath": "resetGeneration", "order": "ASCENDING" },
+        { "fieldPath": "realmShardId", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "entries",
       "queryScope": "COLLECTION",
       "fields": [
