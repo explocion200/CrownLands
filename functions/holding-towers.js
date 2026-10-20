@@ -12,7 +12,7 @@ const TOWER_UPGRADE_QUEUE_LIMIT = 10;
 const TOWER_CONQUEST_LEVEL_LOSS = 5;
 const TOWER_VEIL_DURATION_MS = 10 * 60 * 1000;
 const TOWER_VEIL_DAILY_LIMIT = 3;
-const TOWER_DONATION_HOURS = 12;
+const TOWER_DONATION_DAILY_CAP = 250_000_000;
 const WALL_FULL_INTEGRITY_BPS = 10_000;
 const MANAGER_ROLES = Object.freeze(["leader", "officer"]);
 
@@ -408,124 +408,51 @@ function validateTowerRallyParticipants(participants = [], membersByUid = new Ma
   };
 }
 
-function getDonationAllowance(rawBaseGoldPerHour, donatedToday = 0, options = {}) {
-  const rawGoldPerHour = clampInteger(rawBaseGoldPerHour);
-  const dailyCap = safeMultiply(rawGoldPerHour, TOWER_DONATION_HOURS, "daily donation cap");
-  const donated = clampInteger(donatedToday, 0, dailyCap);
-  const locked = options.locked !== false;
-  return {
-    donationDayUtc: String(options.donationDayUtc || ""),
-    rawGoldPerHourSnapshot: locked ? rawGoldPerHour : null,
-    previewRawGoldPerHour: locked ? null : rawGoldPerHour,
-    dailyCap,
-    donatedToday: donated,
-    remaining: Math.max(0, dailyCap - donated),
-    locked,
-    preview: !locked,
-  };
-}
-
 function normalizeDonationUsage(rawUsage = {}, donationDayUtc = "") {
   const day = String(donationDayUtc || "");
-  const storedDay = String(rawUsage?.donationDayUtc || rawUsage?.utcDate || "");
-  if (!day || storedDay !== day) {
-    return {
-      donationDayUtc: day,
-      rawGoldPerHourSnapshot: null,
-      dailyDonationCap: null,
-      donatedToday: 0,
-      locked: false,
-    };
-  }
-  const hasCanonicalSnapshot = Object.prototype.hasOwnProperty.call(rawUsage || {}, "rawGoldPerHourSnapshot");
-  const hasLegacySnapshot = Object.prototype.hasOwnProperty.call(rawUsage || {}, "rawBaseGoldPerHour");
-  if (!hasCanonicalSnapshot && !hasLegacySnapshot) {
-    return {
-      donationDayUtc: day,
-      rawGoldPerHourSnapshot: null,
-      dailyDonationCap: null,
-      donatedToday: 0,
-      locked: false,
-    };
-  }
-  const rawGoldPerHourSnapshot = clampInteger(
-    hasCanonicalSnapshot ? rawUsage.rawGoldPerHourSnapshot : rawUsage.rawBaseGoldPerHour
-  );
-  const dailyDonationCap = safeMultiply(
-    rawGoldPerHourSnapshot,
-    TOWER_DONATION_HOURS,
-    "daily donation cap"
-  );
-  const donatedToday = clampInteger(
-    rawUsage?.donatedToday ?? rawUsage?.donated,
-    0,
-    dailyDonationCap
-  );
-  return {
-    donationDayUtc: day,
-    rawGoldPerHourSnapshot,
-    dailyDonationCap,
-    donatedToday,
-    locked: true,
-  };
+  const sameDay = day && String(rawUsage?.donationDayUtc || rawUsage?.utcDate || "") === day;
+  const donatedToday = sameDay ? Number(rawUsage?.donatedToday ?? rawUsage?.donated ?? 0) : 0;
+  // Preserve donations above the new cap during rollout; never refund or erase them.
+  if (!Number.isSafeInteger(donatedToday) || donatedToday < 0) throw new RangeError("Invalid daily donation total");
+  return { donationDayUtc: day, dailyDonationCap: TOWER_DONATION_DAILY_CAP, donatedToday };
 }
 
-function getDonationAllowanceForUsage(rawUsage, currentRawBaseGoldPerHour, donationDayUtc) {
+function getDonationAllowanceForUsage(rawUsage, donationDayUtc) {
   const usage = normalizeDonationUsage(rawUsage, donationDayUtc);
-  if (usage.locked) {
-    return getDonationAllowance(usage.rawGoldPerHourSnapshot, usage.donatedToday, {
-      donationDayUtc,
-      locked: true,
-    });
-  }
-  return getDonationAllowance(currentRawBaseGoldPerHour, 0, {
-    donationDayUtc,
-    locked: false,
-  });
+  return {
+    donationDayUtc: usage.donationDayUtc,
+    dailyCap: TOWER_DONATION_DAILY_CAP,
+    donatedToday: usage.donatedToday,
+    remaining: Math.max(0, TOWER_DONATION_DAILY_CAP - usage.donatedToday),
+    // Retain the public flags for cached clients; there is no production preview.
+    locked: true,
+    preview: false,
+  };
 }
 
 function applyTreasuryDonation({
   usage = {},
-  currentRawBaseGoldPerHour = 0,
   donationDayUtc = "",
   amount = 0,
   personalGold = 0,
   treasury = {},
 } = {}) {
+  if (!Number.isSafeInteger(amount) || amount <= 0) throw new RangeError("Donation must be a positive integer");
   const donation = requireSafePositiveInteger(amount, "donation");
   const normalizedUsage = normalizeDonationUsage(usage, donationDayUtc);
-  const rawGoldPerHourSnapshot = normalizedUsage.locked
-    ? normalizedUsage.rawGoldPerHourSnapshot
-    : clampInteger(currentRawBaseGoldPerHour);
-  const allowanceBefore = getDonationAllowance(
-    rawGoldPerHourSnapshot,
-    normalizedUsage.donatedToday,
-    { donationDayUtc, locked: true }
-  );
+  const allowanceBefore = getDonationAllowanceForUsage(normalizedUsage, donationDayUtc);
   if (donation > allowanceBefore.remaining) throw new Error("daily-donation-cap-exceeded");
   const availablePersonalGold = finiteNumber(personalGold, -1);
   if (availablePersonalGold < donation) throw new Error("insufficient-personal-gold");
   const balance = safeAdd(treasury?.balance, donation, "Clan Treasury balance");
   const totalDonated = safeAdd(treasury?.totalDonated, donation, "Clan Treasury donated total");
   const donatedToday = safeAdd(normalizedUsage.donatedToday, donation, "daily donation total");
-  const allowance = getDonationAllowance(rawGoldPerHourSnapshot, donatedToday, {
-    donationDayUtc,
-    locked: true,
-  });
+  const nextUsage = { ...normalizedUsage, donatedToday };
   return {
-    usage: {
-      donationDayUtc,
-      rawGoldPerHourSnapshot,
-      dailyDonationCap: allowance.dailyCap,
-      donatedToday,
-    },
-    allowance,
+    usage: nextUsage,
+    allowance: getDonationAllowanceForUsage(nextUsage, donationDayUtc),
     personalGold: availablePersonalGold - donation,
-    treasury: {
-      balance,
-      totalDonated,
-      totalSpent: clampInteger(treasury?.totalSpent),
-    },
+    treasury: { balance, totalDonated, totalSpent: clampInteger(treasury?.totalSpent) },
   };
 }
 
@@ -725,7 +652,7 @@ module.exports = Object.freeze({
   TOWER_CONQUEST_LEVEL_LOSS,
   TOWER_VEIL_DURATION_MS,
   TOWER_VEIL_DAILY_LIMIT,
-  TOWER_DONATION_HOURS,
+  TOWER_DONATION_DAILY_CAP,
   WALL_FULL_INTEGRITY_BPS,
   MANAGER_ROLES,
   TOWERS,
@@ -742,7 +669,6 @@ module.exports = Object.freeze({
   getEligibleScoutTowerOrigins,
   selectClosestScoutOrigin,
   validateTowerRallyParticipants,
-  getDonationAllowance,
   normalizeDonationUsage,
   getDonationAllowanceForUsage,
   applyTreasuryDonation,

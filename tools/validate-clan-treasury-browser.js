@@ -24,14 +24,24 @@ const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
    await wait('document.documentElement?.dataset.clanRuntimeReady==="true"');
    await ev(`(()=>{
     window.ctq={calls:[],fail:false,hold:false};const api=getOnlineApi();updateEconomy=()=>{};refreshServerEconomy=async()=>{if(ctq.nextGold!==undefined)state.gold=ctq.nextGold;};
-    window.ctReset=()=>{clanTreasuryView={};clanTreasuryDonationRequest=null;state.gold=32400000;clanTreasuryStatus={clanId:state.clanId,treasury:{balance:84250000,totalDonated:134250000,totalSpent:50000000,revision:1},allowance:{remaining:18000000,dailyCap:24000000,donatedToday:6000000,locked:true,rawGoldPerHourSnapshot:2000000}};clanTreasuryClanId=state.clanId;clanContent.querySelector('.clan-treasury-ui')?.remove();renderClanView();};
+    window.ctReset=()=>{clanTreasuryView={};clanTreasuryDonationRequest=null;state.gold=32400000;clanTreasuryStatus={clanId:state.clanId,utcDate:getUtcDateKeyAtMs(getClanQuestServerNowMs()),resetsAtMs:Date.parse(getUtcDateKeyAtMs(getClanQuestServerNowMs())+"T00:00:00Z")+86400000,treasury:{balance:84250000,totalDonated:134250000,totalSpent:50000000,revision:1},allowance:{remaining:18000000,dailyCap:250000000,donatedToday:232000000,locked:true}};clanTreasuryClanId=state.clanId;clanContent.querySelector('.clan-treasury-ui')?.remove();renderClanView();};
     getOnlineApi=()=>({...api,donateClanTreasuryGold:async payload=>{ctq.calls.push(payload);if(ctq.hold)await new Promise(r=>ctq.release=r);if(ctq.fail){ctq.fail=false;throw Error('Donation could not be confirmed. Retry.');}const t=clanTreasuryStatus.treasury,a=clanTreasuryStatus.allowance;ctq.nextGold=state.gold-payload.amount;return{clanId:state.clanId,balance:t.balance+payload.amount,totalDonated:t.totalDonated+payload.amount,totalSpent:t.totalSpent,revision:t.revision+1,allowance:{...a,locked:true,remaining:a.remaining-payload.amount,donatedToday:a.donatedToday+payload.amount}};}});
     ctReset();
    })()`);
    await wait(`!!document.querySelector('.clan-treasury-ui') && [...document.querySelectorAll('.clan-treasury-ui img')].every(img=>img.complete)`);
    await ev('document.fonts.ready');await delay(150);
    const layout=await ev(`(()=>{const p=document.querySelector('.clan-treasury-ui'),b=p.querySelector('#ct-reviewDonation'),r=b.getBoundingClientRect();return{visible:r.top>=0&&r.bottom<=innerHeight&&r.height>=44,hit:b.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)),overflow:[p,...p.querySelectorAll('.scroll-panel')].some(n=>n.scrollWidth>n.clientWidth+1),art:[...p.querySelectorAll('img')].every(n=>n.complete&&n.naturalWidth)}})()`);
+   assert.equal(await ev(`document.querySelector('#ct-dailyCap').textContent`),'250,000,000');
+   assert(await ev(`document.querySelector('#ct-allowanceNote').textContent.includes('across all clans')`));
+   assert(!await ev(`document.querySelector('.clan-treasury-ui').textContent.includes('raw Gold/hour')`));
+   await ev(`CrownlandsClanTreasuryUi.updateCountdown(clanContent,clanTreasuryStatus,clanTreasuryStatus.resetsAtMs-61000)`);
+   assert(await ev(`document.querySelector('#ct-resetCountdown').textContent.includes('00:01:01')`));
+   await ev(`CrownlandsClanTreasuryUi.updateCountdown(clanContent,clanTreasuryStatus,clanTreasuryStatus.resetsAtMs)`);
+   assert.equal(await ev(`document.querySelector('#ct-resetCountdown').textContent`),'Refreshing daily allowance…');
+   await ev(`CrownlandsClanTreasuryUi.updateCountdown(clanContent,clanTreasuryStatus,getClanQuestServerNowMs())`);
    await screenshot(width+'-overview');assert(layout.visible&&layout.hit&&!layout.overflow&&layout.art,JSON.stringify({width,...layout}));
+   await ev(`document.querySelector('.donation-panel').scrollTop=9999`);await screenshot(width+'-allowance');
+   await ev(`document.querySelector('.donation-panel').scrollTop=0`);
    assert(await navigationVisible(), 'Treasury must keep all Clan and Rewards tabs visible and clickable.');
    assert.equal(await ev(`document.querySelector('[data-clan-reward=treasury]').getAttribute('aria-pressed')`),'true');
    for(const id of ['ct-amount','ct-amountSlider']){
@@ -69,6 +79,12 @@ const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
    assert.equal(await ev('ctq.calls.length'),3);
    await ev('clanTreasuryStatus=null;renderClanView()');assert.equal(await ev(`document.querySelector('#ct-reviewDonation').textContent`),'Retry connection');
    await screenshot(width+'-unavailable');
+   // A wealthy player can select exactly the full cap; legacy over-cap totals remain visible.
+   await ev(`ctReset();state.gold=1000000000;Object.assign(clanTreasuryStatus.allowance,{donatedToday:0,remaining:250000000});renderClanView();document.querySelector('#ct-max').click()`);
+   assert.equal(await ev(`document.querySelector('#ct-amount').value`),'250000000');
+   await ev(`Object.assign(clanTreasuryStatus.allowance,{donatedToday:300000000,remaining:0});renderClanView()`);
+   assert.equal(await ev(`document.querySelector('#ct-donatedToday').textContent`),'300,000,000');
+   assert(await ev(`document.querySelector('#ct-reviewDonation').disabled`));
    // Leaving the clan cancels any pending confirmation.
    await ev(`ctReset();document.querySelector('#ct-reviewDonation').click()`);await wait(`!!document.querySelector('.clan-treasury-confirmation[open]')`);
    await ev('resetClanTreasuryState()');await wait('!clanLedgerConfirmationOpen');assert(!await ev(`!!document.querySelector('.clan-treasury-confirmation[open]')`));

@@ -1,57 +1,48 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "5b20216dc7484e071cf4ce25d280a1401139a7a8",
+  "baseCommit": "1341647119956feeea53a65d702cfb71513205c9",
   "coverage": [
     {
       "paths": [
         "functions/index.js",
-        "functions/marauder-rules.js",
-        "functions/test/emulator-marauder-combat.js",
-        "tools/validate-marauder-rules.js"
+        "functions/holding-towers.js",
+        "firestore.indexes.json",
+        "functions/test/emulator-holding-tower-donation-concurrency.js",
+        "functions/test/emulator-holding-tower-lifecycle.js",
+        "functions/test/treasury-donation-scenarios.js",
+        "tools/test-local-postgres-treasury.js",
+        "tools/validate-holding-towers.js"
       ],
       "tests": [
-        "tools/validate-marauder-rules.js",
-        "tools/validate-clan-rallies.js",
-        "tools/validate-rally-assembly.js",
-        "tools/validate-marauder-reports.js",
-        "functions/test/emulator-marauder-combat.js",
-        "functions/test/emulator-rally-rules.js",
-        "functions/test/emulator-rally-lifecycle.js"
+        "tools/validate-holding-towers.js",
+        "tools/test-local-postgres-treasury.js",
+        "functions/test/emulator-holding-tower-donation-concurrency.js",
+        "functions/test/emulator-holding-tower-lifecycle.js",
+        "functions/test/emulator-holding-tower-rules.js"
       ],
-      "reason": "Change only balance-v2 boss departure eligibility and payouts: accept any positive contribution in 2\u20135 member rallies, freeze a separate reward policy, grant every launched member the full listed Gold/XP, preserve damage/loss allocation and individual item/box odds. Cover all 21 boss levels, legacy shared-reward departures, solo invariance, unsupported/mismatched policies, five reserved slots, stamina charging, losses including wiped participants, ordinary rally rules, recovery/returns and duplicate atomic settlement. The unchanged PostgreSQL adapter executes this same authoritative server code; no schema, queries, worker or world generation changes."
+      "reason": "Replace production-derived Treasury allowance with 250 million personal Gold per UTC day. Aggregate existing current-day/current-realm clan usage once, preserve over-cap totals, persist server-only player/day usage across clan or season changes, and use player-scoped receipts to make new donation retries safe across clan changes. Exercise actual callables against both PostgreSQL and emulators for atomic cap/Gold races, duplicate operations, disbanding, rejected amounts, UTC isolation, legacy receipt replay, current membership and private counter/receipt access. Run Tower lifecycle and rules because the shared pure helper and Treasury balance support upgrades, repair and spending. Added composite index matches the narrowly scoped legacy import query; no world-layout, permission-rule or SQL schema changes."
     },
     {
       "paths": [
-        "marauders-ui.js",
-        "tools/validate-marauders-browser.js"
+        "clan-treasury-ui.js",
+        "game.js",
+        "tools/validate-clan-treasury-browser.js"
       ],
       "tests": [
-        "tools/validate-marauders-browser.js",
-        "tools/validate-marauder-reports-browser.js",
-        "tools/validate-rally-assembly-browser.js"
+        "tools/validate-clan-treasury-browser.js",
+        "tools/validate-clan-treasury-client.js",
+        "tools/validate-clan-action-notifications-browser.js"
       ],
-      "reason": "Boss Info labels full Gold/XP per member and one-troop participation; readiness removes contribution thresholds for new policies while retaining original terms for traveling legacy-policy rallies. Verify desktop and landscape mobile sizing, scrolling and reachable actions, stale readiness, independent drops wording and unchanged scout/stamina/report and shared assembly interfaces."
+      "reason": "Display fixed allowance, actual donated totals and reset countdown using existing server-aligned clan timer. Verify desktop and three landscape sizes, scrolling, reachable confirmation, max constrained by personal Gold or remaining allowance, legacy over-cap state, retries and draft preservation. Existing Treasury client and action badge tests cover shared response/revision/session ordering, midnight refresh and notification availability; no new timer or polling endpoint."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/MARAUDER_REWARD_BALANCE_DRAFT.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [
-        "tools/validate-marauder-rules.js"
+        "tools/validate-holding-towers.js"
       ],
-      "reason": "Record the owner-confirmed override explicitly, including fivefold total payouts with five members, per-member drop probabilities, legacy departure protection and deployment pending. The immutable table is unchanged and validated for all 100 levels; no additional runtime paths arise from documentation."
-    },
-    {
-      "paths": [
-        "tools/asset-performance-budgets.js",
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "tests": [
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "reason": "The new boss departure policy and disclosures add 1,412 delivered offline-shell bytes over current main (4,605,742 total), 1,326 over its cap. Allow one bounded 2 KiB step and bound the related source group at 62 KiB (62,655 bytes). Keep all art, entry, requests and other performance limits unchanged; validate the delivered package as well as source totals."
+      "reason": "Record the explicitly approved fixed cap and cross-clan daily limit, transition behavior and reset countdown; supersede only the old production snapshot rule and label backend deployment pending."
     }
   ]
 }
