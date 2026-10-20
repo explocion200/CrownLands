@@ -17,8 +17,9 @@ those same separate scenery assets. Their interactive landmarks remain separate.
 
 Road rendering uses the existing sampled centerlines and variable widths from
 `tools/map-art/clearance.json`, including the existing landmark approaches. A
-single ribbon mask removes outline seams at junctions. Fine inside edges, wagon
-tracks and small surface marks keep the roads sharp without moving their bounds.
+single ribbon mask removes outline seams at junctions. The owner's subsequent
+[dirt-road refinement](../blended-dirt-roads/README.md) replaces the initial flat
+fill and inside edges with painted soil and irregular blended shoulders.
 The four cardinal exits continue to meet at the same neighboring-map positions.
 
 Camp source files and the content-addressed delivery manifest are in
