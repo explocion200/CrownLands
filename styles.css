@@ -1785,8 +1785,7 @@ input {
 .camp-node .camp-map-banner {
   bottom: calc(100% - 12px);
 }
-.camp-type-flag, .camp-holder-flag { display: block; width: 42px; height: 53px; object-fit: contain; }
-.camp-holder-flag .city-owner-flag { width: 100%; height: 100%; }
+.camp-type-flag { display: block; width: 42px; height: 53px; object-fit: contain; }
 .gold-camp-active-timer {
   display: flex;
   align-items: baseline;
@@ -7949,9 +7948,9 @@ html body .modal.inventory-modal .inventory-carousel .inventory-page-arrow {
 .camp-node.clan-ally .camp-art {
   filter: drop-shadow(0 0 8px rgba(146, 161, 116, .95)) drop-shadow(0 0 18px rgba(102, 122, 74, .82));
 }
-.camp-node.player .gold-camp-active-timer { color: var(--cl-text); background: var(--cl-player-owned); }
-.camp-node.enemy .gold-camp-active-timer { color: var(--cl-text-bright); background: var(--cl-burgundy); }
-.camp-node.clan-ally .gold-camp-active-timer { background: var(--cl-clan); }
+.camp-node.player :is(.city-owner-column, .gold-camp-active-timer) { color: var(--cl-text); background: var(--cl-player-owned); }
+.camp-node.enemy :is(.city-owner-column, .gold-camp-active-timer) { color: var(--cl-text-bright); background: var(--cl-burgundy); }
+.camp-node.clan-ally :is(.city-owner-column, .gold-camp-active-timer) { background: var(--cl-clan); }
 .camp-node .gold-camp-active-timer :is(small, strong) { color: inherit; text-shadow: none; }
 .holding-reinforcement-panel {
   grid-column: 1 / -1;

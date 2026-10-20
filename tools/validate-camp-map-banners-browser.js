@@ -145,8 +145,18 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
             [".city-army-count", ["fontFamily", "fontSize", "fontWeight", "lineHeight", "padding", "minWidth"]],
           ];
           const target = getCampTargetById(campBannerQa.current.id);
+          if (target.ownerUid) {
+            checks.push(
+              [".city-owner-column", ["width", "minHeight", "padding", "display", "justifyItems", "alignContent", "gap", "clipPath"]],
+              [".city-owner-flag", ["width", "height", "borderRadius", "borderWidth", "fontSize", "display", "placeItems"]],
+              [".city-owner-flag .flag-symbol", ["fontSize"]],
+            );
+          }
           return {
             pairs: checks.map(([selector, properties]) => ({selector, camp:paint(camp, selector, properties), castle:paint(castle, selector, properties)})),
+            frameColor: target.ownerUid ? getComputedStyle(camp.querySelector(".city-owner-column")).backgroundColor : null,
+            timerColor: target.ownerUid ? getComputedStyle(camp.querySelector(".city-army-count")).backgroundColor : null,
+            levelCount: camp.querySelectorAll(".city-label-level").length,
             name: camp.querySelector(".city-name").textContent, expectedName: target.name,
             ruler: camp.querySelector(".city-ruler-name").textContent,
             expectedRuler: target.ownerUid ? getCityOwnerDisplayName(target) : "Neutral camp",
@@ -154,6 +164,8 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
           };
         });
         for (const pair of comparison.pairs) assert.deepEqual(pair.camp, pair.castle, `Castle display mismatch: ${pair.selector}`);
+        assert.equal(comparison.frameColor, comparison.timerColor, "Camp flag frame must match the existing relationship color");
+        assert.equal(comparison.levelCount, 0, "Camps must not acquire a city level");
         assert.equal(comparison.name, comparison.expectedName);
         assert.equal(comparison.ruler, comparison.expectedRuler);
         assert.deepEqual(comparison.rows, ["city-ruler-row", "city-name", "gold-camp-active-timer city-army-count"]);
