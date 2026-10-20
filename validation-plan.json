@@ -37,6 +37,19 @@
     },
     {
       "paths": [
+        "functions/test/run-emulator-gates.js"
+      ],
+      "tests": [
+        "tools/test-change-risk-classifier.js",
+        "tools/test-targeted-validation.js",
+        "tools/test-safe-update-pipeline.js",
+        "tools/validate-release-gate.js",
+        "functions/test/emulator-holding-tower-donation-concurrency.js"
+      ],
+      "reason": "Run the Treasury callable regression in the current Core topology and prepare its current-season fixture, matching the production release contract. The previous synthetic transaction test did not need a realm. Cover suite selection, affected-test classification and the safe release pipeline because this changes the shared emulator runner."
+    },
+    {
+      "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [
