@@ -13,7 +13,7 @@
         "tools/validate-chat.js",
         "tools/validate-chat-translation.js"
       ],
-      "reason": "Replace the native recipient select with explicitly selected, keyboard/touch accessible in-game radio rows, preserving pagination, deduplication, retry feedback and recipient routing. Verify bounded row height, scrolling and reachable Share/Cancel at desktop and three landscape sizes, inert long names, mandatory choice, message retry identity, existing drafts and navigation. Check computed link paint and at least 4.5:1 conservative contrast in Global, Clan, private and mini-chat across resting/hover/focus/loading states. Existing chat and note-translation tests protect the shared link renderer dependencies; server calls and authorization remain unchanged."
+      "reason": "Replace the native recipient select with explicitly selected, keyboard/touch accessible in-game radio rows, preserving pagination, deduplication, retry feedback and recipient routing. Recipient name taps must not bubble into map fullscreen entry and cover the dialog. Verify bounded row height, scrolling and reachable Share/Cancel at desktop and three landscape sizes, inert long names, mandatory choice, message retry identity, existing drafts and navigation. Check computed link paint and at least 4.5:1 conservative contrast in Global, Clan, private and mini-chat across resting/hover/focus/loading states. Existing chat and note-translation tests protect the shared link renderer dependencies; server calls and authorization remain unchanged."
     },
     {
       "paths": [

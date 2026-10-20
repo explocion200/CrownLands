@@ -55,7 +55,7 @@
 // no new art, network requests, dependencies or background work.
 // Location sharing adds 19,174 delivered shell bytes (4,625,078 total), bounded
 // by 20 KiB. Reuse existing lazy artwork; resolve only on click, with no polling.
-// Readable links and an inline recipient list add 2,447 bytes (4,627,525 total).
+// Readable links and an inline recipient list add 2,622 bytes (4,627,700 total).
 // Existing headroom covers 1,866 bytes; bound the remainder at 1 KiB.
 const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024 + 2 * 1024 + 4 * 1024 + 512 + 1024 + 8 * 1024 + 12 * 1024 + 3 * 1024 + 5 * 1024 + 2 * 1024 + 20 * 1024 + 1024;
 module.exports = { MAX_INSTALL_PRECACHE_BYTES };

@@ -170,6 +170,7 @@ async function navigationChecks() {
       assert.equal(await ev('document.querySelectorAll(".chat-location-share select").length'), 0, "Recipient selection must not open a native popup");
       assert.equal(await ev('document.querySelectorAll(".chat-location-recipient b").length'), 0, "Recipient names must remain inert text");
       assert.equal(await ev('document.querySelectorAll(".chat-location-recipient input:checked").length'), 0, "A recipient must be explicitly chosen");
+      const fullscreenBefore = await ev('Boolean(document.fullscreenElement)');
       const point = await ev(() => {
         const label = document.querySelector(".chat-location-recipient"); label.scrollIntoView({ block: "nearest" });
         const r = label.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
@@ -184,6 +185,7 @@ async function navigationChecks() {
         await client.send("Input.dispatchMouseEvent", { type: "mouseReleased", ...point, button: "left", clickCount: 1 });
       }
       assert.equal(await ev('document.querySelector(".chat-location-recipient input:checked")?.value'), "bob", "Tapping the name row must select it");
+      assert.equal(await ev('Boolean(document.fullscreenElement)'), fullscreenBefore, "Recipient taps must not trigger fullscreen entry over the dialog");
       await ev('document.querySelector(".chat-location-recipients button").click()'); await delay(60);
       assert.equal(await ev('document.querySelectorAll(".chat-location-contact-list input").length'), 21);
       assert.equal(await ev('document.querySelector(".chat-location-recipient input:checked").value'), "bob", "Pagination lost selection");

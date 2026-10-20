@@ -103,6 +103,8 @@
             const choice = node("label", undefined, "chat-location-recipient"), radio = node("input");
             radio.type = "radio"; radio.name = "chat-location-recipient"; radio.value = row.peerUid;
             const name = node("span", row.player?.name || "Ruler"); name.title = name.textContent;
+            // A name-row tap selects its radio; it must not trigger map fullscreen entry.
+            choice.addEventListener("pointerup", event => event.stopPropagation());
             radio.addEventListener("change", () => {
               if (!radio.checked || busy) return;
               recipientUid = radio.value;
