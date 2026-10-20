@@ -1,6 +1,7 @@
 "use strict";
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
+const crypto = require("node:crypto");
 const M = require("./map-benchmark/seamless/model");
 const { createSeamlessFixture } = require("./map-benchmark/seamless/fixtures");
 const { AssetLoader } = require("./map-benchmark/seamless/assets");
@@ -20,7 +21,12 @@ async function main() {
     for (const city of definition.cities) {
       const o = scene.objects.find(o => o.key === M.identity(s.id, city.id));
       assert.equal(o.id, city.id); assert.deepEqual(o.local, { x: city.x, y: city.y });
-      assert.deepEqual(M.worldToLocal(s, o), o.local);
+      assert.deepEqual(M.worldToLocal(s, o), o.previewLocal);
+      assert.deepEqual(o.artLocal, { x: city.x - 21, y: city.y - 21, width: 42, height: 42 });
+      assert.ok(o.previewLocal.x >= 54 && o.previewLocal.x <= s.width - 54 && o.previewLocal.y >= 54 && o.previewLocal.y <= s.height - 54);
+      close(o.left + 21, o.x); close(o.top + 21, o.y);
+      const roads = clearance.maps.find(m => m.id === s.id).roads;
+      for (const [x, y, width] of roads.flat()) assert.ok(Math.hypot(o.previewLocal.x - x, o.previewLocal.y - y) >= 38 + width / 2, `Castle overlaps road: ${s.id}/${o.id}`);
     }
     for (const art of summary.artPresentation.landmarks) {
       const o = scene.objects.find(o => o.key === M.identity(s.id, art.id));
@@ -32,6 +38,29 @@ async function main() {
       close(o.left, s.x + art.x - art.w / 2); close(o.top, s.y + art.y - art.h / 2);
     }
     for (const p of [{ x: 0, y: 0 }, { x: 1448, y: 1086 }, { x: 724.25, y: 543.75 }]) assert.deepEqual(M.worldToLocal(s, M.localToWorld(s, p)), p);
+    const cities = scene.objects.filter(o => o.sectionId === s.id && o.kind === "castle");
+    assert.equal(cities.length, definition.cities.length);
+    for (const edge of [p => p.x <= 110, p => p.x >= s.width - 110, p => p.y <= 110, p => p.y >= s.height - 110]) {
+      assert.ok(cities.filter(o => edge(o.previewLocal)).length >= 2, `Empty city edge in ${s.name}`);
+    }
+  }
+  const cities = scene.objects.filter(o => o.kind === "castle");
+  assert.equal(cities.length, 540);
+  // Include neighbors across boundaries, not just each section in isolation.
+  for (let i = 0; i < cities.length; i++) {
+    const c = cities[i];
+    for (const other of cities.slice(i + 1)) assert.ok(Math.hypot(c.x - other.x, c.y - other.y) >= 88, "Preview castles overlap");
+    for (const o of scene.objects.filter(o => o.kind !== "castle")) assert.ok(!(c.left < o.left + o.width + 10 && c.left + c.width > o.left - 10 && c.top < o.top + o.height + 10 && c.top + c.height > o.top - 10), `Castle covers ${o.kind}: ${c.key}/${o.key}`);
+  }
+  const terrainRoot = "tools/map-benchmark/seamless/terrain/", manifest = JSON.parse(fs.readFileSync(`${terrainRoot}manifest.json`));
+  assert.equal(manifest.files.length, 18); assert.equal(manifest.gutter, 2); assert.equal(manifest.thumbnailScale, 2);
+  for (const item of [...manifest.inputs, ...manifest.files.map(f => ({ ...f, path: terrainRoot + f.name }))]) {
+    assert.equal(crypto.createHash("sha256").update(fs.readFileSync(item.path)).digest("hex"), item.sha256, `Private terrain needs rebuilding: ${item.path}`);
+  }
+  for (const s of scene.sections) {
+    assert.ok(s.terrain.startsWith(terrainRoot) && s.thumbnail.startsWith(terrainRoot), "Must not replace production terrain");
+    const full = manifest.files.find(f => terrainRoot + f.name === s.terrain), thumb = manifest.files.find(f => terrainRoot + f.name === s.thumbnail);
+    assert.deepEqual([full.width, full.height, thumb.width, thumb.height], [1452, 1090, 726, 545]);
   }
   let seams = 0, corners = 0;
   for (const s of scene.sections) for (const [dx, dy, exit, enter] of [[1, 0, { x: 1448, y: 543 }, { x: 0, y: 543 }], [0, 1, { x: 724, y: 1086 }, { x: 724, y: 0 }]]) {
@@ -96,6 +125,6 @@ async function main() {
     assert.equal((await fetch(`${address.url}/__benchmark__/?scenario=A`)).status, 200, "Existing harness entry broken");
   } finally { await server.close(); }
   for (const file of ["index.html", "app-entry.js", "game.js", "service-worker.js", "tools/build-production-client.js"]) assert.doesNotMatch(fs.readFileSync(file, "utf8"), /seamless\/preview|seamless-world|__benchmark__\/seamless/, `Prototype referenced by production: ${file}`);
-  console.log(`Seamless world: ${scene.objects.length} preserved objects, 12 seams, 4 corners, projection, six road marches, loading limits/recovery and loopback isolation passed.`);
+  console.log(`Seamless world: ${scene.objects.length} identities, 540 safely redistributed castles, private terrain provenance, 12 seams, 4 corners, projection, six road marches, loading limits/recovery and loopback isolation passed.`);
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

@@ -1,0 +1,165 @@
+{
+  "version": 1,
+  "gutter": 2,
+  "thumbnailScale": 2,
+  "width": 4344,
+  "height": 3258,
+  "inputs": [
+    {
+      "path": "docs/art-sources/clean-map-ground/ground.png",
+      "sha256": "e71312078dd946a72858f0e07c6a713fc61f58d67709865b6a79be52e819f192"
+    },
+    {
+      "path": "docs/art-sources/blended-dirt-roads/dirt-material.png",
+      "sha256": "d40a90535459a213b2cf2639c939c7c3e2b2fb38ffc5cca25a4622bdc2602e9a"
+    },
+    {
+      "path": "assets/worlds/core-expansion-v1/region-catalog.json",
+      "sha256": "13465f36679b71c5d3f7cce325f0d1a39bbb24313ea678e990300eb5de902466"
+    },
+    {
+      "path": "tools/map-art/clearance.json",
+      "sha256": "40afddb7033cf622448f212598da900c3edc1e9e61771d676f2edc9ee1868f4b"
+    },
+    {
+      "path": "tools/build-clean-map-ground.js",
+      "sha256": "f4aa1709643e3b40e8e62bf00fc813ff2459360d782c627daebc051d744de304"
+    },
+    {
+      "path": "tools/map-benchmark/seamless/model.js",
+      "sha256": "93dd326bae03391a1c82bb118f95ad8aa3069efe6ca7557b6a587988a792a538"
+    },
+    {
+      "path": "tools/map-benchmark/seamless/build-terrain.js",
+      "sha256": "777d3c76046185faaeb0ce1c95dba1f828f10086e15c4d11860ab2ffa5d404fe"
+    }
+  ],
+  "files": [
+    {
+      "name": "core-v2-warband-camp-m2-m2.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208696,
+      "sha256": "b0ae27864b158beadc5809db15a8f4c5047fad8360617c1340024b2d09228bf3"
+    },
+    {
+      "name": "core-v2-warband-camp-m2-m2-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 67658,
+      "sha256": "874002fad604851a19143fe7a021d86ee900c355d8441414d01ae705464f4cdd"
+    },
+    {
+      "name": "core-v2-relic-camp-north-west-m1-m2.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208648,
+      "sha256": "b75c951376e15b013dc628693d4f6604339390a011cb8bdfddebd15aa091c913"
+    },
+    {
+      "name": "core-v2-relic-camp-north-west-m1-m2-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65034,
+      "sha256": "80c49ca0b2614d279267d724abce3653978bec57e27bd629f836a5225a22c01b"
+    },
+    {
+      "name": "core-v2-north-support-p0-m2.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208416,
+      "sha256": "e06a7c834340e61fca684892148e1e04b03f9cf3ffa193661b9629be1f1c16b6"
+    },
+    {
+      "name": "core-v2-north-support-p0-m2-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65814,
+      "sha256": "b4c78d716a3dc5e9534383392ccf21ed943ae61db0a413ef7770ea0d4f8c557e"
+    },
+    {
+      "name": "core-v2-relic-camp-west-north-m2-m1.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208940,
+      "sha256": "fffd6116a8e0e0ca8742dabb817608ad24340d3676f5f6001ac253096c1f69b3"
+    },
+    {
+      "name": "core-v2-relic-camp-west-north-m2-m1-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66060,
+      "sha256": "6e5e9d9960ed4d3faf8701a912b7288da3be26123462da13b8389d5844dc6b6b"
+    },
+    {
+      "name": "core-v2-north-west-holding-tower-m1-m1.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 207826,
+      "sha256": "84dcf0866b475b50d914dad0e806c4729dd182b0f63de0253f5fd02aa8afd030"
+    },
+    {
+      "name": "core-v2-north-west-holding-tower-m1-m1-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65288,
+      "sha256": "a08692fcb427240f2fe0b55214c71fcc75c33db3ff92f7ceb061b64e4ec06c91"
+    },
+    {
+      "name": "core-v2-greybanner-hold-p0-m1.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 209032,
+      "sha256": "1ba6784f23752492188b1b888d4b6aea08f71e99fc0ef5b6c84338280d4b3f63"
+    },
+    {
+      "name": "core-v2-greybanner-hold-p0-m1-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66592,
+      "sha256": "0836f2bcbde08134efa80abf54dbc3082b9ef5a36d3944e9a53a10b01809521d"
+    },
+    {
+      "name": "core-v2-west-support-m2-p0.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208636,
+      "sha256": "db49361940788b233200de246d074067e8042be81ac923e16cc45d55ee2e4252"
+    },
+    {
+      "name": "core-v2-west-support-m2-p0-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66040,
+      "sha256": "05b2b5b6c413267f1a95f7a52a331924dccb4455c499fc57bc3ebc0f37867321"
+    },
+    {
+      "name": "core-v2-aurum-keep-m1-p0.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 207956,
+      "sha256": "68f5485ca97e1f17e36bb54eed448785ed837f359a91404c06285cd0ef4a2a5c"
+    },
+    {
+      "name": "core-v2-aurum-keep-m1-p0-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65678,
+      "sha256": "6b84478714ec023a5cbb16aac945a666ce94ae05878945130a1c9dc43358a98a"
+    },
+    {
+      "name": "core-v2-crown-citadel-p0-p0.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208488,
+      "sha256": "f149ebbd21f103a2d31f27611bc9717ab01a1244c63a61dd8171ebe198a98e4f"
+    },
+    {
+      "name": "core-v2-crown-citadel-p0-p0-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65294,
+      "sha256": "1d236de5fb816703095fa50bde852a09c7e8b923ec1433cc8ee787e54b20e56e"
+    }
+  ]
+}
