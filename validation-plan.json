@@ -1,52 +1,51 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "d5b43e60b254763263e2f205cad9d2a3e0178b8c",
+  "baseCommit": "803a4251d37e084dbda259447a69d1374e683a7e",
   "coverage": [
     {
       "paths": [
-        "tools/map-benchmark/seamless/assets.js",
-        "tools/map-benchmark/seamless/fixtures.js",
-        "tools/map-benchmark/seamless/index.html",
-        "tools/map-benchmark/seamless/model.js",
-        "tools/map-benchmark/seamless/preview.css",
-        "tools/map-benchmark/seamless/preview.js",
-        "tools/map-benchmark/seamless/terrain/manifest.json",
-        "tools/map-benchmark/server.js",
-        "tools/map-benchmark/seamless/build-catalog-overview.js",
-        "tools/map-benchmark/seamless/catalog-feed.js",
-        "tools/map-benchmark/seamless/feed.js",
-        "tools/map-benchmark/seamless/terrain/catalog-overview.json",
-        "tools/map-benchmark/seamless/terrain/catalog-overview.webp",
-        "tools/validate-seamless-catalog-browser.js",
-        "tools/validate-seamless-catalog.js",
-        "tools/map-benchmark/seamless/phone-server.js",
-        "tools/validate-seamless-phone-preview.js"
+        "tools/map-benchmark/seamless/delta-feed.js",
+        "tools/map-benchmark/seamless/realm-store.js",
+        "tools/map-benchmark/seamless/stage-three-server.js",
+        "tools/map-benchmark/seamless/stage-three-login.js",
+        "tools/test-local-postgres-world-stream.js",
+        "tools/test-local-postgres-world-browser.js"
       ],
       "tests": [
-        "tools/validate-seamless-world.js",
-        "tools/validate-seamless-world-browser.js",
-        "tools/validate-seamless-catalog.js",
-        "tools/validate-seamless-catalog-browser.js",
-        "tools/validate-map-benchmark.js",
-        "tools/validate-production-artifact.js",
-        "tools/validate-seamless-phone-preview.js"
+        "tools/test-local-auth-service.js",
+        "tools/test-local-postgres-world-stream.js",
+        "tools/test-local-postgres-world-browser.js",
+        "tools/validate-production-artifact.js"
       ],
-      "reason": "Full-catalog private fixtures affect camera bounds, original identity/coordinates, city placement, terrain provenance, bounded image/area residency, selection and troop following. Validate every one of the 81 definitions, 3720 cities, 144 joins and 64 corners; synthetic versioned ownership/troop updates, stale response rejection, slow/offline/reconnect, repeated full-world visits with GC heap/DOM/listener bounds, overview eviction and desktop/landscape touch. Shared renderer changes require the original nine-section seam/road, zoom sharpness, exact selection and interaction regression. Shared loopback server and image scheduler require existing map benchmark regression; production artifact validation proves all tool-only code/assets are excluded from shipping. No production APIs, gameplay authority, data contracts or emulator behavior change. The optional Android home-Wi-Fi test endpoint must bind a private interface, expose only explicit scene assets and fictional read-only endpoints, reject arbitrary repository/live paths and cross-origin/foreign-host requests, render through its exact origin, and expire automatically. The unrestricted benchmark server remains loopback-only."
+      "reason": "Isolated Stage 3 fixture realm reuses existing PostgreSQL Store/AuthService contracts but never production accounts or live game authority. Test fresh schema boundaries and cleanup, auth/session revocation including in-flight reads, Host/Origin/route/method guards, per-account army visibility, atomic snapshot cursors and versioned changes, explicit removals, bounded event retention/fallback, epoch/stale-response recovery and overview cache restoration. Browser tests exercise actual sign-in, cross-boundary follow, visibility loss, ownership/deletion, offline resume, landscape touch, repeated area visits and performance. Production build/artifact check proves the private service and preview remain excluded; no functions or live gameplay contracts change, so no new emulator suite applies."
     },
     {
       "paths": [
-        "docs/CONTINUOUS_WORLD_PROTOTYPE.md",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CONTINUOUS_WORLD_STAGE_TWO_TESTS.md"
+        "tools/map-benchmark/seamless/preview.js",
+        "tools/map-benchmark/seamless/preview.css"
       ],
       "tests": [
         "tools/validate-seamless-world.js",
         "tools/validate-seamless-world-browser.js",
         "tools/validate-seamless-catalog.js",
         "tools/validate-seamless-catalog-browser.js",
-        "tools/validate-seamless-phone-preview.js"
+        "tools/validate-seamless-phone-preview.js",
+        "tools/validate-map-benchmark.js",
+        "tools/test-local-postgres-world-browser.js"
       ],
-      "reason": "Document the explicitly authorized private Stage 2 tests, measured results and remaining physical-device, bandwidth, renderer and artwork limits. Preserve distinction between prepared catalog sections and active live maps, and between fictional test transport and authenticated multiplayer. No production release or gameplay rule changes."
+      "reason": "Shared preview gains opt-in authenticated delta transport, epoch-aware prepared routes, server-relative patrol clock, authoritative deletion/permission-loss selection handling, login styles and session controls. Regress the original nine-section and 81-section previews, all seams/corners, anchored zoom, drag/selection/follow, sharpness, image-fault handling, stale loading, residency, repeated world traversals and desktop/landscape layouts. The separate account-free phone endpoint and ordinary loopback benchmark must still work. No production renderer, city positions, assets or travel behavior change."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/CONTINUOUS_WORLD_STAGE_THREE.md",
+        "docs/CONTINUOUS_WORLD_STAGE_TWO_TESTS.md"
+      ],
+      "tests": [
+        "tools/test-local-postgres-world-stream.js",
+        "tools/test-local-postgres-world-browser.js"
+      ],
+      "reason": "Record the confirmed first Stage 3 milestone, actual Android Stage 2 feedback, temporary access/lifecycle, bounded private data contract and measured limits. Keep full live visibility parity, constrained-device rendering, outer terrain seams and release controls explicit remaining gates. Documentation does not grant production cutover or claim the private fixture is multiplayer-ready."
     }
   ]
 }

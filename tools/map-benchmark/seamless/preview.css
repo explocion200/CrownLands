@@ -66,3 +66,10 @@ nav button{padding:4px 6px}
 
 #world.overview .object .tag{display:none}
 #marches.overview .object .tag{display:none}
+
+/* The isolated Stage 3 service supplies temporary sample-account credentials. */
+.fixture-login {display:grid;place-items:center;min-height:100dvh;height:auto;overflow:auto}
+.fixture-login main {max-width:28rem;padding:2rem;background:#eee2c4;color:#392f24;border:2px solid #8b7044}
+.fixture-login label {display:grid;gap:.4rem;margin:1rem 0}
+.fixture-login input {font:inherit;padding:.6rem;min-width:0;border:1px solid #8b7044;background:#fff9ec}
+.fixture-login button {margin-top:.5rem}
