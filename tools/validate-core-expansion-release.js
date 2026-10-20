@@ -9,6 +9,7 @@ const { extractFunction } = require("./world-travel-test-fixtures.js");
 const topology = require("../functions/coreExpansionTopology.js");
 const realmTopology = require("../functions/realmTopology.js");
 const regionCatalogRuntime = require("../region-catalog.js");
+const { projectCampArtwork } = require("./sync-core-expansion-assets.js");
 
 const root = path.resolve(__dirname, "..");
 const readJson = relativePath => JSON.parse(fs.readFileSync(path.join(root, relativePath), "utf8"));
@@ -50,8 +51,9 @@ const browserJsonCatalog = readJson("assets/worlds/core-expansion-v1/region-cata
 const browserCatalog = JSON.parse(read("assets/worlds/core-expansion-v1/region-catalog.js")
   .match(/Object\.freeze\((\{[\s\S]*\})\);/)?.[1] || "null");
 const receipt = readJson("assets/worlds/core-expansion-v1/build-receipt.json");
-assert.deepEqual(browserCatalog, catalog);
-assert.deepEqual(browserJsonCatalog, catalog);
+assert.deepEqual(browserCatalog, { ...projectCampArtwork(catalog), assetVersion: browserCatalog.assetVersion },
+  "Only approved camp-art references and the browser asset version may differ from the server catalog.");
+assert.deepEqual(browserJsonCatalog, browserCatalog);
 assert.deepEqual(regionCatalogRuntime.validateCatalog(catalog), []);
 assert.equal(layout.maps.length, 81);
 assert.equal(catalog.regions.length, 81);
@@ -62,12 +64,12 @@ assert.equal(receipt.preparedSecondLayerMapCount, 32);
 assert.equal(receipt.newLandsMapCount, 56);
 assert.equal(receipt.newLandsCityCount, 2240);
 assert.equal(receipt.objectiveCount, 17);
-assert.equal(receipt.catalogHash, hash(catalog));
+assert.equal(receipt.catalogHash, hash(browserCatalog));
 assert.equal(receipt.worldLayoutHash, hash(layout));
 assert.match(catalog.assetVersion, /^[0-9a-f]{12}$/);
-assert.equal(catalog.assetVersion, hash(receipt.assets).slice(0, 12));
+assert.equal(browserCatalog.assetVersion, hash(receipt.assets).slice(0, 12));
 assert.equal(layout.assetVersion, catalog.assetVersion);
-assert.equal(receipt.assetVersion, catalog.assetVersion);
+assert.equal(receipt.assetVersion, browserCatalog.assetVersion);
 assert.equal(catalog.version, 2026090201);
 assert.equal(layout.version, 2026090201);
 assert.deepEqual(layout.globalSettings, catalog.globalSettings,

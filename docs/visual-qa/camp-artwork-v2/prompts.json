@@ -1,0 +1,27 @@
+{
+  "mode": "Built-in image_gen",
+  "common": "Use case: stylized-concept.\nAsset type: one standalone medieval strategy-game camp map sprite, part of a coordinated four-camp set for Crownlands.\nInput image 1 is a STYLE REFERENCE ONLY. Create a new camp scene matching the uploaded map's small hand-drawn buildings: fine irregular dark brown ink outlines, dry watercolor/gouache shading, restrained olive grass, ochre canvas and earth, weathered timber and warm gray stone. Illustrated medieval atlas aesthetic, not photorealistic, not glossy 3D.\nCamera: elevated three-quarter map view, seeing roofs and fronts, approximately 45-degree downward view. Compact readable cluster, all elements fully in frame. Square composition with 8% clear padding, camp fills about 80% width. Soft daylight from upper left. Consistent miniature building scale. Use a small irregular olive-grass and earth footprint under the camp with scattered stones, edges ending naturally into genuine transparent alpha. No large scenery, backdrop, sky or horizon. NO checkerboard painted into the image.\nNo walls, castle fortifications, embedded flags or flagpoles, floating symbols, UI, text, captions, lettering, watermarks, glowing magic, modern objects or visible people. Clear silhouette and a few large readable shapes, suitable for reduction to a small map marker. It is a camp scene, not an emblem or banner.",
+  "subjects": [
+    {
+      "key": "gold",
+      "name": "Gold Camp",
+      "subject": "A medieval GOLD CAMP: a modest ochre-and-dark-navy canvas counting pavilion with open front, two small canvas storage tents, stout timber trestle displaying clearly visible gold coins and small ingots, an iron-bound open chest with gold, two tied coin sacks, and a small wooden two-wheel cargo cart beside the tent. The central warm gold counting table and chest communicate wealth at small size. All objects are naturally camp-scale, not oversized floating icons. Keep gold matte and the buildings rustic."
+    },
+    {
+      "key": "troops",
+      "name": "Warband Camp",
+      "subject": "A medieval WARBAND CAMP that rewards troops: a large muted burgundy-and-ochre command tent with two smaller soldier tents arranged around a compact dirt muster yard, a simple timber rack of spears and shields, bundled bedrolls and supply barrels, a round practice target and modest wooden watch platform. Prominent crossed swords on a plain shield leaning against the command tent, physically within the scene. The readable tent formation and military equipment identify the camp; no soldiers or fortified walls."
+    },
+    {
+      "key": "items",
+      "name": "Relic Camp",
+      "subject": "A medieval RELIC CAMP that awards useful items: a weathered muted purple-and-parchment canvas antiquarian pavilion and two small supply tents, an open iron-bound treasure chest, a timber display bench with an old round shield, curled brass recall horn, rolled parchment and a war drum, a few wooden crates and ceramic vessels. A low broken warm-gray stone arch at the rear suggests a recovered relic site, not a temple or magical portal. The chest and collected equipment should read clearly without clutter. No glow, runes or fantasy crystals."
+    },
+    {
+      "key": "deed",
+      "name": "Deed Camp",
+      "subject": "A medieval DEED CAMP where a land charter grants a city: a sage-green-and-ochre canvas surveyors' pavilion beside a tiny half-timber land registry hut with weathered golden thatch, a large wooden drafting desk with an unlettered parchment map, two visibly rolled charter scrolls tied with red wax seals, a surveyor's simple wooden tripod, measuring poles, a small chest for documents, and three modest boundary stones. Land maps, scrolls and a small civic hut identify this as a land-claim camp rather than a military or treasure camp. No readable text on the parchments."
+    }
+  ],
+  "createdFor": "New camp scene artwork requested October 20, 2026"
+}

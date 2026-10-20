@@ -10,6 +10,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
   assert(executable, "Chromium required");
   const output = path.resolve(__dirname, "../release-artifacts/camp-map-banners");
   fs.mkdirSync(output, { recursive: true });
+  const artwork = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../docs/visual-qa/camp-artwork-v2/assets.json"), "utf8")).assets;
   const server = createMapBenchmarkServer(), address = await server.listen();
   let browser, client; const errors = [], results = [];
   try {
@@ -83,6 +84,45 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       assert.equal(flag.width, 84); assert.equal(flag.height, 106);
       assert(flag.transparent > 0 && flag.nearOpaque > flag.width * flag.height * .3, JSON.stringify(flag));
     }
+    for (const asset of artwork) {
+      const decoded = await ev(`(async () => {
+        const img=new Image(); img.src=${JSON.stringify(asset.output)}; await img.decode();
+        return [img.naturalWidth,img.naturalHeight];
+      })()`);
+      assert.deepEqual(decoded, [384,384], "Camp art must decode at its bounded delivery size");
+      const atlas = await ev(`(() => {
+        const regions=REGION_CATALOG.regions.filter(region=>region.artPresentation?.landmarks?.some(item=>item.kind==="camp"&&item.asset===${JSON.stringify(asset.output)}));
+        return regions.map(region=>{
+          const node=document.createElement("div");
+          node.innerHTML=renderIllustratedMapThumbnail(region.id,region.thumbnailAsset);
+          return [...node.querySelectorAll(".map-thumbnail-landmark")].some(img=>img.getAttribute("href")===${JSON.stringify(asset.output)});
+        });
+      })()`);
+      assert(atlas.length > 0 && atlas.every(Boolean), "Atlas previews must use the approved camp painting");
+    }
+    // The installed server still carries the original presentation paths.
+    // Exercise its real descriptor shape, twice, as at login and realm refresh.
+    const oldRegions = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../functions/core-expansion-region-catalog.json"), "utf8"))
+      .regions.filter(region => region.artPresentation?.landmarks?.some(item => item.kind === "camp"));
+    const refreshedAtlas = await ev(`(() => {
+      const descriptors=${JSON.stringify(oldRegions)};
+      descriptors[0].artPresentation.landmarks.find(item=>item.kind==="camp").x+=1;
+      registerCoreExpansionRegions(descriptors); registerCoreExpansionRegions(descriptors);
+      return descriptors.map(region=>{
+        const before=region.artPresentation.landmarks.find(item=>item.kind==="camp");
+        const current=getIllustratedMapPresentation(region.id).landmarks.find(item=>item.id===before.id);
+        return {old:before.asset,paint:current.asset,x:current.x,expectedX:before.x,
+          preview:renderIllustratedMapThumbnail(region.id,region.thumbnailAsset)};
+      });
+    })()`);
+    assert.equal(refreshedAtlas.length, 12);
+    for (const refreshed of refreshedAtlas) {
+      const asset = artwork.find(item => item.replaces === refreshed.old);
+      assert(asset);
+      assert.equal(refreshed.paint, asset.output);
+      assert.equal(refreshed.x, refreshed.expectedX, "Server position updates must still apply");
+      assert(refreshed.preview.includes(asset.output) && !refreshed.preview.includes(asset.replaces));
+    }
     const verifyFlag = flag => {
       assert.equal(flag.width, 42); assert.equal(flag.height, 53);
       assert.deepEqual(flag.actual, flag.expected, "Camp must display the current holder's actual heraldry");
@@ -124,6 +164,8 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         verifyFlag(layout.flag);
         if(mode==="neutral") assert(layout.flag.typeSrc.endsWith(`camp-${["gold","troops","items","deed"][i]}-v2.webp`));
         assert(layout.flagLoaded, "Camp flag did not load");
+        const painting = artwork.find(a => a.type === ["gold","troops","items","deed"][i]);
+        assert.equal(await ev('cityLayer.querySelector(".camp-node .camp-art").getAttribute("src")'), painting.output);
         assert.equal(layout.timerHidden, mode==="neutral"); assert.equal(layout.ownerFlags, 0, "Small owner flag must remain removed");
         assert.equal(layout.hasDeedRing, i===3);
         if(mode==="contested") assert(/contested/i.test(layout.timer));
@@ -186,6 +228,31 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         assert(await ev('Boolean(document.querySelector(".gold-camp-action-wheel .camp-info-action"))'), "Camp actions missing");
         const shot=await client.send("Page.captureScreenshot",{format:"png"});
         fs.writeFileSync(path.join(output,`${["gold","troops","items","deed"][i]}-${width}.png`),Buffer.from(shot.data,"base64"));
+        // Real camp windows and both compact UI renderers must use the same
+        // painting, including an old held snapshot received before map loading.
+        const surfaces = await ev(`(async () => {
+          const id=campBannerQa.current.id, old=${JSON.stringify(painting.replaces)};
+          const saved=WORLD_CAMPS_BY_ID.get(id), snapshot=onlineCampStates.get(id);
+          onlineHeldCampStates.set(id,{...saved,...snapshot,artSrc:old});
+          WORLD_CAMPS_BY_ID.delete(id);
+          const held=getCampTargetById(id);
+          WORLD_CAMPS_BY_ID.set(id,saved); onlineHeldCampStates.delete(id);
+          const detached=document.createElement("div");
+          detached.innerHTML=renderHeldCampView(held)+renderTroopOrderLocation(held,"To","",false);
+          const sources=[held.artSrc,...[...detached.querySelectorAll(".camp-art,.location-art")].map(img=>img.getAttribute("src"))];
+          showRewardCampInfoModal(id);
+          const portrait=modalBody.querySelector(".camp-portrait img"); await portrait.decode();
+          sources.push(portrait.getAttribute("src"));
+          const b=modal.getBoundingClientRect();
+          return {sources,overflow:modalBody.scrollWidth-modalBody.clientWidth,
+            inside:b.left>=-1&&b.top>=-1&&b.right<=innerWidth+1&&b.bottom<=innerHeight+1};
+        })()`);
+        assert.deepEqual(surfaces.sources, Array(4).fill(painting.output));
+        assert(surfaces.inside && surfaces.overflow <= 1, JSON.stringify(surfaces));
+        await delay(250); // Capture the completed modal entrance transition.
+        const detailShot=await client.send("Page.captureScreenshot",{format:"png"});
+        fs.writeFileSync(path.join(output,`details-${painting.type}-${width}.png`),Buffer.from(detailShot.data,"base64"));
+        await ev('modal.close()');
         // Countdown ticks keep the same flag/banner DOM and update only text.
         await ev(() => {
           campBannerQa.node = cityLayer.querySelector(".camp-map-banner");

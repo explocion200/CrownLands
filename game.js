@@ -2964,7 +2964,16 @@ function isWorldRegionRuntimeActive(regionId) {
 function registerCoreExpansionRegions(regions = []) {
   if (!CORE_EXPANSION_TOPOLOGY_ACTIVE || !REGION_DEFINITION_LOADER?.register) return false;
   const descriptors = (Array.isArray(regions) ? regions : [])
-    .filter(region => region?.id);
+    .filter(region => region?.id)
+    .map(region => {
+      const paintings = REGION_CATALOG_SUMMARIES_BY_ID.get(cleanEditorRegionId(region.id))?.artPresentation?.landmarks;
+      if (!region.artPresentation?.landmarks || !paintings?.some(item => item.kind === "camp")) return region;
+      // Server refreshes own locations; the client owns the current camp paint.
+      return { ...region, artPresentation: { ...region.artPresentation,
+        landmarks: region.artPresentation.landmarks.map(item => item.kind === "camp"
+          ? { ...item, asset: paintings.find(local => local.id === item.id)?.asset || item.asset } : item),
+      } };
+    });
   if (!descriptors.length) return false;
   REGION_DEFINITION_LOADER.register(descriptors);
   editorMapCache.clear();
@@ -18253,6 +18262,8 @@ function getCampTargetById(campId) {
     kind: config.kind,
     targetType: "camp",
     campType: config.type,
+    // Resolve old or unloaded-map snapshots to current artwork.
+    artSrc: getCampConfigForType(config.type).artSrc,
     rewardType: config.rewardType,
     holdDurationMs: config.holdSeconds * 1000,
     rewardSchedule: config.rewardSchedule,
