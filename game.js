@@ -29349,7 +29349,7 @@ function renderCitiesUncached(force = false) {
         ${deedHold && camp.ownerUid ? `<span class="deed-hold-ring" aria-hidden="true"><span class="deed-hold-seal">D</span></span>` : ""}
         <span class="camp-map-banner city-label player-city-label">
           <span class="player-city-banner">
-            ${camp.ownerUid ? `<span class="camp-holder-flag">${renderCityOwnerFlag(camp)}</span>` : `<img class="camp-type-flag" src="assets/icons/camps/camp-${campConfig.type}-v2.webp" width="42" height="53" alt="" draggable="false" decoding="async" />`}
+            ${camp.ownerUid ? `<span class="camp-holder-flag city-owner-column">${renderCityOwnerFlag(camp)}</span>` : `<img class="camp-type-flag" src="assets/icons/camps/camp-${campConfig.type}-v2.webp" width="42" height="53" alt="" draggable="false" decoding="async" />`}
             <span class="player-city-data">
               <span class="city-ruler-row"><strong class="city-ruler-name">${escapeHtml(camp.ownerUid ? getCityOwnerDisplayName(camp) : "Neutral camp")}</strong></span>
               <strong class="city-name">${escapeHtml(camp.name)}</strong>

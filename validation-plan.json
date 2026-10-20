@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "356a1ac1f676a3dfdee088b7bc03dc0afcfff962",
+  "baseCommit": "9945740f94be1181117f92dc5c1db513e4a4ae6f",
   "coverage": [
     {
       "paths": [
@@ -12,10 +12,9 @@
         "tools/validate-camp-map-banners-browser.js",
         "tools/validate-city-map-reconciliation-browser.js",
         "tools/validate-player-flags.js",
-        "tools/validate-player-identity-browser.js",
         "tools/validate-reward-camp-lifecycle.js"
       ],
-      "reason": "Switch neutral camp type artwork to the current holder's personal heraldry using the existing castle flag renderer and identity resolution. Check actual colors, pattern, symbol and stable owner key for own/rival/contested camps, capture/ownership transfer, cached profile flag changes and return to each neutral camp type using normal render invalidation. Verify unchanged 42x53 slots, castle typography, timer-only DOM reuse, removal of the small pole flag, selection and zoom at desktop and landscape-phone sizes. Shared city reconciliation, flag, player identity and camp lifecycle checks cover reused dependencies; the production build and asset gates verify packaging. Presentation only: no server logic, authority, camp rewards or data changes, so no emulator suites are required."
+      "reason": "Reuse the actual castle owner-column frame for held camps and remove the full-slot flag stretch. Compare computed frame shape, padding, layout and inset flag dimensions/border/symbol size with a real castle at desktop and landscape-mobile sizes. Check unchanged 42x53 slot, relationship-color parity with the existing camp timer, no invented city level, neutral artwork, holder identity/flag edits, captures/transfers/resets, timer DOM reuse, selection and zoom. Shared city renderer, player flag and camp lifecycle validators protect affected dependencies. Production/asset gates remain required. Presentation only: no backend, authority, rewards or player-data changes, so no emulator suites apply."
     },
     {
       "paths": [
@@ -24,7 +23,7 @@
       "tests": [
         "tools/validate-camp-map-banners-browser.js"
       ],
-      "reason": "Record the explicit owner instruction: neutral camps use type banners and held camps use the player's flag in the same slot. Supersede the prior fixed-type display without restoring the small pole flag; keep publication contingent on verification."
+      "reason": "Record the explicitly requested castle-style pointed frame and inset flag proportions, preserving held/neutral flag selection and the compact footprint. Reference verified PR 649 behavior and keep this visual refinement conditional on its own publication verification."
     }
   ]
 }
