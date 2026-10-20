@@ -2,6 +2,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const M = require("./model");
+const { spreadCities } = require("./layout");
 const ROOT = path.resolve(__dirname, "../../..");
 const read = file => JSON.parse(fs.readFileSync(path.join(ROOT, file), "utf8"));
 
@@ -15,23 +16,28 @@ function createSeamlessFixture(crowded = false) {
     const definition = read(r.regionDefinitionPath);
     if (definition.width !== M.TILE.width || definition.height !== M.TILE.height) throw new Error("Unexpected section footprint.");
     return { id: r.id, name: r.name, gridX: r.gridX, gridY: r.gridY, ...M.offset(r), width: definition.width, height: definition.height,
-      terrain: r.mapAsset, thumbnail: r.thumbnailAsset, definition, art: r.artPresentation,
+      terrain: `tools/map-benchmark/seamless/terrain/${r.id}.webp`, thumbnail: `tools/map-benchmark/seamless/terrain/${r.id}-thumb.webp`, definition, art: r.artPresentation,
       roads: clearance.maps.find(m => m.id === r.id).roads };
   });
   if (sections.length !== 9) throw new Error("Preview requires nine unique Core sections.");
   const objects = [];
   const owners = ["Lady Rowan · sample", "Sir Alder · sample", "House Ember · sample", "Neutral · sample"];
-  function add(section, raw, kind, asset, width, height, left, top, index) {
-    const point = M.localToWorld(section, raw);
+  function add(section, raw, kind, asset, width, height, left, top, index, previewLocal = { x: raw.x, y: raw.y }) {
+    const point = M.localToWorld(section, previewLocal), dx = previewLocal.x - raw.x, dy = previewLocal.y - raw.y;
     objects.push({ key: M.identity(section.id, raw.id), id: raw.id, sectionId: section.id, sectionName: section.name,
-      name: raw.name || raw.type, kind, local: { x: raw.x, y: raw.y }, artLocal: { x: left, y: top, width, height }, ...point,
-      left: section.x + left, top: section.y + top, width, height, asset,
+      name: raw.name || raw.type, kind, local: { x: raw.x, y: raw.y }, previewLocal, artLocal: { x: left, y: top, width, height }, ...point,
+      left: section.x + left + dx, top: section.y + top + dy, width, height, asset,
       owner: owners[index % owners.length], troops: 1250 + (index * 7919) % 850000, selectable: kind !== "scenery" });
   }
   for (const section of sections) {
+    const seasonal = (halloween.maps[section.id] || []).map(([assetIndex, x, y], i) => {
+      const a = halloween.assets[assetIndex]; return { id: `sample-halloween-${i}`, name: "Autumn scenery", x, y, width: a.w, height: a.h, asset: a.src };
+    });
+    const obstacles = [...section.art.landmarks, ...section.art.scenery.map(a => ({ x: a.x - a.w / 2, y: a.y - a.h / 2, width: a.w, height: a.h })), ...seasonal];
+    const positions = spreadCities(section, obstacles);
     section.definition.cities.forEach((city, i) => {
       const stage = 1 + i % 5;
-      add(section, city, "castle", catalog.mapPresentation.cityStageAssets[stage], 42, 42, city.x - 21, city.y - 21, i);
+      add(section, city, "castle", catalog.mapPresentation.cityStageAssets[stage], 42, 42, city.x - 21, city.y - 21, i, positions.get(city.id));
     });
     section.art.landmarks.forEach((item, i) => {
       const original = [...section.definition.camps, ...section.definition.strongholds].find(o => o.id === item.id);
@@ -40,10 +46,7 @@ function createSeamlessFixture(crowded = false) {
     });
     section.art.scenery.forEach((item, i) => add(section, item, "scenery", item.asset, item.w, item.h, item.x - item.w / 2, item.y - item.h / 2, i));
     // Fixed October art fixture, independent of the host clock or live account.
-    (halloween.maps[section.id] || []).forEach(([assetIndex, x, y], i) => {
-      const a = halloween.assets[assetIndex];
-      add(section, { id: `sample-halloween-${i}`, name: "Autumn scenery", x, y }, "scenery", a.src, a.w, a.h, x, y, i);
-    });
+    seasonal.forEach((a, i) => add(section, a, "scenery", a.asset, a.width, a.height, a.x, a.y, i));
   }
   // Six routes use the exact painted polylines approaching opposite sides of
   // three horizontal and three vertical seams. Ping-pong avoids teleport loops.

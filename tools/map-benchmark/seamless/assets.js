@@ -11,7 +11,7 @@
       this.peakRequests = 0; this.peakFull = 0; this.disposed = false;
     }
     static async load(path, signal) {
-      if (!/^assets\/[a-zA-Z0-9_./-]+\.(webp|png|svg)$/.test(path) || path.includes("..")) throw new Error("Non-asset URL refused");
+      if (!/^(assets\/[a-zA-Z0-9_./-]+\.(webp|png|svg)|tools\/map-benchmark\/seamless\/terrain\/[a-z0-9-]+\.webp)$/.test(path) || path.includes("..")) throw new Error("Non-asset URL refused");
       const response = await fetch(`/${path}`, { signal, credentials: "omit" });
       if (!response.ok) throw new Error(`Image HTTP ${response.status}`);
       const url = URL.createObjectURL(await response.blob());

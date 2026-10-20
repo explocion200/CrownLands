@@ -31,8 +31,9 @@
     }
     for (const section of scene.sections) {
       const tile = document.createElement("div"); tile.className = "tile"; tile.dataset.section = section.id;
-      tile.style.cssText = `left:${section.x}px;top:${section.y}px;width:${section.width + (section.gridX < 0 ? 1 : 0)}px;height:${section.height + (section.gridY < 0 ? 1 : 0)}px`;
+      tile.style.cssText = `left:${section.x}px;top:${section.y}px;width:${section.width}px;height:${section.height}px`;
       const thumb = new Image(), full = new Image(); thumb.alt = ""; full.alt = "";
+      full.className = "full-terrain";
       const label = document.createElement("span"); label.className = "section-label"; label.textContent = section.name;
       tile.append(thumb, full, label); $("terrain").append(tile); terrain.set(section.id, { tile, thumb, full });
     }
@@ -134,7 +135,7 @@
       const ordered = [...scene.sections].sort((a, b) => Math.hypot(a.x + 724 - camera.x, a.y + 543 - camera.y) - Math.hypot(b.x + 724 - camera.x, b.y + 543 - camera.y));
       const visibleSections = ordered.filter(s => M.intersects(exact, s.x, s.y, s.width, s.height));
       const fullSections = overview ? [] : [...visibleSections, ...ordered.filter(s => !visibleSections.includes(s))].slice(0, 4);
-      const visibleObjects = scene.objects.filter(o => (!overview || !["castle", "scenery"].includes(o.kind)) && M.intersects(view, o.left, o.top, o.width, o.height));
+      const visibleObjects = scene.objects.filter(o => (!overview || o.kind !== "scenery") && M.intersects(view, o.left, o.top, o.width, o.height));
       const visibleMarches = marches.filter(m => M.intersects(view, m.position.x - 18, m.position.y - 18, 36, 36));
       const requests = ordered.map((s, i) => ({ path: s.thumbnail, kind: "thumbnail", priority: visibleSections.includes(s) ? i : 100 + i }));
       fullSections.forEach((s, i) => requests.push({ path: s.terrain, kind: "full", priority: visibleSections.includes(s) ? 10 + i : 150 + i }));
@@ -143,8 +144,8 @@
       if (plan !== lastPlan) { assets.update(requests); lastPlan = plan; }
       for (const section of scene.sections) {
         const tile = terrain.get(section.id); setImage(tile.thumb, section.thumbnail); setImage(tile.full, section.terrain);
-        // Scale labels without relaying out text on every zoom frame. Tile edge
-        // overlap is fixed at construction, never resized during navigation.
+        // Scale labels without relaying out text on every zoom frame. Authored
+        // matching gutters cover fractional sampling without stretching terrain.
         tile.tile.lastChild.style.transform = `translateX(-50%) scale(${Math.max(1, 11 / (20 * camera.zoom))})`;
       }
       const visibleKeys = new Set([...visibleObjects, ...visibleMarches].map(o => o.key));

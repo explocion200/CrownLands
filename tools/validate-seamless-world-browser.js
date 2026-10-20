@@ -51,6 +51,56 @@ async function main() {
   };
   await resize({ width: 1440, height: 900 });
   try {
+    // Separate, inert same-origin document: compare authored gutters before the
+    // interactive preview starts. Only two temporary images are decoded at once.
+    await cdp.send("Page.navigate", { url: `${address.url}/__benchmark__/seamless/fixture` });
+    await sleep(100);
+    const seamPixels = await evaluate(async () => {
+      const scene = await (await fetch("/__benchmark__/seamless/fixture")).json();
+      const results = [];
+      for (const key of ["terrain", "thumbnail"]) for (const s of scene.sections) for (const [dx, dy] of [[1, 0], [0, 1]]) {
+        const n = scene.sections.find(n => n.gridX === s.gridX + dx && n.gridY === s.gridY + dy); if (!n) continue;
+        const overlap = key === "terrain" ? 4 : 2;
+        const a = await createImageBitmap(await (await fetch(`/${s[key]}`)).blob());
+        const b = await createImageBitmap(await (await fetch(`/${n[key]}`)).blob());
+        const canvas = document.createElement("canvas"); canvas.width = dx ? overlap : a.width; canvas.height = dy ? overlap : a.height;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        ctx.drawImage(a, dx ? a.width - overlap : 0, dy ? a.height - overlap : 0, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+        const left = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(b, 0, 0, canvas.width, canvas.height, 0, 0, canvas.width, canvas.height);
+        const right = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        let max = 0, total = 0; for (let i = 0; i < left.length; i++) { const delta = Math.abs(left[i] - right[i]); max = Math.max(max, delta); total += delta; }
+        results.push({ a: s.name, b: n.name, key, maxChannelDifference: max, meanChannelDifference: total / left.length });
+        a.close(); b.close(); canvas.width = canvas.height = 0;
+      }
+      return results;
+    });
+    assert.equal(seamPixels.length, 24);
+    for (const seam of seamPixels) assert.ok(seam.meanChannelDifference < 3 && seam.maxChannelDifference < 40, `Painted seam discontinuity: ${JSON.stringify(seam)}`);
+    fs.writeFileSync(path.join(output, "seam-pixels.json"), JSON.stringify(seamPixels, null, 2) + "\n");
+    console.log(`Terrain: all 12 full-detail and thumbnail joins match within compression tolerance; worst mean channel difference ${Math.max(...seamPixels.map(s => s.meanChannelDifference)).toFixed(2)}/255.`);
+    const previewIds = new Set(require("./map-benchmark/seamless/fixtures").createSeamlessFixture().sections.map(s => s.id));
+    const roadSamples = require("./map-art/clearance.json").maps.filter(m => previewIds.has(m.id));
+    const roadResult = await evaluate(async maps => {
+      const scene = await (await fetch("/__benchmark__/seamless/fixture")).json();
+      let tested = 0; const failures = [];
+      for (const s of scene.sections) {
+        const bitmap = await createImageBitmap(await (await fetch(`/${s.terrain}`)).blob());
+        const canvas = document.createElement("canvas"); canvas.width = bitmap.width; canvas.height = bitmap.height;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true }); ctx.drawImage(bitmap, 0, 0);
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        for (const [x, y] of maps.find(m => m.id === s.id).points) {
+          const i = ((Math.min(1085, Math.round(y)) + 2) * canvas.width + Math.min(1447, Math.round(x)) + 2) * 4;
+          const [r, g, b] = data.slice(i, i + 3); tested++;
+          if (!(r > g + 5 && b > g * .5)) failures.push({ section: s.name, x, y, r, g, b });
+        }
+        bitmap.close(); canvas.width = canvas.height = 0;
+      }
+      return { tested, failures };
+    }, roadSamples.map(m => ({ id: m.id, points: m.roads.flatMap(line => line.filter((_, i) => i % 12 === 0 || i === line.length - 1).map(([x, y]) => [x, y])) })));
+    assert.deepEqual(roadResult.failures, [], "Road artwork must cover routes in all nine sections, not just the first tile");
+    assert.ok(roadResult.tested > 500);
+    console.log(`Terrain: ${roadResult.tested} painted road-center samples passed across all nine sections.`);
     await navigate(`${address.url}/__benchmark__/seamless/`);
     await waitFor(() => window.seamlessPreview); await settle();
     const initial = await snapshot(); assert.equal(initial.assets.peakRequests, 2); assert.equal(initial.assets.full, 4);
@@ -101,7 +151,10 @@ async function main() {
     }
     await settle(); await click("#close");
     await screenshot("four-section-corner.png");
+    await evaluate(() => { const s = seamlessPreview.snapshot(); seamlessPreview.view(2896, 1629, SeamlessModel.limits(s.size).home); });
+    await settle(); await screenshot("spread-cities-seam.png");
     await click("#fit"); await settle(); assert.equal((await snapshot()).assets.full, 0);
+    assert.equal(await evaluate(() => document.querySelectorAll(".object.castle").length), 540, "Overview must show the redistributed city pattern");
     await screenshot("overview.png");
     await click("#home"); await settle(); const home = await snapshot();
     near(home.camera.x, initial.camera.x); near(home.camera.y, initial.camera.y); near(home.camera.zoom, initial.camera.zoom);
@@ -151,12 +204,13 @@ async function main() {
     // Failure + delayed obsolete loads, while input remains usable.
     await resize({ width: 1440, height: 900 });
     let failedOnce = false;
-    const stopIntercept = cdp.on("Fetch.requestPaused", async ({ requestId }) => {
+    const stopIntercept = cdp.on("Fetch.requestPaused", async ({ requestId, request }) => {
+      if (request.url.endsWith("-thumb.webp")) { await cdp.send("Fetch.continueRequest", { requestId }).catch(() => {}); return; }
       await sleep(180);
       if (!failedOnce) { failedOnce = true; await cdp.send("Fetch.fulfillRequest", { requestId, responseCode: 503, body: Buffer.from("test failure").toString("base64") }); }
       else await cdp.send("Fetch.continueRequest", { requestId }).catch(() => {});
     });
-    await cdp.send("Fetch.enable", { patterns: [{ urlPattern: "*/assets/worlds/core-expansion-v1/maps/*.webp" }] });
+    await cdp.send("Fetch.enable", { patterns: [{ urlPattern: "*/tools/map-benchmark/seamless/terrain/*.webp" }] });
     await navigate(`${address.url}/__benchmark__/seamless/`); await waitFor(() => window.seamlessPreview);
     await waitFor(() => seamlessPreview.snapshot().assets.failed === 1);
     assert.ok(await evaluate(() => [...document.querySelectorAll(".tile")].find(n => n.dataset.section === seamlessPreview.scene.homeSectionId).firstChild.src.startsWith("blob:")), "Visible terrain must retain its thumbnail on full-image failure");

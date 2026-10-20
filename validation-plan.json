@@ -1,18 +1,36 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "8ec9ffc00be4c3788cfeabd332cc651a2b2cfa5f",
+  "baseCommit": "d12baf9e20ad42e51fbe156fe6ec31be9f8b8c09",
   "coverage": [
     {
       "paths": [
         "tools/map-benchmark/seamless/assets.js",
+        "tools/map-benchmark/seamless/build-terrain.js",
         "tools/map-benchmark/seamless/fixtures.js",
-        "tools/map-benchmark/seamless/index.html",
-        "tools/map-benchmark/seamless/model.js",
+        "tools/map-benchmark/seamless/layout.js",
         "tools/map-benchmark/seamless/preview.css",
         "tools/map-benchmark/seamless/preview.js",
-        "tools/map-benchmark/server.js",
+        "tools/validate-seamless-world.js",
         "tools/validate-seamless-world-browser.js",
-        "tools/validate-seamless-world.js"
+        "tools/map-benchmark/seamless/terrain/core-v2-aurum-keep-m1-p0-thumb.webp",
+        "tools/map-benchmark/seamless/terrain/core-v2-aurum-keep-m1-p0.webp",
+        "tools/map-benchmark/seamless/terrain/core-v2-crown-citadel-p0-p0-thumb.webp",
+        "tools/map-benchmark/seamless/terrain/core-v2-crown-citadel-p0-p0.webp",
+        "tools/map-benchmark/seamless/terrain/core-v2-greybanner-hold-p0-m1-thumb.webp",
+        "tools/map-benchmark/seamless/terrain/core-v2-greybanner-hold-p0-m1.webp",
+        "tools/map-benchmark/seamless/terrain/core-v2-north-support-p0-m2-thumb.webp",
+        "tools/map-benchmark/seamless/terrain/core-v2-north-support-p0-m2.webp",
+        "tools/map-benchmark/seamless/terrain/core-v2-north-west-holding-tower-m1-m1-thumb.webp",
+        "tools/map-benchmark/seamless/terrain/core-v2-north-west-holding-tower-m1-m1.webp",
+        "tools/map-benchmark/seamless/terrain/core-v2-relic-camp-north-west-m1-m2-thumb.webp",
+        "tools/map-benchmark/seamless/terrain/core-v2-relic-camp-north-west-m1-m2.webp",
+        "tools/map-benchmark/seamless/terrain/core-v2-relic-camp-west-north-m2-m1-thumb.webp",
+        "tools/map-benchmark/seamless/terrain/core-v2-relic-camp-west-north-m2-m1.webp",
+        "tools/map-benchmark/seamless/terrain/core-v2-warband-camp-m2-m2-thumb.webp",
+        "tools/map-benchmark/seamless/terrain/core-v2-warband-camp-m2-m2.webp",
+        "tools/map-benchmark/seamless/terrain/core-v2-west-support-m2-p0-thumb.webp",
+        "tools/map-benchmark/seamless/terrain/core-v2-west-support-m2-p0.webp",
+        "tools/map-benchmark/seamless/terrain/manifest.json"
       ],
       "tests": [
         "tools/validate-seamless-world.js",
@@ -20,7 +38,7 @@
         "tools/validate-map-benchmark.js",
         "tools/validate-production-artifact.js"
       ],
-      "reason": "Exercise the new isolated scene, pure camera projection and coordinate preservation, real mouse/touch selection and following, every internal seam/corner, delayed/failed asset recovery, bounded requests/residency and DOM/listener stability. The shared loopback server retains its existing fixture behavior. Build and inspect the production artifact to prove no prototype tools or entry points are published. No server authority or multiplayer behavior changes; emulator suites do not apply."
+      "reason": "Verify preserved catalog identities/source coordinates, deterministic full-section city placement and clearance against roads, scenery, objectives and neighboring cities. Validate terrain source/output hashes, all 12 full/thumbnail pixel joins and corner samples, all nine painted road networks, real desktop/touch interaction, overview city visibility, delayed/failed private artwork recovery, bounded assets/DOM/listeners and normal/crowded performance. The shared loopback harness keeps its existing fixture behavior; production build/artifact validation proves tools and private terrain stay excluded. No backend or authoritative gameplay changes; no emulator suite applies."
     },
     {
       "paths": [
@@ -31,7 +49,7 @@
         "tools/validate-seamless-world.js",
         "tools/validate-seamless-world-browser.js"
       ],
-      "reason": "Record the explicitly approved local-only stage and verify the documented nine-section layout, controls, identity/loading limits, isolation and performance methodology against the executable fixture and browser tests."
+      "reason": "Document the owner-approved private display-layout and seam-art refinement, its separation from live coordinates/artwork, reproducible authoring, tested bounds and measured performance limitations. This does not authorize Stage 2 production integration."
     }
   ]
 }
