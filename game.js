@@ -29322,24 +29322,24 @@ function renderCitiesUncached(force = false) {
   });
   visibleCamps.forEach(camp => {
     const mapPoint = worldToMapPoint(camp);
-    const interactiveRewardCamp = Boolean(getRewardCampConfig(camp));
+    const campConfig = getRewardCampConfig(camp);
     const existingCampNode = existingCampNodes.get(camp.id);
     const campNode = existingCampNode || document.createElement("button");
     existingCampNodes.delete(camp.id);
     campNode.type = "button";
     campNode.dataset.renderCampId = camp.id;
-    if (interactiveRewardCamp) campNode.dataset.campId = camp.id;
+    if (campConfig) campNode.dataset.campId = camp.id;
     else delete campNode.dataset.campId;
-    const clanAllyCamp = interactiveRewardCamp && isClanAllyCity(camp);
-    campNode.className = `camp-node camp-${camp.campType || "gold"} ${interactiveRewardCamp ? camp.owner || "neutral" : "decorative"}${clanAllyCamp ? " clan-ally" : ""}`;
-    if (interactiveRewardCamp && camp.id === selectedTargetId) campNode.classList.add("selected");
-    if (interactiveRewardCamp && sendMode && source) campNode.classList.add(camp.owner === "player" || clanAllyCamp ? "supportable" : "attackable");
+    const clanAllyCamp = campConfig && isClanAllyCity(camp);
+    campNode.className = `camp-node camp-${camp.campType || "gold"} ${campConfig ? camp.owner || "neutral" : "decorative"}${clanAllyCamp ? " clan-ally" : ""}`;
+    if (campConfig && camp.id === selectedTargetId) campNode.classList.add("selected");
+    if (campConfig && sendMode && source) campNode.classList.add(camp.owner === "player" || clanAllyCamp ? "supportable" : "attackable");
     campNode.style.left = `${mapPoint.x}px`;
     campNode.style.top = `${mapPoint.y}px`;
     campNode.style.setProperty("--camp-size", `${camp.size}px`);
-    if (interactiveRewardCamp) {
+    if (campConfig) {
       campNode.title = `${camp.name}. ${getRewardCampStatusText(camp)}.`;
-      campNode.setAttribute("aria-label", `${camp.name}. ${getRewardCampStatusText(camp)}. ${formatNumber(camp.baseReward)} ${getRewardCampConfig(camp)?.rewardLabel || "reward"} reward.`);
+      campNode.setAttribute("aria-label", `${camp.name}. ${getRewardCampStatusText(camp)}. ${formatNumber(camp.baseReward)} ${campConfig.rewardLabel || "reward"} reward.`);
       const countdown = getRewardCampCountdownSeconds(camp);
       const deedHold = String(camp.campType || "") === "deed";
       campNode.classList.toggle("deed-hold-active", Boolean(deedHold && camp.ownerUid));
@@ -29348,13 +29348,13 @@ function renderCitiesUncached(force = false) {
         <img class="camp-art${camp.flipX ? " map-art-flip-x" : ""}" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" decoding="async" />
         ${camp.ownerUid ? `<span class="camp-owner-marker" aria-hidden="true">${renderCityOwnerFlag(camp)}</span>` : ""}
         ${deedHold && camp.ownerUid ? `<span class="deed-hold-ring" aria-hidden="true"><span class="deed-hold-seal">D</span></span>` : ""}
-        <span class="camp-map-banner player-city-label">
+        <span class="camp-map-banner city-label player-city-label">
           <span class="player-city-banner">
-            <svg class="camp-type-flag" viewBox="0 0 48 60" aria-hidden="true" focusable="false"><use href="assets/icons/camp-type-flags-v1.svg#${getRewardCampConfig(camp).type}"></use></svg>
+            <svg class="camp-type-flag" viewBox="0 0 48 60" aria-hidden="true" focusable="false"><use href="assets/icons/camp-type-flags-v1.svg#${campConfig.type}"></use></svg>
             <span class="player-city-data">
-              <strong class="city-ruler-name">${escapeHtml(camp.name)}</strong>
-              <span class="camp-map-controller">${escapeHtml(camp.ownerUid ? getCityOwnerDisplayName(camp) : "Neutral camp")}</span>
-              <span class="gold-camp-active-timer" ${camp.ownerUid ? "" : "hidden"}>
+              <span class="city-ruler-row"><strong class="city-ruler-name">${escapeHtml(camp.ownerUid ? getCityOwnerDisplayName(camp) : "Neutral camp")}</strong></span>
+              <strong class="city-name">${escapeHtml(camp.name)}</strong>
+              <span class="gold-camp-active-timer city-army-count" ${camp.ownerUid ? "" : "hidden"}>
                 <small>${camp.state === "contested" ? "Contested" : "Active"}</small>
                 <strong>${camp.payoutPending ? countdown > 0 ? formatDuration(countdown) : "Payout ready" : "Securing"}</strong>
               </span>
