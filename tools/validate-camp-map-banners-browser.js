@@ -34,6 +34,26 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         camps: ["gold", "troops", "items", "deed"].map(type => ({ ...WORLD_CAMPS[0], ...getCampConfigForType(type), id: "camp-banner-qa-" + type, campType: type })),
         anchor: { ...playerCities()[0] }, uid: getCurrentOnlineUid(),
       };
+      campBannerQa.readFlag = (rawFlag, uid) => {
+        const banner = cityLayer.querySelector(".camp-map-banner");
+        const slot = banner.querySelector(".camp-type-flag, .camp-holder-flag");
+        const flag = banner.querySelector(".city-kingdom-flag");
+        const normalized = uid ? normalizeFlag(rawFlag, uid) : null;
+        return {
+          width: slot.offsetWidth, height: slot.offsetHeight,
+          typeSrc: banner.querySelector(".camp-type-flag")?.getAttribute("src") || null,
+          actual: flag ? {
+            uid: flag.dataset.flagStableKey,
+            primary: flag.style.getPropertyValue("--flag-primary"),
+            secondary: flag.style.getPropertyValue("--flag-secondary"),
+            symbolColor: flag.style.getPropertyValue("--flag-symbol-color"),
+            pattern: [...flag.classList].find(c => c.startsWith("pattern-"))?.slice(8),
+            symbol: flag.querySelector(".flag-symbol").dataset.flagSymbol,
+          } : null,
+          expected: normalized ? {uid, primary:normalized.primary, secondary:normalized.secondary,
+            symbolColor:normalized.symbolColor, pattern:normalized.pattern, symbol:normalized.symbol} : null,
+        };
+      };
       if (campBannerQa.camps.some(c => !c.id || !c.regionId.startsWith("core-v2-"))) throw Error("Current Core camp fixtures required");
       // Isolated visual fixture: relocate one real type at a time to the active
       // map, without subscriptions or production writes.
@@ -63,6 +83,11 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       assert.equal(flag.width, 84); assert.equal(flag.height, 106);
       assert(flag.transparent > 0 && flag.nearOpaque > flag.width * flag.height * .3, JSON.stringify(flag));
     }
+    const verifyFlag = flag => {
+      assert.equal(flag.width, 42); assert.equal(flag.height, 53);
+      assert.deepEqual(flag.actual, flag.expected, "Camp must display the current holder's actual heraldry");
+      assert.equal(Boolean(flag.typeSrc), !flag.expected, "Type banner is only for neutral camps");
+    };
     for (const [width, height] of [[1440,900], [844,390], [568,320]]) {
       await client.send("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: false });
       for (const [i, mode] of ["neutral", "player", "rival", "contested"].entries()) {
@@ -83,17 +108,21 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         const layout = await ev(() => {
           const n = cityLayer.querySelector(".camp-node"), label = n.querySelector(".camp-map-banner"),
             art = n.querySelector(".camp-art"), timer = n.querySelector(".gold-camp-active-timer"),
-            r = label.getBoundingClientRect(), a = art.getBoundingClientRect();
+            r = label.getBoundingClientRect(), a = art.getBoundingClientRect(),
+            snapshot = onlineCampStates.get(campBannerQa.current.id),
+            typeFlag = n.querySelector(".camp-type-flag");
           return { text:label.innerText, above:r.bottom <= a.top + 13 * zoom,
             inside:r.left>=0 && r.right<=innerWidth && r.top>=0 && r.bottom<=innerHeight,
-            width:label.offsetWidth, height:label.offsetHeight, flag:n.querySelector(".camp-type-flag").getAttribute("src"),
-            flagLoaded:n.querySelector(".camp-type-flag").complete && n.querySelector(".camp-type-flag").naturalWidth === 84,
+            width:label.offsetWidth, height:label.offsetHeight,
+            flag:campBannerQa.readFlag(snapshot.holderUid === campBannerQa.uid ? state.flag : snapshot.holderFlag, snapshot.holderUid),
+            flagLoaded:!typeFlag || (typeFlag.complete && typeFlag.naturalWidth === 84),
             ownerFlags:n.querySelectorAll(".camp-owner-marker").length,
             timerHidden:timer.hidden, timer:timer.innerText, hasDeedRing:Boolean(n.querySelector(".deed-hold-ring")),
             bounds:r.toJSON(), art:a.toJSON() };
         });
         assert(layout.above && layout.inside && layout.width<=220 && layout.height<=54, JSON.stringify(layout));
-        assert(layout.flag.endsWith(`camp-${["gold","troops","items","deed"][i]}-v2.webp`));
+        verifyFlag(layout.flag);
+        if(mode==="neutral") assert(layout.flag.typeSrc.endsWith(`camp-${["gold","troops","items","deed"][i]}-v2.webp`));
         assert(layout.flagLoaded, "Camp flag did not load");
         assert.equal(layout.timerHidden, mode==="neutral"); assert.equal(layout.ownerFlags, 0, "Small owner flag must remain removed");
         assert.equal(layout.hasDeedRing, i===3);
@@ -153,9 +182,32 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         });
         assert(await ev('campBannerQa.node === cityLayer.querySelector(".camp-map-banner")'));
         if(mode!=="neutral") assert.equal(await ev('cityLayer.querySelector(".gold-camp-active-timer strong").textContent'), await ev('formatDuration(65)'));
-        await ev(() => {
-          const c=onlineCampStates.get(campBannerQa.current.id); c.holderUid="";c.state="neutral";renderCities(true);
+        // Exercise capture/transfer and a later profile-flag edit through normal
+        // render invalidation, without forcing the renderer or reloading the map.
+        const transferred = await ev(() => {
+          const c = onlineCampStates.get(campBannerQa.current.id);
+          c.holderUid = "fixture-next-holder"; c.holderName = "Next ruler"; c.state = "held";
+          c.holderFlag = {...c.holderFlag, primary:"#6E3038", secondary:"#F2E2BF", pattern:"cross", symbol:"crown"};
+          playerIdentityCache.delete(c.holderUid);
+          renderCities();
+          return campBannerQa.readFlag(c.holderFlag, c.holderUid);
         });
+        verifyFlag(transferred);
+        const refreshed = await ev(() => {
+          const c = onlineCampStates.get(campBannerQa.current.id);
+          const flag = {...c.holderFlag, primary:"#315A8A", pattern:"diagonal", symbol:"lion"};
+          rememberPlayerIdentity({uid:c.holderUid, playerName:"Next ruler", flag, updatedAtMs:Date.now()}, {force:true});
+          renderCities();
+          return campBannerQa.readFlag(flag, c.holderUid);
+        });
+        verifyFlag(refreshed);
+        assert.notDeepEqual(refreshed.actual, transferred.actual, "Changed holder heraldry must repaint");
+        await ev(() => {
+          const c=onlineCampStates.get(campBannerQa.current.id); c.holderUid="";c.state="neutral";renderCities();
+        });
+        const neutralFlag = await ev('campBannerQa.readFlag(null, "")');
+        verifyFlag(neutralFlag);
+        assert(neutralFlag.typeSrc.endsWith(`camp-${["gold","troops","items","deed"][i]}-v2.webp`));
         assert.equal(await ev('document.querySelectorAll(".camp-owner-marker").length'),0,"Stale owner flag after neutral reset");
         assert(await ev('cityLayer.querySelector(".gold-camp-active-timer").hidden'));
         results.push({width,height,mode,...layout,castleStyleMatch:true});
@@ -169,7 +221,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     }
     assert.deepEqual(errors, []);
     fs.writeFileSync(path.join(output,"results.json"),JSON.stringify({results,flagAssets,errors},null,2));
-    console.log("Camp banners: painted transparent type flags, no small owner flag, exact castle typography/spacing/information bars, desktop/landscape, neutral/held/contested/reset, countdown reuse, selection and zoom passed.");
+    console.log("Camp banners: neutral type artwork, holder heraldry, capture/transfer/profile edits/neutral reset, no small pole flag, castle layout, desktop/landscape, countdown reuse, selection and zoom passed.");
   } finally {
     if(client){await client.send("Browser.close").catch(()=>{});client.close();}
     if(browser){if(!await waitForProcessExit(browser.browserProcess))browser.browserProcess.kill();await removeBrowserProfile(browser.profilePath);}
