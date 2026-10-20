@@ -8,7 +8,7 @@ const root = path.resolve(__dirname, "..");
 const read = file => fs.readFileSync(path.join(root, file));
 const json = file => JSON.parse(read(file));
 const hash = bytes => crypto.createHash("sha256").update(bytes).digest("hex");
-const manifest = json("docs/visual-qa/camp-artwork-v2/assets.json");
+const manifest = json("docs/visual-qa/camp-artwork-v3/assets.json");
 const catalog = json("assets/worlds/core-expansion-v1/region-catalog.json");
 const serverCatalog = json("functions/core-expansion-region-catalog.json");
 const serverLayout = json("functions/core-expansion-world-layout.json");
@@ -36,6 +36,8 @@ for (const asset of manifest.assets) {
   assert(bytes.length <= 60 * 1024, "Each camp must fit its 60 KiB delivery limit");
   assert.equal(catalog.mapPresentation.campAssets[asset.type], asset.output);
   assert(!fs.existsSync(path.join(root, asset.replaces)), "Retired active camp art must be deleted");
+  assert(!fs.existsSync(path.join(root, asset.supersedes)), "Camp floor-island artwork must be retired");
+  assert(!JSON.stringify(catalog).includes(asset.supersedes));
   assert(!JSON.stringify(catalog).includes(asset.replaces));
   assert(!JSON.stringify(layout).includes(asset.replaces));
   const maps = layout.maps.filter(map => map.camps?.some(camp => camp.campType === asset.type));
@@ -45,12 +47,14 @@ for (const asset of manifest.assets) {
     const region = json(`assets/worlds/core-expansion-v1/regions/${map.id}.json`);
     assert.deepEqual(region.camps, map.camps, "Lazy-map camps must retain the canonical gameplay definition");
     assert(!JSON.stringify(region).includes(asset.replaces), "Lazy map definition still uses retired art");
+    assert(!JSON.stringify(region).includes(asset.supersedes), "Lazy map still uses the old camp floor");
   }
   assert(!read("service-worker.js").toString().includes(asset.output), "Camp art must remain lazy");
   const dist = path.join(root, "dist");
   if (fs.existsSync(dist)) {
     assert.equal(hash(fs.readFileSync(path.join(dist, asset.output))), asset.sha256);
     assert(!fs.existsSync(path.join(dist, asset.replaces)), "Retired art shipped in production");
+    assert(!fs.existsSync(path.join(dist, asset.supersedes)), "Camp floor-island art shipped in production");
   }
 }
 console.log("All four approved camp paintings, active catalog/map references, hashes, deletions and lazy production packaging passed.");
