@@ -180,7 +180,9 @@
         // matching gutters cover fractional sampling without stretching terrain.
         const labelScale = Math.max(1, 11 / (20 * camera.zoom));
         tile.tile.lastChild.style.transform = `translateX(-50%) scale(${labelScale})`;
-        tile.tile.lastChild.style.maxWidth = fullCatalog && overview ? `${section.width * .9 / labelScale}px` : "";
+        const tinyOverview = fullCatalog && overview && section.width * camera.zoom < 90;
+        tile.tile.lastChild.hidden = tinyOverview && section.id !== scene.homeSectionId;
+        tile.tile.lastChild.style.maxWidth = fullCatalog && overview && !tinyOverview ? `${section.width * .9 / labelScale}px` : "";
       }
       const visibleKeys = new Set([...visibleObjects, ...visibleMarches].map(o => o.key));
       for (const [key, node] of nodes) if (!visibleKeys.has(key)) { node.remove(); nodes.delete(key); }

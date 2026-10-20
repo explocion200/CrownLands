@@ -111,7 +111,7 @@ async function main() {
       await view({ x: castle.x, y: castle.y, zoom: s.camera.zoom * 3 }); await settle(); await click(`[data-key=${JSON.stringify(castle.key)}]`, true); assert.equal((await snapshot()).selected, castle.key);
       const inspector = await rect("#inspector"); assert.ok(inspector.y >= 0 && inspector.y + inspector.height <= height); await shot(`landscape-${width}.png`); await click("#close");
       await click("#fit"); await settle();
-      assert.ok(await evaluate(() => [...document.querySelectorAll(".tile")].every(n => n.lastChild.getBoundingClientRect().width <= n.getBoundingClientRect().width * .91)), "Overview labels overlap neighboring sections");
+      assert.ok(await evaluate(() => { const labels = [...document.querySelectorAll(".section-label")].filter(n => !n.hidden); return labels.length === 1 && labels[0].textContent === "Stoneward" && labels[0].scrollWidth <= labels[0].clientWidth; }), "Tiny overview must retain one readable home label");
       await shot(`overview-${width}.png`);
     }
     console.log("Full-world browser: follow across areas, overview eviction, slow/offline/reconnect, stale request and native landscape touch passed.");
