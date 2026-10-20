@@ -4,6 +4,10 @@ const { CdpClient } = require("./map-benchmark/cdp-client");
 const { createMapBenchmarkServer } = require("./map-benchmark/server");
 const { startBrowserSession, waitForProcessExit, removeBrowserProfile } = require("./validate-focused-browser-smoke");
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+const luminance = rgb => rgb.reduce((sum, value, i) => {
+  const s = value / 255; return sum + (s <= .04045 ? s / 12.92 : ((s + .055) / 1.055) ** 2.4) * [.2126, .7152, .0722][i];
+}, 0);
+const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + .05) / (Math.min(luminance(a), luminance(b)) + .05);
 
 async function navigationChecks() {
   const source = fs.readFileSync(path.join(__dirname, "../game.js"), "utf8");
@@ -42,12 +46,38 @@ async function navigationChecks() {
   let browser, client; const errors = [], layouts = [];
   try {
     browser = await startBrowserSession(executable); client = await CdpClient.connect(browser.targets.find(t => t.type === "page").webSocketDebuggerUrl);
-    await client.send("Page.enable"); await client.send("Runtime.enable");
+    await client.send("Page.enable"); await client.send("Runtime.enable"); await client.send("DOM.enable"); await client.send("CSS.enable");
     client.on("Runtime.exceptionThrown", event => errors.push(event.exceptionDetails.exception?.description || event.exceptionDetails.text));
     const ev = async fn => {
       const response = await client.send("Runtime.evaluate", { expression: typeof fn === "function" ? `(${fn})()` : fn, awaitPromise: true, returnByValue: true });
       if (response.exceptionDetails) throw Error(response.exceptionDetails.exception?.description || response.exceptionDetails.text);
       return response.result.value;
+    };
+    const checkPaint = async (selector, mini = false) => {
+      const doc = await client.send("DOM.getDocument");
+      const { nodeId } = await client.send("DOM.querySelector", { nodeId: doc.root.nodeId, selector });
+      assert(nodeId, selector);
+      for (const pseudo of [[], ["hover"], ["focus-visible"]]) {
+        await client.send("CSS.forcePseudoState", { nodeId, forcedPseudoClasses: pseudo });
+        const paint = await ev(`(() => {
+          const link = document.querySelector(${JSON.stringify(selector)}), s = getComputedStyle(link);
+          return { color: s.color, children: [...link.querySelectorAll("strong,small")].map(n => getComputedStyle(n).color),
+            image: s.backgroundImage, background: s.backgroundColor, shadow: s.boxShadow, textShadow: s.textShadow, opacity: s.opacity };
+        })()`);
+        const ink = mini ? "rgb(244, 230, 197)" : "rgb(53, 43, 32)";
+        assert.equal(paint.color, ink); assert(paint.children.every(c => c === ink), "Child text lost its readable ink");
+        assert.equal(paint.image, "none"); assert.equal(paint.background, "rgba(0, 0, 0, 0)");
+        assert.equal(paint.shadow, "none"); assert.equal(paint.textShadow, "none"); assert.equal(paint.opacity, "1");
+        // Mini-chat's darkest gradient layer is 72% opaque; use its lightest
+        // possible result over a white map as the conservative contrast bound.
+        assert(contrast(paint.color.match(/\d+/g).map(Number), mini ? [107, 95, 88] : [237, 225, 194]) >= 4.5);
+      }
+      await client.send("CSS.forcePseudoState", { nodeId, forcedPseudoClasses: [] });
+      await ev(`document.querySelector(${JSON.stringify(selector)}).disabled = true`);
+      const disabled = await ev(`(() => { const s = getComputedStyle(document.querySelector(${JSON.stringify(selector)}));
+        return [s.opacity, s.backgroundImage, s.backgroundColor, s.color]; })()`);
+      assert.deepEqual(disabled, ["1", "none", "rgba(0, 0, 0, 0)", mini ? "rgb(244, 230, 197)" : "rgb(53, 43, 32)"]);
+      await ev(`document.querySelector(${JSON.stringify(selector)}).disabled = false`);
     };
     await client.send("Page.navigate", { url: address.url + "/__benchmark__/?scenario=A&visualMarches=0" });
     for (let i = 0; i < 300 && !await ev('document.documentElement?.dataset.crownlandsBenchmarkReady === "true"'); i++) await delay(100);
@@ -73,7 +103,14 @@ async function navigationChecks() {
           q.calls.push(input);
           if (input.action === "status") return { enabled: true };
           if (input.action === "unread") return { count: 0 };
-          if (input.action === "list") return { rows: [{ id: "c".repeat(40), peerUid: "bob", player: q.player, status: "accepted" }], next: null };
+          if (input.action === "list") {
+            if (q.contactsError) throw Error("Contacts unavailable. Retry.");
+            const bob = { id: "c".repeat(40), peerUid: "bob", player: q.player, status: "accepted" };
+            if (!q.largeContacts || input.kind !== "friends") return { rows: [bob], next: null };
+            return input.cursor ? { rows: [{ ...bob, peerUid: "last", player: { name: "Last contact" } }], next: null }
+              : { rows: [bob, ...Array.from({ length: 19 }, (_, i) => ({ ...bob, peerUid: "contact-" + i,
+                player: { name: i === 0 ? "<b>A very long ruler name for a narrow landscape screen</b>" : "Ruler " + (i + 2) } }))], next: { at: 1, id: "a".repeat(40) } };
+          }
           if (input.action === "history") return { relation: { id: "c".repeat(40), peerUid: "bob", canSend: true, conversation: "accepted" }, player: q.player,
             messages: [{ id: "d".repeat(40), sequence: 1, senderUid: "bob", senderDisplayName: "Bob", text: "Meet here", location: q.location, createdAtMs: Date.now(), expiresAtMs: Date.now() + 86400000 }] };
           if (input.action === "resolveLocation") return { status: q.result, location: q.location };
@@ -113,6 +150,13 @@ async function navigationChecks() {
           within: b.left >= l.left && b.right <= l.right + 1, overflow: list.scrollWidth > list.clientWidth + 1, links: row.querySelectorAll(".chat-location-link").length };
       });
       assert.equal(layout.font, layout.textFont); assert(layout.within && !layout.overflow); assert.equal(layout.links, 1); assert(layout.rowHeight < 60, "Compact shared location became a large card"); layouts.push({ width, height, ...layout });
+      await checkPaint(".chat-message .chat-location-link");
+      await client.send("Page.captureScreenshot", { format: "png" }).then(result => fs.writeFileSync(path.join(artifacts, `chat-readable-${width}.png`), Buffer.from(result.data, "base64")));
+      await ev('document.querySelector(\'[data-chat-channel="clan"]\').click()'); await delay(50);
+      await checkPaint(".chat-message .chat-location-link");
+      await ev('CrownlandsChat.init().setMode("quick")'); await delay(50);
+      await checkPaint("#quickChat .chat-location-link", true);
+      await ev(() => { CrownlandsChat.init().setMode("full"); document.querySelector('[data-chat-channel="global"]').click(); });
       await ev(() => CrownlandsChatLocations.open(locationQa.location));
       await delay(50);
       const share = await ev(() => { const d = document.querySelector(".chat-location-share"), r = d.getBoundingClientRect(); return { inside: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight, overflow: d.scrollWidth > d.clientWidth + 1,
@@ -121,8 +165,54 @@ async function navigationChecks() {
       assert(share.inside && !share.overflow);
       assert.equal(share.label, "rgb(60, 52, 36)"); assert.notEqual(share.selected, share.unselected, "Destination selection must be visible");
       await client.send("Page.captureScreenshot", { format: "png" }).then(result => fs.writeFileSync(path.join(artifacts, `share-${width}.png`), Buffer.from(result.data, "base64")));
+      await ev(() => { locationQa.largeContacts = true; document.querySelector('[data-channel="private"]').click(); }); await delay(60);
+      assert.equal(await ev('document.querySelectorAll(".chat-location-contact-list input").length'), 20, "Friends/conversations must deduplicate");
+      assert.equal(await ev('document.querySelectorAll(".chat-location-share select").length'), 0, "Recipient selection must not open a native popup");
+      assert.equal(await ev('document.querySelectorAll(".chat-location-recipient b").length'), 0, "Recipient names must remain inert text");
+      assert.equal(await ev('document.querySelectorAll(".chat-location-recipient input:checked").length'), 0, "A recipient must be explicitly chosen");
+      const point = await ev(() => {
+        const label = document.querySelector(".chat-location-recipient"); label.scrollIntoView({ block: "nearest" });
+        const r = label.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+      });
+      if (height < 600) {
+        await client.send("Emulation.setTouchEmulationEnabled", { enabled: true });
+        await client.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ ...point, id: 1 }] });
+        await client.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+        await client.send("Emulation.setTouchEmulationEnabled", { enabled: false });
+      } else {
+        await client.send("Input.dispatchMouseEvent", { type: "mousePressed", ...point, button: "left", clickCount: 1 });
+        await client.send("Input.dispatchMouseEvent", { type: "mouseReleased", ...point, button: "left", clickCount: 1 });
+      }
+      assert.equal(await ev('document.querySelector(".chat-location-recipient input:checked")?.value'), "bob", "Tapping the name row must select it");
+      await ev('document.querySelector(".chat-location-recipients button").click()'); await delay(60);
+      assert.equal(await ev('document.querySelectorAll(".chat-location-contact-list input").length'), 21);
+      assert.equal(await ev('document.querySelector(".chat-location-recipient input:checked").value'), "bob", "Pagination lost selection");
+      await delay(120);
+      const pickerLayout = await ev(() => {
+        const d = document.querySelector(".chat-location-share"), list = d.querySelector(".chat-location-contact-list"),
+          button = d.querySelector('button[type="submit"]'), b = button.getBoundingClientRect(),
+          footer = d.querySelector("footer").getBoundingClientRect(), r = d.getBoundingClientRect();
+        return { scrolls: list.scrollHeight > list.clientHeight, overflow: d.scrollWidth > d.clientWidth,
+          modal: d.matches(":modal") && r.width > 0,
+          footerHit: button.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)),
+          rowHeight: list.querySelector("label").getBoundingClientRect().height,
+          radioHeight: list.querySelector("input").getBoundingClientRect().height,
+          footerVisible: footer.top >= r.top && footer.bottom <= r.bottom && footer.bottom <= innerHeight,
+          selectedVisible: Boolean(d.querySelector(".chat-location-recipient.is-selected")) };
+      });
+      assert(pickerLayout.modal && pickerLayout.footerHit && pickerLayout.scrolls && !pickerLayout.overflow && pickerLayout.footerVisible && pickerLayout.selectedVisible, JSON.stringify(pickerLayout));
+      assert(pickerLayout.rowHeight <= 40 && pickerLayout.radioHeight <= 18, "Recipient rows inherited oversized input styling");
+      await client.send("Page.captureScreenshot", { format: "png" }).then(result => fs.writeFileSync(path.join(artifacts, `recipients-${width}.png`), Buffer.from(result.data, "base64")));
       await ev('document.querySelector(".chat-location-share").close()');
     }
+    await ev(() => { locationQa.largeContacts = false; CrownlandsChatLocations.open(locationQa.location); locationQa.contactsError = true; document.querySelector('[data-channel="private"]').click(); }); await delay(60);
+    assert((await ev('document.querySelector(".chat-location-recipients small").textContent')).includes("unavailable"));
+    await ev(() => { locationQa.contactsError = false; document.querySelector(".chat-location-recipients button").click(); }); await delay(60);
+    await ev('document.querySelector(".chat-location-recipient input").focus()');
+    await client.send("Input.dispatchKeyEvent", { type: "keyDown", key: " ", code: "Space", windowsVirtualKeyCode: 32 });
+    await client.send("Input.dispatchKeyEvent", { type: "keyUp", key: " ", code: "Space", windowsVirtualKeyCode: 32 });
+    assert.equal(await ev('document.querySelector(".chat-location-recipient input:checked")?.value'), "bob", "Keyboard selection failed");
+    await ev('document.querySelector(".chat-location-share").close()');
     await ev(() => {
       const list = document.getElementById("chatMessageList"); list.scrollTop = 0;
       document.getElementById("chatMessageInput").value = "Unsent global draft";
@@ -142,7 +232,9 @@ async function navigationChecks() {
     await ev(() => { locationQa.failedSend = false; document.querySelector(".chat-location-share form").requestSubmit(); }); await delay(80);
     assert(await ev(() => { const sent = locationQa.calls.filter(c => c.location); return sent.length === 2 && sent[0].requestId === sent[1].requestId && !("name" in sent[0].location); }));
     await ev(() => { CrownlandsChatLocations.open(locationQa.location); document.querySelector('[data-channel="private"]').click(); }); await delay(80);
-    await ev(() => { document.querySelector(".chat-location-recipients select").value = "bob"; document.querySelector(".chat-location-share form").requestSubmit(); }); await delay(80);
+    await ev('document.querySelector(".chat-location-share form").requestSubmit()');
+    assert((await ev('document.querySelector(".chat-location-status").textContent')).includes("Choose who"));
+    await ev(() => { document.querySelector(".chat-location-recipient").click(); document.querySelector(".chat-location-share form").requestSubmit(); }); await delay(80);
     assert(await ev('locationQa.calls.some(c => c.action === "send" && c.peerUid === "bob" && c.location && c.text === "")'));
     await ev(() => { CrownlandsChatLocations.open(locationQa.location); document.querySelector('[data-channel="clan"]').click(); locationQa.clan = "changed"; document.querySelector(".chat-location-share form").requestSubmit(); });
     assert((await ev('document.querySelector(".chat-location-status").textContent')).includes("clan changed"));
@@ -150,6 +242,7 @@ async function navigationChecks() {
 
     await ev(() => { CrownlandsSocial.open("messages"); }); await delay(80);
     await ev('document.querySelector(".social-conversation").click()'); await delay(80);
+    await checkPaint(".social-message .chat-location-link");
     await ev(() => { document.querySelector(".social-compose textarea").value = "Unsent private draft"; document.querySelector(".social-message .chat-location-link").click(); }); await delay(80);
     assert(await ev('locationQa.calls.some(c => c.action === "resolveLocation" && c.conversationId === "c".repeat(40))'));
     await ev('CrownlandsChat.init().setMode("full")'); await delay(100);
