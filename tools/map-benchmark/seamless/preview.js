@@ -1,7 +1,9 @@
 /* Local-only demonstration: no live client, identity, subscriptions or orders. */
 (async function () {
   "use strict";
-  if (location.hostname !== "127.0.0.1") throw new Error("Private preview requires loopback.");
+  // Only the separate, allowlisted, expiring phone server supplies this origin.
+  const phoneOrigin = document.querySelector('meta[name="crownlands-private-preview-origin"]')?.content;
+  if (location.hostname !== "127.0.0.1" && phoneOrigin !== location.origin) throw new Error("Private preview requires loopback or the temporary phone test server.");
   const $ = id => document.getElementById(id);
   const viewport = $("viewport"), world = $("world"), objectsLayer = $("objects"), marchesLayer = $("marches");
   try {

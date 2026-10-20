@@ -18,7 +18,9 @@
         "tools/map-benchmark/seamless/terrain/catalog-overview.json",
         "tools/map-benchmark/seamless/terrain/catalog-overview.webp",
         "tools/validate-seamless-catalog-browser.js",
-        "tools/validate-seamless-catalog.js"
+        "tools/validate-seamless-catalog.js",
+        "tools/map-benchmark/seamless/phone-server.js",
+        "tools/validate-seamless-phone-preview.js"
       ],
       "tests": [
         "tools/validate-seamless-world.js",
@@ -26,9 +28,10 @@
         "tools/validate-seamless-catalog.js",
         "tools/validate-seamless-catalog-browser.js",
         "tools/validate-map-benchmark.js",
-        "tools/validate-production-artifact.js"
+        "tools/validate-production-artifact.js",
+        "tools/validate-seamless-phone-preview.js"
       ],
-      "reason": "Full-catalog private fixtures affect camera bounds, original identity/coordinates, city placement, terrain provenance, bounded image/area residency, selection and troop following. Validate every one of the 81 definitions, 3720 cities, 144 joins and 64 corners; synthetic versioned ownership/troop updates, stale response rejection, slow/offline/reconnect, repeated full-world visits with GC heap/DOM/listener bounds, overview eviction and desktop/landscape touch. Shared renderer changes require the original nine-section seam/road, zoom sharpness, exact selection and interaction regression. Shared loopback server and image scheduler require existing map benchmark regression; production artifact validation proves all tool-only code/assets are excluded from shipping. No production APIs, gameplay authority, data contracts or emulator behavior change."
+      "reason": "Full-catalog private fixtures affect camera bounds, original identity/coordinates, city placement, terrain provenance, bounded image/area residency, selection and troop following. Validate every one of the 81 definitions, 3720 cities, 144 joins and 64 corners; synthetic versioned ownership/troop updates, stale response rejection, slow/offline/reconnect, repeated full-world visits with GC heap/DOM/listener bounds, overview eviction and desktop/landscape touch. Shared renderer changes require the original nine-section seam/road, zoom sharpness, exact selection and interaction regression. Shared loopback server and image scheduler require existing map benchmark regression; production artifact validation proves all tool-only code/assets are excluded from shipping. No production APIs, gameplay authority, data contracts or emulator behavior change. The optional Android home-Wi-Fi test endpoint must bind a private interface, expose only explicit scene assets and fictional read-only endpoints, reject arbitrary repository/live paths and cross-origin/foreign-host requests, render through its exact origin, and expire automatically. The unrestricted benchmark server remains loopback-only."
     },
     {
       "paths": [
@@ -40,7 +43,8 @@
         "tools/validate-seamless-world.js",
         "tools/validate-seamless-world-browser.js",
         "tools/validate-seamless-catalog.js",
-        "tools/validate-seamless-catalog-browser.js"
+        "tools/validate-seamless-catalog-browser.js",
+        "tools/validate-seamless-phone-preview.js"
       ],
       "reason": "Document the explicitly authorized private Stage 2 tests, measured results and remaining physical-device, bandwidth, renderer and artwork limits. Preserve distinction between prepared catalog sections and active live maps, and between fictional test transport and authenticated multiplayer. No production release or gameplay rule changes."
     }

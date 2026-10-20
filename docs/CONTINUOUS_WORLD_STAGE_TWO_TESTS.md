@@ -25,6 +25,7 @@ The normal fixture has 144 patrols, one across each adjoining east/south road pa
 node tools/validate-seamless-world.js
 node tools/validate-seamless-catalog.js
 node tools/validate-map-benchmark.js
+node tools/validate-seamless-phone-preview.js
 # Set CHROME_PATH to Chrome/Chromium if needed.
 node tools/validate-seamless-world-browser.js
 CROWNLANDS_SEAMLESS_SOAK_SECONDS=180 node tools/validate-seamless-catalog-browser.js
@@ -61,9 +62,25 @@ The extended evidence is retained as `release-artifacts/seamless-catalog/extende
 
 This validates the private area-loading approach and identifies what still needs work before live gameplay integration. A merge of this test harness does not enable a continuous live map.
 
-1. Test on an actual phone. CDP touch input, viewport sizes and CPU throttling do not measure a phone's GPU, thermal limits, memory pressure or browser chrome. This computer's preview stays loopback-only; a phone cannot open its `127.0.0.1` URL directly. Use a deliberate private test connection such as USB forwarding, not a public router forward or the unrestricted benchmark server on the LAN.
+1. Test on an actual phone. CDP touch input, viewport sizes and CPU throttling do not measure a phone's GPU, thermal limits, memory pressure or browser chrome. This computer's preview stays loopback-only; a phone cannot open its `127.0.0.1` URL directly. For the owner’s Android phone on home Wi-Fi, use the separate, explicitly started `phone-server.js` described below. Keep the unrestricted benchmark server on loopback and add no public router forward.
 2. Improve the crowded/throttled rendering budget further before a large real multiplayer scene. Preserve readable individual markers; evaluate a dedicated renderer or measured level-of-detail approach using this fixture rather than claiming that desktop FPS proves mobile capacity.
 3. Replace the synthetic whole-area snapshots with an authenticated, authorized production feed using initial snapshots plus versioned deltas, resumable reconnects and explicit deletion/movement handling. The current five-second JSON snapshots intentionally expose payload and allocation costs; they are not the final production wire format. Establish bandwidth/rate/security limits before attaching live accounts.
 4. Audit/compose the remaining terrain seams using the approved art workflow, and verify actual player placements, travel semantics, visibility and rollout/rollback controls in a separate approved stage.
 
 No live game services are restarted, no production data changes, and no extra database backup is created by these tests.
+
+## Temporary Android home-Wi-Fi test
+
+The owner selected an Android phone on the same home Wi-Fi. This optional server is separate from `server.js`; it does not proxy the unrestricted repository server. Start it only for the test:
+
+```sh
+node tools/map-benchmark/seamless/phone-server.js --host=192.168.1.145 --port=8800 --minutes=60
+```
+
+The specified address must belong to a private interface on this computer. Only clients in that interface's IPv4 subnet are accepted, with the exact expected Host and same-origin browser requests. The server exposes the preview HTML, five named browser files, the exact image assets referenced by the fictional catalog, and three read-only fixture/catalog/area endpoints. All other repository files and live routes return 404. No accounts, cookies, passwords or game commands are used. An exact-origin marker in the served HTML permits this intentional phone connection without enabling arbitrary-host copies of the normal loopback preview. CSP blocks outside connections, frames and forms. The process closes active connections and its listener after at most 60 minutes; it also closes on SIGTERM/SIGINT.
+
+If the host firewall blocks the test port, use only an explicitly temporary rule from the home subnet to this exact interface/address/port. Schedule its deletion before adding the rule, and remove it when testing finishes. Do not open the router or bind the benchmark server to all interfaces. The phone server itself never changes the firewall.
+
+On Android Chrome, keep Wi-Fi on, open the printed `?catalog=full` link, turn landscape, pan through several sections, pinch in/out, tap a castle and follow a sample patrol. Check that dragging stops following and Home restores Stoneward. Try `&crowded=1` separately and report the phone model and visible stuttering or loading problems. This is a physical interaction check, not an instrumented FPS measurement. All displayed ownership and troops are fictional. The physical-device outcome remains pending until the owner reports it.
+
+`validate-seamless-phone-preview.js` checks allowlisted image/data delivery, all major forbidden file/API routes, invalid subscriptions, non-read methods, foreign Host/Origin, cross-site fetch rejection, expiry and actual listener shutdown. A headless mobile browser loads the full scene through a nondefault loopback address to exercise the phone-origin bootstrap and verifies zero failed assets, outside requests or runtime exceptions. This verifies the server path, not actual Wi-Fi connectivity or phone performance.
