@@ -33,6 +33,7 @@ const layout = JSON.parse(read("functions/world-layout.json"));
 const thumbnailManifest = JSON.parse(read("assets/worlds/world_01/thumbnail-manifest.json"));
 
 const MAX_LOGIN_PRELOAD_BYTES = 2 * 1024 * 1024;
+assert(statBytes("assets/icons/camp-type-flags-v1.svg") <= 3 * 1024, "Four camp type flags must remain within 3 KiB.");
 for (const type of ["gold", "troops", "items", "deed"]) {
   assert(statBytes(`assets/icons/camps/camp-${type}-v2.webp`) <= 6 * 1024, "Each painted camp flag must remain within 6 KiB.");
 }
@@ -106,7 +107,7 @@ assert(["chat-ledger-ui.css", "chat-ui.js", "chat-translation.js", "reward-ledge
   "assets/icons/chat-ledger-seal.svg", "assets/icons/hero-reward-crown.svg"]
   .reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 120 * 1024,
 "Chat and reward ledger shell files exceed their 120 KiB budget.");
-assert(normalizedTextBytes("chat-locations-ui.js") <= 6 * 1024, "Location sharing controls exceed 12 KiB.");
+assert(normalizedTextBytes("chat-locations-ui.js") <= 12 * 1024, "Location sharing controls exceed 12 KiB.");
 // The in-game recipient list and fixed footer add 1,297 CSS bytes; bound the
 // complete stylesheet at 5 KiB, with no added image or runtime dependency.
 assert(normalizedTextBytes("chat-locations.css") <= 5 * 1024, "Location sharing styles exceed 5 KiB.");
