@@ -1,79 +1,23 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "f7ac18da5ed109d917387a9892b0d14392f98f74",
+  "baseCommit": "295c3b99222c37909f7ebb494d5a3f0eab0a76b3",
   "coverage": [
     {
       "paths": [
-        "assets/worlds/core-expansion-v1/art/camp-brambleford-59426d2cd404.webp",
-        "assets/worlds/core-expansion-v1/art/camp-brightmere-6916ecf1850c.webp",
-        "assets/worlds/core-expansion-v1/art/camp-deed-v2-09c90a1ca416.webp",
-        "assets/worlds/core-expansion-v1/art/camp-gold-d9ba98b26c61.webp",
-        "assets/worlds/core-expansion-v1/art/camp-gold-v2-99f2fc668829.webp",
-        "assets/worlds/core-expansion-v1/art/camp-items-v2-de5d02289ae1.webp",
-        "assets/worlds/core-expansion-v1/art/camp-troops-v2-a509413035b9.webp",
-        "assets/worlds/core-expansion-v1/art/camp-warband-2bb9352998c8.webp",
-        "assets/worlds/core-expansion-v1/build-receipt.json",
-        "assets/worlds/core-expansion-v1/region-catalog.js",
-        "assets/worlds/core-expansion-v1/region-catalog.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-deed-camp-east-north-p2-m1.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-deed-camp-north-east-p1-m2.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-deed-camp-south-west-m1-p2.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-deed-camp-west-south-m2-p1.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-gold-camp-north-east-p2-m2.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-gold-camp-south-west-m2-p2.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-relic-camp-east-south-p2-p1.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-relic-camp-north-west-m1-m2.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-relic-camp-south-east-p1-p2.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-relic-camp-west-north-m2-m1.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-warband-camp-m2-m2.json",
-        "assets/worlds/core-expansion-v1/regions/core-v2-warband-camp-south-east-p2-p2.json",
-        "game.js",
-        "tools/sync-core-expansion-assets.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-camp-artwork.js",
-        "tools/validate-camp-map-banners-browser.js",
-        "tools/validate-core-expansion-release.js"
+        "docs/LOCAL_SERVER_DASHBOARD.md",
+        "tools/server-monitoring/crownlands.plugin",
+        "tools/server-monitoring/go.d.conf",
+        "tools/server-monitoring/monitor-role.sql",
+        "tools/server-monitoring/netdata.conf",
+        "tools/server-monitoring/postgres.conf",
+        "tools/server-monitoring/private.conf",
+        "tools/server-monitoring/test_collector.py",
+        "tools/validate-server-monitoring.js"
       ],
       "tests": [
-        "tools/validate-camp-artwork.js",
-        "tools/validate-camp-map-banners-browser.js",
-        "tools/validate-core-expansion-release.js",
-        "tools/validate-core-expansion-topology.js",
-        "tools/validate-reward-camp-lifecycle.js"
+        "tools/validate-server-monitoring.js"
       ],
-      "reason": "Replace four active Core camp images and delete only their superseded sprites. Verify exact hashes and bounded lazy delivery, all map/atlas/details/held-camp/order previews, server refreshes retaining new paintings but accepting positions, pre-map stale snapshots, unchanged castle flags, click/touch, timers and zoom at desktop and landscape-mobile sizes. Core asset sync projects only four presentation paths; reverse-projection equality and canonical lazy-map data protect all gameplay values. Core release/topology and reward lifecycle tests protect shared catalog/loader and camp dependencies. Production build, artifact, lint and asset budgets remain required. No server code, server catalog/layout, installed runtime, authority or data changes, so no emulator suite applies."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/visual-qa/camp-artwork-v2/README.md",
-        "docs/visual-qa/camp-artwork-v2/assets.json",
-        "docs/visual-qa/camp-artwork-v2/camp-deed.png",
-        "docs/visual-qa/camp-artwork-v2/camp-gold.png",
-        "docs/visual-qa/camp-artwork-v2/camp-items.png",
-        "docs/visual-qa/camp-artwork-v2/camp-troops.png",
-        "docs/visual-qa/camp-artwork-v2/prompts.json"
-      ],
-      "tests": [
-        "tools/validate-camp-artwork.js",
-        "tools/validate-camp-map-banners-browser.js"
-      ],
-      "reason": "Record the explicitly approved artwork replacement, source images and generation prompts. Pin source/delivery hashes and four exact retired-path mappings used by build sync. Verify all active game presentations and preserve archived art and the unrelated knight castle decoration."
-    },
-    {
-      "paths": [
-        "docs/SAFE_UPDATE_WORKFLOW.md",
-        "tools/prepare-pr.js",
-        "tools/safe-update-lib.js",
-        "tools/test-safe-update-pipeline.js"
-      ],
-      "tests": [
-        "tools/test-safe-update-pipeline.js",
-        "tools/test-change-risk-classifier.js",
-        "tools/test-targeted-validation.js",
-        "tools/validate-release-gate.js"
-      ],
-      "reason": "Required to complete the owner-requested deletion of the four replaced camp assets: the old audit unconditionally blocked any deletion after explicit review. Add only an exact per-file, per-run acknowledgement, recorded in the exact-head receipt and PR audit. Test default rejection, partial and invalid/wildcard paths, scope blockers, missing CLI arguments, stale receipt and main protection; keep generated-artifact, selected-validation and CI requirements unchanged."
+      "reason": "Private Netdata host configuration, read-only PostgreSQL monitor role, and an unprivileged collector for existing sanitized operations/publisher receipts and seasonal backup health. Offline tests exercise stale/future/missing/malformed inputs, safe numeric output, queue gaps, publisher states, reuse of backup policy, private listener/ACL and resource limits, restricted stats-only role and disabled top-query history. Installed service checks additionally verify live chart freshness, all private addresses, no public listener, Cloud unclaimed/offline, bounded memory, existing game health and the anonymous browser dashboard. No game/client/backend authority, world data, backup schedule or publisher changes: no game build or emulator suite applies. Documentation records host-specific installation and independent phone/Tailscale verification limits."
     }
   ]
 }

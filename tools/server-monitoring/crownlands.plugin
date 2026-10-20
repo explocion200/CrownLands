@@ -1,0 +1,142 @@
+#!/usr/bin/python3
+"""Read sanitized Crownlands health receipts as an unprivileged Netdata plugin.
+
+No credentials, player records, SQL, service control, or outgoing messages.
+Unknown/stale health fails closed; unavailable queue counts become chart gaps.
+"""
+from datetime import datetime
+import json
+import math
+from pathlib import Path
+import sys
+import time
+from urllib.error import HTTPError, URLError
+from urllib.request import ProxyHandler, build_opener
+
+COMPONENTS = ('database', 'workers', 'email', 'notifications', 'payments', 'services')
+QUEUES = {
+    'worker_dead': ('workers', 'dead'),
+    'worker_overdue': ('workers', 'overdue'),
+    'worker_stalled': ('workers', 'stalled'),
+    'worker_errors': ('workers', 'handlerErrors'),
+    'worker_failed': ('workers', 'failedOutcomes'),
+    'email_pending': ('email', 'pending'),
+    'email_failed': ('email', 'failed'),
+    'payment_pending': ('payments', 'pendingDeliveries'),
+    'payment_failed': ('payments', 'failedDeliveries'),
+}
+MAX_RECEIPT_BYTES = 32768
+
+
+def read_receipt(path):
+    try:
+        with path.open('rb') as stream:
+            raw = stream.read(MAX_RECEIPT_BYTES + 1)
+        if len(raw) > MAX_RECEIPT_BYTES:
+            return {}
+        result = json.loads(raw)
+        return result if isinstance(result, dict) else {}
+    except (OSError, ValueError, RecursionError):
+        return {}
+
+
+def fresh(receipt, key, now, max_age):
+    try:
+        stamp = datetime.fromisoformat(receipt[key].replace('Z', '+00:00'))
+        return stamp.utcoffset() is not None and 0 <= now - stamp.timestamp() <= max_age
+    except (KeyError, TypeError, ValueError, AttributeError, OverflowError):
+        return False
+
+
+def number(value):
+    return type(value) in (int, float) and 0 <= value <= 10**12 and math.isfinite(value)
+
+
+def sample(operations, deploy, backup_ok, now):
+    valid = fresh(operations, 'recordedAt', now, 90)
+    components = operations.get('components') if valid else {}
+    if not isinstance(components, dict):
+        components = {}
+    parts = {name: value if isinstance(value := components.get(name), dict) else {}
+             for name in COMPONENTS}
+    health = {name: int(parts[name].get('healthy') is True) for name in COMPONENTS}
+    health['status_fresh'] = int(valid)
+    health['seasonal_backup'] = int(backup_ok is True)
+    publisher_fresh = fresh(deploy, 'checkedAt', now, 900)
+    publisher = {name: int(publisher_fresh and deploy.get('status') in states)
+                 for name, states in {
+                     'current': ('current', 'deployed'),
+                     'waiting': ('waiting-for-github-build', 'verified-ready'),
+                     'held': ('held', 'paused'),
+                     'error': ('error',),
+                 }.items()}
+    publisher['status_fresh'] = int(publisher_fresh)
+    counts = {key: int(value) for key, (component, field) in QUEUES.items()
+              if number(value := parts[component].get(field))}
+    lag = parts['workers'].get('scheduleLagMinutes')
+    return {
+        'health': health,
+        'queues': counts,
+        'worker_lag': {'lag': round(lag * 1000)} if number(lag) else {},
+        'publisher': publisher,
+    }
+
+
+def backup_healthy():
+    # Reuse the installed seasonal policy, including its completion grace period.
+    # Bypass proxy environment variables: this request must stay on loopback.
+    try:
+        with build_opener(ProxyHandler({})).open(
+                'http://127.0.0.1:9187/backup-healthz', timeout=1) as response:
+            return response.status == 200
+    except (HTTPError, URLError, OSError, ValueError):
+        return False
+
+
+def definitions(interval):
+    charts = (
+        ('health', 'Crownlands service health (1 healthy, 0 needs attention)', 'healthy',
+         (*COMPONENTS, 'status_fresh', 'seasonal_backup')),
+        ('queues', 'Crownlands work queues and errors', 'jobs', tuple(QUEUES)),
+        ('worker_lag', 'Crownlands worker schedule lag', 'minutes', ('lag',)),
+        ('publisher', 'Crownlands publisher state (1 active)', 'state',
+         ('current', 'waiting', 'held', 'error', 'status_fresh')),
+    )
+    lines = []
+    for priority, (key, title, units, dimensions) in enumerate(charts, 1000):
+        lines.append(f"CHART crownlands.{key} '' '{title}' '{units}' 'Crownlands' "
+                     f"'crownlands.{key}' line {priority} {interval}")
+        for dimension in dimensions:
+            divisor = 1000 if key == 'worker_lag' else 1
+            lines.append(f'DIMENSION {dimension} {dimension} absolute 1 {divisor}')
+    return '\n'.join(lines)
+
+
+def render(values):
+    lines = []
+    for chart, dimensions in values.items():
+        lines.append(f'BEGIN crownlands.{chart}')
+        for key, value in dimensions.items():
+            lines.append(f'SET {key} = {value}')
+        lines.append('END')
+    return '\n'.join(lines)
+
+
+def main():
+    interval = max(10, int(sys.argv[1])) if len(sys.argv) > 1 else 10
+    print(definitions(interval), flush=True)
+    while True:
+        start = time.monotonic()
+        values = sample(
+            read_receipt(Path('/var/lib/crownlands-operations/status.json')),
+            read_receipt(Path('/var/lib/crownlands-deploy/status.json')),
+            backup_healthy(), time.time())
+        print(render(values), flush=True)
+        time.sleep(max(0.1, interval - (time.monotonic() - start)))
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (BrokenPipeError, KeyboardInterrupt):
+        pass
