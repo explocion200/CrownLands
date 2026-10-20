@@ -35,8 +35,9 @@ function readJson(filePath) {
 // Camp paintings are client presentation. Keep the installed server's world
 // contract untouched while projecting its original asset references into the
 // current browser catalog and lazy region definitions.
-const campArtwork = readJson(path.join(root, "docs/visual-qa/camp-artwork-v2/assets.json")).assets;
-const campAssetReplacements = new Map(campArtwork.map(asset => [asset.replaces, asset.output]));
+const campArtwork = readJson(path.join(root, "docs/visual-qa/camp-artwork-v3/assets.json")).assets;
+const campAssetReplacements = new Map(campArtwork.flatMap(asset =>
+  [asset.replaces, asset.supersedes].filter(Boolean).map(previous => [previous, asset.output])));
 function projectCampArtwork(value) {
   if (typeof value === "string") return campAssetReplacements.get(value) || value;
   if (Array.isArray(value)) return value.map(projectCampArtwork);

@@ -10,7 +10,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
   assert(executable, "Chromium required");
   const output = path.resolve(__dirname, "../release-artifacts/camp-map-banners");
   fs.mkdirSync(output, { recursive: true });
-  const artwork = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../docs/visual-qa/camp-artwork-v2/assets.json"), "utf8")).assets;
+  const artwork = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../docs/visual-qa/camp-artwork-v3/assets.json"), "utf8")).assets;
   const server = createMapBenchmarkServer(), address = await server.listen();
   let browser, client; const errors = [], results = [];
   try {
@@ -87,9 +87,13 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     for (const asset of artwork) {
       const decoded = await ev(`(async () => {
         const img=new Image(); img.src=${JSON.stringify(asset.output)}; await img.decode();
-        return [img.naturalWidth,img.naturalHeight];
+        const canvas=document.createElement("canvas"); canvas.width=img.naturalWidth; canvas.height=img.naturalHeight;
+        const ctx=canvas.getContext("2d");ctx.drawImage(img,0,0);const pixels=ctx.getImageData(0,0,384,384).data;
+        let clearFloor=0;for(let y=193;y<384;y++)for(let x=0;x<384;x++)if(pixels[(y*384+x)*4+3]<16)clearFloor++;
+        return {size:[img.naturalWidth,img.naturalHeight],clearFloor:clearFloor/(191*384)};
       })()`);
-      assert.deepEqual(decoded, [384,384], "Camp art must decode at its bounded delivery size");
+      assert.deepEqual(decoded.size, [384,384], "Camp art must decode at its bounded delivery size");
+      assert(decoded.clearFloor > .55, "Actual map ground must show through most of the camp floor");
       const atlas = await ev(`(() => {
         const regions=REGION_CATALOG.regions.filter(region=>region.artPresentation?.landmarks?.some(item=>item.kind==="camp"&&item.asset===${JSON.stringify(asset.output)}));
         return regions.map(region=>{
@@ -99,6 +103,31 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         });
       })()`);
       assert(atlas.length > 0 && atlas.every(Boolean), "Atlas previews must use the approved camp painting");
+    }
+    // Decode the shipped ground images, not just the geometry receipts: every
+    // sampled road center must remain visible after compositing and WebP encoding.
+    const roadProof = JSON.parse(fs.readFileSync(path.resolve(__dirname, "map-art/clearance.json"), "utf8"));
+    const groundChecks = await ev(`(async () => {
+      const checks=[];
+      for(const map of ${JSON.stringify(roadProof.maps.map(map=>({id:map.id,roads:map.roads.map(road=>road.filter((_,i)=>i%4===0))})))}) {
+        const summary=REGION_CATALOG.regions.find(r=>r.id===map.id), img=new Image();
+        img.src=summary.mapAsset;await img.decode();
+        const canvas=document.createElement("canvas");canvas.width=1448;canvas.height=1086;
+        const ctx=canvas.getContext("2d");ctx.drawImage(img,0,0);
+        const pixels=ctx.getImageData(0,0,1448,1086).data;let missed=0,total=0;
+        for(const road of map.roads)for(const [x,y] of road){
+          const at=(Math.min(1085,Math.max(0,Math.round(y)))*1448+Math.min(1447,Math.max(0,Math.round(x))))*4;
+          const [r,g,b]=pixels.slice(at,at+3);total++;
+          if(!(r>=185&&b>=96&&r>g+10&&g>b+45))missed++;
+        }
+        checks.push({id:map.id,width:img.naturalWidth,height:img.naturalHeight,total,missed});
+      }
+      return checks;
+    })()`);
+    assert.equal(groundChecks.length,81);
+    for(const check of groundChecks){
+      assert.equal(check.width,1448);assert.equal(check.height,1086);
+      assert.equal(check.missed,0,`Missing visible road samples: ${JSON.stringify(check)}`);
     }
     // The installed server still carries the original presentation paths.
     // Exercise its real descriptor shape, twice, as at login and realm refresh.
@@ -289,7 +318,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         assert(neutralFlag.typeSrc.endsWith(`camp-${["gold","troops","items","deed"][i]}-v2.webp`));
         assert.equal(await ev('document.querySelectorAll(".camp-owner-marker").length'),0,"Stale owner flag after neutral reset");
         assert(await ev('cityLayer.querySelector(".gold-camp-active-timer").hidden'));
-        results.push({width,height,mode,...layout,castleStyleMatch:true});
+        results.push({viewportWidth:width,viewportHeight:height,mode,...layout,castleStyleMatch:true});
       }
       // Both ends of normal map zoom retain an anchored, selectable type banner.
       for(const z of [.4,1]) {
@@ -299,7 +328,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       }
     }
     assert.deepEqual(errors, []);
-    fs.writeFileSync(path.join(output,"results.json"),JSON.stringify({results,flagAssets,errors},null,2));
+    fs.writeFileSync(path.join(output,"results.json"),JSON.stringify({results,flagAssets,groundChecks,errors},null,2));
     console.log("Camp banners: neutral type artwork, holder heraldry, capture/transfer/profile edits/neutral reset, no small pole flag, castle layout, desktop/landscape, countdown reuse, selection and zoom passed.");
   } finally {
     if(client){await client.send("Browser.close").catch(()=>{});client.close();}
