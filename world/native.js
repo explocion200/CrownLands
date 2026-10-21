@@ -66,6 +66,21 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   }
   const locate = (id,region) => view?.scene.objects.find(o => o.id === id && (!region || o.sectionId === region));
   function clearWheel() { overlay.replaceChildren(); lastWheel = ""; wheelPoint = null; }
+  function positionWheel(nodes,{camera,size}) {
+    const p=SeamlessModel.project(camera,wheelPoint,size);
+    // Preserve the existing close-up control size. Below maximum zoom the
+    // entire wheel, including button spacing, shrinks with its map target.
+    const maxZoom=SeamlessModel.forWorld(scene).limits(size).max;
+    const closeScale=size.height<500?.74:.9;
+    const scale=closeScale*Math.min(1,camera.zoom/maxZoom);
+    for(const node of nodes){
+      if(node.classList.contains("clan-tower-action-wheel")){
+        const bottom=wheelPoint.top+wheelPoint.height-wheelPoint.y;
+        node.style.setProperty("--tower-action-y",`${(bottom*maxZoom+36)/closeScale}px`);
+      }
+      node.style.left=`${p.x}px`;node.style.top=`${p.y}px`;node.style.transform=`translate(-50%,-50%) scale(${scale})`;
+    }
+  }
   function paintWheel() {
     if (!view || !areasReady || bridge?.running || getOnlineSessionRequestScope() !== session) return clearWheel();
     const target = selectedTowerMapId ? getHoldingTowerVisual(selectedTowerMapId) : selectedTargetId ? getArmyTargetById(selectedTargetId) : selectedSourceId ? getTroopOrderSourceById(selectedSourceId) : null;
@@ -88,7 +103,17 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     // can submit the expanded cross-section candidate list. Do not send the
     // old same-section list under the wider-world rules.
     if (!authenticated) for (const button of cityLayer.querySelectorAll(".wheel-scout-nearby,.wheel-regroup")) {button.disabled=true;button.title="Wider-world bulk controls are not connected in this UI rehearsal";}
-    for (const node of [...cityLayer.children]) { node.style.pointerEvents = "auto"; overlay.append(node); }
+    const controls=[...cityLayer.children];
+    // The native tower row normally measures a legacy cityLayer marker, which
+    // the connected map no longer renders. Retain its centered 60px spacing.
+    for(const node of controls)if(node.classList.contains("clan-tower-action-wheel")){
+      const buttons=[...node.querySelectorAll("[data-clan-tower-map-action]")];
+      buttons.forEach((button,index)=>button.style.setProperty("--tower-action-x",`${(index-(buttons.length-1)/2)*60}px`));
+    }
+    // Size before attaching: async identity/selection updates must not flash
+    // an unscaled wheel while waiting for the next camera frame.
+    positionWheel(controls,view.snapshot());
+    for (const node of controls) { node.style.pointerEvents = "auto"; overlay.append(node); }
   }
   // Identity repairs, own-power subscriptions and the existing power-band
   // stabilization timer must repaint visible banners as well as action wheels.
@@ -203,7 +228,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
       // Preserve an in-progress troop destination choice while navigating.
       if (!sendMode && view?.getObject(view.selectedKey)?.kind!=="troop") { view?.clear(); bridge.cancel(); clearSelection(false); clearWheel(); }
     },
-    onFrame: ({project,size}) => {
+    onFrame: ({camera,project,size}) => {
       frameView={project,size};updateMainCityReturnButton();
       if (getOnlineSessionRequestScope() !== session) { dispose(); return; }
       for(const node of pickupNodes.values()){const p=project(node.worldPoint);node.hidden=!areasReady||p.x< -30||p.y< -30||p.x>size.width+30||p.y>size.height+30;node.style.left=`${p.x}px`;node.style.top=`${p.y}px`;}
@@ -223,7 +248,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
         if (!sendMode&&!bridge.running&&!transitioning) {view.clear();bridge.cancel();clearSelection(false);}
         clearWheel();return;
       }
-      for(const node of overlay.children){const scale=size.height<500?.74:.9;node.style.left=`${p.x}px`;node.style.top=`${p.y}px`;node.style.transform=`translate(-50%,-50%) scale(${scale})`;}
+      positionWheel(overlay.children,{camera,size});
     },
   });
   } catch (error) { dispose(); throw error; }

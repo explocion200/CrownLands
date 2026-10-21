@@ -1,25 +1,11 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "dce595d01a3babbcd39c2907e80a8e1edb6af143",
+  "baseCommit": "174ae0aab87eb6415a3fe8903df2cbba8c653c55",
   "coverage": [
     {
       "paths": [
-        "world/appearance.js"
-      ],
-      "tests": [
-        "tools/validate-king-power-colors.js",
-        "tools/validate-weaker-kingdom-protection.js",
-        "tools/validate-king-power.js",
-        "tools/test-local-postgres-production-world.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "reason": "Restore the existing authoritative King Power bands and native shield colors for visible regular castles across section boundaries. Reuse canonical identity lookups, version/timestamp guards, three-second stabilization and bounded repairs. Verify unknown/zero/legacy power, protection thresholds, troop accounting, ownership/ally/objective exemptions, selected and unselected CSS colors at desktop and landscape-mobile sizes, with no balance or server-authoritative changes."
-    },
-    {
-      "paths": [
         "world/native.js",
-        "world/preview.js",
-        "tools/check-continuous-map-power.js",
+        "tools/check-continuous-control-scale.js",
         "tools/test-local-postgres-native-auth-world.js"
       ],
       "tests": [
@@ -27,7 +13,14 @@
         "tools/test-local-postgres-native-auth-world.js",
         "tools/validate-production-artifact.js"
       ],
-      "reason": "Connect visible neighboring owners to the existing deduplicated identity queue and invalidate appearance on native stats/identity/timer updates. Exercise delayed authoritative repair, same-node repaint, stabilized color changes, bounded cache requests and live action/selection/privacy dependencies in the isolated PostgreSQL authenticated harness. Confirm desktop/mobile performance and production packaging; the shared harness also retains private-mode coverage. No schema, backend logic or production data changes, so no extra emulator suite is needed."
+      "reason": "Scale complete native city/objective action arrangements with the continuous camera relative to their existing maximum-zoom size. Verify proportional button/spacing geometry, anchors, pre-attachment transforms, resize and real mouse/touch Info actions at four zooms and three desktop/landscape-mobile sizes for own/ally cities and all objective kinds. The authenticated production harness also exercises NPC controls, power colors, deselection, troop destination choice, scout/regroup/send/recall/rally handlers, visibility and performance. Run its shared private-mode entry and production packaging validation. No server, movement, data or gameplay changes require new emulator suites. Restore the native Clan Tower row spacing without depending on an absent legacy marker, and verify button faces do not stack. The existing pickup click also waits for the queued camera frame before measuring its hit point, avoiding a stale-coordinate test race."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
+      "tests": [],
+      "reason": "Record the owner-confirmed proportional selection-control sizing and retain existing gameplay and zoom/deselection behavior. Documentation does not claim deployment."
     }
   ]
 }
