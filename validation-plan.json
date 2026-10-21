@@ -1,72 +1,16 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "30bd1761f69038acea8407897efd1aeb75e209a1",
+  "baseCommit": "90fe8c83f3a873054cc455b9c6db2bce896d8434",
   "coverage": [
     {
       "paths": [
-        "functions/index.js",
-        "tools/validate-authoritative-army-orders.js"
-      ],
-      "tests": [
-        "tools/validate-authoritative-army-orders.js",
-        "tools/validate-world-travel-network.js",
-        "tools/test-local-postgres-world-commands.js",
-        "tools/test-local-postgres-world-pilot.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-world-travel.js",
-        "functions/test/emulator-rally-lifecycle.js"
-      ],
-      "reason": "Private capability projects canonical endpoints for Scout Nearby and Regroup and accepts qualified cross-section bulk addresses. Preserve default same-map behavior, signatures, server costs/ownership, atomicity, movement copies and current travel calculations. Disposable PostgreSQL covers actual wider-world commands, generated identities, out-of-range denial, retry rollback, reinforcement/rally authority and browser integration; emulator suites cover installed current-policy bulk orders/travel and shared rally paths."
-    },
-    {
-      "paths": [
-        "tools/map-benchmark/seamless/command-routing.js"
-      ],
-      "tests": [
-        "tools/validate-world-command-routing.js",
-        "tools/test-local-postgres-world-pilot.js",
-        "tools/test-local-postgres-world-commands.js"
-      ],
-      "reason": "Distance and route commands share the same canonical display layout/units and section identity. Test edge/radius boundaries, generated template separation, no forged paths, routing workers, old/new geometry and rollback."
-    },
-    {
-      "paths": [
-        "tools/map-benchmark/seamless/live-reader.js",
-        "tools/map-benchmark/seamless/live-server.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-live-reader.js",
-        "tools/test-local-postgres-world-cohort.js",
-        "tools/test-local-postgres-open-routing.js",
-        "tools/test-local-postgres-world-pilot.js"
-      ],
-      "reason": "Keep live/cohort modes read-only while admitting only an in-process disposable pilot capability; validate session/Origin/Host restrictions, account isolation, expiry, allowed commands, projection privacy and old/new/return route metadata. Recheck existing production-reader and draft-route consumers."
-    },
-    {
-      "paths": [
-        "tools/map-benchmark/seamless/gameplay-pilot.js",
-        "tools/map-benchmark/seamless/gameplay-controls.js",
-        "tools/map-benchmark/seamless/preview.js",
-        "tools/map-benchmark/seamless/preview.css",
-        "tools/run-world-gameplay-pilot.js",
-        "tools/test-local-postgres-world-pilot.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-world-pilot.js",
-        "tools/test-local-postgres-live-browser.js",
-        "tools/test-local-postgres-open-routing-browser.js",
-        "tools/test-local-postgres-world-phone.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "reason": "Real isolated command pilot, bounded account/session lifecycle and explicit launcher; two browser identities, previews/launch/recall, desktop and 844x390/568x320 touch and 4x CPU, input/selection races, failure retry, unchanged readonly clients, route return interpolation, bounded image residency, no outside requests or production inclusion. Physical two-player pilot is deliberately deferred by the owner."
-    },
-    {
-      "paths": [
+        "docs/CONTINUOUS_WORLD_GAMEPLAY_PILOT.md",
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CONTINUOUS_WORLD_GAMEPLAY_PILOT.md"
+        "docs/CONTINUOUS_WORLD_COMMAND_REHEARSAL.md",
+        "docs/CONTINUOUS_WORLD_LIVE_READER.md"
       ],
       "tests": [],
-      "reason": "Record the confirmed private-only scope, preserved balance, measured automated results, deferred human pilot and launch/cleanup procedure. Documentation adds no runtime behavior."
+      "reason": "Documentation-only record of the owner explicitly waiving the hands-on continuous-world player pilot. Preserve historical automated evidence, keep optional launchers inactive, and identify existing unfinished production integration. No runtime, game rules, assets, dependencies, installed services or production data change; no runtime or emulator suites apply."
     }
   ]
 }

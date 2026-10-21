@@ -58,7 +58,7 @@ To start a separately authorized local session, an administrator runs the review
 
 The owner preview created for this work uses the transient user service `crownlands-world-live-preview.service` and the administrator cleanup timer `crownlands-world-reader-expiry.timer`. The grant is at `~/.local/share/crownlands-world-reader/grant.json`. The visible entry is `http://127.0.0.1:8802/__benchmark__/seamless/?catalog=full` on this computer only.
 
-Before public rollout: complete the hands-on selected-player pilot, resolve its findings, validate any additional disclosure/UI requirements, reduce larger/dispersed-cohort deferrals and obtain rollout authorization. All gameplay and travel rules remain on the current live map.
+Before public rollout: validate any additional disclosure/UI requirements, reduce larger/dispersed-cohort deferrals and obtain rollout authorization. The owner waived the hands-on selected-player pilot on October 21; it remains unperformed and is no longer a prerequisite. See [the current integration work](CONTINUOUS_WORLD_GAMEPLAY_PILOT.md#remaining-production-integration). All gameplay and travel rules remain on the current live map.
 
 
 ## October 21 follow-up: refreshes, terrain and appearance
