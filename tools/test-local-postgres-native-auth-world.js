@@ -40,6 +40,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     const select = async (p, city) => {
       const section = pilot.reader.sections.get(city.regionId);
       await p.evaluate(({ x, y }) => nativeContinuousWorld.view.view(x, y), { x: section.x + 724, y: section.y + 543 });
+      // Programmatic camera changes are applied on the next frame. Let its
+      // area window update before checking freshness or selecting an object
+      // that happened to remain cached from the preceding viewport.
+      await p.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
       await p.waitForFunction(({ key, region }) => {
         const v = nativeContinuousWorld.view, f = v.snapshot().feed;
         return f.ids.includes(region) && !f.pending && !f.failed && !!v.getObject(key);
