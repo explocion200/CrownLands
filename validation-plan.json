@@ -1,176 +1,40 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "2421a791a406bb7691a0dd97a215cea56f2481a4",
+  "baseCommit": "8f9d78879283543c158e8ca550d2e14786de9a7a",
   "coverage": [
     {
       "paths": [
-        "docs/CONTINUOUS_WORLD_PRODUCTION.md",
-        "docs/CONTINUOUS_WORLD_ROLLOUT.md",
+        "local-backend/world/reader.js",
+        "tools/validate-world-map-presentation.js"
+      ],
+      "tests": [
+        "tools/validate-world-map-presentation.js",
+        "tools/test-local-postgres-world-service.js",
+        "tools/test-local-postgres-production-world.js",
+        "functions/test/emulator-army-listener-rules.js"
+      ],
+      "reason": "Restore explicitly public names, levels, owner/clan identity and march type for the original presentation. Test the public whitelist, fresh own-only exact counts, other-viewer filtering, capture/privacy changes and bounded authenticated load; routes and gameplay rules are unchanged."
+    },
+    {
+      "paths": [
+        "world/appearance.js",
+        "world/flags.css",
+        "world/native.js",
+        "world/preview.js",
+        "tools/test-local-postgres-native-auth-world.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-production-world.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Restore native banners, flags, march tokens and Home control on the existing bounded camera. Exercise actual authenticated client selection, private counts, all gameplay controls, cross-area Home, following, drag/pinch, area loss and growth; visually inspect desktop and landscape mobile screenshots and measure frame times. Existing game CSS is reused inside the map shadow root; other HUD/windows stay unchanged."
+    },
+    {
+      "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record explicitly approved production scope, test evidence and ordered activation/rollback. Documentation does not itself change or claim production state."
-    },
-    {
-      "paths": [
-        "functions/index.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-production-routes.js",
-        "tools/validate-production-world.js",
-        "tools/validate-authoritative-army-orders.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-rally-lifecycle.js",
-        "functions/test/emulator-scouting-veil.js",
-        "functions/test/emulator-army-listener-rules.js"
-      ],
-      "reason": "Preserve accepted continuous paths and speed/idempotency rules; closest-source scouting prunes only safe lower bounds with ties. Exercise real preview, launch, arrival, recall/rejoin, bulk ranges, rallies, saved routes after restart and disclosure rules."
-    },
-    {
-      "paths": [
-        "local-backend/world/catalog.js",
-        "local-backend/world/layout.js",
-        "local-backend/world/pathfinder.js",
-        "local-backend/world/reader.js",
-        "local-backend/world/roads.js",
-        "local-backend/world/route-service.js",
-        "local-backend/world/route-worker.js",
-        "local-backend/world/routing.js",
-        "local-backend/world/service.js",
-        "local-backend/world/source/catalog.json",
-        "local-backend/world/source/dirt.png",
-        "local-backend/world/source/ground.png",
-        "local-backend/world/source/roads.json",
-        "local-backend/world/templates.json",
-        "local-backend/world/terrain-worker.js",
-        "tools/prepare-world-templates.js"
-      ],
-      "tests": [
-        "tools/validate-production-world.js",
-        "tools/test-local-postgres-world-service.js",
-        "tools/test-local-postgres-production-routes.js",
-        "tools/test-local-postgres-production-world.js"
-      ],
-      "reason": "Production catalog, reader, terrain and routing share approved geometry and current realm authority. Cover generated growth, seasons, retired membership, 512-section bound, all seams/corners, corruption recovery, private exact counts, 24-player combined command/chat load, real march animation and saved paths. Frozen art inputs must remain byte-identical and contain no fictional ownership. Overlap the same viewer's foreground Nearby/Regroup reads and area polls while retaining per-lane admission and the shared two-connection bound."
-    },
-    {
-      "paths": [
-        "local-backend/game-http.js",
-        "local-backend/package.json",
-        "local-backend/permanent-platform.js",
-        "local-backend/permanent-services.js",
-        "local-backend/pnpm-lock.yaml"
-      ],
-      "tests": [
-        "tools/test-local-postgres-permanent.js",
-        "tools/test-local-postgres-game-http.js",
-        "tools/test-local-postgres-world-service.js",
-        "tools/test-local-postgres-production-world.js"
-      ],
-      "reason": "Explicit protected permanent capability, new read-only pool and locked raster dependency must preserve restricted identities, activation fencing, authentication/CSRF, fair action/chat admission and health lifecycle. Exercise actual service startup and normal reads/writes with production integration disabled and enabled test realms."
-    },
-    {
-      "paths": [
-        "local-client.js",
-        "local-production.js",
-        "world/appearance.js",
-        "world/assets.js",
-        "world/bootstrap.js",
-        "world/delta-feed.js",
-        "world/feed.js",
-        "world/flags.css",
-        "world/game-bridge.js",
-        "world/model.js",
-        "world/native.js",
-        "world/preview.css",
-        "world/preview.js",
-        "world/sprite-layer.js",
-        "world/surface.html"
-      ],
-      "tests": [
-        "tools/test-local-browser-client.js",
-        "tools/test-local-chat-client.js",
-        "tools/test-local-production-client.js",
-        "tools/test-local-postgres-production-world.js",
-        "tools/validate-production-world.js",
-        "tools/test-local-postgres-pickups.js"
-      ],
-      "reason": "Exercise lazy minified production modules with real cookie-authenticated clients, native action controls and live saved marches. Verify visibility, stale queued command revisions, selection/camera across generated expansion, reconnect/logout, desktop and mobile CPU-throttled rendering; retain unchanged chat transport and disabled-world compatibility. Preserve gold/troop/Crown pickup buttons and real claim transactions in the continuous camera. Verify offscreen native Location and Home navigation resolves the exact displayed castle after area loading, and delayed responses respect subsequent manual panning."
-    },
-    {
-      "paths": [
-        "tools/build-production-client.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "tests": [
-        "tools/validate-production-artifact.js",
-        "tools/test-local-production-client.js",
-        "tools/test-local-postgres-production-world.js"
-      ],
-      "reason": "Only the exact production module allowlist is published; retain base entry/worker/asset budgets and separately cap the optional world modules. Validate production minification and signed-local client preparation without benchmark code or fixtures."
-    },
-    {
-      "paths": [
-        "tools/map-benchmark/seamless/gameplay-pilot.js",
-        "tools/map-benchmark/seamless/native-auth-harness.js",
-        "tools/map-benchmark/seamless/production-test-policy.js",
-        "tools/test-local-postgres-native-auth-world.js",
-        "tools/test-local-postgres-production-world.js",
-        "tools/test-local-postgres-world-service.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-native-auth-world.js",
-        "tools/test-local-postgres-production-world.js",
-        "tools/test-local-postgres-world-service.js"
-      ],
-      "reason": "Shared disposable-world helpers now support one genuine production HTTP service for many isolated accounts. Preserve private harness behavior; test actual bundled modules, live data policies, command matrix, retired/new generation, no external requests, generated selection continuity and representative combined load."
-    },
-    {
-      "paths": [
-        "tools/test-local-postgres-production-routes.js",
-        "tools/test-local-postgres-world-commands.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-world-commands.js",
-        "tools/test-local-postgres-production-routes.js"
-      ],
-      "reason": "Execute both private and production route variants through real registered handlers and a fresh process, including old/new persisted paths, transient worker retries, recall and rallies."
-    },
-    {
-      "paths": [
-        "tools/test-local-browser-client.js"
-      ],
-      "tests": [
-        "tools/test-local-browser-client.js"
-      ],
-      "reason": "Queued request identity and original world revision must survive admission waiting and reject obsolete requests."
-    },
-    {
-      "paths": [
-        "tools/test-local-production-client.js"
-      ],
-      "tests": [
-        "tools/test-local-production-client.js"
-      ],
-      "reason": "Prepared production client loads the optional bootstrap only after local configuration while preserving its existing identity checks."
-    },
-    {
-      "paths": [
-        "tools/test-local-postgres-permanent.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-permanent.js"
-      ],
-      "reason": "Restricted service fixture includes the bounded world read pool and verifies disabled production catalog without changing normal auth/save behavior."
-    },
-    {
-      "paths": [
-        "tools/validate-production-world.js"
-      ],
-      "tests": [
-        "tools/validate-production-world.js"
-      ],
-      "reason": "Run actual production art composition, geometry at capacity, all joins/corners, cache corruption recovery, zoom anchoring and closest-scout pruning."
+      "reason": "Record the owner-confirmed UI restoration while retaining continuous movement; does not assert deployment."
     }
   ]
 }

@@ -71,7 +71,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       },key);
       assert(!await page.evaluate(id=>nativeContinuousWorld.view.snapshot().feed.ids.includes(id),far.id));
       const farKey=await navigate();await centered(farKey);
-      await page.locator("#continuous-game-surface #home").click();
+      await page.locator("#mainCityReturnBtn").click();
       await page.waitForFunction(()=>getActiveMapRegionId()===getMainCityRegionId()&&!isMapInteractionBlocked());
       await centered(await page.evaluate(()=>getMainCityRegionId()+":"+state.mainCityId));
       const originalRead=harness.worldData.read;let release,waiting=false;
@@ -88,6 +88,16 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
         assert(Math.hypot(moved.x-after.x,moved.y-after.y)<1,"A delayed Location response overrode manual panning");
       }finally{release();harness.worldData.read=originalRead;}
       await select(page,source);
+    }
+    if(production){
+      const ui=await page.evaluate(key=>{
+        const root=nativeContinuousWorld.root,node=[...root.querySelectorAll("[data-key]")].find(n=>n.dataset.key===key);
+        return {banner:!!node?.querySelector(".player-city-banner"),level:node?.querySelector(".city-label-level")?.textContent,
+          troops:node?.querySelector(".city-army-count")?.textContent,tag:!!node?.querySelector(".tag"),
+          cameraPanel:getComputedStyle(root.querySelector("header")).display,statusHidden:root.querySelector("footer").hidden};
+      },source.regionId+":"+source.id);
+      assert(ui.banner&&ui.level&&ui.troops,"Original own-city banner must show level and authorized troops");
+      assert(!ui.tag&&ui.cameraPanel==="none"&&ui.statusHidden,"Prototype presentation must not replace the normal HUD");
     }
     await page.locator("#continuous-game-actions .wheel-send").click();
     await select(page, target);
@@ -110,6 +120,13 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     assert.equal(await page.evaluate(() => nativeContinuousWorld.view.snapshot().following), null);
     await select(pages[1], source);
     const visible = await Promise.all(pages.map(p => p.evaluate(key => nativeContinuousWorld.view.getObject(key), source.regionId + ":" + source.id)));
+    if(production){
+      const foreign=await pages[1].evaluate(key=>{
+        const root=nativeContinuousWorld.root,node=[...root.querySelectorAll("[data-key]")].find(n=>n.dataset.key===key);
+        return {banner:!!node?.querySelector(".foreign-selected-banner"),text:node?.querySelector(".foreign-garrison")?.textContent};
+      },source.regionId+":"+source.id);
+      assert(foreign.banner&&foreign.text==="? troops","Restored foreign banner must not disclose private counts");
+    }
     assert.equal(visible[0].troopVisibility, "exact"); assert.equal(visible[1].troopVisibility, "hidden"); assert(!Object.hasOwn(visible[1], "troops"));
     // Recall uses the actual activity-panel button and recovery journal.
     await page.evaluate(() => showOutgoingAttacksModal());
@@ -129,7 +146,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
         const button=page.locator(`#continuous-world-pickups [data-harvest-bonus-id="${bonus.id}"]`);
         await button.waitFor({state:"attached"});
         await button.evaluate(node=>CrownlandsContinuousWorld.view.focus(node.worldPoint));
-        await button.click();
+        // The existing pickup pulses continuously. Use an ordinary pointer
+        // click at its center instead of waiting for animation-free geometry.
+        const box=await button.boundingBox();assert(box);
+        await page.mouse.click(box.x+box.width/2,box.y+box.height/2);
         await page.waitForFunction(id=>!getAllActiveHarvestBonuses().some(b=>b.id===id),bonus.id);
         assert(!(await pilot.store.doc("players/"+pilot.players[0].uid).get()).data().harvestBonuses.some(b=>b.id===bonus.id));
       }
@@ -265,6 +285,12 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       results.push({ width, height, fps: 1000 / (times.reduce((a,b)=>a+b,0)/times.length), p95: times[Math.floor(times.length*.95)], assets: sample.assets, feed: sample.feed });
       assert(sample.assets.full <= 4); assert(sample.assets.peakRequests <= 2);
       await page.screenshot({ path: path.join(output, `authenticated-${width}.png`) }); await cdp.detach();
+      if(production){
+        await select(page,source);
+        await page.evaluate(key=>{const v=nativeContinuousWorld.view,o=v.getObject(key);v.focus(o);},source.regionId+":"+source.id);
+        await sleep(250);
+        await page.screenshot({path:path.join(output,`restored-ui-${width}.png`)});
+      }
     }
     if(production){
       // Catalog growth automatically replaces the reader and client scene.

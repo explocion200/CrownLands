@@ -13,17 +13,21 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   const root = host.attachShadow({mode:"open"});
   const html = await (await fetch("/world/surface.html")).text();
   const parsed = new DOMParser().parseFromString(html, "text/html");
-  root.innerHTML = '<link rel="stylesheet" href="/world/preview.css"><style>:host{display:block}.shell{height:100%;display:flex;flex-direction:column}header{position:absolute;top:80px;right:8px;padding:3px;z-index:6}header nav{display:grid;grid-template-columns:32px 32px;gap:2px}header button{min-height:28px;font-size:10px;padding:2px}header #home,header #fit{grid-column:span 2}header #zoom{display:none}header>div,footer #hint{display:none}footer{position:absolute;top:4px;right:60px;border:1px solid #a88c5d;max-width:200px;font-size:8px}#load-status{white-space:normal}#viewport{height:100%}</style><div class="shell">' + parsed.body.innerHTML + '</div>';
-  root.querySelector("#fit").textContent = "World";
-  const inspectorStyle = document.createElement("style");
-  inspectorStyle.textContent = "#inspector{bottom:100px;max-height:calc(100% - 190px)}@media(max-height:500px){#inspector{bottom:84px;max-height:calc(100% - 135px);width:265px;padding:6px}#inspector h1{font-size:15px;margin:2px 30px 3px 0}#inspector p{margin:1px 0;font-size:11px}#inspector #kind{font-size:9px}#inspector #follow{min-height:26px;padding:3px 10px;position:sticky;bottom:0}}";
-  root.append(inspectorStyle);
-  if (authenticated) { const style = document.createElement("link"); style.rel="stylesheet"; style.href="/world/flags.css"; root.append(style); }
+  // Share the actual game's styles, rather than the prototype's replacement UI.
+  root.innerHTML = ["styles.css","interface-theme.css","readability.css","manuscript-prototype.css","ui-contrast-correction.css","crownlands-palette.css","marauders-ui.css","holding-tower-ui.css","world/preview.css","world/flags.css"]
+    .map(file=>`<link rel="stylesheet" href="/${file}">`).join("") + '<div class="shell">' + parsed.body.innerHTML + '</div>';
   const overlay = document.createElement("div"); overlay.id = "continuous-game-actions";
   overlay.style.cssText = "position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden";
   const pickups = document.createElement("div"); pickups.id="continuous-world-pickups";
   pickups.style.cssText="position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden;--map-hit-size:44px";
+  // SVG fragment references resolve inside the shadow tree. Reuse the game's
+  // existing symbol definitions so neutral crests and player emblems stay visible.
+  const symbols=document.createElementNS("http://www.w3.org/2000/svg","svg");
+  symbols.style.cssText="position:absolute;width:0;height:0;overflow:hidden";symbols.setAttribute("aria-hidden","true");
+  for(const symbol of document.querySelectorAll("svg symbol"))symbols.append(symbol.cloneNode(true));
+  root.prepend(symbols);
   mapFrame.append(host,pickups,overlay); mapWorld.hidden = true;
+  setMainCityReturnHudMode(true);if(mainCityReturnBtn)mainCityReturnBtn.title="Return to main city";
   // Renderer owns its pointer stream. Native HUD and dialog events stay outside.
   const stop = e => e.stopPropagation();
   for (const type of ["pointerdown","pointermove","pointerup","pointercancel","click","wheel","touchmove"]) { host.addEventListener(type,stop); overlay.addEventListener(type,stop); }
@@ -34,7 +38,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   const original = { renderCities, renderArmies, renderPaths, renderHarvestBonuses, centerOnMap, centerOnCity, centerOnWorldPoint, beginMapVisualTransition, updateMainCityReturnButton,
     renderWorldMap, renderIslandTeleporters, preloadIslandMap, preloadNearbyIslandMaps,
     getNearbyScoutCandidates, getNearbyRegroupCandidates, toggleScoutNearby, toggleRegroup };
-  let view, bridge, transitioning = false, restoringSelection = false, disposed = false, lastWheel = "", wheelPoint = null, pendingFocus = null;
+  let view, bridge, transitioning = false, restoringSelection = false, disposed = false, lastWheel = "", wheelPoint = null, pendingFocus = null, frameView = null;
   // A Location command can precede the bounded area's first snapshot. Resolve
   // its exact display position when that snapshot arrives, unless the player
   // has already chosen a new camera interaction.
@@ -115,7 +119,13 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     };
   }
   beginMapVisualTransition = () => null;
-  updateMainCityReturnButton = () => { if (mainCityReturnBtn) mainCityReturnBtn.hidden=true; };
+  updateMainCityReturnButton = () => {
+    if(!mainCityReturnBtn||!frameView)return;
+    const main=getMainCityReference(),point=main&&locate(main.id,getMainCityRegionId());
+    const {project,size}=frameView,p=point&&project(point);
+    const visible=p&&p.x>56&&p.y>100&&p.x<size.width-56&&p.y<size.height-80;
+    if(mainCityReturnBtn.hidden!==Boolean(visible))mainCityReturnBtn.hidden=Boolean(visible);
+  };
   centerOnMap = () => { if (!transitioning && !restoringSelection) { pendingFocus=null;const s=view?.scene.sections.find(s=>s.id===getActiveMapRegionId());if(s)view.focus({x:s.x+s.width/2,y:s.y+s.height/2}); } };
   centerOnCity = id => { const c = getArmyTargetById(id); if(c)centerOnWorldPoint(c,getCityRegionId(c)); };
   centerOnWorldPoint = (point,region=getActiveMapRegionId()) => {
@@ -154,7 +164,13 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
       else if (isRewardCampTarget(target)) selectRewardCamp(target.id); else selectCity(target.id);
     },
   });
-  try { view = await window.createContinuousWorldView({ root, scene, nativeUi:true,
+  try {
+    await Promise.all([...root.querySelectorAll('link[rel="stylesheet"]')].map(link=>new Promise((resolve,reject)=>{
+      if(link.sheet)return resolve();
+      const done=error=>{clearTimeout(timer);link.onload=link.onerror=null;error?reject(Error("Map styles unavailable. Reload to retry.")):resolve();};
+      const timer=setTimeout(()=>done(true),10000);link.onload=()=>done(false);link.onerror=()=>done(true);
+    })));
+    view = await window.createContinuousWorldView({ root, scene, nativeUi:true,
     ...(authenticated ? { loadAreas: (ids, signal, cursor) => readWorld("areas", { realm: scene.realmId, ids, cursor }, signal),
       onAreas: data => {
         areasReady = !data.authExpired && !data.failed && data.authoritative === true;
@@ -179,6 +195,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     },
     onClear: () => {pendingFocus=null;bulkGeneration++;bulk=null;bridge.cancel();clearSelection(false);},
     onFrame: ({project,size}) => {
+      frameView={project,size};updateMainCityReturnButton();
       if (getOnlineSessionRequestScope() !== session) { dispose(); return; }
       for(const node of pickupNodes.values()){const p=project(node.worldPoint);node.hidden=!areasReady||p.x< -30||p.y< -30||p.x>size.width+30||p.y>size.height+30;node.style.left=`${p.x}px`;node.style.top=`${p.y}px`;}
       if (!wheelPoint) return;
@@ -187,12 +204,11 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     },
   });
   } catch (error) { dispose(); throw error; }
-  root.querySelector("#home").addEventListener("click",()=>{pendingFocus=null;void returnToMainCity();});
   // Useful native panels still open from the real HUD; no replacement HUD.
   clearSelection(false);view.home();renderPickups();
   root.querySelector("#load-status").textContent="Connected";
   function dispose() {
-    if(disposed)return;disposed=true;window.removeEventListener("pagehide",dispose);bridge.dispose();view?.dispose();host.remove();overlay.remove();pickups.remove();pickupNodes.clear();mapWorld.hidden=false;
+    if(disposed)return;disposed=true;window.removeEventListener("pagehide",dispose);bridge.dispose();view?.dispose();host.remove();overlay.remove();pickups.remove();pickupNodes.clear();mapWorld.hidden=false;setMainCityReturnHudMode(false);
     ({renderCities,renderArmies,renderPaths,renderHarvestBonuses,centerOnMap,centerOnCity,centerOnWorldPoint,beginMapVisualTransition,updateMainCityReturnButton,
       renderWorldMap,renderIslandTeleporters,preloadIslandMap,preloadNearbyIslandMaps,getNearbyScoutCandidates,getNearbyRegroupCandidates,toggleScoutNearby,toggleRegroup}=original);
     delete window.CrownlandsContinuousControls;

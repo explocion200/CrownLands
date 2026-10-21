@@ -232,8 +232,15 @@ class LiveReader {
     const x=section.x+previewLocal.x,y=section.y+previewLocal.y;
     const dto={key:section.id+":"+id,id,sectionId:section.id,sectionName:section.name,name:text(data.name)||id,kind,
       gamePosition:{x:data.x,y:data.y},local,previewLocal,x,y,left:x-width/2,top:y-height/2,width,height,asset:safeAsset(data.artSrc,asset),
-      owner:text(data.ownerName||data.holderName||data.clanName)||"Neutral",selectable:true,troopVisibility:"hidden"};
-    if(kind==="npc"){dto.spawnId=text(data.spawnId,96);dto.selectable=data.status==="active";}
+      owner:text(data.ownerName||data.holderName||data.clanName)||"Neutral",selectable:true,troopVisibility:"hidden",
+      // Public presentation only. Exact garrisons still pass through the fresh
+      // per-viewer ownership check above; never spread the source document.
+      ownerUid:text(data.ownerUid||data.holderUid,128),ownerClanId:text(data.ownerClanId||data.clanId,128),ownerClanTag:text(data.ownerClanTag||data.clanTag,5),
+      level:Math.max(1,Math.floor(number(data.level)||1)),isMainCity:data.isMainCity===true,
+      campType:["gold","troops","items","deed"].includes(data.campType)?data.campType:null,
+      classification:data.classification==="boss"?"boss":"solo"};
+    if(kind==="npc"){dto.spawnId=text(data.spawnId,96);dto.selectable=data.status==="active";dto.respawnAtMs=Math.max(0,number(data.respawnAtMs));}
+    if(kind==="camp"){dto.payoutAtMs=Math.max(0,number(data.payoutAtMs));dto.payoutPending=data.payoutPending===true;dto.contested=data.state==="contested";}
     if(this.display&&kind==="castle"&&!this.display.match(section,local,"castle"))dto.layoutUnmapped=true;
     if((data.ownerUid||data.holderUid)&&["castle","camp","stronghold","citadel"].includes(kind))dto.ownerFlag=Flags.normalizeFlag(data.ownerFlag||data.holderFlag,data.ownerUid||data.holderUid);
     if(uid&&(data.ownerUid===uid||data.holderUid===uid)){const count=data.troops??data.currentGarrison;if(Number.isFinite(count)){dto.troops=Math.max(0,Math.floor(count));dto.troopVisibility="exact";}}
@@ -252,6 +259,7 @@ class LiveReader {
     if(!sectionIds.some(id=>ids.includes(id)))return null;
     const routeId="route-"+hash(points),key="march:"+id;
     const body={key,id,sectionId:sectionIds[0],sections:[...new Set(sectionIds)],name:text(data.ownerName)||"March",owner:text(data.ownerName),kind:"troop",asset:"assets/icons/skills/atlas-v1/marchOrders.webp",
+      ownerUid:text(data.ownerUid,128),ownerClanId:text(data.ownerClanId,128),missionKind:["attack","transfer","reinforce","scout","rally"].includes(data.kind)?data.kind:"attack",
       routeId,departAt:data.launchedAtMs/1000,arriveAt:data.arrivesAtMs/1000,troopVisibility:"hidden",returning:false,swiftAt:0,swiftProgress:0,returnStartProgress:0,recalledAt:0};
     if(data.returning&&Number.isFinite(data.recalledAtMs)&&data.arrivesAtMs>data.recalledAtMs){body.returning=true;body.recalledAt=data.recalledAtMs/1000;body.returnStartProgress=Math.max(0,Math.min(1,number(data.returnStartProgress)));}
     if(Number.isFinite(data.swiftMarchUsedAtMs)&&data.arrivesAtMs>data.swiftMarchUsedAtMs){body.swiftAt=data.swiftMarchUsedAtMs/1000;body.swiftProgress=Math.max(0,Math.min(1,number(data.swiftMarchProgressAtUse)));}
