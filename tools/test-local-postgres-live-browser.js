@@ -5,7 +5,7 @@ const {startBrowserSession,waitForProcessExit,removeBrowserProfile}=require("./v
 const {createFixture}=require("./map-benchmark/seamless/live-test-fixture"),{createLiveServer}=require("./map-benchmark/seamless/live-server");
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function main(){
- const f=await createFixture({players:2,crowded:true}),server=await createLiveServer({reader:f.reader,grants:f.grants}),address=await server.listen();
+ const f=await createFixture({players:2,crowded:true,appearances:true}),server=await createLiveServer({reader:f.reader,grants:f.grants}),address=await server.listen();
  const browsers=[],clients=[],errors=[],external=[],measurements=[];const output=path.resolve("release-artifacts/continuous-live-reader");fs.mkdirSync(output,{recursive:true});
  try{
   for(let i=0;i<2;i++){
@@ -24,8 +24,11 @@ async function main(){
    assert.equal(await evaluate(i,()=>seamlessPreview.snapshot().assets.failed),0);
   }
   const city=await evaluate(0,()=>seamlessPreview.scene.objects.find(o=>o.kind==="castle"&&o.troopVisibility==="exact"));assert.ok(city);
+  assert.equal(city.asset,require("../functions/cosmetics").item("halloween_city").assets[2]);
   const other=await evaluate(1,key=>seamlessPreview.scene.objects.find(o=>o.key===key),city.key);assert.equal(other.troopVisibility,"hidden");assert.ok(!Object.hasOwn(other,"troops"));
   for(let i=0;i<2;i++)await evaluate(i,o=>{seamlessPreview.view(o.x,o.y);seamlessPreview.select(o.key);},city);
+  await sleep(250);
+  assert.equal(await evaluate(0,key=>document.querySelector(`[data-key="${key}"] .preview-owner-flag`)?.dataset.flagVersion,city.key),"2");
   assert.notEqual(await evaluate(0,()=>document.getElementById("troops").textContent),await evaluate(1,()=>document.getElementById("troops").textContent));
   await sleep(1200);await wait(0,()=>!seamlessPreview.snapshot().feed.pending);
   const beforeArea=await evaluate(0,()=>seamlessPreview.snapshot().feed.snapshots);

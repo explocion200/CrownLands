@@ -45,10 +45,10 @@ function buildCatalog(realm, expansion) {
     width:(Math.max(...sections.map(s=>s.gridX))-minX+1)*1448,height:(Math.max(...sections.map(s=>s.gridY))-minY+1)*1086,
     overviewAsset:"tools/map-benchmark/seamless/terrain/live-overview.webp"},scenery};
 }
-async function overview(manifest) {
+async function overview(manifest,resolve=asset=>path.join(ROOT,asset)) {
   const sharp=require("sharp"), scale=0.085;
   const layers=[];
-  for(const s of manifest.sections) layers.push({input:await sharp(path.join(ROOT,s.thumbnail)).extract({left:1,top:1,width:724,height:543})
+  for(const s of manifest.sections) layers.push({input:await sharp(resolve(s.thumbnail)).extract({left:1,top:1,width:724,height:543})
     .resize(Math.ceil(s.width*scale),Math.ceil(s.height*scale)).webp().toBuffer(),left:Math.floor(s.x*scale),top:Math.floor(s.y*scale)});
   return sharp({create:{width:Math.ceil(manifest.width*scale)+1,height:Math.ceil(manifest.height*scale)+1,channels:3,background:"#676d37"}}).composite(layers).webp({quality:78}).toBuffer();
 }

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "eff59a7b2414a3ada0f74cf16881cb00de2713f2",
+  "baseCommit": "1cea1af9831f196c5460661a8f9d5b429995908d",
   "coverage": [
     {
       "paths": [
@@ -8,74 +8,86 @@
         "docs/CONTINUOUS_WORLD_LIVE_READER.md"
       ],
       "tests": [],
-      "reason": "Records the explicit owner-approved read-only connection, scope, measured limits and remaining rollout gates; no game balance or runtime rules change."
+      "reason": "Records the approved private-reader optimization, existing-art seam repair, measured limits and prepared but disabled small player pilot. No public rollout or gameplay rule changes."
     },
     {
       "paths": [
-        ".github/workflows/crownlands-release-gate.yml",
-        "package.json",
-        "pnpm-lock.yaml"
-      ],
-      "tests": [
-        "tools/test-change-risk-classifier.js",
-        "tools/test-targeted-validation.js",
-        "tools/test-safe-update-pipeline.js",
-        "tools/validate-release-gate.js",
-        "tools/validate-production-artifact.js",
-        "tools/test-local-postgres-live-reader.js"
-      ],
-      "reason": "Install locked development-only Sharp for private dynamic overviews with dependency scripts disabled. Exercise CI selector/push safeguards, image composition and production exclusion; existing function and backend installations remain intact."
-    },
-    {
-      "paths": [
-        "tools/map-benchmark/seamless/live-catalog.js",
         "tools/map-benchmark/seamless/live-reader.js",
-        "tools/map-benchmark/seamless/live-server.js",
-        "tools/map-benchmark/seamless/live-login.js",
-        "tools/map-benchmark/seamless/prepare-live-reader.py",
         "tools/map-benchmark/seamless/live-test-fixture.js"
       ],
       "tests": [
         "tools/test-local-postgres-live-reader.js",
         "tools/test-local-postgres-live-load.js",
-        "tools/test-local-postgres-live-browser.js",
+        "tools/test-local-postgres-live-soak.js",
         "tools/test-local-postgres-access.js",
-        "tools/validate-server-route-parity.js",
-        "tools/validate-seamless-catalog.js",
-        "tools/validate-production-artifact.js"
+        "tools/validate-cosmetics.js",
+        "tools/validate-player-flags.js"
       ],
-      "reason": "New private reader is production read-only; fictional isolated PostgreSQL fixtures exercise the actual Access engine, active-world topology, server coordinate conversion, current ownership, public-only caching, restricted grant/session handling, bounded reads and dynamic artwork. Production verification uses only authorized aggregate SELECTs; helper role privileges and scheduled revocation were verified on host. No game authority or command implementation is modified, so no multiplayer emulator suite applies."
+      "reason": "Fresh Access context projection, bounded overlapping-section caches, unchanged-poll reuse and public appearance projection affect cross-player isolation and consistency. Isolated PostgreSQL tests cover current membership, captures/deletions, exact/hidden/estimated counts, failed cache load recovery, busy admission, moving viewers and shared public cosmetics. Existing Access, flag and skin contracts remain authoritative. No command/backend authority changes; emulator game suites are not applicable."
     },
     {
       "paths": [
-        "tools/map-benchmark/seamless/assets.js",
-        "tools/map-benchmark/seamless/delta-feed.js",
-        "tools/map-benchmark/seamless/preview.js"
+        "tools/map-benchmark/seamless/live-server.js",
+        "tools/map-benchmark/seamless/cohort-access.js"
       ],
       "tests": [
         "tools/test-local-postgres-live-reader.js",
+        "tools/test-local-postgres-world-cohort.js",
+        "tools/test-local-auth-service.js",
+        "tools/test-local-auth-http.js",
         "tools/test-local-postgres-live-browser.js",
-        "tools/test-local-postgres-world-stream.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Tests both owner grants and the disabled pilot capability against actual normal AuthService sessions in isolated schemas. Covers verified/selected accounts, revocation during requests, expiry, loopback HTTPS proxy/private subnet checks, no sign-in/game writes, private artwork allowlists and production-package exclusion. No auth privileges or proxy routes are installed."
+    },
+    {
+      "paths": [
+        "tools/map-benchmark/seamless/live-catalog.js",
+        "tools/map-benchmark/seamless/live-terrain.js"
+      ],
+      "tests": [
+        "tools/validate-live-terrain.js",
+        "tools/validate-seamless-catalog.js",
+        "tools/test-local-postgres-live-reader.js",
+        "tools/validate-server-route-parity.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Recompose existing approved ground and road artwork at all 112 current grid positions with shared gutters and hash-checked development caches. Validate 202 adjacent joins at full/thumbnail resolution, 91 corners, all road approaches, realm-independent artwork caching, catalog coordinate round trips and unchanged production/server geometry."
+    },
+    {
+      "paths": [
+        "tools/map-benchmark/seamless/preview.js",
+        "tools/map-benchmark/seamless/appearance.js",
+        "tools/map-benchmark/seamless/live-appearance-assets.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-live-browser.js",
         "tools/test-local-postgres-world-browser.js",
+        "tools/test-local-postgres-world-stream.js",
         "tools/validate-seamless-world.js",
         "tools/validate-seamless-world-browser.js",
         "tools/validate-seamless-catalog-browser.js",
-        "tools/validate-map-benchmark.js"
+        "tools/validate-map-benchmark.js",
+        "tools/validate-player-flags.js"
       ],
-      "reason": "Shared private rendering now fetches same-origin private assets, clears ended live views, supports bounded longer routes and interpolates authoritative timestamps. Test old fixture behavior, stale deltas/expiry, selection/follow, gestures, seams and camera navigation, desktop and landscape mobile rendering and unchanged production benchmark isolation."
+      "reason": "Shared private renderer adds existing flag art, public castle skins, zoom-dependent flag detail and live labels. Exercise two independent viewers, stale/private selection clearing, desktop and 4x-slowed landscape mobile performance, image/listener bounds, touch/zoom/follow/navigation and backwards compatibility of fictional previews; no external requests."
     },
     {
       "paths": [
         "tools/test-local-postgres-live-reader.js",
-        "tools/test-local-postgres-live-load.js",
-        "tools/test-local-postgres-live-browser.js"
+        "tools/test-local-postgres-live-browser.js",
+        "tools/test-local-postgres-live-soak.js",
+        "tools/test-local-postgres-world-cohort.js",
+        "tools/validate-live-terrain.js"
       ],
       "tests": [
         "tools/test-local-postgres-live-reader.js",
-        "tools/test-local-postgres-live-load.js",
-        "tools/test-local-postgres-live-browser.js"
+        "tools/test-local-postgres-live-browser.js",
+        "tools/test-local-postgres-live-soak.js",
+        "tools/test-local-postgres-world-cohort.js",
+        "tools/validate-live-terrain.js"
       ],
-      "reason": "Execute new isolated source/projection, HTTP authorization and concurrent-viewer fixtures, including two real browser contexts, 10/25/50/100-viewer loads, dispersed areas, ownership/revocation, no external traffic and bounded memory/connections. No fixture write targets production schemas."
+      "reason": "Run the new/extended regression fixtures themselves. Default moving-viewer run is 45 seconds in selected checks; the separately recorded manual ten-minute run adds longer evidence without making every PR run a full soak. All generated accounts and ownership changes stay in fresh isolated test schemas."
     }
   ]
 }

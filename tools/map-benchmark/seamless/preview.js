@@ -76,12 +76,13 @@
       $("inspector").hidden = !item;
       if (!item) return;
       selectedSnapshot = item;
-      $("kind").textContent = item.kind === "troop" ? "Sample march · read only" : `${item.kind} · read only`;
+      $("kind").textContent = item.kind === "troop" ? `${scene.liveReadOnly ? "March" : "Sample march"} · read only` : `${item.kind} · read only`;
       $("name").textContent = item.name;
       const sectionName = item.kind === "troop" ? sectionAt(item.position)?.name : item.sectionName;
       $("section").textContent = `${sectionName || "Preview edge"}${fullCatalog && (feed?.failed || (!objects.has(selected) && !byMarch.has(selected))) ? " · last received" : ""}`; lastInspectorSection = sectionName;
       $("owner").textContent = item.owner;
-      $("troops").textContent = item.troopVisibility === "hidden" ? "Troop count private" : item.troopVisibility === "estimate" ? `${item.troopEstimateLabel} troops · estimate` : `${(item.troops || 0).toLocaleString()} sample troops`;
+      window.SeamlessAppearance?.render($("owner"),item,{inspector:true});
+      $("troops").textContent = item.troopVisibility === "hidden" ? "Troop count private" : item.troopVisibility === "estimate" ? `${item.troopEstimateLabel} troops · estimate` : `${(item.troops || 0).toLocaleString()} ${scene.liveReadOnly ? "troops" : "sample troops"}`;
       $("follow").hidden = item.kind !== "troop";
       $("follow").textContent = following === selected ? "Stop following" : "Follow";
     }
@@ -179,8 +180,9 @@
       on(window, "online", () => feed.refresh());
       if (stageThree) {
         document.querySelector("header small").textContent = scene.liveReadOnly ? "Private preview · read-only game data" : "Private Stage 3 · sample data";
-        const logout = document.createElement("button"); logout.textContent = "Sign out"; logout.id = "sign-out"; document.querySelector("header nav").append(logout);
+        const logout = document.createElement("button"); logout.textContent = scene.cohortReadOnly ? "Return to game" : "Sign out"; logout.id = "sign-out"; document.querySelector("header nav").append(logout);
         on(logout, "click", async () => {
+          if(scene.cohortReadOnly){location.assign("/play/");return;}
           const response = await fetch("./logout", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: "{}" });
           if (response.ok) location.replace("./login");
         });
@@ -232,6 +234,7 @@
       for (const [key, node] of nodes) if (!visibleKeys.has(key)) { node.remove(); nodes.delete(key); }
       for (const item of [...interactive, ...visibleMarches]) {
         const node = nodes.get(item.key) || createObject(item); if (item.kind !== "troop") setImage(node.firstChild, item.asset);
+        window.SeamlessAppearance?.render(node,item,{visible:camera.zoom>=.6});
         node.classList.toggle("selected", item.key === selected);
         if (item.kind === "troop") { const pixels = `${Math.max(22, 36 * camera.zoom)}px`; if (node.style.width !== pixels) { node.style.width = pixels; node.style.height = pixels; } }
       }
