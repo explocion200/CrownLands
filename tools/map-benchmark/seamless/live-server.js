@@ -9,6 +9,7 @@ const {appearanceAssets}=require("./live-appearance-assets");
 const {prepareTerrain}=require("./live-terrain");
 const {isCohort}=require("./cohort-access");
 const {createRouteService}=require("./open-route-service");
+const {inSubnet,privateAddress}=require("./phone-server");
 const ENTRY="/__benchmark__/seamless/";
 const TYPES={".webp":"image/webp",".png":"image/png",".svg":"image/svg+xml",".js":"text/javascript",".css":"text/css"};
 const HEADERS={"cache-control":"no-store","x-content-type-options":"nosniff","referrer-policy":"no-referrer","cross-origin-resource-policy":"same-origin",
@@ -22,17 +23,20 @@ function readGrant(file){
        || !/^[A-Za-z0-9_-]{43}$/.test(grant.key||""))throw Error("Valid expiring owner grant required");return grant;
   }finally{fs.closeSync(fd);}
 }
-async function createLiveServer({reader,grants=[],cohort=null,valid=()=>true,atlas,clock=Date.now}){
+async function createLiveServer({reader,grants=[],cohort=null,valid=()=>true,atlas,clock=Date.now,commands=null,host="127.0.0.1",subnet="127.0.0.0/8"}){
   if(cohort?!isCohort(cohort)||grants.length:!Array.isArray(grants)||!grants.length||grants.length>128)throw Error("Explicit private viewers required");
+  if(commands && (!require("./gameplay-pilot").isGameplayPilot(commands)||commands.reader!==reader||cohort||grants.some(g=>!commands.players.some(p=>p.uid===g.uid))))throw Error("Isolated gameplay pilot required");
+  if(host!=="127.0.0.1"&&(!commands||!privateAddress(host)||!inSubnet(host,subnet)||grants.some(g=>g.expiresAt>clock()+3600000)))throw Error("One-hour private-network gameplay pilot required");
   const terrain=await prepareTerrain(reader.manifest);reader.manifest=terrain.manifest;
   if(cohort)reader.manifest={...reader.manifest,cohortReadOnly:true};
   const allowed=new Map(grants.map(g=>[digest(g.key),{uid:g.uid,expiresAt:g.expiresAt}])),sessions=new Map(),recent=new Map();
   const assets=new Map(),sessionsPerViewer=new Map();let origin,cookieName,closed=false,timer;
-  const routeService=reader.openWorld?createRouteService(reader.display.geometry):null,routeRecent=new Map();
+  const routeService=reader.openWorld&&!commands?createRouteService(reader.display.geometry):null,routeRecent=new Map();
   const appearance=appearanceAssets(ROOT);
   for(const name of ["model.js","assets.js","feed.js","delta-feed.js","sprite-layer.js","preview.js","preview.css","live-login.js","appearance.js"])
     assets.set("/tools/map-benchmark/seamless/"+name,path.join(__dirname,name));
   for(const name of ["playerFlagConfig.js","flagRenderer.js"])assets.set("/functions/"+name,path.join(ROOT,"functions",name));
+  if(commands)assets.set("/tools/map-benchmark/seamless/gameplay-controls.js",path.join(__dirname,"gameplay-controls.js"));
   if(routeService)assets.set("/tools/map-benchmark/seamless/route-preview.js",path.join(__dirname,"route-preview.js"));
   function add(asset){if(!/^(assets\/|tools\/map-benchmark\/seamless\/terrain\/)[a-zA-Z0-9_./-]+\.(webp|png|svg)$/.test(asset||"")||asset.includes(".."))return;
     if(assets.has("/"+asset))return;
@@ -51,9 +55,19 @@ async function createLiveServer({reader,grants=[],cohort=null,valid=()=>true,atl
   const server=http.createServer(async(req,res)=>{
     try{
       if(closed||!valid()||(cohort&&!cohort.valid()))throw fail(410,"Private reader has ended");
-      if((cohort?!cohort.accepts(req):req.socket.remoteAddress!=="127.0.0.1")||req.headers.host!==new URL(origin).host||(req.headers.origin&&req.headers.origin!==origin)||req.headers["sec-fetch-site"]==="cross-site")throw fail(403,"Local same-origin access required");
+      if((cohort?!cohort.accepts(req):!(host==="127.0.0.1"?req.socket.remoteAddress==="127.0.0.1":inSubnet(req.socket.remoteAddress,subnet)))||req.headers.host!==new URL(origin).host||(req.headers.origin&&req.headers.origin!==origin)||req.headers["sec-fetch-site"]==="cross-site")throw fail(403,"Local same-origin access required");
       if(!req.url?.startsWith("/")||req.url.startsWith("//")||req.url.length>8192)throw fail(400,"Invalid request");
       const url=new URL(req.url,origin);
+      if(req.method==="POST"&&commands&&url.pathname===ENTRY+"command"){
+        if(req.headers.origin!==origin||req.headers["content-type"]!=="application/json")throw fail(403,"Same-origin JSON required");
+        const s=await session(req);if(!s)throw fail(401,"Test session ended");
+        let body="";for await(const chunk of req){body+=chunk;if(Buffer.byteLength(body)>16384)throw fail(413,"Request too large");}
+        let data;try{data=JSON.parse(body);}catch{throw fail(400,"Invalid command");}
+        if((await session(req))?.uid!==s.uid)throw fail(401,"Test session ended");
+        try{const result=await commands.execute(s.uid,data.name,data.data);send(req,res,200,result);}
+        catch(error){const status=error.status||({"permission-denied":403,"unauthenticated":401,"not-found":404,"invalid-argument":400,"failed-precondition":409,"already-exists":409,"resource-exhausted":429,"unavailable":503}[error.code]);throw fail(status||503,status?error.message:"Private command temporarily unavailable; retry the same order");}
+        return;
+      }
       if(req.method==="POST"){
         if(cohort)throw fail(405,"Private pilot cannot change accounts or game data");
         if(![ENTRY+"login",ENTRY+"logout"].includes(url.pathname))throw fail(405,"Read-only preview");
@@ -68,7 +82,7 @@ async function createLiveServer({reader,grants=[],cohort=null,valid=()=>true,atl
         send(req,res,200,{ok:true},undefined,{"set-cookie":`${cookieName}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${Math.floor((grant.expiresAt-clock())/1000)}`});return;
       }
       if(!["GET","HEAD"].includes(req.method))throw fail(405,"Read-only preview");
-      if(url.pathname===ENTRY+"login"){send(req,res,200,cohort?'<!doctype html><title>Private Crownlands pilot</title><h1>Private read-only pilot</h1><p>Sign in to Crownlands normally, then return here. Only the selected test accounts can enter.</p><a href="/play/">Open Crownlands</a>':login,"text/html");return;}
+      if(url.pathname===ENTRY+"login"){send(req,res,200,cohort?'<!doctype html><title>Private Crownlands pilot</title><h1>Private read-only pilot</h1><p>Sign in to Crownlands normally, then return here. Only the selected test accounts can enter.</p><a href="/play/">Open Crownlands</a>':commands?login.replace("Read-only view of the current game. No orders can be sent.","Private gameplay pilot. Sample accounts and troops only; your live game is not connected."):login,"text/html");return;}
       // Owner mode has two public login resources. Pilot mode instead verifies
       // an existing normal session; neither mode proxies sign-in operations.
       const s=await session(req),loginAsset=!cohort&&["/tools/map-benchmark/seamless/live-login.js","/tools/map-benchmark/seamless/preview.css"].includes(url.pathname);
@@ -77,7 +91,7 @@ async function createLiveServer({reader,grants=[],cohort=null,valid=()=>true,atl
       if(url.pathname===ENTRY+"flags.css"){send(req,res,200,appearance.css,"text/css");return;}
       if(url.pathname==="/"+reader.manifest.overviewAsset){send(req,res,200,atlas,"image/webp");return;}
       if(url.pathname===ENTRY){const html=fs.readFileSync(path.join(__dirname,"index.html"),"utf8").replace("<head>",'<head><meta name="crownlands-stage-three" content="private"><link rel="stylesheet" href="/__benchmark__/seamless/flags.css"><script defer src="/functions/playerFlagConfig.js"></script><script defer src="/functions/flagRenderer.js"></script><script defer src="/tools/map-benchmark/seamless/appearance.js"></script>')
-        .replace('</head>',`${cohort?`<meta name="crownlands-private-preview-origin" content="${origin}">`:""}${routeService?'<script defer src="/tools/map-benchmark/seamless/route-preview.js"></script>':""}</head>`)
+        .replace('</head>',`${(cohort||commands)?`<meta name="crownlands-private-preview-origin" content="${origin}">`:""}${commands?'<script defer src="/tools/map-benchmark/seamless/gameplay-controls.js"></script>':""}${routeService?'<script defer src="/tools/map-benchmark/seamless/route-preview.js"></script>':""}</head>`)
         .replace('<body>','<body>'+appearance.svg.replace('<svg ', '<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden" '))
         .replace('<script defer src="/tools/map-benchmark/seamless/preview.js">','<script defer src="/tools/map-benchmark/seamless/delta-feed.js"></script><script defer src="/tools/map-benchmark/seamless/preview.js">');send(req,res,200,html,"text/html");return;}
       if(url.pathname===ENTRY+"catalog"){await reader.initialize(s.uid);if((await session(req))?.uid!==s.uid)throw fail(401,"Private grant ended");send(req,res,200,reader.manifest);return;}
@@ -104,7 +118,7 @@ async function createLiveServer({reader,grants=[],cohort=null,valid=()=>true,atl
     }catch(error){if(!res.headersSent)send(req,res,error.status||503,{error:error.status?error.message:"Private reader temporarily unavailable"},undefined,error.status===429?{"retry-after":"1"}:{});else res.destroy();}
   });
   server.requestTimeout=10000;server.headersTimeout=10000;server.maxConnections=128;
-  return {reader,server,async listen(port=0){await new Promise((resolve,reject)=>{server.once("error",reject);server.listen(port,"127.0.0.1",resolve);});const localUrl=`http://127.0.0.1:${server.address().port}`;origin=cohort?.origin||localUrl;cookieName="world_reader_"+server.address().port;
+  return {reader,server,async listen(port=0){await new Promise((resolve,reject)=>{server.once("error",reject);server.listen(port,host,resolve);});const localUrl=`http://${host}:${server.address().port}`;origin=cohort?.origin||localUrl;cookieName="world_reader_"+server.address().port;
     timer=setTimeout(()=>{void this.close();},Math.max(1,(cohort?.expiresAt||Math.min(...grants.map(g=>g.expiresAt)))-clock()));timer.unref();return{url:origin,localUrl,entry:origin+ENTRY+"?catalog=full"};},
   async close(){if(closed)return;closed=true;clearTimeout(timer);sessions.clear();await routeService?.close();server.closeAllConnections();if(server.listening)await new Promise(resolve=>server.close(resolve));}};
 }

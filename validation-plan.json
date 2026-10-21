@@ -1,97 +1,72 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "d41a4b9b36b127f035e45781ec332fd8c7f76f84",
+  "baseCommit": "30bd1761f69038acea8407897efd1aeb75e209a1",
   "coverage": [
     {
       "paths": [
-        "functions/index.js"
+        "functions/index.js",
+        "tools/validate-authoritative-army-orders.js"
       ],
       "tests": [
         "tools/validate-authoritative-army-orders.js",
         "tools/validate-world-travel-network.js",
-        "tools/validate-march-path-alignment.js",
-        "tools/validate-clan-rallies.js",
-        "tools/validate-clan-reinforcements.js",
-        "tools/validate-holding-towers.js",
-        "tools/validate-city-relinquishment-limit.js",
-        "tools/validate-marauder-terrain.js",
         "tools/test-local-postgres-world-commands.js",
-        "tools/test-local-postgres-rally-rejoin.js",
-        "functions/test/emulator-world-travel.js",
+        "tools/test-local-postgres-world-pilot.js",
         "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-rally-lifecycle.js",
-        "functions/test/emulator-rally-staging-defense.js",
-        "functions/test/emulator-city-relinquishment-limit.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-marauder-combat.js",
-        "functions/test/emulator-reward-camp-lifecycle.js"
+        "functions/test/emulator-world-travel.js",
+        "functions/test/emulator-rally-lifecycle.js"
       ],
-      "reason": "Await the optional isolated route provider throughout real movement factories and returns while retaining current default routing. Test canonical trust, ownership, bonuses/timing, closest scouts, bulk orders, recalls, rallies, Towers, camps, hunts, relinquishment, idempotency and saved segment metadata. Placement and mission probes deliberately keep current synchronous policy. Emulator cases cover shared production call chains; disposable PostgreSQL covers open-edge behavior and transition."
+      "reason": "Private capability projects canonical endpoints for Scout Nearby and Regroup and accepts qualified cross-section bulk addresses. Preserve default same-map behavior, signatures, server costs/ownership, atomicity, movement copies and current travel calculations. Disposable PostgreSQL covers actual wider-world commands, generated identities, out-of-range denial, retry rollback, reinforcement/rally authority and browser integration; emulator suites cover installed current-policy bulk orders/travel and shared rally paths."
     },
     {
       "paths": [
-        "local-backend/platform.js"
+        "tools/map-benchmark/seamless/command-routing.js"
       ],
       "tests": [
-        "tools/test-local-postgres-world-commands.js",
-        "tools/test-local-postgres-game.js"
-      ],
-      "reason": "Explicit capability injection is limited to disposable worldtest schemas; default environment, permanent and Firebase platforms cannot enable it. Exercise denial on live/preview schemas, default registration/integration isolation and real game handler persistence with/without the provider."
-    },
-    {
-      "paths": [
-        "tools/map-benchmark/seamless/command-routing.js",
-        "tools/test-local-postgres-world-commands.js",
         "tools/validate-world-command-routing.js",
-        "tools/map-benchmark/seamless/open-world-routing.js",
-        "tools/validate-open-world-routing.js"
+        "tools/test-local-postgres-world-pilot.js",
+        "tools/test-local-postgres-world-commands.js"
       ],
-      "tests": [
-        "tools/test-local-postgres-world-commands.js",
-        "tools/validate-world-command-routing.js",
-        "tools/validate-open-world-routing.js",
-        "tools/validate-open-world-travel.js",
-        "tools/validate-production-artifact.js",
-        "tools/test-local-postgres-open-routing.js"
-      ],
-      "reason": "Current active topology only: generated template coordinates, spread endpoints, 112 sections, worker offloading/admission/cache/eviction, geometry identities, active-region rejection, failed order rollback, old/new route persistence and actual multi-player commands. Reuse existing obstacle/seam and unchanged travel formula tests; require private artifacts excluded from published game. No new browser interface. The shared draft planner now traverses each spatial bucket once; an independent 3,000-segment collision oracle plus axis/corner/clearance cases verifies obstacle safety without raising the search budget. Recheck the existing read-only route service as an affected consumer."
+      "reason": "Distance and route commands share the same canonical display layout/units and section identity. Test edge/radius boundaries, generated template separation, no forged paths, routing workers, old/new geometry and rollback."
     },
     {
       "paths": [
-        "functions/test/rally-recall-rejoin-cases.js"
+        "tools/map-benchmark/seamless/live-reader.js",
+        "tools/map-benchmark/seamless/live-server.js"
       ],
       "tests": [
-        "tools/test-local-postgres-world-commands.js",
-        "tools/test-local-postgres-rally-rejoin.js",
-        "functions/test/emulator-rally-staging-defense.js"
+        "tools/test-local-postgres-live-reader.js",
+        "tools/test-local-postgres-world-cohort.js",
+        "tools/test-local-postgres-open-routing.js",
+        "tools/test-local-postgres-world-pilot.js"
       ],
-      "reason": "Allow the shared fixture to resolve generated starting maps through the actual current topology factory, while retaining its default catalog lookup. Run the same real rally withdrawal, return and race cases on both policies and emulator."
+      "reason": "Keep live/cohort modes read-only while admitting only an in-process disposable pilot capability; validate session/Origin/Host restrictions, account isolation, expiry, allowed commands, projection privacy and old/new/return route metadata. Recheck existing production-reader and draft-route consumers."
     },
     {
       "paths": [
-        "tools/validate-marauder-terrain.js"
+        "tools/map-benchmark/seamless/gameplay-pilot.js",
+        "tools/map-benchmark/seamless/gameplay-controls.js",
+        "tools/map-benchmark/seamless/preview.js",
+        "tools/map-benchmark/seamless/preview.css",
+        "tools/run-world-gameplay-pilot.js",
+        "tools/test-local-postgres-world-pilot.js"
       ],
       "tests": [
-        "tools/validate-marauder-terrain.js"
+        "tools/test-local-postgres-world-pilot.js",
+        "tools/test-local-postgres-live-browser.js",
+        "tools/test-local-postgres-open-routing-browser.js",
+        "tools/test-local-postgres-world-phone.js",
+        "tools/validate-production-artifact.js"
       ],
-      "reason": "The synchronous spawn-reachability dependency was renamed to distinguish existing placement policy from asynchronous private commands. Exercise its actual geometry/road/clearance validator."
-    },
-    {
-      "paths": [
-        "tools/validate-holding-tower-client-lifecycle.js"
-      ],
-      "tests": [
-        "tools/validate-holding-tower-client-lifecycle.js"
-      ],
-      "reason": "Supply the location-share mount dependency missing from the existing narrow Tower lifecycle harness so affected Tower checks execute. No Tower UI or sharing behavior changes; full current lifecycle assertions remain."
+      "reason": "Real isolated command pilot, bounded account/session lifecycle and explicit launcher; two browser identities, previews/launch/recall, desktop and 844x390/568x320 touch and 4x CPU, input/selection races, failure retry, unchanged readonly clients, route return interpolation, bounded image residency, no outside requests or production inclusion. Physical two-player pilot is deliberately deferred by the owner."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CONTINUOUS_WORLD_COMMAND_REHEARSAL.md"
+        "docs/CONTINUOUS_WORLD_GAMEPLAY_PILOT.md"
       ],
       "tests": [],
-      "reason": "Document the owner-authorized isolated command rehearsal, measured distance/load results, unchanged live rules and explicit remaining activation gates. No runtime behavior in documentation."
+      "reason": "Record the confirmed private-only scope, preserved balance, measured automated results, deferred human pilot and launch/cleanup procedure. Documentation adds no runtime behavior."
     }
   ]
 }

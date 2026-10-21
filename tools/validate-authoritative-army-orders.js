@@ -114,7 +114,7 @@ const scoutStart = server.indexOf("exports.sendNearbyScouts");
 const scoutEnd = server.indexOf("exports.sendRegroupOrders", scoutStart);
 const scoutSource = server.slice(scoutStart, scoutEnd);
 assert.match(scoutSource, /NEARBY_SCOUT_GOLD_COST/);
-assert.match(scoutSource, /isWithinRadius\(source, target, NEARBY_SCOUT_RADIUS\)/);
+assert.match(scoutSource, /await withinArmyOrderRadius\(\{ \.\.\.source, regionId: sourceRegionId \}, target, NEARBY_SCOUT_RADIUS\)/);
 assert.match(scoutSource, /chargeBulkOrderCost/);
 assert.match(scoutSource, /writePreparedEconomy/);
 assert.match(scoutSource, /bulkOrderRequestRef/);
@@ -129,7 +129,7 @@ const regroupStart = server.indexOf("exports.sendRegroupOrders");
 const regroupEnd = server.indexOf("exports.sendArmyOrder", regroupStart);
 const regroupSource = server.slice(regroupStart, regroupEnd);
 assert.match(regroupSource, /REGROUP_GOLD_COST/);
-assert.match(regroupSource, /isWithinRadius\(source, target, REGROUP_RADIUS\)/);
+assert.match(regroupSource, /await withinArmyOrderRadius\(source, \{ \.\.\.target, regionId: targetRegionId \}, REGROUP_RADIUS\)/);
 assert.match(regroupSource, /patch:\s*\{ troops:\s*0/,
   "Regroup must send every currently available troop from each confirmed source.");
 assert.match(regroupSource, /bulkOrderRequestRef/);

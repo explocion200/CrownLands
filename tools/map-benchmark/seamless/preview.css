@@ -94,3 +94,15 @@ nav button{padding:4px 6px}
 .open-route-actions{margin-top:8px}
 @media(max-height:500px){.open-route-panel{bottom:31px;left:6px;max-width:calc(100vw - 260px);padding:5px 7px;font-size:10px}.open-route-panel button{font-size:11px;padding:3px 5px}}
 @media(max-width:650px){.open-route-panel{max-width:calc(100vw - 245px)}}
+
+/* Gameplay controls exist only in the isolated pilot, never the live reader. */
+.pilot-console{position:absolute;z-index:6;left:10px;bottom:40px;width:min(380px,calc(100vw - 320px));max-height:calc(100dvh - 120px);overflow:auto;background:#eddfbdf5;border:2px solid #987e4c;padding:8px;font:12px/1.4 system-ui}
+.pilot-console p{margin:5px 0}.pilot-console button{font:inherit;min-height:32px;padding:5px 8px}
+.pilot-console button[aria-pressed=true]{background:#72363a;color:#fff3ce}
+.pilot-row{display:flex;gap:5px;align-items:center;flex-wrap:wrap}.pilot-row span{flex:1;min-width:80px}
+.pilot-console input[type=number]{min-width:0;width:100px;font:inherit;padding:5px;background:#fff5dc;border:1px solid #987e4c}
+.pilot-list{display:grid;gap:3px;max-height:110px;overflow:auto;margin:5px 0}.pilot-list label{display:flex;align-items:center;min-height:32px;gap:5px}
+.pilot-console details{margin-top:8px}.pilot-console summary{cursor:pointer;min-height:30px}
+#pilot-send,#pilot-bulk-send{background:#72363a;color:#fff3ce}.pilot-console :disabled{opacity:.55;cursor:wait}
+@media(max-height:500px){.pilot-console{left:6px;bottom:31px;width:calc(100vw - 270px);max-height:calc(100dvh - 90px);padding:5px;font-size:11px}}
+@media(max-width:650px){.pilot-console{width:calc(100vw - 250px)}}
