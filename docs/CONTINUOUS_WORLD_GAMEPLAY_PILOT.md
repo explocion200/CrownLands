@@ -1,6 +1,6 @@
 # Continuous-world gameplay pilot
 
-This is a private sample-account pilot on `core-expansion-v1`, extending the command rehearsal. It does not activate open-world gameplay in the installed server. On October 21 the owner chose **prepare now; test later**. The physical two-player session remains pending; automated tests are not a substitute for that review.
+This is a private sample-account pilot on `core-expansion-v1`, extending the command rehearsal. It does not activate open-world gameplay in the installed server. On October 21 the owner initially chose **prepare now; test later**, then explicitly chose **skip the pilot**. The hands-on two-player session is waived, not pending or passed. Keep the prepared launcher inactive; the existing automated results remain the available gameplay-pilot evidence. This decision does not activate the continuous world in production.
 
 ## Distance policy
 
@@ -24,7 +24,20 @@ Run `node tools/test-local-postgres-world-pilot.js` with Node 22 and `CHROME_PAT
 
 Desktop 1440×900 and landscape 844×390 / 568×320 use actual browser input; mobile runs use 4× CPU slowdown. Reported measurements are short local moving-camera samples, not a multiplayer capacity estimate. Screenshots and JSON timings are in ignored `release-artifacts/continuous-gameplay-pilot/`. The final local run completed 16 successful command calls and 10 resolutions with zero settlement errors. The 32 handler/options samples measured 19.6 ms median / 58.3 ms p95; these exclude browser/network travel. All three moving-camera runs measured about 60 FPS with 16.7–16.8 ms p95 frame times. Full terrain stayed at four images, thumbnails at fifteen, requests at two, and listeners at 28. There were no browser exceptions or external requests. These measurements are automated emulation, not a new physical-phone result. Existing reader, read-only cohort, open-routing, travel/bulk-order validators and selected multiplayer emulator suites remain required dependencies.
 
-## Starting the hands-on session later
+## Remaining production integration
+
+Skipping the hands-on pilot removes that scheduling gate. It does not complete the following engineering work:
+
+- Integrate the continuous renderer, authenticated area feed and gameplay controls into the normal game UI and production package, preserving current disclosure rules and existing UI actions.
+- Validate larger representative command loads, especially closest-source scouting, worker admission, retries and transaction time. Retain the tested speed formulas and Scout Nearby/Regroup ranges; review placement/admission behavior against the wider display geometry.
+- Prepare durable versioned geometry and deliberate rendering of old and new marches. Preserve accepted routes and timestamps through activation, recall, restart and rollback.
+- Prepare and validate coordinated backend/client installation, compatibility checks, monitoring and rollback. Recheck the current realm before production-specific work. Public activation remains a separate authorized deployment.
+
+The skipped hands-on session is an unperformed check, not a test failure or a substitute for these integration checks. Do not start another player pilot unless the owner requests one.
+
+## Optional launcher reference — inactive
+
+Retain these instructions for a future explicitly requested test; they are no longer the next required step.
 
 From clean synchronized main, run:
 
@@ -36,4 +49,4 @@ Use the computer's actual home-network address if it has changed. Without `--hos
 
 The launcher shows the entry URL. Assign Rowan and Alder to separate browsers/devices. On home Wi-Fi, each opens the URL and enters their own temporary key. Test the nearby cross-edge city, a transfer, an attack on a neutral city, allied reinforcement and return, Recall Horn, Scout Nearby, Regroup and a two-player rally. Confirm accepted departure/arrival times, troop conservation, selection/follow across boundaries, visibility after ownership changes, pinch/drag/zoom, failed-request retry and refresh/reconnection. Use **Measure 10s** during camera movement and record FPS/p95, phone model and unexpected messages. Normal combat requirements still apply; a server denial should be visible instead of silently changing the order.
 
-The process removes keys and the disposable schema at expiry or SIGINT/SIGTERM. It creates no backup. If the machine/process is killed before cleanup, review the exact schema recorded in that session file before deleting it; never drop schemas by a broad wildcard. Public rollout, a live-account write pilot, full game UI parity and coordinated backend/client activation/rollback remain separate work after the human findings are resolved.
+The process removes keys and the disposable schema at expiry or SIGINT/SIGTERM. It creates no backup. If the machine/process is killed before cleanup, review the exact schema recorded in that session file before deleting it; never drop schemas by a broad wildcard. No hands-on session was run and there are no human pilot findings to resolve. Production integration and rollout remain separate work as listed above.

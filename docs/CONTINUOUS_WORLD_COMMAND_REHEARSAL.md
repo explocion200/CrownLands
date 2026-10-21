@@ -31,7 +31,7 @@ The required review plan includes current-policy multiplayer emulator suites cov
 ## Remaining gates before live use
 
 - Review the travel-distance balance and confirm the intended speed policy. Keeping current speed constants is the tested proposal, not a promise that every journey becomes faster.
-- Reconcile distance/radius features (Regroup, nearby searches, admission and NPC placement) with the wider world layout. Their current live-coordinate rules are intentionally unchanged here.
-- Test the command-aware renderer and authenticated pilot end to end, including old/new route labels, generated maps, departure/arrival anchors and failures/retries. The deferred player pilot remains inactive.
+- Scout Nearby and Regroup now use the wider layout in the isolated gameplay pilot, including adjoining sections; current live rules remain unchanged. Placement/admission behavior and integration into the production client still need review.
+- The command-aware private renderer has automated two-player coverage for old/new route labels, generated maps, departure/arrival anchors and failures/retries. The owner waived the hands-on player pilot on October 21; it was not run. Production UI integration remains separate. See [the gameplay pilot report](CONTINUOUS_WORLD_GAMEPLAY_PILOT.md).
 - Bound and optimize worst-case scout candidate searches and transaction time under a larger representative command load. Four-request admission deliberately protects the private worker; the final production capacity/retry experience is still a release gate.
 - Prepare an explicit, reviewed backend/client activation and rollback contract, including saved geometry availability, monitoring and package compatibility. Do not install or enable open routing just because this PR merges. No production data, services, client package, grants or backups were changed by the rehearsal.
