@@ -61,6 +61,46 @@
     let length = 0;
     return { points: points.map((p, i) => { if (i) length += Math.hypot(p.x - points[i - 1].x, p.y - points[i - 1].y); return { ...p, distance: length }; }), length };
   }
+  // Lay out labels in world units, so pan/zoom cannot enlarge them or change
+  // their clearance. Spatial buckets keep crowded area updates bounded.
+  function placeLabels(labels, compactKeys = new Set(), attempt = 0) {
+    const grid = new Map(), cell = 160, gap = 4;
+    const buckets = rect => {
+      const keys=[];
+      for(let x=Math.floor(rect.left/cell);x<=Math.floor(rect.right/cell);x++)
+        for(let y=Math.floor(rect.top/cell);y<=Math.floor(rect.bottom/cell);y++)keys.push(x+":"+y);
+      return keys;
+    };
+    const add=rect=>{for(const key of buckets(rect)){if(!grid.has(key))grid.set(key,[]);grid.get(key).push(rect);}};
+    const blocked=rect=>buckets(rect).some(key=>(grid.get(key)||[]).some(other=>rect.left<other.right+gap&&rect.right+gap>other.left&&rect.top<other.bottom+gap&&rect.bottom+gap>other.top));
+    const placed=[];
+    for(const label of [...labels].sort((a,b)=>(b.priority||0)-(a.priority||0)||a.y-b.y||a.key.localeCompare(b.key))){
+      let result;
+      // Keep full details near their castle. In a crowded row, retain the name
+      // and heraldry and stagger the compact banner before moving it farther.
+      const variants=[...(compactKeys.has(label.key)?[]:[{...label,compact:false,limit:24}]),...(label.compact?[{...label.compact,compact:true,limit:288}]:[{...label,compact:false,limit:288}])];
+      for(const variant of variants){
+        for(let up=0;up<=variant.limit&&!result;up+=12)for(const dx of [0,-24,24,-48,48]){
+          const rect={left:label.x+dx-variant.width/2,right:label.x+dx+variant.width/2,top:label.y-up-variant.height,bottom:label.y-up};
+          if(!blocked(rect)){result={key:label.key,dx,dy:-up,compact:variant.compact,rect};break;}
+        }
+        if(result)break;
+      }
+      // An exceptional coincident marker retains its castle hit target/name
+      // for selection. Never paint an unreadable stack of overlapping banners.
+      if(result){add(result.rect);placed.push(result);}else placed.push({key:label.key,hidden:true});
+    }
+    if(attempt<3){
+      let changed=false;
+      const byKey=new Map(labels.map(label=>[label.key,label]));
+      for(const result of placed.filter(p=>p.hidden||p.dy < -60)){
+        const crowded=byKey.get(result.key);
+        for(const label of labels)if(label.compact&&!compactKeys.has(label.key)&&Math.abs(label.x-crowded.x)<180&&Math.abs(label.y-crowded.y)<180){compactKeys.add(label.key);changed=true;}
+      }
+      if(changed)return placeLabels(labels,compactKeys,attempt+1);
+    }
+    return placed;
+  }
   function along(path, distance) {
     distance = Math.max(0, Math.min(path.length, distance));
     let lo = 0, hi = path.points.length - 1;
@@ -69,6 +109,6 @@
     return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
   }
   function forWorld(world) { return { ...api, limits: size => limits(size, world), clamp: (camera, size) => clamp(camera, size, world), zoomAt: (camera, size, anchor, zoom, nextAnchor) => zoomAt(camera, size, anchor, zoom, nextAnchor, world) }; }
-  const api = { TILE, WORLD, identity, offset, localToWorld, worldToLocal, project, unproject, limits, clamp, zoomAt, visible, intersects, interestSections, preparePath, along, forWorld };
+  const api = { TILE, WORLD, identity, offset, localToWorld, worldToLocal, project, unproject, limits, clamp, zoomAt, visible, intersects, interestSections, placeLabels, preparePath, along, forWorld };
   return api;
 });

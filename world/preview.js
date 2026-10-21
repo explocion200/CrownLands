@@ -85,6 +85,7 @@ window.createContinuousWorldView = async function (options = {}) {
       $("follow").textContent = following === selected ? "Stop following" : "Follow";
     }
     function select(key, notify = true) { if (objects.get(key)?.selectable || byMarch.has(key)) { selected = key; dirty = true; refreshInspector(); if (notify) options.onSelect?.(objects.get(key) || byMarch.get(key)); } }
+    function clear(notify = true) { selected = null; selectedSnapshot = null; cancelFollow(); dirty = true; refreshInspector(); if (notify) options.onClear?.(); }
     function cancelFollow() { routeDraft?.cancelFollow(); if (following) { following = null; refreshInspector(); } }
     function point(event) { const rect = viewport.getBoundingClientRect(); return { x: event.clientX - rect.left, y: event.clientY - rect.top }; }
     function beginGesture() {
@@ -97,7 +98,7 @@ window.createContinuousWorldView = async function (options = {}) {
       if (event.button !== 0) return;
       if (!pointers.size) { dragged = false; clickKey = event.target.closest("[data-key]")?.dataset.key || null; }
       pointers.set(event.pointerId, point(event)); viewport.setPointerCapture(event.pointerId);
-      if (pointers.size > 1) { dragged = true; cancelFollow(); }
+      if (pointers.size > 1) { dragged = true; cancelFollow(); options.onZoom?.(); }
       beginGesture();
     });
     on(viewport, "pointermove", event => {
@@ -118,7 +119,7 @@ window.createContinuousWorldView = async function (options = {}) {
       if (!pointers.has(event.pointerId)) return;
       pointers.delete(event.pointerId);
       if (!pointers.size) {
-        if (!dragged && event.type === "pointerup" && clickKey) select(clickKey);
+        if (!dragged && event.type === "pointerup") { if (clickKey) select(clickKey); else clear(); }
         suppressClick = true; viewport.classList.remove("dragging"); gesture = null;
       } else { dragged = true; beginGesture(); }
     }
@@ -130,19 +131,19 @@ window.createContinuousWorldView = async function (options = {}) {
     });
     on(viewport, "keydown", event => {
       suppressClick = false;
-      if (event.key === "Escape") { selected = null; cancelFollow(); dirty = true; refreshInspector(); options.onClear?.(); }
+      if (event.key === "Escape") { clear(); }
       const directions = { ArrowLeft: [-100, 0], ArrowRight: [100, 0], ArrowUp: [0, -100], ArrowDown: [0, 100] };
       if (directions[event.key]) { event.preventDefault(); cancelFollow(); const [x, y] = directions[event.key]; camera = M.clamp({ ...camera, x: camera.x + x / camera.zoom, y: camera.y + y / camera.zoom }, size); dirty = true; }
     });
     on(viewport, "wheel", event => {
-      event.preventDefault(); cancelFollow();
+      event.preventDefault(); cancelFollow(); options.onZoom?.();
       const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? size.height : 1);
       camera = M.zoomAt(camera, size, point(event), camera.zoom * Math.exp(-Math.max(-300, Math.min(300, delta)) * 0.002)); dirty = true;
     }, { passive: false });
     on($("home"), "click", home);
-    on($("fit"), "click", () => { cancelFollow(); camera = M.clamp({ x: scene.width / 2, y: scene.height / 2, zoom: M.limits(size).min }, size); dirty = true; });
-    for (const [id, factor] of [["plus", 1.25], ["minus", 0.8]]) on($(id), "click", () => { camera = M.zoomAt(camera, size, center(), camera.zoom * factor); dirty = true; });
-    on($("close"), "click", () => { selected = null; cancelFollow(); dirty = true; refreshInspector(); options.onClear?.(); });
+    on($("fit"), "click", () => { cancelFollow(); options.onZoom?.(); camera = M.clamp({ x: scene.width / 2, y: scene.height / 2, zoom: M.limits(size).min }, size); dirty = true; });
+    for (const [id, factor] of [["plus", 1.25], ["minus", 0.8]]) on($(id), "click", () => { options.onZoom?.(); camera = M.zoomAt(camera, size, center(), camera.zoom * factor); dirty = true; });
+    on($("close"), "click", () => { clear(); });
     on($("follow"), "click", () => { routeDraft?.cancelFollow(); following = following === selected ? null : selected; dirty = true; refreshInspector(); });
     on($("retry"), "click", () => { if (feed?.authExpired) { location.replace("/play/"); return; } assets.retry(); feed?.refresh(); dirty = true; });
     if (fullCatalog) {
@@ -220,6 +221,7 @@ window.createContinuousWorldView = async function (options = {}) {
         node.classList.toggle("selected", item.key === selected);
 
       }
+      window.SeamlessAppearance?.layout(interactive.map(item => ({item,node:nodes.get(item.key)})));
       world.classList.toggle("close-view", camera.zoom >= M.limits(size).home);
       world.classList.toggle("overview", overview);
       marchesLayer.classList.toggle("overview", overview);
@@ -281,7 +283,8 @@ window.createContinuousWorldView = async function (options = {}) {
       dispose,
       getObject: key => objects.get(key) || byMarch.get(key),
       focus: item => { cancelFollow(); camera = M.clamp({ ...camera, x: item.x, y: item.y }, size); dirty = true; },
-      clear: () => { selected = null; selectedSnapshot = null; following = null; dirty = true; refreshInspector(); },
+      clear: () => clear(false),
+      get selectedKey() { return selected; },
       scene, home, select, routeDraft, gameplay, refresh: () => feed?.refresh(),
       snapshot: () => ({ camera: { ...camera }, size: { ...size }, selected, following, assets: assets.stats(), feed: feed?.stats(), nodes: nodes.size, listeners: listenerCount+(routeDraft?.cleanups.length||0)+(gameplay?.cleanups.length||0), frameTimes: [...frameTimes], workTimes: [...workTimes], marches: marches.map(m => ({ key: m.key, position: m.position })) }),
       view: (x, y, zoom) => { cancelFollow(); camera = M.clamp({ x, y, zoom: zoom ?? camera.zoom }, size); },

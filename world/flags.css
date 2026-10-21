@@ -6,12 +6,18 @@
 #viewport{height:100%;min-height:0}
 #world .section-label{display:none}
 #world .object.city-node{transform:none;min-width:0;min-height:0;background:none;border:0;box-shadow:none;filter:none}
-#world .object>.map-banner{position:absolute;left:50%;bottom:100%;width:0;height:0;transform-origin:50% 100%;pointer-events:none}
+#world .object>.map-banner{position:absolute;left:50%;bottom:100%;width:0;height:0;transform:translateY(-4px) scale(.8);transform-origin:50% 100%;pointer-events:none}
 #world .map-banner .city-label{bottom:0;pointer-events:none}
 #world .object.selected:after{display:none}
 #world .object.selected>img{filter:drop-shadow(0 0 4px #ffe394)}
 #world .map-banner .camp-type-flag{width:42px;height:53px;object-fit:contain}
-#world .object>.map-banner .holding-tower-map-label{position:absolute;bottom:0;top:auto;left:0;transform:translateX(-50%);white-space:nowrap}
+#world .native-tower-label{display:flex;flex-direction:column;align-items:center}
+#world .native-tower-label .holding-tower-map-label,#world .native-tower-label .holding-tower-clan-banner{position:static;transform:none;white-space:nowrap}
+#world .map-banner .player-city-data{min-width:0;width:118px}
+#world .map-banner .city-name,#world .map-banner .city-ruler-name,#world .map-banner .foreign-ruler-name{max-width:118px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#world .map-banner.compact .city-ruler-row,#world .map-banner.compact .map-city-clan-tag,#world .map-banner.compact .city-army-count{display:none}
+#world .map-banner.compact .player-city-data{width:76px}
+#world .map-banner.compact .city-name{max-width:80px}
 #world .native-npc-label{position:absolute;bottom:0;left:0;transform:translateX(-50%);white-space:nowrap;background:#4d2228;color:#f5e5ba;padding:3px 6px;border:1px solid #b79652;border-radius:3px;font-size:12px}
 #marches .object.troop{opacity:1;width:auto;height:30px;min-width:44px;display:flex;padding:0 .35rem;border:2px solid rgba(255,255,255,.72);border-radius:999px;box-shadow:0 3px 6px #0005;color:white;contain:layout}
 #marches .object.troop.player{background:linear-gradient(#4fb2ff,#175ea9)}
