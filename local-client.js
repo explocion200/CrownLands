@@ -42,23 +42,30 @@
       })().finally(() => { refreshing = null; });
       return refreshing;
     }
-    async function post(path, input, authentication = false) {
+    async function post(path, input, authentication = false, signal) {
       if (authentication) return performPost(path, input, true);
       if (!csrf) await session();
       const requestedRevision = revision;
       const unavailable = () => makeError(path.startsWith("call/") ? "functions/unauthenticated" : "unauthenticated", "The account session changed.");
       if (disposed) throw unavailable();
+      signal?.throwIfAborted();
       if (pendingRequests.length >= 128) throw makeError(path.startsWith("call/") ? "functions/resource-exhausted" : "resource-exhausted", "Too many pending game requests.");
       // Login starts many independent listeners/callables. Bound each tab to
       // six in-flight game requests so the server's admission limit is useful
       // protection rather than a source of normal startup failures.
       await new Promise((resolve, reject) => {
         if (activeRequests < 6) { activeRequests++; resolve(); }
-        else pendingRequests.push({ resolve, reject: () => reject(unavailable()) });
+        else {
+          const cleanup = () => signal?.removeEventListener("abort", abort);
+          const entry = { resolve: () => { cleanup(); resolve(); }, reject: () => { cleanup(); reject(unavailable()); } };
+          const abort = () => { const index = pendingRequests.indexOf(entry); if (index >= 0) { pendingRequests.splice(index, 1); cleanup(); reject(signal.reason); } };
+          pendingRequests.push(entry); signal?.addEventListener("abort", abort, { once: true });
+        }
       });
       try {
         if (disposed || requestedRevision !== revision) throw unavailable();
-        return await performPost(path, input, false);
+        signal?.throwIfAborted();
+        return await performPost(path, input, false, signal);
       } finally {
         const next = pendingRequests.shift();
         if (next) next.resolve(); else activeRequests--;
@@ -75,7 +82,7 @@
       if (disposed || (!authentication && started !== revision)) throw makeError(normalizeCode("functions/unauthenticated"), "The account session changed.");
       if (!response.ok || result.error) {
         if (response.status === 401) await session().catch(() => {});
-        throw Object.assign(makeError(normalizeCode(result.error?.code || (authentication ? "auth/network-request-failed" : "functions/unavailable")), result.error?.message), { details: result.error?.details });
+        throw Object.assign(makeError(normalizeCode(result.error?.code || (authentication ? "auth/network-request-failed" : "functions/unavailable")), result.error?.message), { status: response.status, details: result.error?.details });
       }
       return authentication ? result : result.result;
     }
@@ -340,7 +347,10 @@
     };
     const messaging = root.CrownlandsLocalPush?.create() || { isSupported: async () => false };
     return { app: { initializeApp: () => ({}) }, auth, firestore, functions: { getFunctions: () => ({}), httpsCallable: (_functions, name) => async data => ({ data: await post("call/" + name, { data }) }) },
-      appCheck: {}, messaging,
+      appCheck: {}, messaging, world: { read: (operation, input = {}, signal) => {
+        if (!["catalog", "areas", "options"].includes(operation)) throw makeError("invalid-argument");
+        return post("world/" + operation, input, false, signal);
+      } },
       dispose: () => { disposed = true; revision++; restartChat(); messaging.dispose?.(); root.clearInterval(authTimer); root.clearTimeout(watchTimer); watchers.clear(); observers.clear();
         root.document.removeEventListener?.("visibilitychange", foreground); root.removeEventListener?.("online", foreground);
         for (const request of pendingRequests.splice(0)) request.reject(); } };

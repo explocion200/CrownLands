@@ -85,7 +85,7 @@ async function createGameplayPilot() {
     }
     routing.setEnabled(true);
     reader.manifest = { ...reader.manifest, gameplayPilot: true, label: "Private gameplay pilot — sample accounts" };
-    const pilot = { reader, store, routing, players, identity, metrics, pair, assignments, cityRef, context, close,
+    const pilot = { reader, store, routing, players, identity, metrics, pair, assignments, cityRef, context, close, routes: require("../../../local-backend/platform").describe(game),
       async execute(uid, name, data = {}, { nativeUi = false } = {}) {
         if (closed || !players.some(p => p.uid === uid)) throw fail(403, "Test session ended");
         if (!data || typeof data !== "object" || Array.isArray(data)) throw fail(400, "Invalid command data");

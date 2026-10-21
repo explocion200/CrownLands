@@ -49,6 +49,15 @@ async function main(){
   packet=await reader.read(uid,[id],cursor);assert.equal(packet.kind,"delta");assert.equal(packet.objects.upsert.length,0);assert.equal(packet.marches.upsert.length,0);
   const after=(await store.pool.query(`SELECT count(*)::text AS documents,(SELECT count(*) FROM ${store.schema}.changes)::text AS changes FROM ${store.schema}.documents`)).rows[0];assert.deepEqual(after,before,"Reader mutated source data");
   assert.ok(reader.stats.unchangedPolls>0,"Unchanged polls rebuilt the scene");
+  const tower=require("../functions/holding-towers").TOWERS.find(t=>reader.sections.has(t.regionId));
+  await store.doc("holdingTowers/"+tower.id).delete();
+  reader.publicAreas.clear();reader.publicSections.clear();
+  const towerBefore=(await store.pool.query(`SELECT count(*)::text AS documents,(SELECT count(*) FROM ${store.schema}.changes)::text AS changes FROM ${store.schema}.documents`)).rows[0];
+  const neutral=(await reader.read(uid,[tower.regionId])).objects.upsert.find(o=>o.id===tower.id);
+  assert(neutral&&neutral.kind==="tower"&&neutral.troopVisibility==="hidden");
+  assert(!Object.hasOwn(neutral,"troops"));assert(!(await store.doc("holdingTowers/"+tower.id).get()).exists);
+  const towerAfter=(await store.pool.query(`SELECT count(*)::text AS documents,(SELECT count(*) FROM ${store.schema}.changes)::text AS changes FROM ${store.schema}.documents`)).rows[0];
+  assert.deepEqual(towerAfter,towerBefore,"Neutral tower fallback wrote game data");
   let clock=Date.now()+1000;reader.clock=()=>clock;
   await reader.read(uid,[id]);const loaded=reader.stats.sectionLoads;
   await reader.read(other,crossing.sections);assert.equal(reader.stats.sectionLoads,loaded+1,"Overlapping area reloaded a fresh section");

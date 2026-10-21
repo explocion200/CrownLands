@@ -8,8 +8,8 @@ window.createContinuousWorldView = async function (options = {}) {
   const $ = id => root.querySelector(`#${id}`);
   const viewport = $("viewport"), world = $("world"), objectsLayer = $("objects"), marchesLayer = $("marches");
   try {
-    const stageThree = !options.scene && !!document.querySelector('meta[name="crownlands-stage-three"]');
-    const params = new URLSearchParams(location.search), fullCatalog = !options.scene && (stageThree || params.get("catalog") === "full"), crowded = params.get("crowded") === "1";
+    const stageThree = typeof options.loadAreas === "function" || (!options.scene && !!document.querySelector('meta[name="crownlands-stage-three"]'));
+    const params = new URLSearchParams(location.search), fullCatalog = stageThree || (!options.scene && params.get("catalog") === "full"), crowded = params.get("crowded") === "1";
     const response = options.scene ? null : await fetch(`/__benchmark__/seamless/${fullCatalog ? "catalog" : "fixture"}?crowded=${crowded}`, { credentials: stageThree ? "same-origin" : "omit" });
     if (response && !response.ok) throw new Error("Fixture unavailable");
     const scene = options.scene || await response.json();
@@ -75,7 +75,7 @@ window.createContinuousWorldView = async function (options = {}) {
     function sectionAt(point) { return scene.sections.find(s => point.x >= s.x && point.x < s.x + s.width && point.y >= s.y && point.y < s.y + s.height); }
     function refreshInspector() {
       const item = objects.get(selected) || byMarch.get(selected) || (selectedSnapshot?.key === selected ? selectedSnapshot : null);
-      $("inspector").hidden = (options.nativeUi === true && ["castle", "camp", "stronghold", "citadel"].includes(item?.kind)) || !item;
+      $("inspector").hidden = (options.nativeUi === true && ["castle", "camp", "stronghold", "citadel", "npc", "tower"].includes(item?.kind)) || !item;
       routeDraft?.update(); gameplay?.update();
       if (!item) return;
       selectedSnapshot = item;
@@ -166,8 +166,12 @@ window.createContinuousWorldView = async function (options = {}) {
         const inspectedAreaPresent = inspectedSections.some(id => data.sections.some(s => s.id === id));
         const inspectedAreaLoaded = data.authoritative && inspectedAreaPresent;
         const inspectedMissing = inspectedAreaLoaded && !data.sections.some(s => s.objects.some(o => o.key === selected)) && !data.marches.some(m => m.key === selected);
+        const freshSelected = inspectedAreaLoaded && data.sections.flatMap(s => s.objects).find(o => o.key === selected);
+        const permissionChanged = freshSelected && selectedSnapshot && (freshSelected.owner !== selectedSnapshot.owner
+          || freshSelected.troopVisibility !== selectedSnapshot.troopVisibility || freshSelected.spawnId !== selectedSnapshot.spawnId);
         if (principalChanged || epochChanged || data.authExpired || data.removed?.includes(selected) || inspectedMissing
-            || (scene.liveReadOnly && selectedSnapshot && !inspectedAreaPresent)) { selected = null; selectedSnapshot = null; following = null; }
+            || permissionChanged
+            || (scene.liveReadOnly && selectedSnapshot && !inspectedAreaPresent)) { selected = null; selectedSnapshot = null; following = null; options.onClear?.(); }
         if (data.removed?.includes(following)) following = null;
         scene.objects = data.sections.flatMap(s => s.objects); objects.clear(); scene.objects.forEach(o => objects.set(o.key, o));
         const routes = new Map(data.routes.map(r => [r.id, r.points]));
@@ -177,15 +181,16 @@ window.createContinuousWorldView = async function (options = {}) {
         if (following && !data.authExpired && !marches.some(m => m.key === following) && byMarch.has(following)) marches.push(byMarch.get(following));
         byMarch.clear(); marches.forEach(m => byMarch.set(m.key, m)); scene.marches = marches;
         refreshInspector(); dirty = true;
-      }, async (ids, signal, cursor) => {
+        options.onAreas?.({ ...data, failed: feed.failed });
+      }, options.loadAreas || (async (ids, signal, cursor) => {
         const query = new URLSearchParams({ crowded: String(crowded), ids: ids.join(",") });
         if (stageThree) { query.set("realm", scene.realmId); if (cursor) { query.set("epoch", cursor.epoch); query.set("revision", cursor.revision); } }
         const response = await fetch(`/__benchmark__/seamless/${stageThree ? "changes" : "areas"}?${query}`, { signal, credentials: stageThree ? "same-origin" : "omit" });
         if (!response.ok) throw Object.assign(new Error(`Area HTTP ${response.status}`), { status: response.status }); return response.json();
-      });
+      }));
       const poll = setInterval(() => { if (!document.hidden) feed.refresh(); }, stageThree ? 1000 : 5000); cleanups.push(() => clearInterval(poll));
       on(window, "online", () => feed.refresh());
-      if (stageThree) {
+      if (stageThree && !options.nativeUi) {
         document.querySelector("header small").textContent = scene.gameplayPilot ? "Private gameplay pilot · SAMPLE accounts and troops" : scene.openWorldDraft ? "Private open-world draft · read-only game data" : scene.liveReadOnly ? "Private preview · read-only game data" : "Private Stage 3 · sample data";
         const logout = document.createElement("button"); logout.textContent = scene.cohortReadOnly ? "Return to game" : "Sign out"; logout.id = "sign-out"; document.querySelector("header nav").append(logout);
         on(logout, "click", async () => {
@@ -195,7 +200,7 @@ window.createContinuousWorldView = async function (options = {}) {
         });
       }
     }
-    if (stageThree && phoneOrigin) {
+    if (stageThree && phoneOrigin && !options.nativeUi) {
       document.body.classList.add("phone-test");
       let measureTimer; cleanups.push(()=>clearTimeout(measureTimer));
       const measure = document.createElement("button"); measure.textContent="Measure 10s"; measure.id="measure-phone"; document.querySelector("footer").append(measure);
@@ -207,8 +212,8 @@ window.createContinuousWorldView = async function (options = {}) {
       });
     }
     const observer = new ResizeObserver(resize); observer.observe(viewport); resize();
-    if(scene.gameplayPilot){gameplay=new window.SeamlessGameplayControls({scene,selected:()=>objects.get(selected)||byMarch.get(selected),navigate:p=>{camera=M.clamp({...camera,x:p.x,y:p.y},size);select(p.key);dirty=true;},refresh:()=>feed?.refresh()});cleanups.push(()=>gameplay.dispose());}
-    else if(scene.openWorldDraft){routeDraft=new window.SeamlessRoutePreview({scene,viewport,selected:()=>objects.get(selected)||byMarch.get(selected),navigate:p=>{if(following){following=null;refreshInspector();}camera=M.clamp({...camera,...p},size);}});cleanups.push(()=>routeDraft.dispose());}
+    if(scene.gameplayPilot && !options.nativeUi){gameplay=new window.SeamlessGameplayControls({scene,selected:()=>objects.get(selected)||byMarch.get(selected),navigate:p=>{camera=M.clamp({...camera,x:p.x,y:p.y},size);select(p.key);dirty=true;},refresh:()=>feed?.refresh()});cleanups.push(()=>gameplay.dispose());}
+    else if(scene.openWorldDraft && !options.nativeUi){routeDraft=new window.SeamlessRoutePreview({scene,viewport,selected:()=>objects.get(selected)||byMarch.get(selected),navigate:p=>{if(following){following=null;refreshInspector();}camera=M.clamp({...camera,...p},size);}});cleanups.push(()=>routeDraft.dispose());}
     function renderScene() {
       const view = M.visible(camera, size, 75), exact = M.visible(camera, size);
       const overview = camera.zoom < M.limits(size).home * 0.56;
@@ -253,7 +258,7 @@ window.createContinuousWorldView = async function (options = {}) {
       $("zoom").textContent = `${Math.round(camera.zoom / M.limits(size).home * 100)}%`;
       const stats = assets.stats();
       $("load-status").textContent = stats.failed ? `${stats.failed} image(s) unavailable · navigation ready` : feed?.authExpired ? "Test session ended · reload to sign in" : feed?.failed ? "Area updates interrupted · retrying" : feed?.data.scriptHealthy === false ? "Sample updates paused · restart private test" : `${overview ? `Overview${fullCatalog ? ` · ${scene.sections.length} sections` : ""}` : `${stats.full}/4 detailed sections`} · ${scene.gameplayPilot ? "Sample commands" : scene.liveReadOnly ? "Read-only" : `${scene.crowded ? "Crowded" : "Normal"} sample`}`;
-      if (options.nativeUi && !stats.failed) $("load-status").textContent = "Private game UI — sample data";
+      if (options.nativeUi && !stats.failed && !feed?.failed) $("load-status").textContent = options.loadAreas ? "Private game UI — authenticated test data" : "Private game UI — sample data";
       $("retry").hidden = !stats.failed && !feed?.failed; $("retry").textContent = feed?.authExpired ? "Sign in" : "Retry loading";
     }
     function frame(now) {
@@ -274,7 +279,7 @@ window.createContinuousWorldView = async function (options = {}) {
           march.position = M.along(march.path, distance <= march.path.length ? distance : march.path.length * 2 - distance);
         }
       }
-      if (following) { const m = byMarch.get(following); camera = M.clamp({ ...camera, ...m.position }, size); }
+      if (following) { const m = byMarch.get(following); if (m) camera = M.clamp({ ...camera, ...m.position }, size); else following = null; }
       routeDraft?.tick(now);
       // Camera transforms remain frame-synchronous. Reconcile the larger scene
       // only when its culling margin or zoom requires it. Patrol hit targets
