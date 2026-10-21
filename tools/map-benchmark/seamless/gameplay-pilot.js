@@ -86,7 +86,7 @@ async function createGameplayPilot() {
     routing.setEnabled(true);
     reader.manifest = { ...reader.manifest, gameplayPilot: true, label: "Private gameplay pilot — sample accounts" };
     const pilot = { reader, store, routing, players, identity, metrics, pair, assignments, cityRef, context, close,
-      async execute(uid, name, data = {}) {
+      async execute(uid, name, data = {}, { nativeUi = false } = {}) {
         if (closed || !players.some(p => p.uid === uid)) throw fail(403, "Test session ended");
         if (!data || typeof data !== "object" || Array.isArray(data)) throw fail(400, "Invalid command data");
         if (active.has(uid) || active.size >= 2) throw fail(429, "Order pending; retry shortly");
@@ -95,6 +95,9 @@ async function createGameplayPilot() {
           if (name === "options") return await options(uid, data);
           if (!callableNames.has(name)) throw fail(405, "This command is not available in the pilot");
           const result = await call(name, uid, data); metrics.commands++;
+          // The normal UI rehearsal uses the callable envelope from this isolated
+          // factory. No production platform can construct this capability.
+          if (nativeUi) return result;
           // Only return fields needed by the pilot, never full profiles/reports.
           return name === "previewArmyRoute" ? { durationMs: result.durationMs, pathLength: result.length, segments: result.segments }
             : { ok: result.ok, movementId: result.movement?.id, rallyId: result.rally?.id, movementIds: result.armies?.map(m => m.id), cost: result.cost };

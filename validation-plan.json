@@ -1,16 +1,62 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "90fe8c83f3a873054cc455b9c6db2bce896d8434",
+  "baseCommit": "b0946ea5b98bb669c8089666fd674e6eca69e5f0",
   "coverage": [
     {
       "paths": [
-        "docs/CONTINUOUS_WORLD_GAMEPLAY_PILOT.md",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CONTINUOUS_WORLD_COMMAND_REHEARSAL.md",
-        "docs/CONTINUOUS_WORLD_LIVE_READER.md"
+        "game.js",
+        "tools/validate-continuous-game-ui.js"
+      ],
+      "tests": [
+        "tools/validate-continuous-game-ui.js",
+        "tools/validate-authoritative-army-orders.js",
+        "tools/validate-pending-army-departures.js"
+      ],
+      "reason": "Native command integration exposed the accepted-attack toast dereferencing a missing optional protection snapshot. Execute the actual notification fragment for absent/normal/raid snapshots and retain authoritative launch, pending feedback and session/retry dependency checks. Combat and server rules are unchanged."
+    },
+    {
+      "paths": [
+        "tools/map-benchmark/seamless/game-bridge.js",
+        "tools/map-benchmark/seamless/native-fixture.js",
+        "tools/map-benchmark/seamless/native-game.js",
+        "tools/map-benchmark/mock-firebase.js",
+        "tools/map-benchmark/server.js",
+        "tools/test-local-postgres-native-world-ui.js"
+      ],
+      "tests": [
+        "tools/validate-continuous-game-ui.js",
+        "tools/validate-map-benchmark.js"
+      ],
+      "reason": "Private native-HUD adapter, exact catalog identities, serialized selection, cancellation/session cleanup, opt-in nonce-bound local test commands and default benchmark isolation. The new real-PostgreSQL/browser test was also run locally at 1440x900, 844x390 and 568x320, verifying actual native order submission, control bounds, touch isolation and no external requests; CI has no configured local game PostgreSQL."
+    },
+    {
+      "paths": [
+        "tools/map-benchmark/seamless/preview.js"
+      ],
+      "tests": [
+        "tools/validate-seamless-world.js",
+        "tools/validate-seamless-catalog.js",
+        "tools/validate-continuous-game-ui.js"
+      ],
+      "reason": "Make the private renderer mountable in a shadow root, preserve standalone boot/feed paths and expose lifecycle/selection/camera callbacks. Verify catalog identities, original/display coordinates, geometry, asset bounds and prototype exclusion. Existing desktop/mobile seamless browser regression including mouse/touch, failed loads, seams and crowded throttled rendering was run locally."
+    },
+    {
+      "paths": [
+        "tools/map-benchmark/seamless/gameplay-pilot.js"
+      ],
+      "tests": [
+        "tools/validate-world-command-routing.js",
+        "tools/validate-continuous-game-ui.js"
+      ],
+      "reason": "Allow only the in-process isolated factory to return its original callable envelope for native UI tests; the existing default pilot projection remains unchanged. Private world-routing guards and current release geometry are checked; real sample-world native command tests and the existing two-player PostgreSQL pilot regression were run locally. No installed backend or public API changes."
+    },
+    {
+      "paths": [
+        "docs/CONTINUOUS_WORLD_NATIVE_UI.md",
+        "docs/CONTINUOUS_WORLD_GAMEPLAY_PILOT.md"
       ],
       "tests": [],
-      "reason": "Documentation-only record of the owner explicitly waiving the hands-on continuous-world player pilot. Preserve historical automated evidence, keep optional launchers inactive, and identify existing unfinished production integration. No runtime, game rules, assets, dependencies, installed services or production data change; no runtime or emulator suites apply."
+      "reason": "Document this first native-HUD rehearsal, actual measurements, production exclusion, remaining authenticated feed/command work and the previously waived human pilot. No new gameplay design decision or release activation."
     }
   ]
 }

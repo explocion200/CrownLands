@@ -5,6 +5,7 @@ const fsp = require("node:fs/promises");
 const http = require("node:http");
 const path = require("node:path");
 
+const { createNativeFixture } = require("./seamless/native-fixture");
 const { createFixture, SCENARIOS } = require("./fixtures.js");
 const { createSeamlessFixture } = require("./seamless/fixtures.js");
 const { createCatalogFeed } = require("./seamless/catalog-feed.js");
@@ -102,6 +103,7 @@ function createBenchmarkIndex(scenarioId, fixture) {
   let source = fs.readFileSync(path.join(ROOT_DIR, "index.html"), "utf8");
   const queryParams = new URLSearchParams({ scenario: scenarioId });
   if (fixture.scenario.visualQa) queryParams.set("visualMarches", String(fixture.scenario.marchCount));
+  if (fixture.nativeWorld) queryParams.set("nativeWorld", "1");
   if (fixture.scenario.visualKinds) queryParams.set("visualKinds", "true");
   const query = queryParams.toString();
   source = source.replace('<base id="crownlandsBase" href="./" />', '<base id="crownlandsBase" href="/" />');
@@ -112,6 +114,9 @@ function createBenchmarkIndex(scenarioId, fixture) {
   source = source.replace(/<script src="release-manifest\.js"><\/script>/, `<script src="/__benchmark__/release-manifest.js?${query}"></script>`);
   source = source.replace(/<script src="firebaseClient\.js[^>]*><\/script>/, `<script src="/__benchmark__/mock-firebase.js?${query}"></script>`);
   source = source.replace(/<script src="game\.js[^>]*><\/script>/, `<script src="/__benchmark__/game.js?${query}"></script>`);
+  if (fixture.nativeWorld) source = source.replace(/<link[^>]+https:\/\/fonts\.(?:googleapis|gstatic)\.com[^>]*>/g, "");
+  if (fixture.nativeWorld) source = source.replace(`<script src="/__benchmark__/game.js?${query}"></script>`,
+    ["model", "assets", "feed", "sprite-layer", "game-bridge", "preview"].map(name => `<script ${name === "preview" ? "data-manual" : ""} src="/tools/map-benchmark/seamless/${name}.js"></script>`).join("\n") + `<script src="/__benchmark__/game.js?${query}"></script>`);
   return source;
 }
 
@@ -152,7 +157,7 @@ function resolveStaticPath(pathname) {
   return resolved.startsWith(`${ROOT_DIR}${path.sep}`) ? resolved : null;
 }
 
-function createMapBenchmarkServer({ clock = Date.now } = {}) {
+function createMapBenchmarkServer({ clock = Date.now, nativeFixture = null, nativeCommand = null } = {}) {
   const requests = [];
   const fixtures = new Map();
   const seamlessFixtures = new Map();
@@ -164,6 +169,20 @@ function createMapBenchmarkServer({ clock = Date.now } = {}) {
       return;
     }
     const requestUrl = new URL(request.url || "/", `http://${hostHeader || HOST}`);
+    if (requestUrl.pathname === "/__benchmark__/native-command") {
+      if (!nativeCommand || !nativeFixture?.commandNonce || request.method !== "POST"
+          || request.headers.origin !== `http://${hostHeader}` || request.headers["x-native-test"] !== nativeFixture.commandNonce) {
+        send(response, 403, "Private command unavailable", "text/plain"); return;
+      }
+      let raw = "";
+      try {
+        for await (const part of request) { raw += part; if (raw.length > 32768) throw Error("Command too large"); }
+        const { name, data } = JSON.parse(raw);
+        const result = await nativeCommand(name, data);
+        send(response, 200, JSON.stringify({ result }), "application/json");
+      } catch (error) { send(response, 400, JSON.stringify({ error: String(error.message || "Command unavailable") }), "application/json"); }
+      return;
+    }
     // Separate private entry; never imports the live client or its mock account.
     if (["/__benchmark__/seamless/", "/__benchmark__/seamless/fixture", "/__benchmark__/seamless/catalog", "/__benchmark__/seamless/areas"].includes(requestUrl.pathname)) {
       requests.push({ at: new Date().toISOString(), method: request.method, path: requestUrl.pathname, scenarioId: "seamless" });
@@ -193,8 +212,10 @@ function createMapBenchmarkServer({ clock = Date.now } = {}) {
       return;
     }
     const scenarioId = getScenarioId(requestUrl, request);
-    if (!fixtures.has(scenarioId)) fixtures.set(scenarioId, createFixture(scenarioId));
-    const baseFixture = fixtures.get(scenarioId);
+    const native = requestUrl.searchParams.get("nativeWorld") === "1" || (() => { try { return new URL(request.headers.referer).searchParams.get("nativeWorld") === "1"; } catch { return false; } })();
+    const fixtureKey = native ? "native" : scenarioId;
+    if (!fixtures.has(fixtureKey)) fixtures.set(fixtureKey, native ? nativeFixture || createNativeFixture() : createFixture(scenarioId));
+    const baseFixture = fixtures.get(fixtureKey);
     const visualOverride = requestUrl.searchParams.has("visualMarches") || requestUrl.searchParams.has("visualKinds");
     const fixture = visualOverride ? applyVisualQaOverrides(structuredClone(baseFixture), requestUrl) : baseFixture;
     requests.push({ at: new Date().toISOString(), method: request.method, path: requestUrl.pathname, scenarioId });
@@ -243,6 +264,7 @@ function createMapBenchmarkServer({ clock = Date.now } = {}) {
       gameSource += fs.readFileSync(path.join(__dirname, "pickup-qa-runtime.js"), "utf8");
       gameSource += fs.readFileSync(path.join(__dirname, "ledgers-qa-runtime.js"), "utf8");
       gameSource += fs.readFileSync(path.join(__dirname, "estate-qa-runtime.js"), "utf8");
+      if (native) gameSource += fs.readFileSync(path.join(__dirname, "seamless/native-game.js"), "utf8");
       send(response, 200, gameSource, "text/javascript; charset=utf-8");
       return;
     }

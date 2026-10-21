@@ -1,17 +1,18 @@
 /* Private inspect-only renderer. The separate reader may supply authorized live data; never game commands. */
-(async function () {
-  "use strict";
+"use strict";
+window.createContinuousWorldView = async function (options = {}) {
   // Only the separate, allowlisted, expiring phone server supplies this origin.
   const phoneOrigin = document.querySelector('meta[name="crownlands-private-preview-origin"]')?.content;
   if (location.hostname !== "127.0.0.1" && phoneOrigin !== location.origin) throw new Error("Private preview requires loopback or the temporary phone test server.");
-  const $ = id => document.getElementById(id);
+  const root = options.root || document;
+  const $ = id => root.querySelector(`#${id}`);
   const viewport = $("viewport"), world = $("world"), objectsLayer = $("objects"), marchesLayer = $("marches");
   try {
-    const stageThree = !!document.querySelector('meta[name="crownlands-stage-three"]');
-    const params = new URLSearchParams(location.search), fullCatalog = stageThree || params.get("catalog") === "full", crowded = params.get("crowded") === "1";
-    const response = await fetch(`/__benchmark__/seamless/${fullCatalog ? "catalog" : "fixture"}?crowded=${crowded}`, { credentials: stageThree ? "same-origin" : "omit" });
-    if (!response.ok) throw new Error("Fixture unavailable");
-    const scene = await response.json();
+    const stageThree = !options.scene && !!document.querySelector('meta[name="crownlands-stage-three"]');
+    const params = new URLSearchParams(location.search), fullCatalog = !options.scene && (stageThree || params.get("catalog") === "full"), crowded = params.get("crowded") === "1";
+    const response = options.scene ? null : await fetch(`/__benchmark__/seamless/${fullCatalog ? "catalog" : "fixture"}?crowded=${crowded}`, { credentials: stageThree ? "same-origin" : "omit" });
+    if (response && !response.ok) throw new Error("Fixture unavailable");
+    const scene = options.scene || await response.json();
     const M = window.SeamlessModel.forWorld(scene);
     scene.objects ||= []; scene.marches ||= [];
     world.style.width = `${scene.width}px`; world.style.height = `${scene.height}px`;
@@ -26,6 +27,7 @@
     const byMarch = new Map(marches.map(m => [m.key, m]));
     const nodes = new Map(), terrain = new Map();
     let patrolPlanAt = 0;
+    let disposed = false;
     let size, camera, selected = null, following = null, dirty = true, raf = 0, lastFrame = 0;
     let serverTimeOffset = 0, sceneTime = 0, frozenTime = null, lastInspectorSection = "", lastPlan = "", plannedCamera = null;
     const frameTimes = [], workTimes = [], pointers = new Map();
@@ -73,7 +75,7 @@
     function sectionAt(point) { return scene.sections.find(s => point.x >= s.x && point.x < s.x + s.width && point.y >= s.y && point.y < s.y + s.height); }
     function refreshInspector() {
       const item = objects.get(selected) || byMarch.get(selected) || (selectedSnapshot?.key === selected ? selectedSnapshot : null);
-      $("inspector").hidden = !item;
+      $("inspector").hidden = (options.nativeUi === true && ["castle", "camp", "stronghold", "citadel"].includes(item?.kind)) || !item;
       routeDraft?.update(); gameplay?.update();
       if (!item) return;
       selectedSnapshot = item;
@@ -87,7 +89,7 @@
       $("follow").hidden = item.kind !== "troop";
       $("follow").textContent = following === selected ? "Stop following" : "Follow";
     }
-    function select(key) { if (objects.get(key)?.selectable || byMarch.has(key)) { selected = key; dirty = true; refreshInspector(); } }
+    function select(key, notify = true) { if (objects.get(key)?.selectable || byMarch.has(key)) { selected = key; dirty = true; refreshInspector(); if (notify) options.onSelect?.(objects.get(key) || byMarch.get(key)); } }
     function cancelFollow() { routeDraft?.cancelFollow(); if (following) { following = null; refreshInspector(); } }
     function point(event) { const rect = viewport.getBoundingClientRect(); return { x: event.clientX - rect.left, y: event.clientY - rect.top }; }
     function beginGesture() {
@@ -133,7 +135,7 @@
     });
     on(viewport, "keydown", event => {
       suppressClick = false;
-      if (event.key === "Escape") { selected = null; cancelFollow(); dirty = true; refreshInspector(); }
+      if (event.key === "Escape") { selected = null; cancelFollow(); dirty = true; refreshInspector(); options.onClear?.(); }
       const directions = { ArrowLeft: [-100, 0], ArrowRight: [100, 0], ArrowUp: [0, -100], ArrowDown: [0, 100] };
       if (directions[event.key]) { event.preventDefault(); cancelFollow(); const [x, y] = directions[event.key]; camera = M.clamp({ ...camera, x: camera.x + x / camera.zoom, y: camera.y + y / camera.zoom }, size); dirty = true; }
     });
@@ -145,7 +147,7 @@
     on($("home"), "click", home);
     on($("fit"), "click", () => { cancelFollow(); camera = M.clamp({ x: scene.width / 2, y: scene.height / 2, zoom: M.limits(size).min }, size); dirty = true; });
     for (const [id, factor] of [["plus", 1.25], ["minus", 0.8]]) on($(id), "click", () => { camera = M.zoomAt(camera, size, center(), camera.zoom * factor); dirty = true; });
-    on($("close"), "click", () => { selected = null; cancelFollow(); dirty = true; refreshInspector(); });
+    on($("close"), "click", () => { selected = null; cancelFollow(); dirty = true; refreshInspector(); options.onClear?.(); });
     on($("follow"), "click", () => { routeDraft?.cancelFollow(); following = following === selected ? null : selected; dirty = true; refreshInspector(); });
     on($("retry"), "click", () => { if (feed?.authExpired) { location.replace("./login"); return; } assets.retry(); feed?.refresh(); dirty = true; });
     if (fullCatalog) {
@@ -251,9 +253,11 @@
       $("zoom").textContent = `${Math.round(camera.zoom / M.limits(size).home * 100)}%`;
       const stats = assets.stats();
       $("load-status").textContent = stats.failed ? `${stats.failed} image(s) unavailable · navigation ready` : feed?.authExpired ? "Test session ended · reload to sign in" : feed?.failed ? "Area updates interrupted · retrying" : feed?.data.scriptHealthy === false ? "Sample updates paused · restart private test" : `${overview ? `Overview${fullCatalog ? ` · ${scene.sections.length} sections` : ""}` : `${stats.full}/4 detailed sections`} · ${scene.gameplayPilot ? "Sample commands" : scene.liveReadOnly ? "Read-only" : `${scene.crowded ? "Crowded" : "Normal"} sample`}`;
+      if (options.nativeUi && !stats.failed) $("load-status").textContent = "Private game UI — sample data";
       $("retry").hidden = !stats.failed && !feed?.failed; $("retry").textContent = feed?.authExpired ? "Sign in" : "Retry loading";
     }
     function frame(now) {
+      if (disposed) return;
       const start = performance.now();
       if (lastFrame && !document.hidden) { frameTimes.push(now - lastFrame); if (frameTimes.length > 900) frameTimes.shift(); }
       sceneTime = frozenTime ?? now / 1000 + serverTimeOffset;
@@ -287,7 +291,9 @@
       }
       const cameraKey = `${camera.x}:${camera.y}:${camera.zoom}:${size.width}:${size.height}`;
       if (cameraKey !== sceneryCamera) { sprites.scenery(scenery, camera, size); sceneryCamera = cameraKey; }
-      sprites.patrols(activeMarches, camera, size, selected, document.activeElement?.dataset.key);
+      sprites.patrols(activeMarches, camera, size, selected, (root.activeElement || document.activeElement)?.dataset.key);
+      options.onFrame?.({ camera, size, project: p => M.project(camera, p, size) });
+      if (disposed) return;
       world.style.transform = `translate3d(${size.width / 2 - camera.x * camera.zoom}px,${size.height / 2 - camera.y * camera.zoom}px,0) scale(${camera.zoom})`;
       routeDraft?.draw(camera,size);
       for (const march of activeMarches) { const node = nodes.get(march.key); if (node) { const p = M.project(camera, march.position, size); node.style.transform = `translate3d(${p.x}px,${p.y}px,0) translate(-50%,-50%)`; } }
@@ -298,14 +304,22 @@
     }
     on(document, "visibilitychange", () => { lastFrame = 0; if (stageThree && !document.hidden) feed?.refresh(); });
     raf = requestAnimationFrame(frame);
-    on(window, "pagehide", () => { cancelAnimationFrame(raf); observer.disconnect(); sprites.dispose(); assets.dispose(); feed?.dispose(); cleanups.forEach(fn => fn()); });
+    function dispose() { if (disposed) return; disposed = true; cancelAnimationFrame(raf); observer.disconnect(); sprites.dispose(); assets.dispose(); feed?.dispose(); cleanups.forEach(fn => fn()); nodes.clear(); listenerCount = 0; options.onClear?.(); }
+    on(window, "pagehide", dispose);
     // Deliberately present only in this loopback document, for deterministic QA.
-    window.seamlessPreview = {
+    const controller = {
+      dispose,
+      getObject: key => objects.get(key) || byMarch.get(key),
+      focus: item => { cancelFollow(); camera = M.clamp({ ...camera, x: item.x, y: item.y }, size); dirty = true; },
+      clear: () => { selected = null; selectedSnapshot = null; following = null; dirty = true; refreshInspector(); },
       scene, home, select, routeDraft, gameplay, refresh: () => feed?.refresh(),
       snapshot: () => ({ camera: { ...camera }, size: { ...size }, selected, following, assets: assets.stats(), feed: feed?.stats(), nodes: nodes.size, listeners: listenerCount+(routeDraft?.cleanups.length||0)+(gameplay?.cleanups.length||0), frameTimes: [...frameTimes], workTimes: [...workTimes], marches: marches.map(m => ({ key: m.key, position: m.position })) }),
       view: (x, y, zoom) => { cancelFollow(); camera = M.clamp({ x, y, zoom: zoom ?? camera.zoom }, size); },
       time: value => { frozenTime = value; dirty = true; },
       resetMetrics: () => { frameTimes.length = 0; workTimes.length = 0; }
     };
-  } catch (error) { $("load-status").textContent = `Preview could not load: ${error.message}. Reload to retry.`; }
-})();
+    if (!options.root) window.seamlessPreview = controller;
+    return controller;
+  } catch (error) { $("load-status").textContent = `Preview could not load: ${error.message}. Reload to retry.`; throw error; }
+};
+if (!document.currentScript?.hasAttribute("data-manual")) void window.createContinuousWorldView();
