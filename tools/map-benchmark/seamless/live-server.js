@@ -8,6 +8,7 @@ const {ROOT,fixture,overview}=require("./live-catalog");
 const {appearanceAssets}=require("./live-appearance-assets");
 const {prepareTerrain}=require("./live-terrain");
 const {isCohort}=require("./cohort-access");
+const {createRouteService}=require("./open-route-service");
 const ENTRY="/__benchmark__/seamless/";
 const TYPES={".webp":"image/webp",".png":"image/png",".svg":"image/svg+xml",".js":"text/javascript",".css":"text/css"};
 const HEADERS={"cache-control":"no-store","x-content-type-options":"nosniff","referrer-policy":"no-referrer","cross-origin-resource-policy":"same-origin",
@@ -27,10 +28,12 @@ async function createLiveServer({reader,grants=[],cohort=null,valid=()=>true,atl
   if(cohort)reader.manifest={...reader.manifest,cohortReadOnly:true};
   const allowed=new Map(grants.map(g=>[digest(g.key),{uid:g.uid,expiresAt:g.expiresAt}])),sessions=new Map(),recent=new Map();
   const assets=new Map(),sessionsPerViewer=new Map();let origin,cookieName,closed=false,timer;
+  const routeService=reader.openWorld?createRouteService(reader.display.geometry):null,routeRecent=new Map();
   const appearance=appearanceAssets(ROOT);
   for(const name of ["model.js","assets.js","feed.js","delta-feed.js","sprite-layer.js","preview.js","preview.css","live-login.js","appearance.js"])
     assets.set("/tools/map-benchmark/seamless/"+name,path.join(__dirname,name));
   for(const name of ["playerFlagConfig.js","flagRenderer.js"])assets.set("/functions/"+name,path.join(ROOT,"functions",name));
+  if(routeService)assets.set("/tools/map-benchmark/seamless/route-preview.js",path.join(__dirname,"route-preview.js"));
   function add(asset){if(!/^(assets\/|tools\/map-benchmark\/seamless\/terrain\/)[a-zA-Z0-9_./-]+\.(webp|png|svg)$/.test(asset||"")||asset.includes(".."))return;
     if(assets.has("/"+asset))return;
     const file=fs.realpathSync(terrain.files.get(asset)||path.join(ROOT,asset));if(!file.startsWith(ROOT+path.sep))throw Error("Unexpected asset path");assets.set("/"+asset,file);}
@@ -74,10 +77,21 @@ async function createLiveServer({reader,grants=[],cohort=null,valid=()=>true,atl
       if(url.pathname===ENTRY+"flags.css"){send(req,res,200,appearance.css,"text/css");return;}
       if(url.pathname==="/"+reader.manifest.overviewAsset){send(req,res,200,atlas,"image/webp");return;}
       if(url.pathname===ENTRY){const html=fs.readFileSync(path.join(__dirname,"index.html"),"utf8").replace("<head>",'<head><meta name="crownlands-stage-three" content="private"><link rel="stylesheet" href="/__benchmark__/seamless/flags.css"><script defer src="/functions/playerFlagConfig.js"></script><script defer src="/functions/flagRenderer.js"></script><script defer src="/tools/map-benchmark/seamless/appearance.js"></script>')
-        .replace('</head>',`${cohort?`<meta name="crownlands-private-preview-origin" content="${origin}">`:""}</head>`)
+        .replace('</head>',`${cohort?`<meta name="crownlands-private-preview-origin" content="${origin}">`:""}${routeService?'<script defer src="/tools/map-benchmark/seamless/route-preview.js"></script>':""}</head>`)
         .replace('<body>','<body>'+appearance.svg.replace('<svg ', '<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden" '))
         .replace('<script defer src="/tools/map-benchmark/seamless/preview.js">','<script defer src="/tools/map-benchmark/seamless/delta-feed.js"></script><script defer src="/tools/map-benchmark/seamless/preview.js">');send(req,res,200,html,"text/html");return;}
       if(url.pathname===ENTRY+"catalog"){await reader.initialize(s.uid);if((await session(req))?.uid!==s.uid)throw fail(401,"Private grant ended");send(req,res,200,reader.manifest);return;}
+      if(url.pathname===ENTRY+"route"&&routeService){
+        if(url.searchParams.get("realm")!==reader.manifest.realmId)throw fail(400,"Wrong realm");
+        if(clock()-(routeRecent.get(s.uid)||0)<1000)throw fail(429,"Wait briefly before testing another route");routeRecent.set(s.uid,clock());
+        const [from,to]=await reader.routeEndpoints(s.uid,url.searchParams.get("from"),url.searchParams.get("to"));
+        const result=await routeService.route({x:from.x,y:from.y},{x:to.x,y:to.y});
+        // Revalidate realm, membership, endpoints and session after worker time.
+        const fresh=await reader.routeEndpoints(s.uid,from.key,to.key);
+        if(JSON.stringify(fresh)!==JSON.stringify([from,to]))throw fail(409,"Locations changed; select them again");
+        if((await session(req))?.uid!==s.uid)throw fail(401,"Private grant ended");
+        send(req,res,result.status==="busy"?429:200,{...result,from,to,previewOnly:true});return;
+      }
       if(url.pathname!==ENTRY+"changes")throw fail(404,"Not a preview route");
       if(url.searchParams.get("realm")!==reader.manifest.realmId)throw fail(400,"Wrong realm");
       if(clock()-(recent.get(s.uid)||0)<850)throw fail(429,"Poll at most once per second");recent.set(s.uid,clock());
@@ -92,7 +106,7 @@ async function createLiveServer({reader,grants=[],cohort=null,valid=()=>true,atl
   server.requestTimeout=10000;server.headersTimeout=10000;server.maxConnections=128;
   return {reader,server,async listen(port=0){await new Promise((resolve,reject)=>{server.once("error",reject);server.listen(port,"127.0.0.1",resolve);});const localUrl=`http://127.0.0.1:${server.address().port}`;origin=cohort?.origin||localUrl;cookieName="world_reader_"+server.address().port;
     timer=setTimeout(()=>{void this.close();},Math.max(1,(cohort?.expiresAt||Math.min(...grants.map(g=>g.expiresAt)))-clock()));timer.unref();return{url:origin,localUrl,entry:origin+ENTRY+"?catalog=full"};},
-  async close(){if(closed)return;closed=true;clearTimeout(timer);sessions.clear();server.closeAllConnections();if(server.listening)await new Promise(resolve=>server.close(resolve));}};
+  async close(){if(closed)return;closed=true;clearTimeout(timer);sessions.clear();await routeService?.close();server.closeAllConnections();if(server.listening)await new Promise(resolve=>server.close(resolve));}};
 }
 async function main(){
   const file=process.argv.find(a=>a.startsWith("--grant="))?.slice(8),grant=readGrant(file),port=Number(process.argv.find(a=>a.startsWith("--port="))?.slice(7)||8802);
@@ -105,7 +119,7 @@ async function main(){
   try{
     const r=(await pool.query("SELECT current_user AS role,current_setting('transaction_read_only') AS readonly")).rows[0];
     if(r.role!=="crownlands-world-reader"||r.readonly!=="on")throw Error("Restricted read-only database role required");
-    const reader=new LiveReader({pool});await reader.initialize(grant.uid);
+    const reader=new LiveReader({pool,openWorld:process.argv.includes("--open-world")});await reader.initialize(grant.uid);
     server=await createLiveServer({reader,grants:[grant],valid:()=>{try{return JSON.stringify(readGrant(file))===JSON.stringify(grant)&&JSON.stringify(readControl())===JSON.stringify(control);}catch{return false;}}});
     const address=await server.listen(port);console.log(`Private read-only game preview: ${address.entry}\n${reader.manifest.sections.length} active sections. No game writes or production route changes.`);
     const stop=async()=>{await server.close();await pool.end();};for(const signal of ["SIGINT","SIGTERM"])process.once(signal,()=>{void stop();});

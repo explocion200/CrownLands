@@ -5,6 +5,7 @@ const {Access}=require("../../../local-backend/access");
 const {decode}=require("../../../local-backend/values");
 const {buildCatalog,safeAsset,catalog,fixture,gameToImage}=require("./live-catalog");
 const {CASTLE_SIZE}=require("./layout");
+const {createDisplayLayout}=require("./open-world-layout");
 const Cosmetics=require("../../../functions/cosmetics");
 const Flags=require("../../../functions/playerFlagConfig");
 const hash=value=>crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0,24);
@@ -15,9 +16,9 @@ const current=(data,realm)=>data?.worldId===realm.worldId && data.resetGeneratio
 const CONTEXT_FIELDS=["worldId","resetGeneration","sharedRealmId","resetReadinessStatus","realmShardId","clanId","topologyVersion","activeRegionIds"];
 const CONTEXT_SQL=CONTEXT_FIELDS.map(key=>`'${key}',body->'fields'->'${key}'`).join(",");
 class LiveReader {
-  constructor({pool,schema="migration_game_live",clock=Date.now}) {
+  constructor({pool,schema="migration_game_live",clock=Date.now,openWorld=false}) {
     if(schema!=="migration_game_live"&&!/^migration_reader_test_[a-f0-9]{12}$/.test(schema))throw Error("Reviewed game or isolated test schema required");
-    this.pool=pool;this.store=new Store({schema,pool});this.schema=schema;this.clock=clock;
+    this.pool=pool;this.store=new Store({schema,pool});this.schema=schema;this.clock=clock;this.openWorld=openWorld;
     this.instance=crypto.randomUUID();this.views=new Map();this.publicAreas=new Map();this.publicSections=new Map();this.sectionLoads=new Map();this.pending=new Set();this.active=0;
     this.stats={reads:0,rejected:0,peak:0,peakDatabase:0,maxRows:0,sharedHits:0,omittedObjects:0,omittedMarches:0,sectionLoads:0,sectionHits:0,unchangedPolls:0};
     this.artObjects=new Map(fixture.objects.filter(o=>o.kind!=="scenery").map(o=>[o.sectionId+":"+o.id,o]));
@@ -44,13 +45,35 @@ class LiveReader {
       const expansion=await access.read(`realmGenerations/${realm.resetGeneration}/expansion/current`);
       const signature=hash([realm.worldId,realm.resetGeneration,realm.sharedRealmId,expansion?.topologyVersion,expansion?.activeRegionIds]);
       if(this.catalogSignature && signature!==this.catalogSignature)throw fail(409,"Active map catalog changed; restart the private reader");
-      if(!this.catalogSignature){const built=buildCatalog(realm,expansion);this.manifest=built.manifest;this.scenery=built.scenery;this.catalogSignature=signature;this.expansionPath=`realmGenerations/${realm.resetGeneration}/expansion/current`;this.sections=new Map(this.manifest.sections.map(s=>[s.id,s]));}
+      if(!this.catalogSignature){const built=buildCatalog(realm,expansion);this.manifest=built.manifest;this.scenery=built.scenery;this.catalogSignature=signature;this.expansionPath=`realmGenerations/${realm.resetGeneration}/expansion/current`;this.sections=new Map(this.manifest.sections.map(s=>[s.id,s]));
+        if(this.openWorld){this.display=createDisplayLayout(this.manifest,fixture);this.manifest={...this.manifest,openWorldDraft:true};}}
       const result=await callback({client,access,realm,now:access.now});
       await client.query("COMMIT");this.stats.reads++;return result;
     }catch(error){if(client)await client.query("ROLLBACK").catch(()=>{});throw error;}
     finally{if(client){this.active--;client.release();}this.pending.delete(uid);}
   }
   initialize(uid){return this.transaction(uid,async()=>this.manifest);}
+  async routeEndpoints(uid,from,to) {
+    if(!this.openWorld)throw fail(404,"Open-world draft is disabled");
+    for(const key of [from,to])if(typeof key!=="string"||key.length>256||!key.includes(":"))throw fail(400,"Choose two map objects");
+    const ids=[...new Set([from,to].map(key=>key.slice(0,key.indexOf(":"))))];
+    const packet=await this.read(uid,ids);
+    const endpoints=[from,to].map(key=>packet.objects.upsert.find(o=>o.key===key&&o.selectable));
+    if(endpoints.some(o=>!o))throw fail(404,"A selected location is no longer available");
+    return this.transaction(uid,async({client,access,realm})=>{
+      const fresh=[];
+      for(const o of endpoints){
+        const collection=o.kind==="tower"?"holdingTowers":o.kind==="camp"?"camps":o.kind==="npc"?"marauders":"cities";
+        const path=collection==="holdingTowers"?`holdingTowers/${o.id}`:`islands/${realm.worldId}--${realm.sharedRealmId}--${o.sectionId}/${collection}/${o.id}`;
+        const data=(await this.store.get(this.store.doc(path),client)).data();
+        if(!data||!current(data,realm)||!await access.canRead(path,data))throw fail(404,"A selected location is no longer available");
+        const item=this.object(o.id,collection,data,this.sections.get(o.sectionId));
+        if(!item||item.layoutUnmapped)throw fail(409,"Location coordinates changed; review the draft layout");
+        fresh.push({key:item.key,name:item.name,sectionId:item.sectionId,x:item.x,y:item.y});
+      }
+      return fresh;
+    });
+  }
   async read(uid,ids,cursor) {
     if(!Array.isArray(ids)||!ids.length||ids.length>16||new Set(ids).size!==ids.length||ids.some(id=>!this.sections?.has(id)))throw fail(400,"Choose 1–16 active sections");
     ids=[...ids].sort();
@@ -190,10 +213,12 @@ class LiveReader {
     if(kind==="castle"&&Cosmetics.item(skin)?.category==="city")asset=Cosmetics.item(skin).assets[stage]||asset;
     if(kind==="npc")asset=`assets/marauders/${data.classification==="boss"?"boss":"solo"}${data.status==="active"?"":"-defeated"}-v1.webp`;
     const width=landmark?.width||(kind==="castle"?CASTLE_SIZE:56),height=landmark?.height||(kind==="castle"?CASTLE_SIZE:56);
-    const x=section.x+local.x,y=section.y+local.y;
+    const previewLocal=this.display&&kind==="castle"?this.display.project(section,local,"castle"):local;
+    const x=section.x+previewLocal.x,y=section.y+previewLocal.y;
     const dto={key:section.id+":"+id,id,sectionId:section.id,sectionName:section.name,name:text(data.name)||id,kind,
-      gamePosition:{x:data.x,y:data.y},local,previewLocal:local,x,y,left:x-width/2,top:y-height/2,width,height,asset:safeAsset(data.artSrc,asset),
+      gamePosition:{x:data.x,y:data.y},local,previewLocal,x,y,left:x-width/2,top:y-height/2,width,height,asset:safeAsset(data.artSrc,asset),
       owner:text(data.ownerName||data.holderName||data.clanName)||"Neutral",selectable:true,troopVisibility:"hidden"};
+    if(this.display&&kind==="castle"&&!this.display.match(section,local,"castle"))dto.layoutUnmapped=true;
     if((data.ownerUid||data.holderUid)&&["castle","camp","stronghold","citadel"].includes(kind))dto.ownerFlag=Flags.normalizeFlag(data.ownerFlag||data.holderFlag,data.ownerUid||data.holderUid);
     if(uid&&(data.ownerUid===uid||data.holderUid===uid)){const count=data.troops??data.currentGarrison;if(Number.isFinite(count)){dto.troops=Math.max(0,Math.floor(count));dto.troopVisibility="exact";}}
     return dto;
@@ -212,6 +237,7 @@ class LiveReader {
     const routeId="route-"+hash(points),key="march:"+id;
     const body={key,id,sectionId:sectionIds[0],sections:[...new Set(sectionIds)],name:text(data.ownerName)||"March",owner:text(data.ownerName),kind:"troop",asset:"assets/icons/skills/atlas-v1/marchOrders.webp",
       routeId,departAt:data.launchedAtMs/1000,arriveAt:data.arrivesAtMs/1000,troopVisibility:"hidden"};
+    if(this.openWorld)body.recordedRoute=true;
     // Trust only the public producer's explicit estimate/exact marker. Never
     // reconstruct exact hidden forces from another source or requestedTroops.
     if(data.troopVisibility==="estimate"){body.troopVisibility="estimate";body.troopEstimateLabel=text(data.troopEstimateLabel,40);}
