@@ -85,10 +85,11 @@ class FixtureRealm {
     try {
       // Snapshot and journal watermark must describe the same committed state.
       await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
-      const visibility = await Visibility.context(this.store, client, uid, this.clock());
+      const readAt = this.clock();
+      const visibility = await Visibility.context(this.store, client, uid, readAt);
       const expired = (await client.query(`SELECT key FROM ${s}.world_rows WHERE sections && $1::text[]
         AND jsonb_typeof(source #> '{data,scoutReport,expiresAtMs}')='number'
-        AND (source #>> '{data,scoutReport,expiresAtMs}')::numeric <= $2 ORDER BY key`, [ids,this.clock()])).rows;
+        AND (source #>> '{data,scoutReport,expiresAtMs}')::numeric <= $2 ORDER BY key`, [ids,readAt])).rows;
       const timeScope = crypto.createHash("sha256").update(JSON.stringify(expired)).digest("hex").slice(0,12);
       viewerEpoch = this.epoch + ":" + visibility.scope + ":" + timeScope + ":" + uid;
       const revision = (await client.query(`SELECT revision FROM ${s}.world_meta`)).rows[0].revision;
@@ -99,7 +100,7 @@ class FixtureRealm {
         if (events.length > MAX_EVENTS) delta = false;
       }
       const rows = delta ? [] : (await client.query(`SELECT * FROM ${s}.world_rows WHERE sections && $1::text[] AND (kind='object' OR $2=ANY(viewers)) ORDER BY key`, [ids, uid])).rows;
-      const result = { kind: delta ? "delta" : "snapshot", epoch: viewerEpoch, viewer: uid, revision, fromRevision: delta ? cursor.revision : null, ids, serverTime: (this.clock() - this.started) / 1000,
+      const result = { kind: delta ? "delta" : "snapshot", epoch: viewerEpoch, viewer: uid, revision, fromRevision: delta ? cursor.revision : null, ids, serverTime: (readAt - this.started) / 1000,
         objects: { upsert: [], remove: [] }, marches: { upsert: [], remove: [] }, routes: [] };
       const latest = new Map();
       if (delta) for (const event of events) {

@@ -214,10 +214,12 @@
     {
       "paths": [
         "tools/map-benchmark/seamless/index.html",
+        "tools/map-benchmark/seamless/model.js",
         "tools/map-benchmark/seamless/preview.css",
         "tools/map-benchmark/seamless/preview.js",
         "tools/map-benchmark/seamless/sprite-layer.js",
         "tools/test-local-postgres-world-browser.js",
+        "tools/validate-seamless-catalog.js",
         "tools/validate-seamless-world-browser.js",
         "tools/validate-seamless-world.js"
       ],
@@ -231,7 +233,7 @@
         "tools/test-local-postgres-world-browser.js",
         "tools/validate-production-artifact.js"
       ],
-      "reason": "Shared private renderer batches scenery/patrols while retaining sharp native castles and accessible exact selection. Stable bounded area windows reduce snapshot churn. Regress original nine/full81 modes, all joins/corners, mouse/touch/keyboard, follow, overview, resize, DPR1/2 sharpness, failed/delayed assets, stale data, permissions, long repeated visits, DOM/listeners/memory and desktop/landscape frame/network measurements. Build proves exclusion from live entrypoints."
+      "reason": "Shared private renderer batches scenery/patrols while retaining sharp native castles and accessible exact selection. Stable bounded area windows reduce snapshot churn. Regress original nine/full81 modes, all joins/corners, mouse/touch/keyboard, follow, overview, resize, DPR1/2 sharpness, failed/delayed assets, stale data, permissions, long repeated visits, DOM/listeners/memory and desktop/landscape frame/network measurements. Build proves exclusion from live entrypoints. Rectangular interest windows must keep every visible section while avoiding repeated full snapshots during small landscape camera motions."
     },
     {
       "paths": [

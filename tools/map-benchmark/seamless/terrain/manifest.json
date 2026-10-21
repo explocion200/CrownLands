@@ -27,7 +27,7 @@
     },
     {
       "path": "tools/map-benchmark/seamless/model.js",
-      "sha256": "7422042f6b75118166619f0ffa7998dd26ea55093aa70ca7d1940daf72569df6"
+      "sha256": "52127ff6db6958ff9033c22eb8283a27a48bbe65c9eb0316acc6f6e4222ed072"
     },
     {
       "path": "tools/map-benchmark/seamless/build-terrain.js",

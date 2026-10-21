@@ -11,7 +11,7 @@ const gone=Symbol("delete"),sandbox={FieldValue:{delete:()=>gone},ARMY_TROOP_VIS
 vm.createContext(sandbox);for(const name of ["formatTroopEstimateBound","getIncomingTroopEstimate","isEstimatedAttackMovement","isEstimatedClanReinforcementMovement","isPrivateTransferMovement","createArmyPublicProjection"])vm.runInContext(fn(name),sandbox);
 const publicArmy=data=>Object.fromEntries(Object.entries(sandbox.createArmyPublicProjection(data)).filter(([,v])=>v!==gone));
 async function main(){
- let clock=Date.now(); const server=await createStageThreeServer({scripted:false,clock:()=>clock}); const {realm,store}=server;
+ let clock=Date.now(),clockStep=0; const server=await createStageThreeServer({scripted:false,clock:()=>{const now=clock;clock+=clockStep;return now;}}); const {realm,store}=server;
  try {
   const template=realm.initial.find(r=>r.kind==="march"),id=template.sections[0], uid="sample-rowan",other="sample-alder", cases=[];
   function row(name,path,data,visible,visibility){const key=id+":"+name;const r={...template,key,viewers:[uid,other],body:{...template.body,key,id:name,name,owner:"Fixture owner",troops:123456,email:"never@example.test",attackCombatSnapshot:{secret:true},scoutReports:{secret:true}},source:{path,data:{...CONTRACT,...data}}};cases.push({name,r,visible,visibility});return r;}
@@ -59,6 +59,13 @@ async function main(){
   data=applyPacket(data,packet,[id],cursor);assert.ok(!data.marches.some(m=>["clan-rally","clan-tower"].includes(m.id)));
   cursor={epoch:packet.epoch,revision:packet.revision};
   clock += 700000;packet=await realm.read(uid,[id],cursor);assert.equal(packet.kind,"snapshot");assert.ok(!packet.marches.upsert.some(m=>m.id==="own-scout"),"Expired intelligence survived a no-change poll");
+  // An expiry between clock reads must not label an unexpired row with the
+  // already-expired epoch, which would leave it cached on all later deltas.
+  const scout=cases.find(c=>c.name==="own-scout").r, edgeKey=id+":boundary-scout";
+  await realm.change([{key:edgeKey,row:{...scout,key:edgeKey,body:{...scout.body,key:edgeKey,id:"boundary-scout"},source:{...scout.source,data:{...scout.source.data,scoutReport:{expiresAtMs:clock+1}}}}}]);
+  clockStep=2;packet=await realm.read(uid,[id]);assert.ok(packet.marches.upsert.some(m=>m.key===edgeKey));
+  cursor={epoch:packet.epoch,revision:packet.revision};packet=await realm.read(uid,[id],cursor);clockStep=0;
+  assert.equal(packet.kind,"snapshot");assert.ok(!packet.marches.upsert.some(m=>m.key===edgeKey));
   cursor={epoch:packet.epoch,revision:packet.revision};
   const owned=cases.find(c=>c.name==="own").r;
   await realm.change([{key:owned.key,row:{...owned,source:{...owned.source,data:{...owned.source.data,ownerUid:other}}}}]);

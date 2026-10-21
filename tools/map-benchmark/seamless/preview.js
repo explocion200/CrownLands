@@ -202,12 +202,8 @@
       const ordered = [...scene.sections].sort((a, b) => Math.hypot(a.x + 724 - camera.x, a.y + 543 - camera.y) - Math.hypot(b.x + 724 - camera.x, b.y + 543 - camera.y));
       const visibleSections = ordered.filter(s => M.intersects(exact, s.x, s.y, s.width, s.height));
       const fullSections = overview ? [] : [...visibleSections, ...ordered.filter(s => !visibleSections.includes(s))].slice(0, 4);
-      let nearby = ordered.filter(s => visibleSections.includes(s) || visibleSections.some(v => Math.abs(v.gridX - s.gridX) <= 1 && Math.abs(v.gridY - s.gridY) <= 1)).slice(0, 16);
-      // Retain the bounded interest window until a visible section leaves it.
-      // Re-sorting the nearest 16 on every tiny camera movement caused repeated
-      // megabyte snapshots and thumbnail churn at otherwise invisible edges.
-      if (fullCatalog && !overview && feed?.ids.length && ordered.filter(s => M.intersects(M.visible(camera,size,100),s.x,s.y,s.width,s.height)).every(s => feed.ids.includes(s.id)))
-        nearby = ordered.filter(s => feed.ids.includes(s.id));
+      const interest = M.interestSections(scene.sections,camera,size,feed?.ids || []);
+      const nearby = ordered.filter(s => interest.includes(s));
       feed?.set(overview ? [] : nearby.map(s => s.id));
       const visibleObjects = scene.objects.filter(o => (!overview || (!fullCatalog && o.kind !== "scenery")) && M.intersects(view, o.left, o.top, o.width, o.height));
       const visibleMarches = overview && fullCatalog ? [] : activeMarches.filter(m => M.intersects(view, m.position.x - 18, m.position.y - 18, 36, 36));
