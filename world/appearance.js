@@ -28,7 +28,7 @@
     const powerLabel=getEnemyCityPowerBandLabel(powerBand,city);
     const countdown=item.kind==="camp"?item.payoutPending?formatDuration(Math.max(0,Math.ceil((item.payoutAtMs-now)/1000))):"Securing":item.kind==="npc"&&!item.selectable?getMarauderRespawnLabel(item):"";
     const main=item.isMainCity===true||(own(item)&&item.id===state.mainCityId&&item.sectionId===getMainCityRegionId());
-    const signature=JSON.stringify([item.key,item.name,item.kind,item.owner,item.ownerUid,item.ownerFlag,item.ownerClanId,item.ownerClanTag,item.level,item.campType,item.classification,item.troopVisibility,item.troops,item.troopEstimateLabel,item.selectable,item.missionKind,selected,owner,countdown,main,powerBand,powerLabel]);
+    const signature=JSON.stringify([item.key,item.name,item.kind,item.owner,item.ownerUid,item.ownerFlag,item.ownerClanId,item.ownerClanTag,item.level,item.campType,item.classification,item.troopVisibility,item.troops,item.troopEstimateLabel,item.selectable,item.missionKind,item.returning,selected,owner,countdown,main,powerBand,powerLabel]);
     if(rendered.get(node)===signature)return;
     rendered.set(node,signature);
     node.classList.remove("player","enemy","neutral","clan-ally");node.classList.add(owner);
@@ -39,8 +39,11 @@
     node.classList.toggle("selected",selected);
     if(item.kind==="troop"){
       node.classList.add("army-token");
+      node.classList.toggle("hidden-transfer",item.troopVisibility==="hidden");
+      node.classList.toggle("clan-attack",owner==="clan-ally"&&!item.returning&&["attack","rally"].includes(item.missionKind));
+      node.setAttribute("aria-expanded",String(selected));
       const shown=item.troopVisibility!=="hidden";
-      node.innerHTML=`<span class="army-token-icon">${item.missionKind==="scout"?renderCrownlandsIcon("scout","army-token-svg"):item.missionKind==="transfer"?"♞":"⚔"}</span><strong class="army-token-count"${shown?"":" hidden"}>${shown?count(item):""}</strong><small class="army-token-time"></small>`;
+      node.innerHTML=`<span class="army-token-icon">${item.missionKind==="scout"?renderCrownlandsIcon("scout","army-token-svg"):item.missionKind==="transfer"?"♞":"⚔"}</span><strong class="army-token-count"${shown?"":" hidden"}>${shown?count(item):""}</strong><small class="army-token-time"></small><span class="army-token-nav" data-army-relationship="${owner==="clan-ally"?"ally":owner}"${selected?"":" hidden"}>${["from","to"].map((endpoint,i)=>`<button type="button" data-army-endpoint="${endpoint}" aria-label="Go to march ${i?"destination":"origin"}"><span aria-hidden="true">${renderCrownlandsIcon(i?"forward":"back")}</span><small>${i?"To":"From"}</small></button>`).join("")}</span>`;
       node.setAttribute("aria-label",`${item.owner||"Ruler"} · ${item.missionKind||"Army"}${shown?" · "+count(item)+" troops":""}`);
       return;
     }
@@ -92,7 +95,7 @@
       banner.style.transform=`translate(${result.dx||0}px,${(result.dy||0)-4}px) scale(.8)`;
     }
   }
-  window.SeamlessAppearance={render,layout,loadIdentities,tickMarch(node,item,now){
+  window.SeamlessAppearance={render,layout,loadIdentities,routeClass(item){return own(item)?"player-route":ally(item)?!item.returning&&["attack","rally"].includes(item.missionKind)?"clan-hostile-route":"clan-support-route":"enemy-route";},tickMarch(node,item,now){
     const timer=node.querySelector(".army-token-time"),value=formatDuration(Math.max(0,Math.ceil(item.arriveAt-now)));
     if(timer&&timer.textContent!==value)timer.textContent=value;
   }};

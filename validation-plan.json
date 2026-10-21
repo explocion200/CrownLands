@@ -1,66 +1,35 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "c363fde3ead1a5b39b94a9b89a54faafb33a6323",
+  "baseCommit": "0729e0772cd21f1502223c8f90a89a2822ae9c04",
   "coverage": [
     {
       "paths": [
-        "functions/index.js",
-        "functions/marauder-population.js",
-        "local-backend/world/routing.js",
-        "tools/validate-marauder-terrain.js",
-        "tools/test-local-postgres-continuous-npcs.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-continuous-npcs.js",
-        "tools/test-local-postgres-marauder-respawn.js",
-        "tools/validate-marauder-terrain.js",
-        "functions/test/emulator-marauder-population.js",
-        "functions/test/emulator-marauder-combat.js"
-      ],
-      "reason": "Use current continuous-world display geometry for seed and dynamic city clearance, preserving the existing road, inset, terrain, spacing and objective rules. Verify current active-template projection, recovery of the blocked Lionwatch boss, concurrent and offline respawn, immutable identity, cooldown, private/public projections and unchanged fallback placement. Relevant authoritative population and combat emulator suites cover existing shared dependencies."
-    },
-    {
-      "paths": [
-        "local-backend/world/reader.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-continuous-npcs.js",
-        "tools/test-local-postgres-production-world.js"
-      ],
-      "reason": "Filter retired/unknown NPC states before the bounded SQL area limit and defensively in projection. Exercise actual PostgreSQL reads and deltas so retired markers disappear, legitimate defeated markers remain, replacement stays selectable and private defenders are not disclosed. Production browser harness covers authenticated area reads, native controls, gameplay actions and isolation."
-    },
-    {
-      "paths": [
-        "marauders-ui.js",
+        "world/native.js",
         "world/appearance.js",
-        "tools/check-continuous-npc-timers.js",
+        "world/flags.css",
+        "world/preview.js",
+        "world/preview.css",
+        "world/surface.html",
+        "tools/check-continuous-marches.js",
         "tools/test-local-postgres-native-auth-world.js"
       ],
       "tests": [
         "tools/test-local-postgres-production-world.js",
         "tools/test-local-postgres-native-auth-world.js",
-        "tools/validate-marauders-browser.js",
-        "tools/validate-production-artifact.js"
+        "tools/validate-marching-army-visibility-browser.js",
+        "tools/validate-pickup-runtime.js",
+        "tools/validate-march-path-alignment.js",
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Tick visible continuous-world NPC countdowns from the authoritative clock and wake exact due identities in every visible section without per-tick retries. Verify 1440x900, 844x390 and 568x320 rendering, early/overdue timers, rejected wake deduplication, replacement and retirement across adjacent sections. Re-run the shared harness private entry and existing NPC UI browser validator; verify production script globals and lazy artifact size."
+      "reason": "Restore compact Gold/troop/Crown pickups and original march markers, attached From/To navigation and authoritative cross-section paths without Follow UI. Actual isolated PostgreSQL/authenticated browser harness exercises real attack, recall and pickup claims at desktop and both landscape sizes, checks proportional sizing, touch/mouse/keyboard navigation, exact accepted routes, private counts, feed removal and session isolation. Recheck the shared private harness entry, legacy movement/route and pickup dependencies, delivered production module globals and unchanged payload budgets. No backend, rules or database changes; no server emulator suites required."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the owner-requested repair of existing road-only placement and respawn behavior without changing economy, cooldown or archived-world design rules. Documentation does not claim deployment."
-    },
-    {
-      "paths": [
-        "tools/asset-performance-budgets.js",
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "tests": [
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "reason": "Account for the measured 1,043 delivered bytes required for visible-area countdowns and bounded respawn wake-up: installation shell 4,629,522 bytes, 1,042 over the previous cap, bounded by 1.5 KiB. NPC source group 64,498 bytes fits one additional KiB. Preserve artwork, lazy-world, request and remaining budgets; no added polling or dependencies."
+      "reason": "Record the owner-confirmed map presentation correction only; preserve gameplay and privacy rules, with deployment verification separate."
     }
   ]
 }
