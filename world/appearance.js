@@ -5,8 +5,17 @@
   const rendered=new WeakMap();
   const esc=value=>escapeHtml(String(value??""));
   const own=item=>Boolean(item.ownerUid&&item.ownerUid===getCurrentOnlineUid());
-  const ally=item=>Boolean(!own(item)&&item.ownerClanId&&item.ownerClanId===state.clanId);
+  const ally=item=>Boolean(!own(item)&&isClanAllyCity({...item,owner:"enemy"}));
   const relation=item=>own(item)?"player":ally(item)?"clan-ally":item.ownerUid?"enemy":"neutral";
+  const powerCity=item=>({...item,owner:relation(item)});
+  function loadIdentities(items){
+    if(!state)return;
+    // The continuous viewport includes owners outside state.cities. Reuse the
+    // bounded identity cache/repair queue, never infer power from local troops.
+    const cities=items.filter(item=>item.kind==="castle").map(powerCity);
+    pruneEnemyPowerBandCache(cities);
+    queuePlayerIdentityLookupForUids(cities.filter(city=>city.owner==="enemy").map(city=>city.ownerUid));
+  }
   const count=item=>item.troopVisibility==="exact"&&Number.isFinite(item.troops)?formatNumber(item.troops):item.troopVisibility==="estimate"?esc(item.troopEstimateLabel):"?";
   const flag=item=>item.ownerFlag?'<span class="kingdom-flag city-owner-flag city-kingdom-flag" aria-hidden="true"><span class="flag-symbol"></span></span>':`<span class="city-owner-flag owner-flag" aria-hidden="true">${renderCrownlandsIcon(OWNER.neutral.flagIcon,"owner-flag-icon")}</span>`;
   function render(node,item,{inspector=false,selected=false}={}){
@@ -14,12 +23,18 @@
     if(inspector||!state)return;
     if(item.kind==="scenery")return;
     const owner=relation(item),now=Date.now();
+    const city=item.kind==="castle"?powerCity(item):null;
+    const powerBand=city?getStableEnemyCityPowerBand(city):"";
+    const powerLabel=getEnemyCityPowerBandLabel(powerBand,city);
     const countdown=item.kind==="camp"?item.payoutPending?formatDuration(Math.max(0,Math.ceil((item.payoutAtMs-now)/1000))):"Securing":item.kind==="npc"&&!item.selectable?item.respawnAtMs>now?"Respawn "+formatDuration(Math.ceil((item.respawnAtMs-now)/1000)):"Awaiting respawn":"";
     const main=item.isMainCity===true||(own(item)&&item.id===state.mainCityId&&item.sectionId===getMainCityRegionId());
-    const signature=JSON.stringify([item.key,item.name,item.kind,item.owner,item.ownerUid,item.ownerFlag,item.ownerClanId,item.ownerClanTag,item.level,item.campType,item.classification,item.troopVisibility,item.troops,item.troopEstimateLabel,item.selectable,item.missionKind,selected,owner,countdown,main]);
+    const signature=JSON.stringify([item.key,item.name,item.kind,item.owner,item.ownerUid,item.ownerFlag,item.ownerClanId,item.ownerClanTag,item.level,item.campType,item.classification,item.troopVisibility,item.troops,item.troopEstimateLabel,item.selectable,item.missionKind,selected,owner,countdown,main,powerBand,powerLabel]);
     if(rendered.get(node)===signature)return;
     rendered.set(node,signature);
     node.classList.remove("player","enemy","neutral","clan-ally");node.classList.add(owner);
+    node.classList.remove("enemy-power-unknown","enemy-power-protected","enemy-power-in-range","enemy-power-overpowering");
+    if(powerBand){node.classList.add(`enemy-power-${powerBand}`);node.dataset.enemyPowerBand=powerBand;}
+    else delete node.dataset.enemyPowerBand;
     node.classList.toggle("main-city-node",main);
     node.classList.toggle("selected",selected);
     if(item.kind==="troop"){
@@ -50,7 +65,8 @@
     }
     node.append(label);
     if(item.ownerFlag)for(const element of label.querySelectorAll(".city-kingdom-flag"))FlagRenderer.render(element,item.ownerFlag,{stableKey:item.ownerUid||item.key,context:"city",size:"small"});
-    node.setAttribute("aria-label",`${item.name} · ${item.sectionName} · ${item.owner}${item.level?" · Level "+item.level:""}`);
+    node.title=`${item.name} · ${item.sectionName} · ${item.owner}${item.level?" · Level "+item.level:""}${powerLabel?" · "+powerLabel:""}`;
+    node.setAttribute("aria-label",node.title);
   }
   let measurements=new WeakMap(),measured=0,lastLayout="",layoutSize="";
   document.fonts?.addEventListener("loadingdone",()=>{measurements=new WeakMap();lastLayout="";});
@@ -76,7 +92,7 @@
       banner.style.transform=`translate(${result.dx||0}px,${(result.dy||0)-4}px) scale(.8)`;
     }
   }
-  window.SeamlessAppearance={render,layout,tickMarch(node,item,now){
+  window.SeamlessAppearance={render,layout,loadIdentities,tickMarch(node,item,now){
     const timer=node.querySelector(".army-token-time"),value=formatDuration(Math.max(0,Math.ceil(item.arriveAt-now)));
     if(timer&&timer.textContent!==value)timer.textContent=value;
   }};

@@ -100,6 +100,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       assert(!ui.tag&&ui.cameraPanel==="none"&&ui.statusHidden,"Prototype presentation must not replace the normal HUD");
     }
     if(production)await require("./check-continuous-map-ui")(page,source,select,output);
+    if(production)await require("./check-continuous-map-power")(page,source,select,output);
     await page.locator("#continuous-game-actions .wheel-send").click();
     await select(page, target);
     await page.waitForFunction(() => !!document.querySelector("#troopSliderConfirm") && !document.querySelector("#troopSliderConfirm").disabled);
