@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "schemaVersion": 1,
   "baseCommit": "f8f2d48863954d743b00ec0ed043451143773775",
   "coverage": [
     {
