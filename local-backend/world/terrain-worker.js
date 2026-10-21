@@ -9,7 +9,7 @@ async function build({ manifest, directory }) {
   fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
   const roads = JSON.parse(fs.readFileSync(path.join(source, "roads.json"))).maps;
   const inputs = ["ground.png", "dirt.png", "roads.json"].map(f => hash(fs.readFileSync(path.join(source, f))));
-  const version = hash(JSON.stringify([inputs, hash(fs.readFileSync(__filename)), hash(fs.readFileSync(path.join(__dirname,"roads.js")))]));
+  const version = hash(JSON.stringify([inputs, sharp.versions, hash(fs.readFileSync(__filename)), hash(fs.readFileSync(path.join(__dirname,"roads.js")))]));
   const ground = new Map(), material = await sharp(path.join(source, "dirt.png")).resize(384,384).png().toBuffer();
   for (const x of [0,1]) for (const y of [0,1]) {
     let image = sharp(path.join(source,"ground.png")).resize(W,H,{fit:"fill"});
