@@ -25,12 +25,16 @@
     let marches = scene.marches.map(m => prepareMarch(m, m.points)), activeMarches = marches, feed = null, feedEpoch = null, feedViewer = null, selectedSnapshot = null;
     const byMarch = new Map(marches.map(m => [m.key, m]));
     const nodes = new Map(), terrain = new Map();
+    let patrolPlanAt = 0;
     let size, camera, selected = null, following = null, dirty = true, raf = 0, lastFrame = 0;
-    let serverTimeOffset = 0, sceneTime = 0, frozenTime = null, lastInspectorSection = "", lastPlan = "", plannedCamera = null, plannedAt = 0;
+    let serverTimeOffset = 0, sceneTime = 0, frozenTime = null, lastInspectorSection = "", lastPlan = "", plannedCamera = null;
     const frameTimes = [], workTimes = [], pointers = new Map();
     let gesture = null, dragged = false, clickKey = null, suppressClick = false, listenerCount = 0;
     const cleanups = [];
     const assets = new window.SeamlessAssets.AssetLoader(() => { dirty = true; });
+    const sprites = new window.SeamlessSpriteLayer(viewport, assets);
+    let scenery = [], sceneryCamera = "";
+    sprites.changed = () => { sceneryCamera = ""; };
     const homeSection = scene.sections.find(s => s.id === scene.homeSectionId);
     function on(target, event, handler, options) { target.addEventListener(event, handler, options); listenerCount++; cleanups.push(() => target.removeEventListener(event, handler, options)); }
     function center() { return { x: size.width / 2, y: size.height / 2 }; }
@@ -60,8 +64,8 @@
       const node = document.createElement(item.kind === "scenery" ? "div" : "button");
       node.className = `object ${item.kind}`; node.dataset.key = item.key;
       if (item.kind !== "scenery") { node.type = "button"; node.setAttribute("aria-label", `${item.name} · ${item.sectionName || "Sample patrol"}`); }
-      const image = new Image(); image.alt = ""; image.draggable = false; node.append(image);
-      if (item.kind !== "scenery") { const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = item.name; node.append(tag); }
+      if (item.kind !== "troop") { const image = new Image(); image.alt = ""; image.draggable = false; node.append(image); }
+      if (!["scenery", "troop"].includes(item.kind)) { const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = item.name; node.append(tag); }
       if (item.kind !== "troop") node.style.cssText = `left:${item.left}px;top:${item.top}px;width:${item.width}px;height:${item.height}px`;
       (item.kind === "troop" ? marchesLayer : objectsLayer).append(node);
       nodes.set(item.key, node); return node;
@@ -77,7 +81,7 @@
       const sectionName = item.kind === "troop" ? sectionAt(item.position)?.name : item.sectionName;
       $("section").textContent = `${sectionName || "Preview edge"}${fullCatalog && (feed?.failed || (!objects.has(selected) && !byMarch.has(selected))) ? " · last received" : ""}`; lastInspectorSection = sectionName;
       $("owner").textContent = item.owner;
-      $("troops").textContent = `${item.troops.toLocaleString()} sample troops`;
+      $("troops").textContent = item.troopVisibility === "hidden" ? "Troop count private" : item.troopVisibility === "estimate" ? `${item.troopEstimateLabel} troops · estimate` : `${(item.troops || 0).toLocaleString()} sample troops`;
       $("follow").hidden = item.kind !== "troop";
       $("follow").textContent = following === selected ? "Stop following" : "Follow";
     }
@@ -153,7 +157,7 @@
         const inspectedSections = selectedSnapshot?.kind === "troop" ? selectedSnapshot.sections : [selectedSnapshot?.sectionId];
         const inspectedAreaLoaded = data.authoritative && inspectedSections.some(id => data.sections.some(s => s.id === id));
         const inspectedMissing = inspectedAreaLoaded && !data.sections.some(s => s.objects.some(o => o.key === selected)) && !data.marches.some(m => m.key === selected);
-        if (principalChanged || data.authExpired || data.removed?.includes(selected) || inspectedMissing) { selected = null; selectedSnapshot = null; following = null; }
+        if (principalChanged || epochChanged || data.authExpired || data.removed?.includes(selected) || inspectedMissing) { selected = null; selectedSnapshot = null; following = null; }
         if (data.removed?.includes(following)) following = null;
         scene.objects = data.sections.flatMap(s => s.objects); objects.clear(); scene.objects.forEach(o => objects.set(o.key, o));
         const routes = new Map(data.routes.map(r => [r.id, r.points]));
@@ -180,6 +184,17 @@
         });
       }
     }
+    if (stageThree && phoneOrigin) {
+      document.body.classList.add("phone-test");
+      let measureTimer; cleanups.push(()=>clearTimeout(measureTimer));
+      const measure = document.createElement("button"); measure.textContent="Measure 10s"; measure.id="measure-phone"; document.querySelector("footer").append(measure);
+      on(measure,"click",()=>{
+        frameTimes.length=0;workTimes.length=0;measure.disabled=true;measure.textContent="Pan / zoom now…";
+        measureTimer=setTimeout(()=>{const samples=frameTimes.slice().sort((a,b)=>a-b); const mean=samples.reduce((a,b)=>a+b,0)/samples.length;
+          measure.textContent=samples.length ? `${(1000/mean).toFixed(0)} FPS · p95 ${samples[Math.floor(samples.length*.95)].toFixed(0)} ms` : "Try again";measure.disabled=false;
+        },10000);
+      });
+    }
     const observer = new ResizeObserver(resize); observer.observe(viewport); resize();
     function renderScene() {
       const view = M.visible(camera, size, 75), exact = M.visible(camera, size);
@@ -187,7 +202,12 @@
       const ordered = [...scene.sections].sort((a, b) => Math.hypot(a.x + 724 - camera.x, a.y + 543 - camera.y) - Math.hypot(b.x + 724 - camera.x, b.y + 543 - camera.y));
       const visibleSections = ordered.filter(s => M.intersects(exact, s.x, s.y, s.width, s.height));
       const fullSections = overview ? [] : [...visibleSections, ...ordered.filter(s => !visibleSections.includes(s))].slice(0, 4);
-      const nearby = ordered.filter(s => visibleSections.includes(s) || visibleSections.some(v => Math.abs(v.gridX - s.gridX) <= 1 && Math.abs(v.gridY - s.gridY) <= 1)).slice(0, 16);
+      let nearby = ordered.filter(s => visibleSections.includes(s) || visibleSections.some(v => Math.abs(v.gridX - s.gridX) <= 1 && Math.abs(v.gridY - s.gridY) <= 1)).slice(0, 16);
+      // Retain the bounded interest window until a visible section leaves it.
+      // Re-sorting the nearest 16 on every tiny camera movement caused repeated
+      // megabyte snapshots and thumbnail churn at otherwise invisible edges.
+      if (fullCatalog && !overview && feed?.ids.length && ordered.filter(s => M.intersects(M.visible(camera,size,100),s.x,s.y,s.width,s.height)).every(s => feed.ids.includes(s.id)))
+        nearby = ordered.filter(s => feed.ids.includes(s.id));
       feed?.set(overview ? [] : nearby.map(s => s.id));
       const visibleObjects = scene.objects.filter(o => (!overview || (!fullCatalog && o.kind !== "scenery")) && M.intersects(view, o.left, o.top, o.width, o.height));
       const visibleMarches = overview && fullCatalog ? [] : activeMarches.filter(m => M.intersects(view, m.position.x - 18, m.position.y - 18, 36, 36));
@@ -208,10 +228,12 @@
         tile.tile.lastChild.hidden = tinyOverview && section.id !== scene.homeSectionId;
         tile.tile.lastChild.style.maxWidth = fullCatalog && overview && !tinyOverview ? `${section.width * .9 / labelScale}px` : "";
       }
-      const visibleKeys = new Set([...visibleObjects, ...visibleMarches].map(o => o.key));
+      scenery = visibleObjects.filter(o => o.kind === "scenery"); sceneryCamera = "";
+      const interactive = visibleObjects.filter(o => o.kind !== "scenery");
+      const visibleKeys = new Set([...interactive, ...visibleMarches].map(o => o.key));
       for (const [key, node] of nodes) if (!visibleKeys.has(key)) { node.remove(); nodes.delete(key); }
-      for (const item of [...visibleObjects, ...visibleMarches]) {
-        const node = nodes.get(item.key) || createObject(item); setImage(node.firstChild, item.asset);
+      for (const item of [...interactive, ...visibleMarches]) {
+        const node = nodes.get(item.key) || createObject(item); if (item.kind !== "troop") setImage(node.firstChild, item.asset);
         node.classList.toggle("selected", item.key === selected);
         if (item.kind === "troop") { const pixels = `${Math.max(22, 36 * camera.zoom)}px`; if (node.style.width !== pixels) { node.style.width = pixels; node.style.height = pixels; } }
       }
@@ -228,18 +250,28 @@
       if (lastFrame && !document.hidden) { frameTimes.push(now - lastFrame); if (frameTimes.length > 900) frameTimes.shift(); }
       sceneTime = frozenTime ?? now / 1000 + serverTimeOffset;
       const view = M.visible(camera, size, 100);
-      activeMarches = marches.filter(m => m.key === following || M.intersects(view, m.bounds.left, m.bounds.top, m.bounds.right - m.bounds.left, m.bounds.bottom - m.bounds.top));
+      activeMarches = (fullCatalog && camera.zoom < M.limits(size).home * .56 ? [] : marches).filter(m => m.key === following || M.intersects(view, m.bounds.left, m.bounds.top, m.bounds.right - m.bounds.left, m.bounds.bottom - m.bounds.top));
       for (const march of activeMarches) {
         const distance = (sceneTime * march.speed + march.path.length * march.phase) % (march.path.length * 2);
         march.position = M.along(march.path, distance <= march.path.length ? distance : march.path.length * 2 - distance);
       }
       if (following) { const m = byMarch.get(following); camera = M.clamp({ ...camera, ...m.position }, size); }
       // Camera transforms remain frame-synchronous. Reconcile the larger scene
-      // only when its 75px culling margin or zoom changes require it, or every
-      // 120ms for moving patrols. Asset/feed/selection changes still refresh now.
+      // only when its culling margin or zoom requires it. Patrol hit targets
+      // reconcile separately every 120ms; their visual positions update each frame.
       const moved = !plannedCamera || Math.hypot(camera.x - plannedCamera.x, camera.y - plannedCamera.y) * camera.zoom > 32;
       const zoomed = !plannedCamera || Math.abs(camera.zoom / plannedCamera.zoom - 1) > 0.03;
-      if (dirty || moved || zoomed || now - plannedAt >= 120) { renderScene(); dirty = false; plannedCamera = { ...camera }; plannedAt = now; }
+      if (dirty || moved || zoomed) { renderScene(); dirty = false; plannedCamera = { ...camera }; }
+      if (now - patrolPlanAt >= 120) {
+        const visible = activeMarches.filter(m => M.intersects(view, m.position.x-18,m.position.y-18,36,36));
+        const keys = new Set(visible.map(m=>m.key));
+        for (const [key,node] of nodes) if(node.classList.contains("troop") && !keys.has(key)) { node.remove();nodes.delete(key); }
+        for (const m of visible) { const node=nodes.get(m.key)||createObject(m); const pixels=`${Math.max(22,36*camera.zoom)}px`;node.style.width=pixels;node.style.height=pixels; }
+        patrolPlanAt=now;
+      }
+      const cameraKey = `${camera.x}:${camera.y}:${camera.zoom}:${size.width}:${size.height}`;
+      if (cameraKey !== sceneryCamera) { sprites.scenery(scenery, camera, size); sceneryCamera = cameraKey; }
+      sprites.patrols(activeMarches, camera, size, selected, document.activeElement?.dataset.key);
       world.style.transform = `translate3d(${size.width / 2 - camera.x * camera.zoom}px,${size.height / 2 - camera.y * camera.zoom}px,0) scale(${camera.zoom})`;
       for (const march of activeMarches) { const node = nodes.get(march.key); if (node) { const p = M.project(camera, march.position, size); node.style.transform = `translate3d(${p.x}px,${p.y}px,0) translate(-50%,-50%)`; } }
       const selectedMarch = byMarch.get(selected);
@@ -249,7 +281,7 @@
     }
     on(document, "visibilitychange", () => { lastFrame = 0; if (stageThree && !document.hidden) feed?.refresh(); });
     raf = requestAnimationFrame(frame);
-    on(window, "pagehide", () => { cancelAnimationFrame(raf); observer.disconnect(); assets.dispose(); feed?.dispose(); cleanups.forEach(fn => fn()); });
+    on(window, "pagehide", () => { cancelAnimationFrame(raf); observer.disconnect(); sprites.dispose(); assets.dispose(); feed?.dispose(); cleanups.forEach(fn => fn()); });
     // Deliberately present only in this loopback document, for deterministic QA.
     window.seamlessPreview = {
       scene, home, select, refresh: () => feed?.refresh(),

@@ -54,7 +54,7 @@ async function main() {
     for (const o of scene.objects.filter(o => o.kind !== "castle")) assert.ok(!(c.left < o.left + o.width + 10 && c.left + c.width > o.left - 10 && c.top < o.top + o.height + 10 && c.top + c.height > o.top - 10), `Castle covers ${o.kind}: ${c.key}/${o.key}`);
   }
   const terrainRoot = "tools/map-benchmark/seamless/terrain/", manifest = JSON.parse(fs.readFileSync(`${terrainRoot}manifest.json`));
-  assert.equal(manifest.files.length, 18); assert.equal(manifest.gutter, 2); assert.equal(manifest.thumbnailScale, 2);
+  assert.equal(manifest.files.length, 162); assert.equal(manifest.gutter, 2); assert.equal(manifest.thumbnailScale, 2);
   for (const item of [...manifest.inputs, ...manifest.files.map(f => ({ ...f, path: terrainRoot + f.name }))]) {
     assert.equal(crypto.createHash("sha256").update(fs.readFileSync(item.path)).digest("hex"), item.sha256, `Private terrain needs rebuilding: ${item.path}`);
   }

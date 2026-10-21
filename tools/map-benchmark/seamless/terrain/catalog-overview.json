@@ -5,327 +5,327 @@
   "inputs": [
     {
       "path": "tools/map-benchmark/seamless/terrain/core-v2-warband-camp-m2-m2.webp",
-      "sha256": "b0ae27864b158beadc5809db15a8f4c5047fad8360617c1340024b2d09228bf3"
+      "sha256": "f4729d190a577444bd55c2066cb76fca52fc20b9bd2fe22293876a43ea97eb65"
     },
     {
       "path": "tools/map-benchmark/seamless/terrain/core-v2-relic-camp-north-west-m1-m2.webp",
-      "sha256": "b75c951376e15b013dc628693d4f6604339390a011cb8bdfddebd15aa091c913"
+      "sha256": "ba6d6901859f117fe6b5f65487447fd8fcd2d927cc7361876db58b8d1e82eac1"
     },
     {
       "path": "tools/map-benchmark/seamless/terrain/core-v2-north-support-p0-m2.webp",
-      "sha256": "e06a7c834340e61fca684892148e1e04b03f9cf3ffa193661b9629be1f1c16b6"
+      "sha256": "4ffd4c7d1f143d4b5e96b9a2034b217c7076aa7c0e8694e8460aa374121b0683"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/core-v2-deed-camp-north-east-p1-m2.webp",
-      "sha256": "bdf916fde4bd94899638c62d0e1f04ff51b9ead279476b4ce00432a86e40dbef"
+      "path": "tools/map-benchmark/seamless/terrain/core-v2-deed-camp-north-east-p1-m2.webp",
+      "sha256": "10da371f181fe3bd0ff62bac6942fcad8efc721ca1c88b88b6444a017f20f535"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/core-v2-gold-camp-north-east-p2-m2.webp",
-      "sha256": "edaeb4c4043d2f7fa14b50d1eb7f11797a7dafacae0ae6c53c55fb0ae63ca859"
+      "path": "tools/map-benchmark/seamless/terrain/core-v2-gold-camp-north-east-p2-m2.webp",
+      "sha256": "e20e0c8327744f92bbca235020e9397235cfc7e809d8299d9b948ed152ec8a9d"
     },
     {
       "path": "tools/map-benchmark/seamless/terrain/core-v2-relic-camp-west-north-m2-m1.webp",
-      "sha256": "fffd6116a8e0e0ca8742dabb817608ad24340d3676f5f6001ac253096c1f69b3"
+      "sha256": "f0da18ea368320aca38e4b342df80251a663c1b45fd9de9d864ef1f27be60867"
     },
     {
       "path": "tools/map-benchmark/seamless/terrain/core-v2-north-west-holding-tower-m1-m1.webp",
-      "sha256": "84dcf0866b475b50d914dad0e806c4729dd182b0f63de0253f5fd02aa8afd030"
+      "sha256": "3cc965a69c0bb8bd5a761bc9e46646d77dee44bb56840d99bdfa20cd23e70c9c"
     },
     {
       "path": "tools/map-benchmark/seamless/terrain/core-v2-greybanner-hold-p0-m1.webp",
-      "sha256": "1ba6784f23752492188b1b888d4b6aea08f71e99fc0ef5b6c84338280d4b3f63"
+      "sha256": "19f583d0790dfe268416e304986ebab955cbdc29f479589c460a13f93dd0edc3"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/core-v2-north-east-holding-tower-p1-m1.webp",
-      "sha256": "ebb043ead372a4b26ce14052d6d7f69f08f8360cb77edb6513992ee1be98f127"
+      "path": "tools/map-benchmark/seamless/terrain/core-v2-north-east-holding-tower-p1-m1.webp",
+      "sha256": "0dfc45410e2faad0d46a0b78e06ee5c6beb541a0dd51cf514430894daed6fc5e"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/core-v2-deed-camp-east-north-p2-m1.webp",
-      "sha256": "bd57ccdb5149c1449724d1fd37d5360c47c8b31810412939114bcae79f4f8a7e"
+      "path": "tools/map-benchmark/seamless/terrain/core-v2-deed-camp-east-north-p2-m1.webp",
+      "sha256": "729d4e868d6ce382333da94f0d78359c96040514e64e613db968c518e4382da6"
     },
     {
       "path": "tools/map-benchmark/seamless/terrain/core-v2-west-support-m2-p0.webp",
-      "sha256": "db49361940788b233200de246d074067e8042be81ac923e16cc45d55ee2e4252"
+      "sha256": "1200957372524470aa6fd346da0c6953a9404bd35510767cb9885d922eceb833"
     },
     {
       "path": "tools/map-benchmark/seamless/terrain/core-v2-aurum-keep-m1-p0.webp",
-      "sha256": "68f5485ca97e1f17e36bb54eed448785ed837f359a91404c06285cd0ef4a2a5c"
+      "sha256": "9409da370fc46fe46147ad806b3ac1656481a90304098fbeddac61cc755f4be1"
     },
     {
       "path": "tools/map-benchmark/seamless/terrain/core-v2-crown-citadel-p0-p0.webp",
-      "sha256": "f149ebbd21f103a2d31f27611bc9717ab01a1244c63a61dd8171ebe198a98e4f"
+      "sha256": "66237c5b9612e14e970935a0f4211f0419bd023c1dcaf02b80534ddba5d98749"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/core-v2-swiftgate-p1-p0.webp",
-      "sha256": "d16f9e3fea0743592d1d57b732bd66ce6b8ce09fe586f50e9ad01b97e66ee537"
+      "path": "tools/map-benchmark/seamless/terrain/core-v2-swiftgate-p1-p0.webp",
+      "sha256": "e2eb2cce59cdc54f5c56d21b2ffa0a2247ea28de430d51c11a63f497fc675399"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/core-v2-east-support-p2-p0.webp",
-      "sha256": "066ce84943be47e9bc33f9e22221c7ad84c6b08239da116cc271d0206898daec"
+      "path": "tools/map-benchmark/seamless/terrain/core-v2-east-support-p2-p0.webp",
+      "sha256": "b273b63554012b74738a0f014f81ce6dbab0700d49e68478ad379c5f9aad422b"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/core-v2-deed-camp-west-south-m2-p1.webp",
-      "sha256": "48ee09f4bb1926ef4b91b099688358a591c8aad3da5d56007db4aa4e79529236"
+      "path": "tools/map-benchmark/seamless/terrain/core-v2-deed-camp-west-south-m2-p1.webp",
+      "sha256": "934f0d147a3d2c680405306fb6293cb9c0e89b085c3f80f40f8cce2e845e919e"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/core-v2-south-west-holding-tower-m1-p1.webp",
-      "sha256": "77b270d667c984288d73709f376d2c0079a52e327a147a460ba12b8dbddbeba0"
+      "path": "tools/map-benchmark/seamless/terrain/core-v2-south-west-holding-tower-m1-p1.webp",
+      "sha256": "64ae141324da3f9fedbd3e5b51c559e0ecef2722ea79fe856ad3ba2f371149e7"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/core-v2-ironwatch-p0-p1.webp",
-      "sha256": "90a9f2909215ec8ae1fb001297d9697bbebfcc75a9a6fa134d7c1166943b9edc"
+      "path": "tools/map-benchmark/seamless/terrain/core-v2-ironwatch-p0-p1.webp",
+      "sha256": "e8c79220b8b8e6e308e06d65ebbc11360f239dac40e3c4441d10353e12c3c290"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/core-v2-south-east-holding-tower-p1-p1.webp",
-      "sha256": "f4990648a8b00a79735990bc61fdb40ae16ed25de5558fec47aac7ac91cd95ec"
+      "path": "tools/map-benchmark/seamless/terrain/core-v2-south-east-holding-tower-p1-p1.webp",
+      "sha256": "effd790299a3951bfddce40d1d146770775d3bd2a48c454cfcbcb88949c78ee9"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/core-v2-relic-camp-east-south-p2-p1.webp",
-      "sha256": "a463131e23407d7b40a0772e1acd0000601f25ddfed8204ac3c920a19fe26944"
+      "path": "tools/map-benchmark/seamless/terrain/core-v2-relic-camp-east-south-p2-p1.webp",
+      "sha256": "3f601e0991260cd7141ae3f00a9e7391e06876ae820020566e0c2067e2ac425d"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/core-v2-gold-camp-south-west-m2-p2.webp",
-      "sha256": "8cbe983d0cce9a9a9a3b720a6b4d70e8a46538ee8d9e09beaa6e53089f4c8347"
+      "path": "tools/map-benchmark/seamless/terrain/core-v2-gold-camp-south-west-m2-p2.webp",
+      "sha256": "5e7c4fcf8a628f1660506af2528ec45c662df8d793dc9cdaa3fc91d3a51f0107"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/core-v2-deed-camp-south-west-m1-p2.webp",
-      "sha256": "6892678cebf70b5f360e5d981091f7034151fb54af7b5410b64f669e6493f0e4"
+      "path": "tools/map-benchmark/seamless/terrain/core-v2-deed-camp-south-west-m1-p2.webp",
+      "sha256": "a6e99ab8eed91bab4e0cc4dc7e4df99797be8c13a09322c980bffd001efb7041"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/core-v2-south-support-p0-p2.webp",
-      "sha256": "76cbd7860cf1e257e8872dd6f7299262f52614edd37387814a3aad7c364e8e17"
+      "path": "tools/map-benchmark/seamless/terrain/core-v2-south-support-p0-p2.webp",
+      "sha256": "221b9cb581275abaa4952a89ae8ad5dd52968c379ff2cba1345770d51e8078df"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/core-v2-relic-camp-south-east-p1-p2.webp",
-      "sha256": "4057bbb69886e2d3a2a3158cea96a532d456c7edbda562d34b117a231355fc77"
+      "path": "tools/map-benchmark/seamless/terrain/core-v2-relic-camp-south-east-p1-p2.webp",
+      "sha256": "40acb46b2e321b2c5562e57892530efa20f96cd8927be99fc48ebec0efdce39f"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/core-v2-warband-camp-south-east-p2-p2.webp",
-      "sha256": "6750d427e94a00878a24802c58f8a7abc46df383b4dc4b755901acb0a9f72f0f"
+      "path": "tools/map-benchmark/seamless/terrain/core-v2-warband-camp-south-east-p2-p2.webp",
+      "sha256": "12fa658815229d0e7b14e3bdd9190ec2ac3edbc6beab3ef1e57c7d2065a95557"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p001.webp",
-      "sha256": "82dfe1a6bbfcd33a79c9bedab968dd7d6782a02c084be155c5043619a2d9af1e"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p001.webp",
+      "sha256": "ca74a88d1d83173f52f254683da3af5ad6ea78ddb0afaa2321564f5a247ed2d5"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p002.webp",
-      "sha256": "f824e7e770d262506a5c9e1f8f5ef3ecfd09ff8ad6afbcc8486ff45a2c3a48fb"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p002.webp",
+      "sha256": "5e9afb40bcc93bc96875aba6583501e9c06dc5ff03992277f865caa52bdbdae9"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p003.webp",
-      "sha256": "73dea96d1d25324ce96fa1d24634a7c6a752bd6daf59db292033d4a05202ac81"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p003.webp",
+      "sha256": "84d42de298796ba23cb6ae4c80a7e2338b62b576406f3b85ae3e93f1a7ead5a0"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p004.webp",
-      "sha256": "08d967a4e05b4eb9d0a29824a679e9ed52c823801b03586fb4c09e4ba8648487"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p004.webp",
+      "sha256": "9258066ce49f2cc5d7e58620881a0fb7006ba1af53a041d7ca3e19b9b9e7d9ba"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p005.webp",
-      "sha256": "609e897cdc85a23ccba59a427ba906b113f49cdf3ff70415dfa434118b44656b"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p005.webp",
+      "sha256": "1f4c7d59858406a284a4179b29cca1d8a91392fb9375fe44908b61148354dfc7"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p006.webp",
-      "sha256": "2a5ac66d61452947b326a97f81204e5a0bd2a0dbdf7d1d6da8f866351f505173"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p006.webp",
+      "sha256": "6e84efbeffdb1c2a969252157dcd999d74345223ac6d3ab9dabaf612aeb67d9f"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p007.webp",
-      "sha256": "0e4254cd603a2a14c51f38b86fb64fa51d6e0a927426a7762db4b0f2c4ac569d"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p007.webp",
+      "sha256": "f323b4cb0ce3531f87d283b8ad965d3c798fe01144504a68f93a2994ad9ff307"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p008.webp",
-      "sha256": "104d024a7462a7eacd3896935e52a2008a0e3dc152cf6a92752f3c9a28a0e692"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p008.webp",
+      "sha256": "80400a058c6f80af4e87020583a4b2681a1378b010390a1540de546a41104bdd"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p009.webp",
-      "sha256": "000b829e1aba04d6da7f8097eac7b9600485b34937726e3656b8f03b5042a2f0"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p009.webp",
+      "sha256": "a8e1b8d93f74d25d8beeddad755891b4987fea0112955046194d5325d341f2e0"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p010.webp",
-      "sha256": "39292956facc413eb424300c1e56ad3816afcd324265f2c56a5fe3db911cfbaf"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p010.webp",
+      "sha256": "0ac7828d3d3e327870357fe11e7a4b1cbd12e1454333901f2fb74444bdb3cbaa"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p011.webp",
-      "sha256": "a2a8e72f41320ce90ce0f4f171986a711e40c32b1a48de9d84d0462be0a92806"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p011.webp",
+      "sha256": "e094501d1ae20db034e463e42d788e9655f569a7e0c41fe7fdf7d2eb76b135b5"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p012.webp",
-      "sha256": "b3679df4d93d24b020bcc6d112c100b8e144528ff9f67092a58b54f33fe8e43c"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p012.webp",
+      "sha256": "6478ba5c0a909ce4229569e09d11a45f7ccf0d2879c3de84cbf9aa3e4a192269"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p013.webp",
-      "sha256": "2b3ca5d152afd93d9bd434282da04682428b1ff497cfe28578ae8788b256c70d"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p013.webp",
+      "sha256": "2c74fb414e90c017deb1b311491939f2887cd6b386df9eeb46dc34bc3a701e77"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p014.webp",
-      "sha256": "a8288480d92c4f81a4acdc44ddf7abb746187fcd1c5af08ae98c4b7addbff993"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p014.webp",
+      "sha256": "5116e9b195b237f182c250f274002c03ba605fa23cfd132638fcc71074978db6"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p015.webp",
-      "sha256": "04a96f12c1826b1e9008254c1db58809c3fdc43c2eb1d473e04a0995bae5add8"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p015.webp",
+      "sha256": "7e6de3813fad555fbf9b7fcedf1583642117a8c08455782c4ea253ad4fa3be89"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p016.webp",
-      "sha256": "025a2b41d5b38ae00ef14ce4bc67ad2b1d35c9987f8e8a2359faf865a26960e7"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p016.webp",
+      "sha256": "c495b5f586a4eeeed67db237c3261ab51ed9e58f65bf017ae0774b7b09789973"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p017.webp",
-      "sha256": "217e694e532b170931ec77cd08b770fa84db161e8d61d5c9d56234556c0b3c1e"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p017.webp",
+      "sha256": "5ed93325d3a19faacdf61e0ff9ef870f9ec7b192ae6c91e87693caa8e0387a84"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p018.webp",
-      "sha256": "311679156658af2be84f93fe82dddb0e24343f39f553592f54eaf6f64e5789e7"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p018.webp",
+      "sha256": "769341050bafa5ca9f7294ed07a25eb951111c5c4ba0eae981f2285c72080cfb"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p019.webp",
-      "sha256": "edc0feea1d5e6f5bb579443d417c979fe3dfe076a53a5ea5894b7f07147a77da"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p019.webp",
+      "sha256": "eb9b3ce705dbd522584280b6ee1dcfad18d8582e56380bd0a59107393032b60c"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p020.webp",
-      "sha256": "21e21d6a787ed4ad239c953eaaacd34aa7f87e6550b3a609a0133d045ad880c6"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p020.webp",
+      "sha256": "e201efc64053e25fb062380211c27cc690297f6d260b0d3b0b4027705924abdd"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p021.webp",
-      "sha256": "fc293e7b049ac59f363a551cd8ca5036f0d62da9944ea16b3e19563d63de4d71"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p021.webp",
+      "sha256": "2395a2852aaea3a58f2f14d1f0668ea91d7ef4d8cc08840bd58c21a097b6229f"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p022.webp",
-      "sha256": "4f1ab4e0742da51aded7152aa45e92b74c29247044f78bee30f00bcbd65983a0"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p022.webp",
+      "sha256": "bcf760e7b8042688bddd168ae9fbdbb5101e0583dda9e31adab561106e427b0a"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p023.webp",
-      "sha256": "18c06918c5749753d4aae3d461ab79749295d273426fc7719c3e3fbecebfebed"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p023.webp",
+      "sha256": "dc33a1540a295ffed2736c55575fa700ce30922326a8a05a0cd5eb643a987db0"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l01-p024.webp",
-      "sha256": "12409fb84ff993d3b77dab77d6700b0c2e1ed7b08d8bd5c41a59e05c7c408414"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l01-p024.webp",
+      "sha256": "94d89ad0faf286068ffccd97e196018932bb73711a9769e3d82b2e174f1b6ad9"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p001.webp",
-      "sha256": "74523be7d132a88dfacefcab04cc2c1fe180af5933dc565136957db72d4d7177"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p001.webp",
+      "sha256": "51ba0b743385c571dff06eb1d56ddd1340c40452e311dbbab7112ce1571f67f3"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p002.webp",
-      "sha256": "810cfc831df48a5020db9a717aa9cd89e1e0da109df5d96b5fefbafa9769c5bd"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p002.webp",
+      "sha256": "1af4a28c685d5760927d2d87525a7e631fddc5122a23c276b11c353e38baa29c"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p003.webp",
-      "sha256": "a37b363c666093a8d95b7acd60199f0b4ab5e0087d33a5a793c97aee7a31b6fa"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p003.webp",
+      "sha256": "0b1148d65d25481cf891559795c9ea90935a609243937251ac1d9c99748a4695"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p004.webp",
-      "sha256": "b7b8b7ccad6e6a9f545655f6abf6644c093c6aa1811c952b4e3a29e94b1eb9d9"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p004.webp",
+      "sha256": "45b9c564830d741accd18a242578c14fd8a2c7c43520ce8c7278d581cf1574af"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p005.webp",
-      "sha256": "8782e0c902af08aed2250969111748e2bbc68d020650c637375dc8770f302e47"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p005.webp",
+      "sha256": "ecc137d105c5924d9f9a76d8ea137d68f2ea8228d5160f18190c04026842569b"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p006.webp",
-      "sha256": "fdf708ec640dff2c591d23bcc06e4679993d970771ff646beca9b7be9cd88c54"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p006.webp",
+      "sha256": "8ac64f8d6b6e53584cb77def25ccd63b6d0e1424f86824100e901e09d341f467"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p007.webp",
-      "sha256": "1c795a73fb2f12a1a3b0738e929b0d79abd496a534a87a50ba094a5355cfb124"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p007.webp",
+      "sha256": "8b7d4ba1b6a6096cb692fc8d548dcf9435abe9394a6c19dcd2be9725aa3b8796"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p008.webp",
-      "sha256": "af0754e98ebc5b52a0e31f70eb7e8d25741ff3f35bb7742952bbd321a465a236"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p008.webp",
+      "sha256": "4eb71d1ec7ffa282ee5e57c405183e2fee78624f74d4064487bf64bb12054daf"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p009.webp",
-      "sha256": "cf1ee20d16228f4fef91ace12475a254fcf4420b01dade2d6d2ed4655dc87f87"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p009.webp",
+      "sha256": "cb5579a2d7561f193e87262c25d113d76229349dc8545f0967c08000ba2acf35"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p010.webp",
-      "sha256": "65864d7e1bae5c9640fdd31031302c4e2ffdea2b52257e0243cc15724c8d71c3"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p010.webp",
+      "sha256": "e984753b9d510cc47b7a814a11126572242e31da88d2e79c3061b66ac7b5cd28"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p011.webp",
-      "sha256": "8da06d70aa22ea557ce81421af5407c4592f2526583f130eceaf9d24e0e87ede"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p011.webp",
+      "sha256": "223845e86e50aaf8a9e588962220a0466f9f1d45de71d24c20a8b91c77c15070"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p012.webp",
-      "sha256": "e43d3721c3ef0dc691eb3b40613545a176aefa76ce200cd9a92d092aab11f803"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p012.webp",
+      "sha256": "6b3f0e1e858e7e294b91863922d5de4cf0faa066080ba9a2d4dbdf02da1b08f1"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p013.webp",
-      "sha256": "e504f93f49cf31c0a5bfaa0e5956206d2818cfe3734d3a55165d4851e3036ed5"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p013.webp",
+      "sha256": "57a48b6c2fe46c835de56b38556184d0eeb742679aa0572223a51491ecb0fcbf"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p014.webp",
-      "sha256": "94750c7b2bf018a1c93d09d4ea7dabda2748f3e3456ece914b0af6e3ecb48f8c"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p014.webp",
+      "sha256": "71523128dc91504ca0c5f579f48b09ca04bcb0b89d3b7489908436fd0f449e1a"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p015.webp",
-      "sha256": "087acfe9ebfed29ffb5c750233de19977ef041c201b12ee62df5c53e5536b571"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p015.webp",
+      "sha256": "e9d2a4951f8ddeb0e6857978c62942617143aedecb038a6343a513158fa4038e"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p016.webp",
-      "sha256": "aa069c7ffe42d9de961ca0037ebda732ddd3faad6f221a1af18e66f46e535ec8"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p016.webp",
+      "sha256": "9436622b088a5fe16bd5ea4d13a0d80703be80d68e04b78b054dc3275812ba6a"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p017.webp",
-      "sha256": "ef8fa0b89498192c5fcc86ab870ea9e3fc6af64c0eb9e12e17c5ce7458a9f98f"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p017.webp",
+      "sha256": "0a4c7ca14919f682e8b18da3de88ede7414e6b4a9e2c210700d383c6bb9ea0a0"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p018.webp",
-      "sha256": "0c19baf9ecf212fa21e8dd69debe9905c143aa8dc3b35b17855318f7f5595beb"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p018.webp",
+      "sha256": "193a089366d3be33e4306d781e4415b5d5d631f811ad42d0c6052a59fc8f69f4"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p019.webp",
-      "sha256": "e9be065dedcd317af66827b4bd948c3ac77f9fc57f1d7b8919a196aea12c23fa"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p019.webp",
+      "sha256": "d5045cbdafbb6a641a767639935de30c66e43898c6749347b8732401766da698"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p020.webp",
-      "sha256": "ca02c8e3285c30deafde54eec7bd09e04f38ab348366b23b8bba69882e64c973"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p020.webp",
+      "sha256": "cd7d04660d56f381b0a156dd5a57d1f7e7f74c4c497d48bc66720732a2f4add2"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p021.webp",
-      "sha256": "ecbddc9575b215ea8bb64f6f69d682a1cee503581e53da50123f00d5a567e385"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p021.webp",
+      "sha256": "e0bded59c9d26aec0e43df15b1579ca1b3984fdd0ac08dcb278074eca15a4d0d"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p022.webp",
-      "sha256": "9c5d54e7ef39f82d21a36513f2202fdacf0967cf3e534dfcaa9bcdbb24d9d4a9"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p022.webp",
+      "sha256": "bec450305c1ae69296f06ccb4a43a04d3b0c86ddd08319f89cedb3bdec4c6579"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p023.webp",
-      "sha256": "eaf4c048f6bb50044a9cffbe62b54569468db7ef8e8ffe8ca467ebd80450ea81"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p023.webp",
+      "sha256": "7e3b577561aad29bd6ec2db14229bf5fa0ae3dfb895196e3935f47e20f7797ef"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p024.webp",
-      "sha256": "cdbc7baabd5a934dd5f2df72e0bb3fb8546ecb241e7e59558897499a94292df9"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p024.webp",
+      "sha256": "c734592d404ec804ec46c1aa4d95c70dfce01f9f39c9976aa42c7ebc4eac9793"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p025.webp",
-      "sha256": "784a5224371a268b63b306fe25b5aa9421ca80fe91c9583881d1dbe338c6ea13"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p025.webp",
+      "sha256": "e631b0a91d016b010f5ffef99728ea4e15b926cd8b092dfa474b47a1ed86bddf"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p026.webp",
-      "sha256": "90901d98b66b5a660043c2916548f3b95d1edb6a16a2b964a771749ce71a318f"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p026.webp",
+      "sha256": "17ee79525cf1834e5734cf7073da874be703a6f4319586c56c502374d254a3b3"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p027.webp",
-      "sha256": "47093700e73fe28431f9c43874183db964b79a51f1f6bea64bd0c18a370cae0d"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p027.webp",
+      "sha256": "e50b22f85f23ad6681a2a7e8b42998123229ec76a13e8e5404e047488f1b53c5"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p028.webp",
-      "sha256": "f89dbb8f7d299c2b4ece23e758d1850fbfb40ae581d390776d0d1bee21f060ca"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p028.webp",
+      "sha256": "0cf1fc7883c8abcb6a8f1e0c493806e494fe3860ae15fbeb1526313021f90bf7"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p029.webp",
-      "sha256": "a41cecbb6f8f507e0f0ea95186bb018148ace6657830a3bbbc9c1beacccb0868"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p029.webp",
+      "sha256": "29cd43b901c8aad2d87cd6bc61f5fe01307de4508622de4d4fa72a8eea622c92"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p030.webp",
-      "sha256": "3639c682b5ce36bdbb9e4f988c26100f0b0ecdf13b846b9599899dd51ef75c27"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p030.webp",
+      "sha256": "84521b99993ed6c0ddafa7a74913a38a005cf0b39ae56a66b8cc2e36e4ed18ba"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p031.webp",
-      "sha256": "936d181ba0fdae86bdc6a5dda16e561b0362e568da422b375a61fc80199e1e7b"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p031.webp",
+      "sha256": "d915d6651465bc405bfac64b388e17fa8dcd3ad9965b0d98cdcdfa8be8418d9a"
     },
     {
-      "path": "assets/worlds/core-expansion-v1/maps/new-lands-l02-p032.webp",
-      "sha256": "04f74f3cfde34290a97401c6692abb031545e58c58b648cbfebd5ee2b91f8711"
+      "path": "tools/map-benchmark/seamless/terrain/new-lands-l02-p032.webp",
+      "sha256": "d09a029d65fb342bbecbebdded30bc37ef5e97f8b3e20f55cd3a188b19c0788e"
     },
     {
       "path": "assets/worlds/core-expansion-v1/region-catalog.json",
@@ -346,7 +346,7 @@
   ],
   "output": {
     "path": "tools/map-benchmark/seamless/terrain/catalog-overview.webp",
-    "bytes": 304320,
-    "sha256": "d0cb26132297a06d84ac7a2cbae4f627675da0b4a4bb4e320e9e3eee8db2e041"
+    "bytes": 313894,
+    "sha256": "6cebc22b151fbd6ddbfb6178174a90c1e29d91bffd73ea5f2fea377be6b8c73b"
   }
 }

@@ -33,7 +33,7 @@ function createPhonePreviewServer({ host = "127.0.0.1", subnet = "127.0.0.0/8", 
     if (!filename.startsWith(ROOT + path.sep) || !fs.statSync(filename).isFile()) throw new Error("Invalid preview file");
     files.set("/" + relative, filename);
   }
-  for (const name of ["model.js", "assets.js", "feed.js", "preview.js", "preview.css"]) add("tools/map-benchmark/seamless/" + name);
+  for (const name of ["model.js", "assets.js", "feed.js", "sprite-layer.js", "preview.js", "preview.css"]) add("tools/map-benchmark/seamless/" + name);
   add(manifest.overviewAsset, true);
   for (const section of manifest.sections) {
     add(section.terrain, true); add(section.thumbnail, true);

@@ -73,3 +73,17 @@ nav button{padding:4px 6px}
 .fixture-login label {display:grid;gap:.4rem;margin:1rem 0}
 .fixture-login input {font:inherit;padding:.6rem;min-width:0;border:1px solid #8b7044;background:#fff9ec}
 .fixture-login button {margin-top:.5rem}
+
+/* Batched scenery stays behind clickable castle art; patrol hit targets retain
+   native focus and activation without hundreds of painted/composited images. */
+.sprite-batch{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.scenery-batch{z-index:1}
+.patrol-batch{z-index:3}
+#world #objects{z-index:2}
+#world{z-index:auto}
+#marches{z-index:4}
+.object.troop,.object.troop:hover{background:none;border:0;box-shadow:none;will-change:auto;opacity:0}
+
+
+.phone-test #hint{display:none}
+#measure-phone{font:11px system-ui;min-height:24px;padding:2px 6px;white-space:nowrap}

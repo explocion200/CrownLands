@@ -1,9 +1,9 @@
 {
-  "version": 1,
+  "version": 2,
   "gutter": 2,
   "thumbnailScale": 2,
-  "width": 4344,
-  "height": 3258,
+  "width": 13032,
+  "height": 9774,
   "inputs": [
     {
       "path": "docs/art-sources/clean-map-ground/ground.png",
@@ -31,7 +31,7 @@
     },
     {
       "path": "tools/map-benchmark/seamless/build-terrain.js",
-      "sha256": "777d3c76046185faaeb0ce1c95dba1f828f10086e15c4d11860ab2ffa5d404fe"
+      "sha256": "09c469eb22adf0941502b78ed07d690cfdc1422b35fe45c39abd1277d410bba0"
     }
   ],
   "files": [
@@ -39,127 +39,1135 @@
       "name": "core-v2-warband-camp-m2-m2.webp",
       "width": 1452,
       "height": 1090,
-      "bytes": 208696,
-      "sha256": "b0ae27864b158beadc5809db15a8f4c5047fad8360617c1340024b2d09228bf3"
+      "bytes": 209460,
+      "sha256": "f4729d190a577444bd55c2066cb76fca52fc20b9bd2fe22293876a43ea97eb65"
     },
     {
       "name": "core-v2-warband-camp-m2-m2-thumb.webp",
       "width": 726,
       "height": 545,
-      "bytes": 67658,
-      "sha256": "874002fad604851a19143fe7a021d86ee900c355d8441414d01ae705464f4cdd"
+      "bytes": 66936,
+      "sha256": "4428f57b0df6827656fab476b26ddf3b8a91706e9758f168105ddb8d3bfd97c0"
     },
     {
       "name": "core-v2-relic-camp-north-west-m1-m2.webp",
       "width": 1452,
       "height": 1090,
-      "bytes": 208648,
-      "sha256": "b75c951376e15b013dc628693d4f6604339390a011cb8bdfddebd15aa091c913"
+      "bytes": 208426,
+      "sha256": "ba6d6901859f117fe6b5f65487447fd8fcd2d927cc7361876db58b8d1e82eac1"
     },
     {
       "name": "core-v2-relic-camp-north-west-m1-m2-thumb.webp",
       "width": 726,
       "height": 545,
-      "bytes": 65034,
-      "sha256": "80c49ca0b2614d279267d724abce3653978bec57e27bd629f836a5225a22c01b"
+      "bytes": 65108,
+      "sha256": "6de300d7c2768ccf65963024f2d23bd767c46dbfa088ec5107745d35f46f5d3e"
     },
     {
       "name": "core-v2-north-support-p0-m2.webp",
       "width": 1452,
       "height": 1090,
-      "bytes": 208416,
-      "sha256": "e06a7c834340e61fca684892148e1e04b03f9cf3ffa193661b9629be1f1c16b6"
+      "bytes": 208712,
+      "sha256": "4ffd4c7d1f143d4b5e96b9a2034b217c7076aa7c0e8694e8460aa374121b0683"
     },
     {
       "name": "core-v2-north-support-p0-m2-thumb.webp",
       "width": 726,
       "height": 545,
-      "bytes": 65814,
-      "sha256": "b4c78d716a3dc5e9534383392ccf21ed943ae61db0a413ef7770ea0d4f8c557e"
+      "bytes": 65896,
+      "sha256": "9b5e06f55b51f36998052298d01b3c338887b457e39f0ff59cc12a30d4bc6f7a"
+    },
+    {
+      "name": "core-v2-deed-camp-north-east-p1-m2.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208574,
+      "sha256": "10da371f181fe3bd0ff62bac6942fcad8efc721ca1c88b88b6444a017f20f535"
+    },
+    {
+      "name": "core-v2-deed-camp-north-east-p1-m2-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 64804,
+      "sha256": "cbad1e4ff946392452068f5e13fb50bcf7d47aac74a8696dd88735cf9709c4ba"
+    },
+    {
+      "name": "core-v2-gold-camp-north-east-p2-m2.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208336,
+      "sha256": "e20e0c8327744f92bbca235020e9397235cfc7e809d8299d9b948ed152ec8a9d"
+    },
+    {
+      "name": "core-v2-gold-camp-north-east-p2-m2-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66088,
+      "sha256": "cbee3696a1b0c355b6e352d38b22150213052abb65c5e3130f57e96cdcb1b41f"
     },
     {
       "name": "core-v2-relic-camp-west-north-m2-m1.webp",
       "width": 1452,
       "height": 1090,
-      "bytes": 208940,
-      "sha256": "fffd6116a8e0e0ca8742dabb817608ad24340d3676f5f6001ac253096c1f69b3"
+      "bytes": 208692,
+      "sha256": "f0da18ea368320aca38e4b342df80251a663c1b45fd9de9d864ef1f27be60867"
     },
     {
       "name": "core-v2-relic-camp-west-north-m2-m1-thumb.webp",
       "width": 726,
       "height": 545,
-      "bytes": 66060,
-      "sha256": "6e5e9d9960ed4d3faf8701a912b7288da3be26123462da13b8389d5844dc6b6b"
+      "bytes": 65970,
+      "sha256": "5da44ad5e41be4c685350bf8bb01b191ee73bcb01232756e7c40de9da85a13d1"
     },
     {
       "name": "core-v2-north-west-holding-tower-m1-m1.webp",
       "width": 1452,
       "height": 1090,
-      "bytes": 207826,
-      "sha256": "84dcf0866b475b50d914dad0e806c4729dd182b0f63de0253f5fd02aa8afd030"
+      "bytes": 209150,
+      "sha256": "3cc965a69c0bb8bd5a761bc9e46646d77dee44bb56840d99bdfa20cd23e70c9c"
     },
     {
       "name": "core-v2-north-west-holding-tower-m1-m1-thumb.webp",
       "width": 726,
       "height": 545,
-      "bytes": 65288,
-      "sha256": "a08692fcb427240f2fe0b55214c71fcc75c33db3ff92f7ceb061b64e4ec06c91"
+      "bytes": 65536,
+      "sha256": "d2d99117d3294f16a3a1f1691c36832ffa425dbd22ebcb5a63f01da5d55ef1e2"
     },
     {
       "name": "core-v2-greybanner-hold-p0-m1.webp",
       "width": 1452,
       "height": 1090,
-      "bytes": 209032,
-      "sha256": "1ba6784f23752492188b1b888d4b6aea08f71e99fc0ef5b6c84338280d4b3f63"
+      "bytes": 209024,
+      "sha256": "19f583d0790dfe268416e304986ebab955cbdc29f479589c460a13f93dd0edc3"
     },
     {
       "name": "core-v2-greybanner-hold-p0-m1-thumb.webp",
       "width": 726,
       "height": 545,
-      "bytes": 66592,
-      "sha256": "0836f2bcbde08134efa80abf54dbc3082b9ef5a36d3944e9a53a10b01809521d"
+      "bytes": 66338,
+      "sha256": "33b1025d2b908f55a2f7567b00c2ac11c38da060caafd5222a8c22dc4a7e0fd6"
+    },
+    {
+      "name": "core-v2-north-east-holding-tower-p1-m1.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208130,
+      "sha256": "0dfc45410e2faad0d46a0b78e06ee5c6beb541a0dd51cf514430894daed6fc5e"
+    },
+    {
+      "name": "core-v2-north-east-holding-tower-p1-m1-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65222,
+      "sha256": "714238d79a4f622fdc0740f2379a16d532420af315d399d26e8147bc0ec1c082"
+    },
+    {
+      "name": "core-v2-deed-camp-east-north-p2-m1.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208624,
+      "sha256": "729d4e868d6ce382333da94f0d78359c96040514e64e613db968c518e4382da6"
+    },
+    {
+      "name": "core-v2-deed-camp-east-north-p2-m1-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65212,
+      "sha256": "3fefc4758e325f6bd4ce62dffad28df48ed7a308f4cd939e8272e2139451ba9e"
     },
     {
       "name": "core-v2-west-support-m2-p0.webp",
       "width": 1452,
       "height": 1090,
-      "bytes": 208636,
-      "sha256": "db49361940788b233200de246d074067e8042be81ac923e16cc45d55ee2e4252"
+      "bytes": 208650,
+      "sha256": "1200957372524470aa6fd346da0c6953a9404bd35510767cb9885d922eceb833"
     },
     {
       "name": "core-v2-west-support-m2-p0-thumb.webp",
       "width": 726,
       "height": 545,
-      "bytes": 66040,
-      "sha256": "05b2b5b6c413267f1a95f7a52a331924dccb4455c499fc57bc3ebc0f37867321"
+      "bytes": 65654,
+      "sha256": "9cfb66fe69435b66429e5bfcab9875d47591d2aa0fa484103c7b858de975efea"
     },
     {
       "name": "core-v2-aurum-keep-m1-p0.webp",
       "width": 1452,
       "height": 1090,
-      "bytes": 207956,
-      "sha256": "68f5485ca97e1f17e36bb54eed448785ed837f359a91404c06285cd0ef4a2a5c"
+      "bytes": 208464,
+      "sha256": "9409da370fc46fe46147ad806b3ac1656481a90304098fbeddac61cc755f4be1"
     },
     {
       "name": "core-v2-aurum-keep-m1-p0-thumb.webp",
       "width": 726,
       "height": 545,
-      "bytes": 65678,
-      "sha256": "6b84478714ec023a5cbb16aac945a666ce94ae05878945130a1c9dc43358a98a"
+      "bytes": 65714,
+      "sha256": "dc7c71193da9a5f30fe81564f861d458a8aa0a75656e896a9c6f7f33fa553a46"
     },
     {
       "name": "core-v2-crown-citadel-p0-p0.webp",
       "width": 1452,
       "height": 1090,
-      "bytes": 208488,
-      "sha256": "f149ebbd21f103a2d31f27611bc9717ab01a1244c63a61dd8171ebe198a98e4f"
+      "bytes": 209138,
+      "sha256": "66237c5b9612e14e970935a0f4211f0419bd023c1dcaf02b80534ddba5d98749"
     },
     {
       "name": "core-v2-crown-citadel-p0-p0-thumb.webp",
       "width": 726,
       "height": 545,
-      "bytes": 65294,
-      "sha256": "1d236de5fb816703095fa50bde852a09c7e8b923ec1433cc8ee787e54b20e56e"
+      "bytes": 65852,
+      "sha256": "40dfcb4cd5f29163a1b44aba4dc8cbec39c362615fabefc7a3d1af23d9c2b7a8"
+    },
+    {
+      "name": "core-v2-swiftgate-p1-p0.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208930,
+      "sha256": "e2eb2cce59cdc54f5c56d21b2ffa0a2247ea28de430d51c11a63f497fc675399"
+    },
+    {
+      "name": "core-v2-swiftgate-p1-p0-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66428,
+      "sha256": "108d0a771fded199d2ad31d6c2862a9eab155609d0ac18e71bdcb166494e4081"
+    },
+    {
+      "name": "core-v2-east-support-p2-p0.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208728,
+      "sha256": "b273b63554012b74738a0f014f81ce6dbab0700d49e68478ad379c5f9aad422b"
+    },
+    {
+      "name": "core-v2-east-support-p2-p0-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65200,
+      "sha256": "50ed9f2fd23abbdbe1572c6e5186931656b6b77f6f37336b12ff9a58b9b331de"
+    },
+    {
+      "name": "core-v2-deed-camp-west-south-m2-p1.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208676,
+      "sha256": "934f0d147a3d2c680405306fb6293cb9c0e89b085c3f80f40f8cce2e845e919e"
+    },
+    {
+      "name": "core-v2-deed-camp-west-south-m2-p1-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 67936,
+      "sha256": "5059062f0259df23a0ff520c8a3c68ff2adb397cff542a8dc127b56c32b49e59"
+    },
+    {
+      "name": "core-v2-south-west-holding-tower-m1-p1.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 209014,
+      "sha256": "64ae141324da3f9fedbd3e5b51c559e0ecef2722ea79fe856ad3ba2f371149e7"
+    },
+    {
+      "name": "core-v2-south-west-holding-tower-m1-p1-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65076,
+      "sha256": "9daff90dc6c06bc4890a70812fd4e57b6280d18c2249769274c18d2fea3d2443"
+    },
+    {
+      "name": "core-v2-ironwatch-p0-p1.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208618,
+      "sha256": "e8c79220b8b8e6e308e06d65ebbc11360f239dac40e3c4441d10353e12c3c290"
+    },
+    {
+      "name": "core-v2-ironwatch-p0-p1-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 68052,
+      "sha256": "ad601968101ffb8a71107e10019f1bb1cd07eb15509537522edf4cdbf5f35e2e"
+    },
+    {
+      "name": "core-v2-south-east-holding-tower-p1-p1.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 209034,
+      "sha256": "effd790299a3951bfddce40d1d146770775d3bd2a48c454cfcbcb88949c78ee9"
+    },
+    {
+      "name": "core-v2-south-east-holding-tower-p1-p1-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66862,
+      "sha256": "63f3be3061ede5117d0c79aa5e6fcd0a185d6cd262925faeac8ea73d70c78bba"
+    },
+    {
+      "name": "core-v2-relic-camp-east-south-p2-p1.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 209096,
+      "sha256": "3f601e0991260cd7141ae3f00a9e7391e06876ae820020566e0c2067e2ac425d"
+    },
+    {
+      "name": "core-v2-relic-camp-east-south-p2-p1-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66500,
+      "sha256": "3ce43810d2b94478ee1c812590e6d257051428be047541d996b1fbf27dc4ae32"
+    },
+    {
+      "name": "core-v2-gold-camp-south-west-m2-p2.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208492,
+      "sha256": "5e7c4fcf8a628f1660506af2528ec45c662df8d793dc9cdaa3fc91d3a51f0107"
+    },
+    {
+      "name": "core-v2-gold-camp-south-west-m2-p2-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 67200,
+      "sha256": "20a39b5f889e47c5e5760bfaef88f57fa9a39b745a1c11239492c847cb45d7cc"
+    },
+    {
+      "name": "core-v2-deed-camp-south-west-m1-p2.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208562,
+      "sha256": "a6e99ab8eed91bab4e0cc4dc7e4df99797be8c13a09322c980bffd001efb7041"
+    },
+    {
+      "name": "core-v2-deed-camp-south-west-m1-p2-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66242,
+      "sha256": "6d5246c8da0eb8ffcc694b5d4365993dbe336250a1ae5c6266c79fe182b60cd0"
+    },
+    {
+      "name": "core-v2-south-support-p0-p2.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208586,
+      "sha256": "221b9cb581275abaa4952a89ae8ad5dd52968c379ff2cba1345770d51e8078df"
+    },
+    {
+      "name": "core-v2-south-support-p0-p2-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66182,
+      "sha256": "689eadee401f6c7cda705e715339025b6989b139f38407904fd34085e6af1f5e"
+    },
+    {
+      "name": "core-v2-relic-camp-south-east-p1-p2.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 209540,
+      "sha256": "40acb46b2e321b2c5562e57892530efa20f96cd8927be99fc48ebec0efdce39f"
+    },
+    {
+      "name": "core-v2-relic-camp-south-east-p1-p2-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65656,
+      "sha256": "82f60c2d678f08de2505bf133c749623f1b805a2dc5516f4e994eb84f4120fb4"
+    },
+    {
+      "name": "core-v2-warband-camp-south-east-p2-p2.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208826,
+      "sha256": "12fa658815229d0e7b14e3bdd9190ec2ac3edbc6beab3ef1e57c7d2065a95557"
+    },
+    {
+      "name": "core-v2-warband-camp-south-east-p2-p2-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65760,
+      "sha256": "9fb3fc8e4eb22e713887095207ef6e476d6d6220595e1386971b5d3861377665"
+    },
+    {
+      "name": "new-lands-l01-p001.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208954,
+      "sha256": "ca74a88d1d83173f52f254683da3af5ad6ea78ddb0afaa2321564f5a247ed2d5"
+    },
+    {
+      "name": "new-lands-l01-p001-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66044,
+      "sha256": "bc6585672ff6cf6317ad08074a8458ff7bc7053ba415f5c2034a2b54c2a22be6"
+    },
+    {
+      "name": "new-lands-l01-p002.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 207746,
+      "sha256": "5e9afb40bcc93bc96875aba6583501e9c06dc5ff03992277f865caa52bdbdae9"
+    },
+    {
+      "name": "new-lands-l01-p002-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65392,
+      "sha256": "74a10e755c15b633aa62075f6378b4ff2abea4195f4ae9a0ed94432a6b9b3b05"
+    },
+    {
+      "name": "new-lands-l01-p003.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 207866,
+      "sha256": "84d42de298796ba23cb6ae4c80a7e2338b62b576406f3b85ae3e93f1a7ead5a0"
+    },
+    {
+      "name": "new-lands-l01-p003-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65760,
+      "sha256": "c8ca214adecfd3030ed556145334dca6352e93bc552ad3cfb835b7ac45375d32"
+    },
+    {
+      "name": "new-lands-l01-p004.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 209410,
+      "sha256": "9258066ce49f2cc5d7e58620881a0fb7006ba1af53a041d7ca3e19b9b9e7d9ba"
+    },
+    {
+      "name": "new-lands-l01-p004-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66100,
+      "sha256": "702d7c5eafac475164b50c8fc470be05b2e85537e270a1a60173ca49ab871b12"
+    },
+    {
+      "name": "new-lands-l01-p005.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 207980,
+      "sha256": "1f4c7d59858406a284a4179b29cca1d8a91392fb9375fe44908b61148354dfc7"
+    },
+    {
+      "name": "new-lands-l01-p005-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65806,
+      "sha256": "140b2d61b5297540acf600c65b255f1c61540ff22eff10922235652938ee5a6e"
+    },
+    {
+      "name": "new-lands-l01-p006.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 207994,
+      "sha256": "6e84efbeffdb1c2a969252157dcd999d74345223ac6d3ab9dabaf612aeb67d9f"
+    },
+    {
+      "name": "new-lands-l01-p006-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65050,
+      "sha256": "213f1eb881847051ec39584126c727fc448a0f363a2bc5bad7c9d8ed6e3ea91b"
+    },
+    {
+      "name": "new-lands-l01-p007.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208186,
+      "sha256": "f323b4cb0ce3531f87d283b8ad965d3c798fe01144504a68f93a2994ad9ff307"
+    },
+    {
+      "name": "new-lands-l01-p007-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 64852,
+      "sha256": "a139e139a2ec55c7fccbbaa2c9b8f104c9ee7582428bb01bd15ce2b6e62ed914"
+    },
+    {
+      "name": "new-lands-l01-p008.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 209288,
+      "sha256": "80400a058c6f80af4e87020583a4b2681a1378b010390a1540de546a41104bdd"
+    },
+    {
+      "name": "new-lands-l01-p008-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65170,
+      "sha256": "925cf85ae18024931b1b45e06fb2c7c6ce46ba4c6e4977a59642ef1524fed713"
+    },
+    {
+      "name": "new-lands-l01-p009.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208470,
+      "sha256": "a8e1b8d93f74d25d8beeddad755891b4987fea0112955046194d5325d341f2e0"
+    },
+    {
+      "name": "new-lands-l01-p009-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65060,
+      "sha256": "3d7717455f675c4933ee888862ab7fcdae80b0d001aac80129721ca47010a82c"
+    },
+    {
+      "name": "new-lands-l01-p010.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208970,
+      "sha256": "0ac7828d3d3e327870357fe11e7a4b1cbd12e1454333901f2fb74444bdb3cbaa"
+    },
+    {
+      "name": "new-lands-l01-p010-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 64924,
+      "sha256": "27432392dfa4df3277fba95d6215df6067b64224318e0da1288849a933bf0ea6"
+    },
+    {
+      "name": "new-lands-l01-p011.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 207440,
+      "sha256": "e094501d1ae20db034e463e42d788e9655f569a7e0c41fe7fdf7d2eb76b135b5"
+    },
+    {
+      "name": "new-lands-l01-p011-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66074,
+      "sha256": "c9fb8b391203601586cb92def92491c05ba07c9d7c88f28c6b2a48f8a5436798"
+    },
+    {
+      "name": "new-lands-l01-p012.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 207588,
+      "sha256": "6478ba5c0a909ce4229569e09d11a45f7ccf0d2879c3de84cbf9aa3e4a192269"
+    },
+    {
+      "name": "new-lands-l01-p012-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66122,
+      "sha256": "fb58e1fae234d030e0722d35c5ef5270a5423824bcb958df57ea43ee85030ae3"
+    },
+    {
+      "name": "new-lands-l01-p013.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208814,
+      "sha256": "2c74fb414e90c017deb1b311491939f2887cd6b386df9eeb46dc34bc3a701e77"
+    },
+    {
+      "name": "new-lands-l01-p013-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66028,
+      "sha256": "39b4ec2919ae5fb655050c2eff3a70681dbc9efa6311bf6e3fed681fa86011b5"
+    },
+    {
+      "name": "new-lands-l01-p014.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 207768,
+      "sha256": "5116e9b195b237f182c250f274002c03ba605fa23cfd132638fcc71074978db6"
+    },
+    {
+      "name": "new-lands-l01-p014-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65006,
+      "sha256": "d5c3ea5168037f8686040dd442aeea02ef07db0458f3209d9f3bf73d6f62c65a"
+    },
+    {
+      "name": "new-lands-l01-p015.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208716,
+      "sha256": "7e6de3813fad555fbf9b7fcedf1583642117a8c08455782c4ea253ad4fa3be89"
+    },
+    {
+      "name": "new-lands-l01-p015-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65594,
+      "sha256": "2a701a99106aa06dfc8fc631e994f1a3c4d5a29079217a625df29326e9c0f3ae"
+    },
+    {
+      "name": "new-lands-l01-p016.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 207914,
+      "sha256": "c495b5f586a4eeeed67db237c3261ab51ed9e58f65bf017ae0774b7b09789973"
+    },
+    {
+      "name": "new-lands-l01-p016-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65690,
+      "sha256": "13791108c20e5520a49729cf833e3a4928461dee1436651d428c411c8fa4b5ee"
+    },
+    {
+      "name": "new-lands-l01-p017.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208496,
+      "sha256": "5ed93325d3a19faacdf61e0ff9ef870f9ec7b192ae6c91e87693caa8e0387a84"
+    },
+    {
+      "name": "new-lands-l01-p017-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65576,
+      "sha256": "6ecc6b31f7e4cbba02231170b0463f1e18a885023f1b5d01c1f23d0ac2810bf3"
+    },
+    {
+      "name": "new-lands-l01-p018.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 209274,
+      "sha256": "769341050bafa5ca9f7294ed07a25eb951111c5c4ba0eae981f2285c72080cfb"
+    },
+    {
+      "name": "new-lands-l01-p018-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65564,
+      "sha256": "5cda0ddaa57db17f74794e8290b12edc32936cc3fa46be952f2fd831247b7142"
+    },
+    {
+      "name": "new-lands-l01-p019.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208122,
+      "sha256": "eb9b3ce705dbd522584280b6ee1dcfad18d8582e56380bd0a59107393032b60c"
+    },
+    {
+      "name": "new-lands-l01-p019-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 64964,
+      "sha256": "f19cff9f2bcbecad186f4c47699b494940b5b31503cf813ca01ce67fedbaebfa"
+    },
+    {
+      "name": "new-lands-l01-p020.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 203120,
+      "sha256": "e201efc64053e25fb062380211c27cc690297f6d260b0d3b0b4027705924abdd"
+    },
+    {
+      "name": "new-lands-l01-p020-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65812,
+      "sha256": "d385de4453e8796bd257be7be60cad21ef05bcf19321d39d5d8ee67b119aecd0"
+    },
+    {
+      "name": "new-lands-l01-p021.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208596,
+      "sha256": "2395a2852aaea3a58f2f14d1f0668ea91d7ef4d8cc08840bd58c21a097b6229f"
+    },
+    {
+      "name": "new-lands-l01-p021-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66304,
+      "sha256": "eb6ae5f6fe2b6b0eecf35573be2351d9dab832f26930694e00e15df1eb4a2ae8"
+    },
+    {
+      "name": "new-lands-l01-p022.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 207882,
+      "sha256": "bcf760e7b8042688bddd168ae9fbdbb5101e0583dda9e31adab561106e427b0a"
+    },
+    {
+      "name": "new-lands-l01-p022-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 64980,
+      "sha256": "1b1ecb9780525de4b0734b7d44bfca1fabccecedc054600cc3605cb36fb5c1b7"
+    },
+    {
+      "name": "new-lands-l01-p023.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 209186,
+      "sha256": "dc33a1540a295ffed2736c55575fa700ce30922326a8a05a0cd5eb643a987db0"
+    },
+    {
+      "name": "new-lands-l01-p023-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65878,
+      "sha256": "51e46b0768348de5a0809f7975509b7203b0eb16fdd2292936fca82c2121b970"
+    },
+    {
+      "name": "new-lands-l01-p024.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 209148,
+      "sha256": "94d89ad0faf286068ffccd97e196018932bb73711a9769e3d82b2e174f1b6ad9"
+    },
+    {
+      "name": "new-lands-l01-p024-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66286,
+      "sha256": "63f0ef18fdc34bd7be85250f911dd7023a2f460ee3b16773e18a9f0e6ed62771"
+    },
+    {
+      "name": "new-lands-l02-p001.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208718,
+      "sha256": "51ba0b743385c571dff06eb1d56ddd1340c40452e311dbbab7112ce1571f67f3"
+    },
+    {
+      "name": "new-lands-l02-p001-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65870,
+      "sha256": "b9d5aa6c0f6fb1dcf122cc3e93ae497d5d1f0f1bf55254551f66c19407346497"
+    },
+    {
+      "name": "new-lands-l02-p002.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208626,
+      "sha256": "1af4a28c685d5760927d2d87525a7e631fddc5122a23c276b11c353e38baa29c"
+    },
+    {
+      "name": "new-lands-l02-p002-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65934,
+      "sha256": "1b514bcc26c3a46a0d138e75ee0da3638d002b857159a8c1259f9a92888fe0c0"
+    },
+    {
+      "name": "new-lands-l02-p003.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208492,
+      "sha256": "0b1148d65d25481cf891559795c9ea90935a609243937251ac1d9c99748a4695"
+    },
+    {
+      "name": "new-lands-l02-p003-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65878,
+      "sha256": "dc9cded36aad513d99cfa143370966f0734e562b2e8796bdacd31313e59157a2"
+    },
+    {
+      "name": "new-lands-l02-p004.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 209010,
+      "sha256": "45b9c564830d741accd18a242578c14fd8a2c7c43520ce8c7278d581cf1574af"
+    },
+    {
+      "name": "new-lands-l02-p004-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66054,
+      "sha256": "1e7e8e1a9fb8bdadedd7fc2b11e7a9e5167f9e00a7ef1f95d15532e65192350b"
+    },
+    {
+      "name": "new-lands-l02-p005.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208854,
+      "sha256": "ecc137d105c5924d9f9a76d8ea137d68f2ea8228d5160f18190c04026842569b"
+    },
+    {
+      "name": "new-lands-l02-p005-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66532,
+      "sha256": "c17f9ec37c14be5b265f63c4ab79b0807187ec49abcf78a7a474816cf77f8768"
+    },
+    {
+      "name": "new-lands-l02-p006.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208052,
+      "sha256": "8ac64f8d6b6e53584cb77def25ccd63b6d0e1424f86824100e901e09d341f467"
+    },
+    {
+      "name": "new-lands-l02-p006-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66462,
+      "sha256": "f747170e11957dd210333e2b398dcdcb739ae32fc029231af2c07296d7c77add"
+    },
+    {
+      "name": "new-lands-l02-p007.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208208,
+      "sha256": "8b7d4ba1b6a6096cb692fc8d548dcf9435abe9394a6c19dcd2be9725aa3b8796"
+    },
+    {
+      "name": "new-lands-l02-p007-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66028,
+      "sha256": "3b8f0987fec4fc692c6786d2ecae437fb5b80424894e594236eec082c19cf097"
+    },
+    {
+      "name": "new-lands-l02-p008.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208614,
+      "sha256": "4eb71d1ec7ffa282ee5e57c405183e2fee78624f74d4064487bf64bb12054daf"
+    },
+    {
+      "name": "new-lands-l02-p008-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65240,
+      "sha256": "d1bc36ca2a8901f55f102b328a9f43e7eeaff3d2decf9d047eec0d357c9d1f7e"
+    },
+    {
+      "name": "new-lands-l02-p009.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 209130,
+      "sha256": "cb5579a2d7561f193e87262c25d113d76229349dc8545f0967c08000ba2acf35"
+    },
+    {
+      "name": "new-lands-l02-p009-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66348,
+      "sha256": "a207ec128492dc52f98e4a92edf3f1973157ef14154fb951be54d6c2de104466"
+    },
+    {
+      "name": "new-lands-l02-p010.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208454,
+      "sha256": "e984753b9d510cc47b7a814a11126572242e31da88d2e79c3061b66ac7b5cd28"
+    },
+    {
+      "name": "new-lands-l02-p010-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66088,
+      "sha256": "560d264d414b12d2b8c11de8f6e7f90bba70effb8536e090779f4780bac9412f"
+    },
+    {
+      "name": "new-lands-l02-p011.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208530,
+      "sha256": "223845e86e50aaf8a9e588962220a0466f9f1d45de71d24c20a8b91c77c15070"
+    },
+    {
+      "name": "new-lands-l02-p011-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65762,
+      "sha256": "099c464b304caa8a2f001fbe1aa11dcda356104c7a294881fc47e892dbf949f6"
+    },
+    {
+      "name": "new-lands-l02-p012.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208942,
+      "sha256": "6b3f0e1e858e7e294b91863922d5de4cf0faa066080ba9a2d4dbdf02da1b08f1"
+    },
+    {
+      "name": "new-lands-l02-p012-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66738,
+      "sha256": "e74aa35db8752b60c53d4271a29aea340e5808ca28d2a353f075a05ab20be1ec"
+    },
+    {
+      "name": "new-lands-l02-p013.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 206902,
+      "sha256": "57a48b6c2fe46c835de56b38556184d0eeb742679aa0572223a51491ecb0fcbf"
+    },
+    {
+      "name": "new-lands-l02-p013-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65716,
+      "sha256": "8f2b846a3f3e7f487030cdaa8baab79178762793911d5d8cd31856d8ad51464a"
+    },
+    {
+      "name": "new-lands-l02-p014.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 206366,
+      "sha256": "71523128dc91504ca0c5f579f48b09ca04bcb0b89d3b7489908436fd0f449e1a"
+    },
+    {
+      "name": "new-lands-l02-p014-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65068,
+      "sha256": "a095fff161ddffc9db4a16ddedf83488fcbca622c790e11266f08b679146c501"
+    },
+    {
+      "name": "new-lands-l02-p015.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 206974,
+      "sha256": "e9d2a4951f8ddeb0e6857978c62942617143aedecb038a6343a513158fa4038e"
+    },
+    {
+      "name": "new-lands-l02-p015-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65496,
+      "sha256": "b7d415aa5f6b3843fbf81782e9daf9dcb7a838989fdccae7e230d69e2afb41d6"
+    },
+    {
+      "name": "new-lands-l02-p016.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 209230,
+      "sha256": "9436622b088a5fe16bd5ea4d13a0d80703be80d68e04b78b054dc3275812ba6a"
+    },
+    {
+      "name": "new-lands-l02-p016-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65284,
+      "sha256": "38c51374d6aefc1169e73dc9d0fa54dfe1ed10262db3ff3e4c8066f27bed65cf"
+    },
+    {
+      "name": "new-lands-l02-p017.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208322,
+      "sha256": "0a4c7ca14919f682e8b18da3de88ede7414e6b4a9e2c210700d383c6bb9ea0a0"
+    },
+    {
+      "name": "new-lands-l02-p017-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66150,
+      "sha256": "4a306eecf4b694ebbccdecf0b82f0abc1cd3f4b20411a011f8395228555ac8a8"
+    },
+    {
+      "name": "new-lands-l02-p018.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 206904,
+      "sha256": "193a089366d3be33e4306d781e4415b5d5d631f811ad42d0c6052a59fc8f69f4"
+    },
+    {
+      "name": "new-lands-l02-p018-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65778,
+      "sha256": "4f98c5458c28ea59984826dcd94b5f075dd575e64b7a942f06b48535a587967c"
+    },
+    {
+      "name": "new-lands-l02-p019.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 209190,
+      "sha256": "d5045cbdafbb6a641a767639935de30c66e43898c6749347b8732401766da698"
+    },
+    {
+      "name": "new-lands-l02-p019-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65820,
+      "sha256": "70073016837b12a827c24d161c1f0d783be02a9bcdfeb7b2df50f1786269259a"
+    },
+    {
+      "name": "new-lands-l02-p020.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 206630,
+      "sha256": "cd7d04660d56f381b0a156dd5a57d1f7e7f74c4c497d48bc66720732a2f4add2"
+    },
+    {
+      "name": "new-lands-l02-p020-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65542,
+      "sha256": "28f0806b79e39fbdc897307075c00650741a726a7a8d1b67ff1b783618c5ecaa"
+    },
+    {
+      "name": "new-lands-l02-p021.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208348,
+      "sha256": "e0bded59c9d26aec0e43df15b1579ca1b3984fdd0ac08dcb278074eca15a4d0d"
+    },
+    {
+      "name": "new-lands-l02-p021-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66316,
+      "sha256": "aba7ad81f3c71980359fa85913b7c74dd86d5c5b4f50180450e333fa73e0e5ec"
+    },
+    {
+      "name": "new-lands-l02-p022.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 207458,
+      "sha256": "bec450305c1ae69296f06ccb4a43a04d3b0c86ddd08319f89cedb3bdec4c6579"
+    },
+    {
+      "name": "new-lands-l02-p022-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66090,
+      "sha256": "fafcc1db630c8c13277bd482a7fbdb8271147f1a49bc75c69e0e6274e13ce14d"
+    },
+    {
+      "name": "new-lands-l02-p023.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208808,
+      "sha256": "7e3b577561aad29bd6ec2db14229bf5fa0ae3dfb895196e3935f47e20f7797ef"
+    },
+    {
+      "name": "new-lands-l02-p023-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65818,
+      "sha256": "a6b16fc0e293f77855945228c4a2a2209481102f5db55017ecbbb0fe2dd2d800"
+    },
+    {
+      "name": "new-lands-l02-p024.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208582,
+      "sha256": "c734592d404ec804ec46c1aa4d95c70dfce01f9f39c9976aa42c7ebc4eac9793"
+    },
+    {
+      "name": "new-lands-l02-p024-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66706,
+      "sha256": "dfc5f0c0ae280638822aac7f8b2388edfa64fc65d6884aa72b06e58372c89b0c"
+    },
+    {
+      "name": "new-lands-l02-p025.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 209080,
+      "sha256": "e631b0a91d016b010f5ffef99728ea4e15b926cd8b092dfa474b47a1ed86bddf"
+    },
+    {
+      "name": "new-lands-l02-p025-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65384,
+      "sha256": "2f196e4871792b254aa6b04837ce7f3ba760c99cd61c919ae4447da139b59ad8"
+    },
+    {
+      "name": "new-lands-l02-p026.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208770,
+      "sha256": "17ee79525cf1834e5734cf7073da874be703a6f4319586c56c502374d254a3b3"
+    },
+    {
+      "name": "new-lands-l02-p026-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65098,
+      "sha256": "06de32345f4ddfff9d8b02301e1d17efd6dd63e7340c3e93df15f3d59d47af3d"
+    },
+    {
+      "name": "new-lands-l02-p027.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208776,
+      "sha256": "e50b22f85f23ad6681a2a7e8b42998123229ec76a13e8e5404e047488f1b53c5"
+    },
+    {
+      "name": "new-lands-l02-p027-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 67702,
+      "sha256": "95bd8295aa67090d8d57e546d874829148b160dd6a45c3e9fcd6e16359915b45"
+    },
+    {
+      "name": "new-lands-l02-p028.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208910,
+      "sha256": "0cf1fc7883c8abcb6a8f1e0c493806e494fe3860ae15fbeb1526313021f90bf7"
+    },
+    {
+      "name": "new-lands-l02-p028-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 67192,
+      "sha256": "e584030683b3dc9cf1f81ef00893aa7c41b28d32a6b1716e78bf597f5b4c76b2"
+    },
+    {
+      "name": "new-lands-l02-p029.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208972,
+      "sha256": "29cd43b901c8aad2d87cd6bc61f5fe01307de4508622de4d4fa72a8eea622c92"
+    },
+    {
+      "name": "new-lands-l02-p029-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66058,
+      "sha256": "e095629476c1092e3023e48d8d957fffd8a7a5758d04fcd0497020c857405bf9"
+    },
+    {
+      "name": "new-lands-l02-p030.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 209012,
+      "sha256": "84521b99993ed6c0ddafa7a74913a38a005cf0b39ae56a66b8cc2e36e4ed18ba"
+    },
+    {
+      "name": "new-lands-l02-p030-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66442,
+      "sha256": "da5fd94a2755771f68fc03b94360abce966314813df2aadced0cc58050532882"
+    },
+    {
+      "name": "new-lands-l02-p031.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 209104,
+      "sha256": "d915d6651465bc405bfac64b388e17fa8dcd3ad9965b0d98cdcdfa8be8418d9a"
+    },
+    {
+      "name": "new-lands-l02-p031-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 66538,
+      "sha256": "50b7f292fbeecd4f9f2522be99246415c43a5807af0f685affe71aada1a656ab"
+    },
+    {
+      "name": "new-lands-l02-p032.webp",
+      "width": 1452,
+      "height": 1090,
+      "bytes": 208302,
+      "sha256": "d09a029d65fb342bbecbebdded30bc37ef5e97f8b3e20f55cd3a188b19c0788e"
+    },
+    {
+      "name": "new-lands-l02-p032-thumb.webp",
+      "width": 726,
+      "height": 545,
+      "bytes": 65980,
+      "sha256": "eb076be761fcffa2cbd03c28fb08e5a7286dac85bd8f5abd637c093b1c7c76bd"
     }
   ]
 }

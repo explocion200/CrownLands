@@ -4,13 +4,16 @@ const { Store } = require("../../../local-backend/store");
 const { AuthService } = require("../../../local-backend/auth");
 const { createLocalPassword } = require("../../../local-backend/passwords");
 const { FixtureRealm } = require("./realm-store");
+const { inSubnet, privateAddress } = require("./phone-server");
 const ROOT = path.resolve(__dirname, "../../.."), ENTRY = "/__benchmark__/seamless/", COOKIE = "crownlands_world3_session";
 const HEADERS = { "cache-control": "no-store", "x-content-type-options": "nosniff", "referrer-policy": "no-referrer",
   "cross-origin-resource-policy": "same-origin", "cross-origin-opener-policy": "same-origin",
   "content-security-policy": "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'" };
 const TYPES = { ".js": "text/javascript", ".css": "text/css", ".webp": "image/webp", ".png": "image/png", ".svg": "image/svg+xml" };
-async function createStageThreeServer({ crowded = false, clock = Date.now, maxAgeMs = 2 * 60 * 60 * 1000, scripted = true } = {}) {
+async function createStageThreeServer({ crowded = false, clock = Date.now, maxAgeMs = 2 * 60 * 60 * 1000, scripted = true, host = "127.0.0.1", subnet = "127.0.0.0/8", phone = false } = {}) {
   if (!Number.isFinite(maxAgeMs) || maxAgeMs < 1 || maxAgeMs > 2 * 60 * 60 * 1000) throw Error("Private test lifetime must be at most two hours");
+  if ((!phone && host !== "127.0.0.1") || (phone && (!privateAddress(host) || !inSubnet(host,subnet) || maxAgeMs > 3600000))) throw Error("Phone testing requires a private interface/subnet and at most one hour");
+  const pendingReads = new Set();
   const schema = "migration_world3_" + crypto.randomBytes(6).toString("hex"), store = new Store({ schema });
   const credentials = ["rowan", "alder"].map(name => ({ uid: "sample-" + name, email: name + "@example.test", password: crypto.randomBytes(24).toString("base64url") }));
   const auth = new AuthService({ store, rateKey: crypto.randomBytes(32) }), realm = new FixtureRealm(store, { crowded, clock });
@@ -25,7 +28,7 @@ async function createStageThreeServer({ crowded = false, clock = Date.now, maxAg
     await store.initialize(); await auth.initialize(); await realm.initialize();
     for (const c of credentials) await store.pool.query(`INSERT INTO ${schema}.accounts(uid,body) VALUES($1,$2)`, [c.uid,
       { localId: c.uid, email: c.email, emailVerified: true, displayName: c.uid + " · private fixture", providerUserInfo: [{ providerId: "password" }], localPassword: await createLocalPassword(c.password) }]);
-    for (const name of ["model.js", "assets.js", "feed.js", "delta-feed.js", "preview.js", "preview.css", "stage-three-login.js"]) add("tools/map-benchmark/seamless/" + name);
+    for (const name of ["model.js", "assets.js", "feed.js", "delta-feed.js", "sprite-layer.js", "preview.js", "preview.css", "stage-three-login.js"]) add("tools/map-benchmark/seamless/" + name);
     const assets = new Set([realm.manifest.overviewAsset]);
     for (const s of realm.manifest.sections) { assets.add(s.terrain); assets.add(s.thumbnail); }
     for (const row of realm.initial) assets.add(row.body.asset);
@@ -48,16 +51,16 @@ async function createStageThreeServer({ crowded = false, clock = Date.now, maxAg
   const server = http.createServer(async (req, res) => {
     try {
       if (expired) { send(req, res, 410, { error: "Private test expired" }); return; }
-      if (req.socket.remoteAddress !== "127.0.0.1" || req.headers.host !== origin.slice(7) || (req.headers.origin && req.headers.origin !== origin) || req.headers["sec-fetch-site"] === "cross-site") { send(req, res, 403, { error: "Loopback and same-origin access required" }); return; }
+      if (!(phone ? inSubnet(req.socket.remoteAddress,subnet) : req.socket.remoteAddress === "127.0.0.1") || req.headers.host !== origin.slice(7) || (req.headers.origin && req.headers.origin !== origin) || req.headers["sec-fetch-site"] === "cross-site") { send(req, res, 403, { error: "Loopback and same-origin access required" }); return; }
       if (!req.url?.startsWith("/") || req.url.startsWith("//") || req.url.length > 8192) { send(req, res, 400, { error: "Invalid path" }); return; }
       const url = new URL(req.url, origin);
       if (req.method === "POST") {
-        if (![ENTRY + "login", ENTRY + "logout"].includes(url.pathname)) { send(req, res, 405, { error: "Inspect and navigate only" }); return; }
+        if (![ENTRY + "login", ENTRY + "logout", ...(phone ? [ENTRY + "open-sample"] : [])].includes(url.pathname)) { send(req, res, 405, { error: "Inspect and navigate only" }); return; }
         if (req.headers.origin !== origin || req.headers["content-type"] !== "application/json") { send(req, res, 403, { error: "Same-origin JSON required" }); return; }
         if (url.pathname.endsWith("logout")) {
           await auth.signOut(token(req)); send(req, res, 200, { ok: true }, undefined, { "set-cookie": `${cookieName}=; Path=${ENTRY}; HttpOnly; SameSite=Strict; Max-Age=0` }); return;
         }
-        const data = await body(req);
+        const data = url.pathname.endsWith("open-sample") && phone ? credentials[0] : await body(req);
         let signed;
         try { signed = await auth.passwordSignIn(data.email, data.password, "127.0.0.1"); }
         catch (_error) { send(req, res, 401, { error: "Test account or password was not accepted" }); return; }
@@ -65,25 +68,27 @@ async function createStageThreeServer({ crowded = false, clock = Date.now, maxAg
         send(req, res, 200, { ok: true }, undefined, { "set-cookie": `${cookieName}=${signed.token}; Path=${ENTRY}; HttpOnly; SameSite=Strict; Max-Age=${Math.floor(maxAgeMs / 1000)}` }); return;
       }
       if (!["GET", "HEAD"].includes(req.method)) { send(req, res, 405, { error: "Read-only realm" }); return; }
-      if (url.pathname === ENTRY + "login") { send(req, res, 200, login, "text/html"); return; }
+      if (url.pathname === ENTRY + "login") { send(req, res, 200, phone ? login.replace('<form id="test-login">','<form id="test-login" data-phone="true">').replace(/<label>[\s\S]*?<\/label>/g, "").replace("Open private world", "Enter sample world").replace("Use the temporary credentials saved on this computer.","Fictional test account only. This home-network preview expires within one hour.") : login, "text/html"); return; }
       if (files.has(url.pathname)) { const file = files.get(url.pathname); send(req, res, 200, fs.readFileSync(file), TYPES[path.extname(file)]); return; }
       if (![ENTRY, ENTRY + "catalog", ENTRY + "changes"].includes(url.pathname)) { send(req, res, 404, { error: "Not a private preview route" }); return; }
       const session = await auth.session(token(req));
       if (!session || !credentials.some(c => c.uid === session.auth.uid)) { send(req, res, url.pathname === ENTRY ? 302 : 401, { error: "Sign in to the private test" }, undefined, url.pathname === ENTRY ? { location: ENTRY + "login" } : {}); return; }
       if (url.pathname === ENTRY) {
         const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8")
-          .replace("<head>", '<head><meta name="crownlands-stage-three" content="private">')
+          .replace("<head>", `<head><meta name="crownlands-stage-three" content="private">${phone ? `<meta name="crownlands-private-preview-origin" content="${origin}">` : ""}`)
           .replace('<script defer src="/tools/map-benchmark/seamless/preview.js">', '<script defer src="/tools/map-benchmark/seamless/delta-feed.js"></script><script defer src="/tools/map-benchmark/seamless/preview.js">');
         send(req, res, 200, html, "text/html"); return;
       }
       if (url.pathname.endsWith("catalog")) { send(req, res, 200, realm.manifest); return; }
+      if (pendingReads.has(session.auth.uid) || pendingReads.size >= 2) { send(req,res,429,{error:"Private feed busy; retry shortly"},undefined,{"retry-after":"1"});return; }
+      pendingReads.add(session.auth.uid);
       let result;
       try {
         const revision = url.searchParams.get("revision"), epoch = url.searchParams.get("epoch");
         if (revision !== null && !/^\d{1,10}$/.test(revision)) throw Error("Invalid cursor");
         if (url.searchParams.get("realm") !== realm.manifest.realmId) throw Error("Wrong realm");
         result = await realm.read(session.auth.uid, (url.searchParams.get("ids") || "").split(","), revision === null ? null : { revision: Number(revision), epoch });
-      } catch (_error) { send(req, res, 400, { error: "Invalid private area request" }); return; }
+      } catch (error) { send(req, res, error.code === "permission-denied" ? 403 : 400, { error: "Invalid private area request" }); return; } finally { pendingReads.delete(session.auth.uid); }
       // Revocation during a snapshot must not leak its in-flight result.
       if (!(await auth.session(token(req)))) { send(req, res, 401, { error: "Private test session ended" }); return; }
       send(req, res, 200, { ...result, scriptHealthy });
@@ -100,7 +105,7 @@ async function createStageThreeServer({ crowded = false, clock = Date.now, maxAg
     })(); return closing;
   }
   return { credentials, realm, auth, store, close, async listen(port = 0) {
-    await new Promise((resolve, reject) => { server.once("error", reject); server.listen(port, "127.0.0.1", resolve); }); origin = `http://127.0.0.1:${server.address().port}`; cookieName = COOKIE + "_" + server.address().port;
+    await new Promise((resolve, reject) => { server.once("error", reject); server.listen(port, host, resolve); }); origin = `http://${host}:${server.address().port}`; cookieName = COOKIE + "_" + server.address().port;
     timer = setTimeout(() => { void close(); }, maxAgeMs);
     if (scripted) ticker = setInterval(() => { if (!ticking) ticking = realm.tick(++step).catch(() => { scriptHealthy = false; clearInterval(ticker); console.error("Private fixture updates paused after a database error."); }).finally(() => { ticking = null; }); }, 5000);
     return { url: origin, entry: origin + ENTRY + "?catalog=full" };
@@ -109,19 +114,23 @@ async function createStageThreeServer({ crowded = false, clock = Date.now, maxAg
 async function main() {
   const portArg = process.argv.find(a => a.startsWith("--port=")), port = Number(portArg?.slice(7) || 8801);
   if (!Number.isInteger(port) || port < 1024 || port > 65535) throw Error("Choose an unprivileged port");
-  const server = await createStageThreeServer({ crowded: process.argv.includes("--crowded") });
+  const host = process.argv.find(a=>a.startsWith("--host="))?.slice(7);
+  const iface = host && Object.values(require("node:os").networkInterfaces()).flat().find(i=>i.family==="IPv4" && i.address===host && !i.internal);
+  if(host && !iface) throw Error("Choose this computer's private LAN interface");
+  const lifetime = host ? 3600000 : 7200000;
+  const server = await createStageThreeServer({ crowded: process.argv.includes("--crowded"), ...(host ? {host,subnet:iface.cidr,phone:true,maxAgeMs:lifetime} : {}) });
   const folder = path.join(ROOT, "release-artifacts/seamless-stage-three-session");
   fs.mkdirSync(folder, { recursive: true, mode: 0o700 }); fs.chmodSync(folder, 0o700);
   const file = path.join(folder, `credentials-${port}.json`);
   try {
     const address = await server.listen(port);
     fs.writeFileSync(file, JSON.stringify({ ...server.credentials[0], url: address.entry }), { mode: 0o600 }); fs.chmodSync(file, 0o600);
-    console.log(`Private authenticated fixture realm: ${address.entry}\nTemporary credentials: ${file}\nExpires in two hours; no production accounts or data are connected.`);
+    console.log(`Private authenticated fixture realm: ${address.entry}\nTemporary credentials: ${file}\nExpires in ${lifetime / 60000} minutes; no production accounts or data are connected.`);
   } catch (error) { await server.close(); throw error; }
   const stop = async () => { await server.close(); fs.rmSync(file, { force: true }); };
   for (const signal of ["SIGINT", "SIGTERM"]) process.once(signal, () => { void stop(); });
   // Remove the saved credentials after the same maximum session lifetime.
-  const cleanup = setTimeout(() => { fs.rmSync(file, { force: true }); }, 2 * 60 * 60 * 1000); cleanup.unref();
+  const cleanup = setTimeout(() => { fs.rmSync(file, { force: true }); }, lifetime); cleanup.unref();
 }
 if (require.main === module) main().catch(error => { console.error(error.message); process.exitCode = 1; });
 module.exports = { createStageThreeServer, ENTRY, COOKIE };
