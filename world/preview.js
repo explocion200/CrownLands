@@ -9,7 +9,7 @@ window.createContinuousWorldView = async function (options = {}) {
     const stageThree = true, fullCatalog = true;
     const scene = options.scene;
     const M = window.SeamlessModel.forWorld(scene);
-    scene.objects ||= []; scene.marches ||= [];
+    scene.objects = (scene.objects || []).map(SeamlessAppearance.geometry); scene.marches ||= [];
     world.style.width = `${scene.width}px`; world.style.height = `${scene.height}px`;
     world.classList.toggle("full-catalog", fullCatalog);
     viewport.setAttribute("aria-label", `${scene.sections.length}-section world. Drag to explore, scroll or pinch to zoom. Select to inspect.`);
@@ -77,7 +77,6 @@ window.createContinuousWorldView = async function (options = {}) {
       if (item.kind === "troop") {node.setAttribute("role","button");node.tabIndex=0;}
       if (item.kind !== "troop") { const image = new Image(); image.alt = ""; image.draggable = false; node.append(image); }
       if (!["scenery", "troop"].includes(item.kind)) { const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = item.name; node.append(tag); }
-      if (item.kind !== "troop") node.style.cssText = `left:${item.left}px;top:${item.top}px;width:${item.width}px;height:${item.height}px`;
       (item.kind === "troop" ? marchesLayer : objectsLayer).append(node);
       nodes.set(item.key, node); return node;
     }
@@ -178,7 +177,7 @@ window.createContinuousWorldView = async function (options = {}) {
         if (principalChanged || epochChanged || data.authExpired || data.removed?.includes(selected) || inspectedMissing
             || permissionChanged
             ) { selected = null; selectedSnapshot = null; options.onClear?.(); }
-        scene.objects = data.sections.flatMap(s => s.objects); objects.clear(); scene.objects.forEach(o => objects.set(o.key, o));
+        scene.objects = data.sections.flatMap(s => s.objects).map(SeamlessAppearance.geometry); objects.clear(); scene.objects.forEach(o => objects.set(o.key, o));
         const routes = new Map(data.routes.map(r => [r.id, r.points]));
         marches = data.marches.map(m => {
           const old = byMarch.get(m.key); return old && !epochChanged && old.routeId === m.routeId ? { ...old, ...m } : prepareMarch(m, routes.get(m.routeId));
@@ -227,6 +226,10 @@ window.createContinuousWorldView = async function (options = {}) {
       for (const [key, node] of nodes) if (!visibleKeys.has(key)) { node.remove(); nodes.delete(key); }
       for (const item of [...interactive, ...visibleMarches]) {
         const node = nodes.get(item.key) || createObject(item); if (item.kind !== "troop") setImage(node.firstChild, item.asset);
+        if (item.kind !== "troop") {
+          const box=`left:${item.left}px;top:${item.top}px;width:${item.width}px;height:${item.height}px`;
+          if(node.worldBox!==box){node.style.cssText=box;node.worldBox=box;}
+        }
         window.SeamlessAppearance?.render(node,item,{selected:item.key===selected,zoom:camera.zoom});
         node.classList.toggle("selected", item.key === selected);
 

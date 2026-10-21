@@ -53,6 +53,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       await p.evaluate(()=>new Promise(requestAnimationFrame));
     };
     await select(page, source);
+    if(production)await require("./check-continuous-city-stages")(page,pilot,source,output);
     if(production){
       // Native Location/Home commands can target an area that has been evicted.
       // Wait for its authoritative display position without overriding a later

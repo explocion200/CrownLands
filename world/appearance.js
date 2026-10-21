@@ -8,6 +8,13 @@
   const ally=item=>Boolean(!own(item)&&isClanAllyCity({...item,owner:"enemy"}));
   const relation=item=>own(item)?"player":ally(item)?"clan-ally":item.ownerUid?"enemy":"neutral";
   const powerCity=item=>({...item,owner:relation(item)});
+  function geometry(item){
+    if(item.kind!=="castle")return item;
+    // The reader's footprint is the established level-100 maximum. Derive
+    // presentation from each fresh packet; never alter saved positions/routes.
+    const scale=.5+.1*getCastleStage(item.level),width=item.width*scale,height=item.height*scale;
+    return {...item,width,height,left:item.x-width/2,top:item.y-height/2};
+  }
   function loadIdentities(items){
     if(!state)return;
     // The continuous viewport includes owners outside state.cities. Reuse the
@@ -98,7 +105,7 @@
     }
     window.SeamlessAppearance.labelBounds=labelBounds;
   }
-  window.SeamlessAppearance={render,layout,loadIdentities,routeClass(item){return own(item)?"player-route":ally(item)?!item.returning&&["attack","rally"].includes(item.missionKind)?"clan-hostile-route":"clan-support-route":"enemy-route";},tickMarch(node,item,now){
+  window.SeamlessAppearance={render,layout,geometry,loadIdentities,routeClass(item){return own(item)?"player-route":ally(item)?!item.returning&&["attack","rally"].includes(item.missionKind)?"clan-hostile-route":"clan-support-route":"enemy-route";},tickMarch(node,item,now){
     const timer=node.querySelector(".army-token-time"),value=formatDuration(Math.max(0,Math.ceil(item.arriveAt-now)));
     if(timer&&timer.textContent!==value)timer.textContent=value;
   }};
