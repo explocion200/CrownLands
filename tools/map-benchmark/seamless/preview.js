@@ -1,4 +1,4 @@
-/* Private demonstration: no production accounts, subscriptions or orders. */
+/* Private inspect-only renderer. The separate reader may supply authorized live data; never game commands. */
 (async function () {
   "use strict";
   // Only the separate, allowlisted, expiring phone server supplies this origin.
@@ -157,7 +157,8 @@
         const inspectedSections = selectedSnapshot?.kind === "troop" ? selectedSnapshot.sections : [selectedSnapshot?.sectionId];
         const inspectedAreaLoaded = data.authoritative && inspectedSections.some(id => data.sections.some(s => s.id === id));
         const inspectedMissing = inspectedAreaLoaded && !data.sections.some(s => s.objects.some(o => o.key === selected)) && !data.marches.some(m => m.key === selected);
-        if (principalChanged || epochChanged || data.authExpired || data.removed?.includes(selected) || inspectedMissing) { selected = null; selectedSnapshot = null; following = null; }
+        if (principalChanged || epochChanged || data.authExpired || data.removed?.includes(selected) || inspectedMissing
+            || (scene.liveReadOnly && selectedSnapshot && !inspectedAreaLoaded)) { selected = null; selectedSnapshot = null; following = null; }
         if (data.removed?.includes(following)) following = null;
         scene.objects = data.sections.flatMap(s => s.objects); objects.clear(); scene.objects.forEach(o => objects.set(o.key, o));
         const routes = new Map(data.routes.map(r => [r.id, r.points]));
@@ -176,7 +177,7 @@
       const poll = setInterval(() => { if (!document.hidden) feed.refresh(); }, stageThree ? 1000 : 5000); cleanups.push(() => clearInterval(poll));
       on(window, "online", () => feed.refresh());
       if (stageThree) {
-        document.querySelector("header small").textContent = "Private Stage 3 · sample data";
+        document.querySelector("header small").textContent = scene.liveReadOnly ? "Private preview · read-only game data" : "Private Stage 3 · sample data";
         const logout = document.createElement("button"); logout.textContent = "Sign out"; logout.id = "sign-out"; document.querySelector("header nav").append(logout);
         on(logout, "click", async () => {
           const response = await fetch("./logout", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: "{}" });
@@ -238,7 +239,7 @@
       marchesLayer.classList.toggle("overview", overview);
       $("zoom").textContent = `${Math.round(camera.zoom / M.limits(size).home * 100)}%`;
       const stats = assets.stats();
-      $("load-status").textContent = stats.failed ? `${stats.failed} image(s) unavailable · navigation ready` : feed?.authExpired ? "Test session ended · reload to sign in" : feed?.failed ? "Area updates interrupted · retrying" : feed?.data.scriptHealthy === false ? "Sample updates paused · restart private test" : `${overview ? `Overview${fullCatalog ? " · 81 sections" : ""}` : `${stats.full}/4 detailed sections`} · ${scene.crowded ? "Crowded" : "Normal"} sample`;
+      $("load-status").textContent = stats.failed ? `${stats.failed} image(s) unavailable · navigation ready` : feed?.authExpired ? "Test session ended · reload to sign in" : feed?.failed ? "Area updates interrupted · retrying" : feed?.data.scriptHealthy === false ? "Sample updates paused · restart private test" : `${overview ? `Overview${fullCatalog ? ` · ${scene.sections.length} sections` : ""}` : `${stats.full}/4 detailed sections`} · ${scene.liveReadOnly ? "Read-only" : `${scene.crowded ? "Crowded" : "Normal"} sample`}`;
       $("retry").hidden = !stats.failed && !feed?.failed; $("retry").textContent = feed?.authExpired ? "Sign in" : "Retry loading";
     }
     function frame(now) {
@@ -248,8 +249,13 @@
       const view = M.visible(camera, size, 100);
       activeMarches = (fullCatalog && camera.zoom < M.limits(size).home * .56 ? [] : marches).filter(m => m.key === following || M.intersects(view, m.bounds.left, m.bounds.top, m.bounds.right - m.bounds.left, m.bounds.bottom - m.bounds.top));
       for (const march of activeMarches) {
-        const distance = (sceneTime * march.speed + march.path.length * march.phase) % (march.path.length * 2);
-        march.position = M.along(march.path, distance <= march.path.length ? distance : march.path.length * 2 - distance);
+        if (scene.liveReadOnly) {
+          const progress = Math.min(1, Math.max(0, (sceneTime - march.departAt) / (march.arriveAt - march.departAt)));
+          march.position = M.along(march.path, march.path.length * progress);
+        } else {
+          const distance = (sceneTime * march.speed + march.path.length * march.phase) % (march.path.length * 2);
+          march.position = M.along(march.path, distance <= march.path.length ? distance : march.path.length * 2 - distance);
+        }
       }
       if (following) { const m = byMarch.get(following); camera = M.clamp({ ...camera, ...m.position }, size); }
       // Camera transforms remain frame-synchronous. Reconcile the larger scene

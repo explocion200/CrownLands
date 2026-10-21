@@ -27,7 +27,7 @@
     }
     if (!Array.isArray(packet.routes) || packet.routes.length > 512) throw Error("Invalid routes");
     for (const route of packet.routes) {
-      if (typeof route?.id !== "string" || !Array.isArray(route.points) || route.points.length < 2 || route.points.length > 1000 || route.points.some(p => !Number.isFinite(p.x) || !Number.isFinite(p.y))) throw Error("Invalid route geometry");
+      if (typeof route?.id !== "string" || !Array.isArray(route.points) || route.points.length < 2 || route.points.length > 8192 || route.points.some(p => !Number.isFinite(p.x) || !Number.isFinite(p.y))) throw Error("Invalid route geometry");
       if (delta && routes.has(route.id) && JSON.stringify(routes.get(route.id).points) !== JSON.stringify(route.points)) throw Error("Route identity changed within an epoch");
       routes.set(route.id, route);
     }
@@ -67,7 +67,7 @@
       } catch (error) {
         if (!this.disposed && generation === this.generation) {
           this.failed = true;
-          if (error.status === 401 || error.status === 403) {
+          if (error.status === 401 || error.status === 403 || error.status === 409 || error.status === 410) {
             this.authExpired = true; this.cursor = null;
             this.data = { revision: -1, sections: [], marches: [], routes: [], authExpired: true };
           }

@@ -61,6 +61,8 @@ jobs:
       - name: Install locked dependencies
         working-directory: functions
         run: pnpm install --frozen-lockfile
+      - name: Install locked development tools
+        run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Install isolated local backend dependencies
         if: ${{ hashFiles('local-backend/pnpm-lock.yaml') != '' }}
         run: pnpm --dir local-backend install --frozen-lockfile --ignore-scripts
