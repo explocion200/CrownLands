@@ -113,6 +113,13 @@ const { COOKIE, CSRF } = require("../local-backend/auth-http");
     logOut = true; await client.auth.reload(); resumeWatch(); await pending;
     assert.equal(timers.size, 0);
     logOut = false; await client.auth.reload(); holdCalls = true;
+    root.CROWNLANDS_WORLD_SESSION = Object.freeze({protocol:1,revision:"a".repeat(64)});
+    const queued = Array.from({length:7}, () => client.functions.httpsCallable({}, "fixtureEcho")({value:1}).then(()=>"ok",error=>error.code));
+    await new Promise(resolve=>setImmediate(resolve));assert.equal(releaseCalls.length,6);
+    root.CROWNLANDS_WORLD_SESSION = Object.freeze({protocol:1,revision:"b".repeat(64)});
+    holdCalls=false;for(const release of releaseCalls.splice(0))release();
+    assert.deepEqual(await Promise.all(queued),["ok","ok","ok","ok","ok","ok","functions/failed-precondition"]);
+    delete root.CROWNLANDS_WORLD_SESSION;holdCalls=true;
     const held = Array.from({ length: 140 }, () => client.functions.httpsCallable({}, "fixtureEcho")({ value: 1 })
       .then(() => "unexpected-success", error => error.code));
     await new Promise(resolve => setImmediate(resolve));

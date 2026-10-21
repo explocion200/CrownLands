@@ -68,6 +68,15 @@ function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, d
       if (url.search) throw fail("invalid-argument");
       if (active >= maxConcurrent) throw fail("resource-exhausted"); active++; counted = true;
       if (req.method === "GET" && url.pathname === "/api/local-game/health") { await store.pool.query("SELECT 1"); return send(res, 200, { ready: true, rehearsal: !permanent, ...(permanent ? { protocol: 1, epoch: deployment.epoch } : {}) }); }
+      if (req.method === "GET" && worldData?.asset && url.pathname.startsWith("/api/local-game/world-assets/")) {
+        const session = await auth.session(cookies(req.headers.cookie)[COOKIE]);
+        if (!session) throw fail("unauthenticated");
+        if (!permanent && session.auth.uid !== ownerUid) throw fail("permission-denied");
+        const bytes = await worldData.asset(url.pathname.slice("/api/local-game/world-assets/".length));
+        if (permanent) await deployment.assertActive();
+        res.writeHead(200, { "Content-Type": "image/webp", "Cache-Control": "private, max-age=86400, immutable" });
+        return res.end(bytes);
+      }
       if (req.method !== "POST" || !url.pathname.startsWith("/api/local-game/v1/")) throw fail("not-found");
       operation = url.pathname.slice("/api/local-game/v1/".length);
       const worldRequest = Boolean(worldData && ["world/catalog", "world/areas", "world/options"].includes(operation));
@@ -111,7 +120,7 @@ function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, d
       operationPromise = store.withTransactionGuard(guard, async () => {
         if (operation.startsWith("world/")) {
           if (!worldRequest) throw fail("not-found");
-          const fields = { "world/catalog": [], "world/areas": ["realm", "ids", "cursor"], "world/options": ["key"] }[operation];
+          const fields = { "world/catalog": [], "world/areas": ["realm", "ids", "cursor", "protocol", "revision"], "world/options": ["key", "realm", "protocol", "revision"] }[operation];
           if (Object.keys(input).some(key => !fields.includes(key))) throw fail("invalid-argument");
           result = await worldData.read(session.auth, operation.slice(6), input, controller.signal);
           // Area readers use their own bounded read-only transaction. Recheck
@@ -131,6 +140,7 @@ function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, d
           if (Object.keys(input).some(key => key !== "data")) throw fail("invalid-argument");
           const route = callables.get(operation.slice(5)); if (!route) throw fail("not-found");
           if (input.data != null && (typeof input.data !== "object" || Array.isArray(input.data))) throw fail("invalid-argument");
+          await worldData?.validateCommand?.(route.name, input.data || {});
           result = await route.handler({ auth: session.auth, data: input.data || {},
             rawRequest: { headers: { "x-forwarded-for": ip, "user-agent": String(req.headers["user-agent"] || "").slice(0, 512) }, ip } });
         } else throw fail("not-found");

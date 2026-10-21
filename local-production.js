@@ -20,4 +20,6 @@
   }
   Object.defineProperty(root, "CROWNLANDS_LOCAL_BACKEND", { configurable: false, writable: false,
     value: Object.freeze({ ...config, ready: true }) });
+  const world = root.document.createElement("script"); world.src = "/world/bootstrap.js?v=continuous-v1"; world.async = true;
+  root.document.head.append(world);
 })(window);

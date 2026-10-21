@@ -5,14 +5,22 @@ const { createGameplayPilot } = require("./map-benchmark/seamless/gameplay-pilot
 const { createAuthenticatedNativeHarness } = require("./map-benchmark/seamless/native-auth-harness");
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
-  const pilot = await createGameplayPilot(); let harness, browser;
-  const output = path.resolve("release-artifacts/continuous-native-auth"); fs.mkdirSync(output, { recursive: true });
+  const production=process.argv.includes("--production");
+  const pilot = await createGameplayPilot({productionRouting:production}); let harness, browser, world;
+  const output = path.resolve("release-artifacts/"+(production?"continuous-production":"continuous-native-auth")); fs.mkdirSync(output, { recursive: true });
   const browserErrors = [], blocked = [], pages = [], results = [];
   try {
-    harness = await createAuthenticatedNativeHarness(pilot);
+    if(production){
+      const deployment=require("./map-benchmark/seamless/production-test-policy").productionTestPolicy(pilot.store);
+      world=require("../local-backend/world/service").createWorldService({store:pilot.store,readPool:pilot.reader.pool,deployment,directory:path.join(output,"terrain"),enabled:true});
+      await world.prepare(pilot.players[0].uid);
+      await pilot.routing.close();Object.defineProperties(pilot.routing,Object.getOwnPropertyDescriptors(world.routing));
+    }
+    harness = await createAuthenticatedNativeHarness(pilot,{productionWorld:world});
     browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || "/usr/bin/google-chrome", headless: true, args: ["--no-sandbox"] });
     for (let i = 0; i < 2; i++) {
       const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: "block" });
+      if(production)await context.addInitScript(()=>Object.defineProperty(window,"nativeContinuousWorld",{get:()=>window.CrownlandsContinuousWorld}));
       await context.addCookies(harness.cookies(i));
       await context.route("**/*", async route => {
         const request = route.request();
@@ -26,20 +34,61 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       await page.getByRole("button", { name: "Keep analytics off" }).click();
       await page.waitForFunction(() => !document.getElementById("enterKingdomBtn")?.disabled);
       await page.locator("#enterKingdomBtn").click();
-      await page.waitForFunction(() => !!window.nativeContinuousWorld, null, { timeout: 90000 });
+      await page.waitForFunction(() => !!window.nativeContinuousWorld && !isMapInteractionBlocked(), null, { timeout: 90000 });
     }
     const page = pages[0], [source, target] = pilot.pair;
     const select = async (p, city) => {
       const section = pilot.reader.sections.get(city.regionId);
       await p.evaluate(({ x, y }) => nativeContinuousWorld.view.view(x, y), { x: section.x + 724, y: section.y + 543 });
+      // Programmatic camera changes are applied on the next frame. Let its
+      // area window update before checking freshness or selecting an object
+      // that happened to remain cached from the preceding viewport.
+      await p.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
       await p.waitForFunction(({ key, region }) => {
         const v = nativeContinuousWorld.view, f = v.snapshot().feed;
         return f.ids.includes(region) && !f.pending && !f.failed && !!v.getObject(key);
       }, { key: `${city.regionId}:${city.id}`, region: city.regionId });
       await p.evaluate(key => nativeContinuousWorld.view.select(key), `${city.regionId}:${city.id}`);
       await p.waitForFunction(() => !nativeContinuousWorld.bridge.running);
+      await p.evaluate(()=>new Promise(requestAnimationFrame));
     };
     await select(page, source);
+    if(production){
+      // Native Location/Home commands can target an area that has been evicted.
+      // Wait for its authoritative display position without overriding a later
+      // manual drag when the area response is slow.
+      const from=pilot.reader.sections.get(source.regionId);
+      const far=[...pilot.reader.sections.values()].sort((a,b)=>Math.hypot(b.x-from.x,b.y-from.y)-Math.hypot(a.x-from.x,a.y-from.y))[0];
+      const navigate=()=>page.evaluate(async region=>{
+        if(!await switchOnlineIsland(region))throw Error("Fixture region unavailable");
+        const city=state.cities.find(c=>getCityRegionId(c)===region&&!isStronghold(c));
+        if(!city)throw Error("Fixture city unavailable");centerOnCity(city.id);return region+":"+city.id;
+      },far.id);
+      const centered=key=>page.waitForFunction(key=>{
+        const v=nativeContinuousWorld.view,o=v.getObject(key);if(!o)return false;
+        const {camera,size}=v.snapshot(),expected=SeamlessModel.forWorld(v.scene).clamp({...camera,x:o.x,y:o.y},size);
+        return Math.hypot(camera.x-expected.x,camera.y-expected.y)<1;
+      },key);
+      assert(!await page.evaluate(id=>nativeContinuousWorld.view.snapshot().feed.ids.includes(id),far.id));
+      const farKey=await navigate();await centered(farKey);
+      await page.locator("#continuous-game-surface #home").click();
+      await page.waitForFunction(()=>getActiveMapRegionId()===getMainCityRegionId()&&!isMapInteractionBlocked());
+      await centered(await page.evaluate(()=>getMainCityRegionId()+":"+state.mainCityId));
+      const originalRead=harness.worldData.read;let release,waiting=false;
+      const held=new Promise(resolve=>{release=resolve;});
+      harness.worldData.read=async(...args)=>{if(args[1]==="areas"&&args[2].ids.includes(far.id)){waiting=true;await held;}return originalRead(...args);};
+      try{
+        await navigate();for(let n=0;n<100&&!waiting;n++)await sleep(20);assert(waiting,"Delayed remote area was not requested");
+        const viewport=await page.locator("#continuous-game-surface #viewport").boundingBox();
+        await page.mouse.move(viewport.x+viewport.width/2,viewport.y+viewport.height/2);
+        await page.mouse.down();await page.mouse.move(viewport.x+viewport.width/2+90,viewport.y+viewport.height/2+30,{steps:8});await page.mouse.up();
+        const moved=await page.evaluate(()=>nativeContinuousWorld.view.snapshot().camera);release();
+        await page.waitForFunction(key=>!!nativeContinuousWorld.view.getObject(key)&&!nativeContinuousWorld.view.snapshot().feed.pending,farKey);
+        const after=await page.evaluate(()=>nativeContinuousWorld.view.snapshot().camera);
+        assert(Math.hypot(moved.x-after.x,moved.y-after.y)<1,"A delayed Location response overrode manual panning");
+      }finally{release();harness.worldData.read=originalRead;}
+      await select(page,source);
+    }
     await page.locator("#continuous-game-actions .wheel-send").click();
     await select(page, target);
     await page.waitForFunction(() => !!document.querySelector("#troopSliderConfirm") && !document.querySelector("#troopSliderConfirm").disabled);
@@ -68,6 +117,23 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     await page.waitForFunction(key => nativeContinuousWorld.view.getObject(key)?.returning, "march:" + march.id);
     assert((await pilot.store.doc("armies/" + march.id).get()).data().returning);
     await page.evaluate(() => modal.close());
+    if(production){
+      // Pickups remain ordinary authoritative claims, rendered on the new
+      // camera rather than left inside the hidden legacy terrain layer.
+      await select(page,source);
+      for(const type of ["gold","troops","crowns"]){
+        const bonus=await page.evaluate(type=>({id:"world-pickup-"+type,type,regionId:getActiveMapRegionId(),...createHarvestBonusPoint(getActiveMapRegionId()),createdAtMs:Date.now()}),type);
+        assert(Number.isFinite(bonus.x)&&Number.isFinite(bonus.y));
+        await pilot.store.doc("players/"+pilot.players[0].uid).update({harvestBonuses:[bonus],harvestNextSpawnAtMs:Date.now()+3600000});
+        await page.evaluate(async()=>applyServerEconomyResult(await getOnlineApi().collectEconomy(),{renderCities:false}));
+        const button=page.locator(`#continuous-world-pickups [data-harvest-bonus-id="${bonus.id}"]`);
+        await button.waitFor({state:"attached"});
+        await button.evaluate(node=>CrownlandsContinuousWorld.view.focus(node.worldPoint));
+        await button.click();
+        await page.waitForFunction(id=>!getAllActiveHarvestBonuses().some(b=>b.id===id),bonus.id);
+        assert(!(await pilot.store.doc("players/"+pilot.players[0].uid).get()).data().harvestBonuses.some(b=>b.id===bonus.id));
+      }
+    }
     // A temporary feed failure must remove actionable stale controls, while
     // leaving the camera usable. Recovery uses the same cookie/session.
     await select(page, source);
@@ -200,6 +266,21 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       assert(sample.assets.full <= 4); assert(sample.assets.peakRequests <= 2);
       await page.screenshot({ path: path.join(output, `authenticated-${width}.png`) }); await cdp.detach();
     }
+    if(production){
+      // Catalog growth automatically replaces the reader and client scene.
+      // Keep the camera's section-local point rather than the old atlas origin.
+      await select(page,source);
+      await page.evaluate(()=>{const v=nativeContinuousWorld.view,c=v.snapshot().camera;v.view(c.x+77,c.y+39,c.zoom);});
+      const before=await page.evaluate(()=>{const v=nativeContinuousWorld.view,c=v.snapshot().camera,s=v.scene.sections.find(s=>c.x>=s.x&&c.x<s.x+s.width&&c.y>=s.y&&c.y<s.y+s.height);return {id:s.id,x:c.x-s.x,y:c.y-s.y,zoom:c.zoom,selected:v.snapshot().selected,revision:CROWNLANDS_WORLD_SESSION.revision};});
+      const expansionPath=`realmGenerations/${pilot.identity.resetGeneration}/expansion/current`,expansion=(await pilot.store.doc(expansionPath).get()).data();
+      const growth=require("./world-travel-test-fixtures").createTravelFixture(88).activeRegionIds.find(id=>!expansion.activeRegionIds.includes(id));
+      await pilot.store.doc(expansionPath).update({activeRegionIds:[...expansion.activeRegionIds,growth]});
+      await world.prepare(pilot.players[0].uid);
+      await page.waitForFunction(({growth,revision})=>window.CrownlandsContinuousWorld?.view.scene.sections.some(s=>s.id===growth)&&window.CROWNLANDS_WORLD_SESSION?.revision!==revision&&window.CROWNLANDS_WORLD_SESSION?.revision,{growth,revision:before.revision},{timeout:60000});
+      await page.waitForFunction(key=>window.CrownlandsContinuousWorld?.view.snapshot().selected===key,before.selected);
+      const after=await page.evaluate(id=>{const v=CrownlandsContinuousWorld.view,c=v.snapshot().camera,s=v.scene.sections.find(s=>s.id===id);return {x:c.x-s.x,y:c.y-s.y,zoom:c.zoom};},before.id);
+      for(const key of ["x","y","zoom"])assert(Math.abs(before[key]-after[key])<1e-6,"Catalog refresh moved camera "+key+": "+before[key]+" -> "+after[key]);
+    }
     // Permission changes clear exact counts and stale native action menus.
     await select(page, source);
     await pilot.cityRef(source).update({ ownerUid: pilot.players[1].uid, ownerName: "Pilot Alder" });
@@ -220,5 +301,5 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     })).catch(() => null));
     for (const [i,p] of pages.entries()) { await p.screenshot({ path: path.join(output, `failure-${i}.png`) }).catch(()=>{}); console.error((await p.locator("body").innerText()).slice(-2000)); }
     console.error(JSON.stringify({ browserErrors, blocked, backendErrors: harness?.errors.map(({name,code,status,path})=>({name,code,status,path})), lastRequests: harness?.requests.slice(-12) })); throw error;
-  } finally { await browser?.close(); await harness?.close(); await pilot.close(); }
+  } finally { await browser?.close(); await harness?.close(); await world?.close(); await pilot.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -12,10 +12,10 @@ const pilots = new WeakSet();
 const callableNames = new Set(["previewArmyRoute", "sendArmyOrder", "sendNearbyScouts", "sendRegroupOrders", "useRecallHorn", "returnClanReinforcement", "createClanRally", "joinClanRally", "launchClanRally", "cancelClanRally", "withdrawClanRallyContribution"]);
 const fail = (status, message) => Object.assign(Error(message), { status });
 
-async function createGameplayPilot() {
+async function createGameplayPilot({productionRouting=false}={}) {
   if (process.env.CROWNLANDS_BACKEND || process.env.FIRESTORE_EMULATOR_HOST || require.cache[require.resolve("../../../functions")]) throw Error("Start the pilot in a fresh development process");
   const schema = "migration_game_worldtest_" + crypto.randomBytes(6).toString("hex");
-  const store = new Store({ schema }), routing = createCommandRouting();
+  const store = new Store({ schema }), routing = productionRouting ? require("../../../local-backend/world/routing").createCommandRouting() : createCommandRouting();
   const platformPath = require.resolve("../../../functions/platform");
   const previousPlatform = require.cache[platformPath];
   require.cache[platformPath] = { id: platformPath, filename: platformPath, loaded: true, exports: createPlatform({ store, privateWorldRouting: routing }) };

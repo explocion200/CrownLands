@@ -1,0 +1,78 @@
+.kingdom-flag {
+  --flag-primary: #315a8a;
+  --flag-secondary: #c69a45;
+  --flag-symbol-color: #f2e2bf;
+  --flag-symbol-outline: rgba(32, 36, 38, .82);
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--flag-primary);
+  border: 2px solid rgba(255,255,255,.72);
+  border-radius: 3px 3px 8px 3px;
+  box-shadow: inset 0 0 0 2px rgba(0,0,0,.18), 0 8px 18px rgba(0,0,0,.32);
+}
+.kingdom-flag::before,
+.kingdom-flag::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  background: var(--flag-secondary);
+}
+.kingdom-flag.pattern-split::before { inset: 0 0 0 50%; }
+.kingdom-flag.pattern-diagonal::before { inset: 0; clip-path: polygon(58% 0, 100% 0, 100% 100%, 15% 100%); }
+.kingdom-flag.pattern-band::before { left: 0; right: 0; top: 38%; height: 24%; }
+.kingdom-flag.pattern-cross::before { top: 0; bottom: 0; left: 42%; width: 16%; }
+.kingdom-flag.pattern-cross::after { left: 0; right: 0; top: 42%; height: 16%; }
+.kingdom-flag.pattern-saltire::before,
+.kingdom-flag.pattern-saltire::after,
+.kingdom-flag.pattern-bend::before {
+  top: -24%;
+  bottom: -24%;
+  left: 42%;
+  width: 16%;
+}
+.kingdom-flag.pattern-saltire::before { transform: rotate(38deg); }
+.kingdom-flag.pattern-saltire::after { transform: rotate(-38deg); }
+.kingdom-flag.pattern-chevron::before {
+  inset: 0;
+  clip-path: polygon(0 70%, 0 47%, 50% 18%, 100% 47%, 100% 70%, 50% 41%);
+}
+.kingdom-flag.pattern-quartered {
+  background: conic-gradient(
+    from 90deg,
+    var(--flag-primary) 0 25%,
+    var(--flag-secondary) 0 50%,
+    var(--flag-primary) 0 75%,
+    var(--flag-secondary) 0 100%
+  );
+}
+.kingdom-flag.pattern-pale::before { top: 0; bottom: 0; left: 36%; width: 28%; }
+.kingdom-flag.pattern-chief::before { top: 0; left: 0; right: 0; height: 34%; }
+.kingdom-flag.pattern-bend::before { transform: rotate(-38deg); }
+.kingdom-flag.pattern-fess::before { inset: 50% 0 0; }
+.kingdom-flag.pattern-pile::before {
+  inset: 0;
+  clip-path: polygon(24% 0, 76% 0, 50% 100%);
+}
+.kingdom-flag.pattern-canton::before { inset: 0 52% 48% 0; }
+.kingdom-flag.pattern-invertedChevron::before {
+  inset: 0;
+  clip-path: polygon(0 31%, 0 54%, 50% 83%, 100% 54%, 100% 31%, 50% 60%);
+}
+.flag-symbol {
+  position: relative;
+  z-index: 2;
+  color: var(--flag-symbol-color);
+  font-weight: 1000;
+  line-height: 1;
+  text-shadow: 0 1px 1px rgba(0,0,0,.5);
+}
+
+.preview-owner-flag{position:absolute;left:50%;bottom:94%;transform:translateX(-50%);width:20px;height:15px;border-width:1px;box-shadow:0 1px 2px #0005;pointer-events:none}
+.preview-owner-flag .flag-symbol{display:block;width:12px;height:12px}
+.preview-owner-flag .flag-symbol-icon{display:block;width:100%;height:100%;fill:currentColor;stroke:var(--flag-symbol-outline);stroke-width:.65px;paint-order:stroke fill}
+.inspector-owner-flag{position:relative;display:inline-grid;left:auto;bottom:auto;transform:none;width:32px;height:24px;vertical-align:middle;margin-right:7px}
+.inspector-owner-flag .flag-symbol{width:20px;height:20px}
+#world.overview .preview-owner-flag{display:none}

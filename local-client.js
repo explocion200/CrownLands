@@ -46,6 +46,7 @@
       if (authentication) return performPost(path, input, true);
       if (!csrf) await session();
       const requestedRevision = revision;
+      const requestedWorld = path.startsWith("call/") ? root.CROWNLANDS_WORLD_SESSION : null;
       const unavailable = () => makeError(path.startsWith("call/") ? "functions/unauthenticated" : "unauthenticated", "The account session changed.");
       if (disposed) throw unavailable();
       signal?.throwIfAborted();
@@ -65,6 +66,10 @@
       try {
         if (disposed || requestedRevision !== revision) throw unavailable();
         signal?.throwIfAborted();
+        if (path.startsWith("call/") && requestedWorld !== root.CROWNLANDS_WORLD_SESSION)
+          throw makeError("functions/failed-precondition", "The world changed while this request waited. Please try again.");
+        if (requestedWorld) input = { ...input, data: { ...input.data,
+          clientWorldProtocol: requestedWorld.protocol, clientWorldRevision: requestedWorld.revision } };
         return await performPost(path, input, false, signal);
       } finally {
         const next = pendingRequests.shift();
