@@ -1,21 +1,33 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "910b2efe5a7211b70364ade1afc6ef83c27b7d95",
+  "baseCommit": "dce595d01a3babbcd39c2907e80a8e1edb6af143",
   "coverage": [
     {
-      "paths": ["world/model.js", "world/appearance.js", "world/flags.css", "tools/validate-continuous-map-labels.js"],
-      "tests": ["tools/validate-continuous-map-labels.js", "tools/test-local-postgres-production-world.js", "tools/validate-production-artifact.js"],
-      "reason": "Keep original native banners with smaller world-space geometry, bounded collision placement and compact crowded details. Validate all current catalog coordinates, neighboring edges/corners, ordering, selection priority and non-growing zoom; exercise actual shared CSS and crowded fictional clan owners in the authenticated browser at desktop and landscape-phone sizes. No server geometry, saved positions, routes or visibility changes."
+      "paths": [
+        "world/appearance.js"
+      ],
+      "tests": [
+        "tools/validate-king-power-colors.js",
+        "tools/validate-weaker-kingdom-protection.js",
+        "tools/validate-king-power.js",
+        "tools/test-local-postgres-production-world.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Restore the existing authoritative King Power bands and native shield colors for visible regular castles across section boundaries. Reuse canonical identity lookups, version/timestamp guards, three-second stabilization and bounded repairs. Verify unknown/zero/legacy power, protection thresholds, troop accounting, ownership/ally/objective exemptions, selected and unselected CSS colors at desktop and landscape-mobile sizes, with no balance or server-authoritative changes."
     },
     {
-      "paths": ["world/native.js", "world/preview.js", "tools/check-continuous-map-ui.js", "tools/test-local-postgres-native-auth-world.js"],
-      "tests": ["tools/test-local-postgres-production-world.js", "tools/validate-production-artifact.js"],
-      "reason": "Synchronize castle selection, native action lifecycle and continuous camera input. Test empty-ground/Escape/native deselection, wheel and touch zoom, offscreen area eviction, canceled async selection, preserved destination selection, actual send/recall/bulk/scout/rally controls, Home, ownership/session loss and desktop/mobile performance using isolated PostgreSQL data and intercepted networking. Build validates production packaging. No server-authoritative changes require an additional emulator suite."
-    },
-    {
-      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
-      "tests": [],
-      "reason": "Record the owner-confirmed selection and smaller non-overlapping map-label behavior without claiming deployment or changing gameplay rules."
+      "paths": [
+        "world/native.js",
+        "world/preview.js",
+        "tools/check-continuous-map-power.js",
+        "tools/test-local-postgres-native-auth-world.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-production-world.js",
+        "tools/test-local-postgres-native-auth-world.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Connect visible neighboring owners to the existing deduplicated identity queue and invalidate appearance on native stats/identity/timer updates. Exercise delayed authoritative repair, same-node repaint, stabilized color changes, bounded cache requests and live action/selection/privacy dependencies in the isolated PostgreSQL authenticated harness. Confirm desktop/mobile performance and production packaging; the shared harness also retains private-mode coverage. No schema, backend logic or production data changes, so no extra emulator suite is needed."
     }
   ]
 }

@@ -90,7 +90,9 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     if (!authenticated) for (const button of cityLayer.querySelectorAll(".wheel-scout-nearby,.wheel-regroup")) {button.disabled=true;button.title="Wider-world bulk controls are not connected in this UI rehearsal";}
     for (const node of [...cityLayer.children]) { node.style.pointerEvents = "auto"; overlay.append(node); }
   }
-  renderCities = paintWheel;
+  // Identity repairs, own-power subscriptions and the existing power-band
+  // stabilization timer must repaint visible banners as well as action wheels.
+  renderCities = () => { view?.invalidate(); paintWheel(); };
   renderArmies = renderPaths = () => {};
   renderHarvestBonuses=renderPickups;
   // A section change still loads authoritative gameplay state, but the hidden

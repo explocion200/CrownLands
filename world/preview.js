@@ -213,6 +213,7 @@ window.createContinuousWorldView = async function (options = {}) {
       }
       scenery = visibleObjects.filter(o => o.kind === "scenery"); sceneryCamera = "";
       const interactive = visibleObjects.filter(o => o.kind !== "scenery");
+      window.SeamlessAppearance?.loadIdentities?.(interactive);
       const visibleKeys = new Set([...interactive, ...visibleMarches].map(o => o.key));
       for (const [key, node] of nodes) if (!visibleKeys.has(key)) { node.remove(); nodes.delete(key); }
       for (const item of [...interactive, ...visibleMarches]) {
@@ -281,6 +282,7 @@ window.createContinuousWorldView = async function (options = {}) {
     // Camera operations are independent of server-authoritative game commands.
     const controller = {
       dispose,
+      invalidate: () => { dirty = true; },
       getObject: key => objects.get(key) || byMarch.get(key),
       focus: item => { cancelFollow(); camera = M.clamp({ ...camera, x: item.x, y: item.y }, size); dirty = true; },
       clear: () => clear(false),
