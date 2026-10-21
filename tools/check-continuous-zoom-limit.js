@@ -31,7 +31,7 @@ module.exports = async function checkZoomLimit(page, source, select, output) {
       }).length;
       return {zoom:s.camera.zoom,range:SeamlessModel.forWorld(v.scene).limits(s.size),size:s.size,cities,areas:s.feed.ids.length,overview:root.querySelector("#world").classList.contains("overview"),assets:s.assets};
     });
-    assert(Math.abs(sample.zoom-sample.range.min)<1e-8,"Zoom input bypassed the floor: "+input);
+    assert(Math.abs(sample.zoom-sample.range.min)<1e-8,`Zoom input bypassed the floor: ${input}; actual ${sample.zoom}, expected ${sample.range.min}`);
     assert(sample.zoom>sample.range.detail && !sample.overview && sample.cities>0 && sample.areas>0,"Zoom hides cities or stops their feed: "+input);
     assert(sample.assets.full<=4 && sample.assets.peakRequests<=2);
     results.push({input,...sample});
@@ -42,10 +42,18 @@ module.exports = async function checkZoomLimit(page, source, select, output) {
       await page.setViewportSize({width,height}); await frames(page);
       await select(page,source);
       await page.evaluate(()=>{const v=nativeContinuousWorld.view,o=v.getObject(v.selectedKey);v.clear();v.view(o.x,o.y,SeamlessModel.forWorld(v.scene).limits(v.snapshot().size).home);});
+      await frames(page);
       const viewport=page.locator("#continuous-game-surface #viewport"), box=await viewport.boundingBox();
       const center={x:box.x+box.width/2,y:box.y+box.height/2};
       await page.mouse.move(center.x,center.y);
-      for(let i=0;i<8;i++){await page.mouse.wheel(0,600);await frames(page);}
+      for(let i=0;i<8;i++){
+        const previous=await page.evaluate(()=>nativeContinuousWorld.view.snapshot().camera.zoom);
+        await page.mouse.wheel(0,600);
+        // Playwright dispatch completes before Chrome consumes wheel input.
+        // Observe the camera instead of assuming two frames drain the queue.
+        await page.waitForFunction(previous=>{const v=nativeContinuousWorld.view,s=v.snapshot();return s.camera.zoom<previous||Math.abs(s.camera.zoom-SeamlessModel.forWorld(v.scene).limits(s.size).min)<1e-8;},previous);
+        await frames(page);
+      }
       await check("wheel");
       await page.screenshot({path:path.join(output,`zoom-limit-${width}.png`)});
       // Native controls use the same floor even though their prototype toolbar
