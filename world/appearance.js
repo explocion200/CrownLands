@@ -35,9 +35,9 @@
     const clan=item.ownerClanTag?`<strong class="map-city-clan-tag">[${esc(item.ownerClanTag)}]</strong>`:"";
     const ruler=`<span class="city-ruler-row"><strong class="${own(item)?"city-ruler-name":"foreign-ruler-name"}">${esc(item.owner)}</strong></span>`;
     if(item.kind==="npc"){
-      label.innerHTML=`<span class="native-npc-label">${item.classification==="boss"?"Boss":"Marauder"} · ${esc(item.level??"")}${countdown?" · "+esc(countdown):""}</span>`;
+      label.innerHTML=`<span class="city-label native-npc-label">${item.classification==="boss"?"Boss":"Marauder"} · ${esc(item.level??"")}${countdown?" · "+esc(countdown):""}</span>`;
     }else if(item.kind==="tower"){
-      label.innerHTML=`<span class="holding-tower-clan-banner">${item.owner!=="Neutral"?ruler:""}</span><span class="holding-tower-map-label">${esc(item.name)}</span>`;
+      label.innerHTML=`<span class="city-label native-tower-label"><span class="holding-tower-clan-banner">${item.owner!=="Neutral"?ruler:""}</span><span class="holding-tower-map-label">${esc(item.name)}</span></span>`;
     }else if(item.kind==="camp"){
       const type=["gold","troops","items","deed"].includes(item.campType)?item.campType:"gold";
       label.innerHTML=`<span class="camp-map-banner city-label player-city-label"><span class="player-city-banner">${item.ownerFlag?`<span class="camp-holder-flag city-owner-column">${flag(item)}</span>`:`<img class="camp-type-flag" src="/assets/icons/camps/camp-${type}-v2.webp" width="42" height="53" alt="" draggable="false">`}<span class="player-city-data">${clan}${ruler}${name}${item.ownerUid?`<span class="gold-camp-active-timer city-army-count"><small>${item.contested?"Contested":"Active"}</small><strong>${esc(countdown)}</strong></span>`:""}</span></span></span>`;
@@ -52,7 +52,31 @@
     if(item.ownerFlag)for(const element of label.querySelectorAll(".city-kingdom-flag"))FlagRenderer.render(element,item.ownerFlag,{stableKey:item.ownerUid||item.key,context:"city",size:"small"});
     node.setAttribute("aria-label",`${item.name} · ${item.sectionName} · ${item.owner}${item.level?" · Level "+item.level:""}`);
   }
-  window.SeamlessAppearance={render,tickMarch(node,item,now){
+  let measurements=new WeakMap(),measured=0,lastLayout="",layoutSize="";
+  document.fonts?.addEventListener("loadingdone",()=>{measurements=new WeakMap();lastLayout="";});
+  function layout(rows){
+    const size=`${innerWidth}:${innerHeight}`;
+    if(size!==layoutSize){layoutSize=size;measurements=new WeakMap();lastLayout="";}
+    const entries=rows.map(({node,item})=>({node,item,banner:node.querySelector(".map-banner"),label:node.querySelector(".city-label")})).filter(e=>e.label);
+    const fresh=entries.filter(e=>!measurements.has(e.label));
+    // Batch reads/writes only for changed banners, never on each camera frame.
+    fresh.forEach(e=>e.banner.classList.remove("compact"));
+    const sizes=fresh.map(e=>({width:e.label.offsetWidth*.8,height:e.label.offsetHeight*.8}));
+    fresh.forEach(e=>{if(!e.node.classList.contains("selected"))e.banner.classList.add("compact");});
+    fresh.forEach((e,i)=>measurements.set(e.label,{...sizes[i],compact:e.node.classList.contains("selected")?null:{width:e.label.offsetWidth*.8,height:e.label.offsetHeight*.8},version:++measured}));
+    const signature=entries.map(e=>`${e.item.key}:${measurements.get(e.label).version}:${e.item.x}:${e.item.top}`).join("|");
+    if(signature===lastLayout)return;
+    lastLayout=signature;
+    const byKey=new Map(entries.map(e=>[e.item.key,e]));
+    const labels=entries.map(e=>({key:e.item.key,x:e.item.x,y:e.item.top-4,priority:e.node.classList.contains("selected")?1:0,...measurements.get(e.label)}));
+    for(const result of SeamlessModel.placeLabels(labels)){
+      const {banner}=byKey.get(result.key);
+      banner.classList.toggle("compact",Boolean(result.compact));
+      banner.style.visibility=result.hidden?"hidden":"";
+      banner.style.transform=`translate(${result.dx||0}px,${(result.dy||0)-4}px) scale(.8)`;
+    }
+  }
+  window.SeamlessAppearance={render,layout,tickMarch(node,item,now){
     const timer=node.querySelector(".army-token-time"),value=formatDuration(Math.max(0,Math.ceil(item.arriveAt-now)));
     if(timer&&timer.textContent!==value)timer.textContent=value;
   }};

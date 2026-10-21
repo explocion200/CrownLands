@@ -99,6 +99,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       assert(ui.banner&&ui.level&&ui.troops,"Original own-city banner must show level and authorized troops");
       assert(!ui.tag&&ui.cameraPanel==="none"&&ui.statusHidden,"Prototype presentation must not replace the normal HUD");
     }
+    if(production)await require("./check-continuous-map-ui")(page,source,select,output);
     await page.locator("#continuous-game-actions .wheel-send").click();
     await select(page, target);
     await page.waitForFunction(() => !!document.querySelector("#troopSliderConfirm") && !document.querySelector("#troopSliderConfirm").disabled);

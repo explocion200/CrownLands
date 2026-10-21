@@ -1,40 +1,21 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "8f9d78879283543c158e8ca550d2e14786de9a7a",
+  "baseCommit": "910b2efe5a7211b70364ade1afc6ef83c27b7d95",
   "coverage": [
     {
-      "paths": [
-        "local-backend/world/reader.js",
-        "tools/validate-world-map-presentation.js"
-      ],
-      "tests": [
-        "tools/validate-world-map-presentation.js",
-        "tools/test-local-postgres-world-service.js",
-        "tools/test-local-postgres-production-world.js",
-        "functions/test/emulator-army-listener-rules.js"
-      ],
-      "reason": "Restore explicitly public names, levels, owner/clan identity and march type for the original presentation. Test the public whitelist, fresh own-only exact counts, other-viewer filtering, capture/privacy changes and bounded authenticated load; routes and gameplay rules are unchanged."
+      "paths": ["world/model.js", "world/appearance.js", "world/flags.css", "tools/validate-continuous-map-labels.js"],
+      "tests": ["tools/validate-continuous-map-labels.js", "tools/test-local-postgres-production-world.js", "tools/validate-production-artifact.js"],
+      "reason": "Keep original native banners with smaller world-space geometry, bounded collision placement and compact crowded details. Validate all current catalog coordinates, neighboring edges/corners, ordering, selection priority and non-growing zoom; exercise actual shared CSS and crowded fictional clan owners in the authenticated browser at desktop and landscape-phone sizes. No server geometry, saved positions, routes or visibility changes."
     },
     {
-      "paths": [
-        "world/appearance.js",
-        "world/flags.css",
-        "world/native.js",
-        "world/preview.js",
-        "tools/test-local-postgres-native-auth-world.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-production-world.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "reason": "Restore native banners, flags, march tokens and Home control on the existing bounded camera. Exercise actual authenticated client selection, private counts, all gameplay controls, cross-area Home, following, drag/pinch, area loss and growth; deterministically render after sign-out clears player state. Visually inspect desktop and landscape mobile screenshots and measure frame times. Existing game CSS is reused inside the map shadow root; other HUD/windows stay unchanged."
+      "paths": ["world/native.js", "world/preview.js", "tools/check-continuous-map-ui.js", "tools/test-local-postgres-native-auth-world.js"],
+      "tests": ["tools/test-local-postgres-production-world.js", "tools/validate-production-artifact.js"],
+      "reason": "Synchronize castle selection, native action lifecycle and continuous camera input. Test empty-ground/Escape/native deselection, wheel and touch zoom, offscreen area eviction, canceled async selection, preserved destination selection, actual send/recall/bulk/scout/rally controls, Home, ownership/session loss and desktop/mobile performance using isolated PostgreSQL data and intercepted networking. Build validates production packaging. No server-authoritative changes require an additional emulator suite."
     },
     {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
+      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
       "tests": [],
-      "reason": "Record the owner-confirmed UI restoration while retaining continuous movement; does not assert deployment."
+      "reason": "Record the owner-confirmed selection and smaller non-overlapping map-label behavior without claiming deployment or changing gameplay rules."
     }
   ]
 }

@@ -70,7 +70,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     if (!view || !areasReady || bridge?.running || getOnlineSessionRequestScope() !== session) return clearWheel();
     const target = selectedTowerMapId ? getHoldingTowerVisual(selectedTowerMapId) : selectedTargetId ? getArmyTargetById(selectedTargetId) : selectedSourceId ? getTroopOrderSourceById(selectedSourceId) : null;
     const point = target && locate(target.id,getCityRegionId(target));
-    if (!point || sendMode) return clearWheel();
+    if (!point || sendMode || view.selectedKey !== point.key) return clearWheel();
     wheelPoint = point;
     const signature = JSON.stringify([point.key,target.owner,target.troops,target.level,Math.floor(getProjectedGold()),scoutNearbySourceId,regroupSourceId,pendingBulkOrderAction?.phase]);
     if (signature === lastWheel) return;
@@ -193,14 +193,32 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
       if (!["castle","camp","stronghold","citadel","npc","tower"].includes(item.kind) || !areasReady) {bridge.cancel();clearSelection(false);return;}
       void bridge.select(item).then(ok=>{lastWheel="";paintWheel();if(!ok && bridge.error)showToast(bridge.error);requestAnimationFrame(()=>{restoringSelection=false;});});
     },
-    onClear: () => {pendingFocus=null;bulkGeneration++;bulk=null;bridge.cancel();clearSelection(false);},
+    onClear: () => {pendingFocus=null;bulkGeneration++;bulk=null;bridge.cancel();clearSelection(false);clearWheel();},
+    onZoom: () => {
+      // Preserve an in-progress troop destination choice while navigating.
+      if (!sendMode) { view?.clear(); bridge.cancel(); clearSelection(false); clearWheel(); }
+    },
     onFrame: ({project,size}) => {
       frameView={project,size};updateMainCityReturnButton();
       if (getOnlineSessionRequestScope() !== session) { dispose(); return; }
       for(const node of pickupNodes.values()){const p=project(node.worldPoint);node.hidden=!areasReady||p.x< -30||p.y< -30||p.x>size.width+30||p.y>size.height+30;node.style.left=`${p.x}px`;node.style.top=`${p.y}px`;}
+      if (areasReady&&!sendMode&&!bridge.running&&!transitioning&&bridge.selected&&view.selectedKey
+          && !selectedSourceId&&!selectedTargetId&&!selectedTowerMapId
+          && view.getObject(view.selectedKey)?.kind!=="troop") view.clear();
+      const selectedPoint=bridge.selected?.key===view.selectedKey?bridge.selected:null;
+      if(selectedPoint&&!sendMode&&!bridge.running&&!transitioning){
+        const p=project(selectedPoint);
+        if(p.x<0||p.y<0||p.x>size.width||p.y>size.height){view.clear();bridge.cancel();clearSelection(false);clearWheel();}
+      }
       if (!wheelPoint) return;
       const p=project(wheelPoint);
-      for(const node of overlay.children){const small=size.height<500,scale=small?.74:.9;node.style.left=`${Math.max(small?Math.min(285,size.width/2):110,Math.min(size.width-115,p.x))}px`;node.style.top=`${Math.max(small?120:110,Math.min(size.height-(small?135:115),p.y))}px`;node.style.transform=`translate(-50%,-50%) scale(${scale})`;}
+      const deselected=!selectedSourceId&&!selectedTargetId&&!selectedTowerMapId;
+      if (view.selectedKey!==wheelPoint.key || (!bridge.running&&!transitioning&&deselected)
+          || p.x<0 || p.y<0 || p.x>size.width || p.y>size.height) {
+        if (!sendMode&&!bridge.running&&!transitioning) {view.clear();bridge.cancel();clearSelection(false);}
+        clearWheel();return;
+      }
+      for(const node of overlay.children){const scale=size.height<500?.74:.9;node.style.left=`${p.x}px`;node.style.top=`${p.y}px`;node.style.transform=`translate(-50%,-50%) scale(${scale})`;}
     },
   });
   } catch (error) { dispose(); throw error; }
