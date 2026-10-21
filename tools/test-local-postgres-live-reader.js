@@ -48,6 +48,31 @@ async function main(){
   const enemy=await reader.read(other,[id]);const same=enemy.objects.upsert.find(o=>o.key===city.key);assert.equal(same.troopVisibility,"hidden");assert.ok(!Object.hasOwn(same,"troops"));
   packet=await reader.read(uid,[id],cursor);assert.equal(packet.kind,"delta");assert.equal(packet.objects.upsert.length,0);assert.equal(packet.marches.upsert.length,0);
   const after=(await store.pool.query(`SELECT count(*)::text AS documents,(SELECT count(*) FROM ${store.schema}.changes)::text AS changes FROM ${store.schema}.documents`)).rows[0];assert.deepEqual(after,before,"Reader mutated source data");
+  assert.ok(reader.stats.unchangedPolls>0,"Unchanged polls rebuilt the scene");
+  let clock=Date.now()+1000;reader.clock=()=>clock;
+  await reader.read(uid,[id]);const loaded=reader.stats.sectionLoads;
+  await reader.read(other,crossing.sections);assert.equal(reader.stats.sectionLoads,loaded+1,"Overlapping area reloaded a fresh section");
+  const flags={version:2,primary:"#72363a",secondary:"#c69a45",symbolColor:"#f2e2bf",pattern:"chevron",symbol:"crown",privateSecret:"must-not-leak"};
+  await store.doc(`${f.island(id)}/cities/${city.id}`).update({ownerFlag:flags});
+  await store.doc("playerCosmetics/"+uid).set({equipped:{city:"templar_city"},privateSecret:"must-not-leak"});
+  clock+=1000;packet=await reader.read(uid,[id]);const dressed=packet.objects.upsert.find(o=>o.key===city.key);
+  assert.equal(dressed.asset,require("../functions/cosmetics").item("templar_city").assets[2]);
+  assert.equal(dressed.ownerFlag.primary,flags.primary.toUpperCase());assert.ok(!Object.hasOwn(dressed.ownerFlag,"privateSecret"));
+  const stranger=await reader.read(other,[id]);assert.equal(stranger.objects.upsert.find(o=>o.key===city.key).asset,dressed.asset);
+  assert.equal(stranger.objects.upsert.find(o=>o.key===city.key).troopVisibility,"hidden");
+  // An owner can change without a public name/flag change. Recompose the
+  // private dependencies even when every public DTO byte is identical.
+  await store.doc(`${f.island(id)}/cities/${city.id}`).update({ownerUid:other});
+  await store.doc("playerCosmetics/"+other).set({equipped:{city:"templar_city"}});
+  clock+=1000;const newOwner=await reader.read(other,[id]);assert.equal(newOwner.objects.upsert.find(o=>o.key===city.key).troopVisibility,"exact");
+  await store.doc(`${f.island(id)}/cities/${city.id}`).update({ownerUid:uid});clock+=1000;
+  packet=await reader.read(uid,[id]);
+  const freshSection=reader.manifest.sections.find(s=>!reader.publicSections.has(s.id)).id,build=reader.buildPublicSections.bind(reader);
+  reader.buildPublicSections=async()=>{throw Error("Fixture asset-independent database interruption");};
+  await assert.rejects(()=>reader.read(uid,[freshSection]),/Fixture asset-independent database interruption/);
+  assert.equal(reader.sectionLoads.size,0,"Failed single-flight read remained pending");reader.buildPublicSections=build;
+  assert.equal((await reader.read(uid,[freshSection])).kind,"snapshot");
+  assert.ok(reader.publicSections.size<=128);reader.clock=Date.now;
   cursor={epoch:packet.epoch,revision:packet.revision};await store.doc(`${f.island(id)}/cities/${city.id}`).update({ownerUid:other,ownerName:"Fixture new owner"});
   packet=await reader.read(uid,[id],cursor);const lost=packet.objects.upsert.find(o=>o.key===city.key);assert.equal(lost.troopVisibility,"hidden");assert.ok(!Object.hasOwn(lost,"troops"));
   data=applyPacket(data,packet,[id],cursor);assert.equal(data.sections[0].objects.find(o=>o.key===city.key).troopVisibility,"hidden");
