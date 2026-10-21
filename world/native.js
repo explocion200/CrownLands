@@ -7,7 +7,6 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     try { return await getOnlineApi().readWorld(operation, { ...input, protocol: scene.protocol, revision: scene.revision, realm: scene.realmId }, signal); }
     catch (error) { if (error.status === 409) window.CrownlandsWorldReload?.(); error.status ||= ({ unauthenticated: 401, "permission-denied": 403, unavailable: 503, "resource-exhausted": 429 })[String(error.code).replace(/^functions\//, "")]; throw error; }
   };
-  const authenticated = true;
   const host = document.createElement("div"); host.id = "continuous-game-surface";
   host.style.cssText = "position:absolute;inset:0;z-index:5";
   const root = host.attachShadow({mode:"open"});
@@ -17,9 +16,10 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   root.innerHTML = ["styles.css","interface-theme.css","readability.css","manuscript-prototype.css","ui-contrast-correction.css","crownlands-palette.css","marauders-ui.css","holding-tower-ui.css","world/preview.css","world/flags.css"]
     .map(file=>`<link rel="stylesheet" href="/${file}">`).join("") + '<div class="shell">' + parsed.body.innerHTML + '</div>';
   const overlay = document.createElement("div"); overlay.id = "continuous-game-actions";
-  overlay.style.cssText = "position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden";
+  const overlayStyle="position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden";
+  overlay.style.cssText = overlayStyle;
   const pickups = document.createElement("div"); pickups.id="continuous-world-pickups";
-  pickups.style.cssText="position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden;--map-hit-size:44px";
+  pickups.style.cssText=overlayStyle+";--map-hit-size:44px";
   // SVG fragment references resolve inside the shadow tree. Reuse the game's
   // existing symbol definitions so neutral crests and player emblems stay visible.
   const symbols=document.createElementNS("http://www.w3.org/2000/svg","svg");
@@ -44,7 +44,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   // has already chosen a new camera interaction.
   const cancelPendingFocus = () => { pendingFocus = null; };
   for (const type of ["pointerdown","wheel","keydown","click"]) host.addEventListener(type,cancelPendingFocus,true);
-  let areasReady = !authenticated, bulk = null, bulkGeneration = 0;
+  let areasReady = false, bulk = null, bulkGeneration = 0;
   const pickupNodes=new Map();
   function renderPickups(){
     if(!view||disposed)return;
@@ -74,7 +74,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     const closeScale=size.height<500?.74:.9;
     const scale=closeScale*Math.min(1,camera.zoom/maxZoom);
     for(const node of nodes){
-      if(node.classList.contains("clan-tower-action-wheel")){
+      if(node.dataset.towerId){
         const bottom=wheelPoint.top+wheelPoint.height-wheelPoint.y;
         node.style.setProperty("--tower-action-y",`${(bottom*maxZoom+36)/closeScale}px`);
       }
@@ -99,15 +99,11 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     else if (isStronghold(target)) renderSelectedStrongholdWheel(target);
     else if (target.owner === "player") renderSelectedCityWheel(target);
     else renderSelectedForeignWheel(target);
-    // These require the bounded authenticated neighbour feed before this HUD
-    // can submit the expanded cross-section candidate list. Do not send the
-    // old same-section list under the wider-world rules.
-    if (!authenticated) for (const button of cityLayer.querySelectorAll(".wheel-scout-nearby,.wheel-regroup")) {button.disabled=true;button.title="Wider-world bulk controls are not connected in this UI rehearsal";}
     const controls=[...cityLayer.children];
     // The native tower row normally measures a legacy cityLayer marker, which
     // the connected map no longer renders. Retain its centered 60px spacing.
-    for(const node of controls)if(node.classList.contains("clan-tower-action-wheel")){
-      const buttons=[...node.querySelectorAll("[data-clan-tower-map-action]")];
+    for(const node of controls)if(node.dataset.towerId){
+      const buttons=[...node.children];
       buttons.forEach((button,index)=>button.style.setProperty("--tower-action-x",`${(index-(buttons.length-1)/2)*60}px`));
     }
     // Size before attaching: async identity/selection updates must not flash
@@ -125,7 +121,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   renderWorldMap = renderIslandTeleporters = preloadNearbyIslandMaps = () => {};
   preloadIslandMap = async () => true;
   mapImageSwapToken++; mapBg.replaceChildren(); portalLayer.replaceChildren();
-  if (authenticated) {
+  {
     // Normal buttons retain their costs, confirmation and request IDs. Candidate
     // identities/ranges come from the authenticated server, never the map cache.
     const key = c => `${getCityRegionId(c)}:${c.id}`;
@@ -201,7 +197,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
       const timer=setTimeout(()=>done(true),10000);link.onload=()=>done(false);link.onerror=()=>done(true);
     })));
     view = await window.createContinuousWorldView({ root, scene, nativeUi:true,
-    ...(authenticated ? { loadAreas: (ids, signal, cursor) => readWorld("areas", { realm: scene.realmId, ids, cursor }, signal),
+    loadAreas: (ids, signal, cursor) => readWorld("areas", { realm: scene.realmId, ids, cursor }, signal),
       onAreas: data => {
         areasReady = !data.authExpired && !data.failed && data.authoritative === true;
         if (!areasReady) {
@@ -218,7 +214,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
           const selected=view.getObject(restoreSelection);restoreSelection=null;
           if(selected?.selectable){restoringSelection=true;view.select(selected.key);}
         }
-      } } : {}),
+      },
     onSelect: item => {
       if (!["castle","camp","stronghold","citadel","npc","tower"].includes(item.kind) || !areasReady) {bridge.cancel();clearSelection(false);return;}
       void bridge.select(item).then(ok=>{lastWheel="";paintWheel();if(!ok && bridge.error)showToast(bridge.error);requestAnimationFrame(()=>{restoringSelection=false;});});

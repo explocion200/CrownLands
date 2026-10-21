@@ -21,6 +21,15 @@
       ],
       "tests": [],
       "reason": "Record the owner-confirmed proportional selection-control sizing and retain existing gameplay and zoom/deselection behavior. Documentation does not claim deployment."
+    },
+    {
+      "paths": [
+        "tools/validate-production-artifact.js"
+      ],
+      "tests": [
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Keep a measured 256-byte allowance above the existing 64 KiB lazy-map budget for proportional control geometry and the repaired tower row, after removing unreachable rehearsal code from the always-authenticated production adapter. Verify the exact world-module allowlist, no private routes, unchanged installation precaching and remaining asset budgets."
     }
   ]
 }
