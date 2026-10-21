@@ -313,6 +313,19 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     await page.waitForFunction(key => nativeContinuousWorld.view.getObject(key)?.troopVisibility === "hidden", source.regionId + ":" + source.id);
     assert.equal(await page.evaluate(key => Object.hasOwn(nativeContinuousWorld.view.getObject(key), "troops"), source.regionId + ":" + source.id), false);
     assert.equal((await call(0, "sendArmyOrder", order(source, target, "transfer"))).error, "functions/permission-denied");
+    if(production){
+      // Force the sign-out ordering: an already scheduled render can run after
+      // player state is cleared, before the continuous camera is disposed.
+      const children=await page.evaluate(()=>{
+        const saved=state,node=document.createElement("span");
+        try{
+          state=null;
+          for(const kind of ["castle","camp","troop"])SeamlessAppearance.render(node,{key:"logout-check",kind,ownerUid:"other",ownerClanId:"other-clan"});
+          return node.childElementCount;
+        }finally{state=saved;}
+      });
+      assert.equal(children,0,"A sign-out frame must not render stale player banners");
+    }
     await harness.auth.signOut(harness.sessions[0].token);
     await page.waitForFunction(() => !window.nativeContinuousWorld || nativeContinuousWorld.view.snapshot().feed.authExpired);
     assert.equal(browserErrors.length, 0, JSON.stringify(browserErrors)); assert.equal(blocked.length, 0, JSON.stringify(blocked));

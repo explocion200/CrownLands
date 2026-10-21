@@ -10,7 +10,8 @@
   const count=item=>item.troopVisibility==="exact"&&Number.isFinite(item.troops)?formatNumber(item.troops):item.troopVisibility==="estimate"?esc(item.troopEstimateLabel):"?";
   const flag=item=>item.ownerFlag?'<span class="kingdom-flag city-owner-flag city-kingdom-flag" aria-hidden="true"><span class="flag-symbol"></span></span>':`<span class="city-owner-flag owner-flag" aria-hidden="true">${renderCrownlandsIcon(OWNER.neutral.flagIcon,"owner-flag-icon")}</span>`;
   function render(node,item,{inspector=false,selected=false}={}){
-    if(inspector)return;
+    // Sign-out clears game state before the pending camera frame is disposed.
+    if(inspector||!state)return;
     if(item.kind==="scenery")return;
     const owner=relation(item),now=Date.now();
     const countdown=item.kind==="camp"?item.payoutPending?formatDuration(Math.max(0,Math.ceil((item.payoutAtMs-now)/1000))):"Securing":item.kind==="npc"&&!item.selectable?item.respawnAtMs>now?"Respawn "+formatDuration(Math.ceil((item.respawnAtMs-now)/1000)):"Awaiting respawn":"";

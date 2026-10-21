@@ -27,7 +27,7 @@
         "tools/test-local-postgres-production-world.js",
         "tools/validate-production-artifact.js"
       ],
-      "reason": "Restore native banners, flags, march tokens and Home control on the existing bounded camera. Exercise actual authenticated client selection, private counts, all gameplay controls, cross-area Home, following, drag/pinch, area loss and growth; visually inspect desktop and landscape mobile screenshots and measure frame times. Existing game CSS is reused inside the map shadow root; other HUD/windows stay unchanged."
+      "reason": "Restore native banners, flags, march tokens and Home control on the existing bounded camera. Exercise actual authenticated client selection, private counts, all gameplay controls, cross-area Home, following, drag/pinch, area loss and growth; deterministically render after sign-out clears player state. Visually inspect desktop and landscape mobile screenshots and measure frame times. Existing game CSS is reused inside the map shadow root; other HUD/windows stay unchanged."
     },
     {
       "paths": [
