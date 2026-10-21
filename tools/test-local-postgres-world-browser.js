@@ -115,6 +115,7 @@ async function main() {
         function frame(now) { const t=(now-start)/1000; seamlessPreview.view(home.x+724+600*Math.sin(t*1.8),home.y+543+400*Math.cos(t*1.4),zoom*(.85+.2*Math.sin(t*2))); if(t<6) requestAnimationFrame(frame); else resolve(); } requestAnimationFrame(frame); }); });
       const s=await snapshot(), sorted=[...s.frameTimes].sort((a,b)=>a-b); bounds(s); assert.ok(sorted.length>50);
       const result={width,height,crowded,cpuSlowdown:rate,fps:+(1000*sorted.length/sorted.reduce((a,b)=>a+b,0)).toFixed(1),frameP95:+sorted[Math.floor(sorted.length*.95)].toFixed(1),nodes:s.nodes,areas:s.feed.sections,marches:s.feed.marches,snapshotsDuringMotion:s.feed.snapshots-feedBefore.snapshots,bytesDuringMotion:s.feed.bytes-feedBefore.bytes}; performanceResults.push(result);
+      assert.ok(result.snapshotsDuringMotion <= 1,"Ordinary nearby camera motion repeatedly replaced its snapshot");
       console.log(`Authenticated preview ${width}×${height} ${crowded?'crowded':'normal'} ${rate}x: ${result.fps} FPS, p95 ${result.frameP95}ms.`);
     }
     await cdp.send("Emulation.setCPUThrottlingRate", { rate:1 }); await login(0);

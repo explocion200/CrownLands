@@ -55,7 +55,9 @@ async function main() {
     assert.notEqual(await evaluate(() => document.querySelector("#owner").textContent), owner);
     assert.notEqual(await evaluate(() => document.querySelector("#troops").textContent), troops);
     assert.deepEqual((await snapshot()).camera, camera, "Updates moved the camera");
-    await view({ x: sections.at(-1).x + 724, y: sections.at(-1).y + 543 }); await settle();
+    const distant = [...sections].sort((a,b) => Math.hypot(b.x+724-castle.x,b.y+543-castle.y)-Math.hypot(a.x+724-castle.x,a.y+543-castle.y))[0];
+    await view({ x: distant.x + 724, y: distant.y + 543 }); await settle();
+    assert.ok(!(await snapshot()).feed.ids.includes(castle.sectionId),"Eviction check must leave the retained area window");
     assert.equal((await snapshot()).selected, castle.key); assert.ok(await evaluate(() => document.querySelector("#section").textContent.includes("last received")));
     await view(camera); await settle(); assert.equal((await snapshot()).selected, castle.key);
     assert.ok(!await evaluate(() => document.querySelector("#section").textContent.includes("last received")));

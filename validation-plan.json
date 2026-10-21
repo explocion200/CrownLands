@@ -219,6 +219,7 @@
         "tools/map-benchmark/seamless/preview.js",
         "tools/map-benchmark/seamless/sprite-layer.js",
         "tools/test-local-postgres-world-browser.js",
+        "tools/validate-seamless-catalog-browser.js",
         "tools/validate-seamless-catalog.js",
         "tools/validate-seamless-world-browser.js",
         "tools/validate-seamless-world.js"
