@@ -88,12 +88,15 @@
     lastLayout=signature;
     const byKey=new Map(entries.map(e=>[e.item.key,e]));
     const labels=entries.map(e=>({key:e.item.key,x:e.item.x,y:e.item.top-4,priority:e.node.classList.contains("selected")?1:0,...measurements.get(e.label)}));
+    const labelBounds=new Map();
     for(const result of SeamlessModel.placeLabels(labels)){
+      if(!result.hidden)labelBounds.set(result.key,result.rect);
       const {banner}=byKey.get(result.key);
       banner.classList.toggle("compact",Boolean(result.compact));
       banner.style.visibility=result.hidden?"hidden":"";
       banner.style.transform=`translate(${result.dx||0}px,${(result.dy||0)-4}px) scale(.8)`;
     }
+    window.SeamlessAppearance.labelBounds=labelBounds;
   }
   window.SeamlessAppearance={render,layout,loadIdentities,routeClass(item){return own(item)?"player-route":ally(item)?!item.returning&&["attack","rally"].includes(item.missionKind)?"clan-hostile-route":"clan-support-route":"enemy-route";},tickMarch(node,item,now){
     const timer=node.querySelector(".army-token-time"),value=formatDuration(Math.max(0,Math.ceil(item.arriveAt-now)));

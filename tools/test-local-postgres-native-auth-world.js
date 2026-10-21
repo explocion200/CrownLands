@@ -162,6 +162,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       // Pickups remain ordinary authoritative claims, rendered on the new
       // camera rather than left inside the hidden legacy terrain layer.
       await select(page,source);
+      await require("./check-continuous-pickup-repair")(page,pilot,source);
       for(const type of ["gold","troops","crowns"]){
         const bonus=await page.evaluate(type=>({id:"world-pickup-"+type,type,regionId:getActiveMapRegionId(),...createHarvestBonusPoint(getActiveMapRegionId()),createdAtMs:Date.now()}),type);
         assert(Number.isFinite(bonus.x)&&Number.isFinite(bonus.y));

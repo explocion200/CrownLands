@@ -37,19 +37,20 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   overlay.addEventListener("pointerdown", () => { suppressMapClick = false; }, true);
   const original = { renderCities, renderArmies, renderPaths, renderHarvestBonuses, centerOnMap, centerOnCity, centerOnWorldPoint, beginMapVisualTransition, updateMainCityReturnButton,
     renderWorldMap, renderIslandTeleporters, preloadIslandMap, preloadNearbyIslandMaps,
-    getNearbyScoutCandidates, getNearbyRegroupCandidates, toggleScoutNearby, toggleRegroup };
+    getNearbyScoutCandidates, getNearbyRegroupCandidates, toggleScoutNearby, toggleRegroup, createHarvestBonusPoint, isHarvestBonusPlacementSafe };
   let view, bridge, transitioning = false, restoringSelection = false, disposed = false, lastWheel = "", wheelPoint = null, pendingFocus = null, frameView = null;
   // A Location command can precede the bounded area's first snapshot. Resolve
   // its exact display position when that snapshot arrives, unless the player
   // has already chosen a new camera interaction.
   const cancelPendingFocus = () => { pendingFocus = null; };
   for (const type of ["pointerdown","wheel","keydown","click"]) host.addEventListener(type,cancelPendingFocus,true);
-  let areasReady = false, bulk = null, bulkGeneration = 0;
+  let areasReady = false, bulk = null, bulkGeneration = 0, pickupPlacement;
   const pickupNodes=new Map();
   function renderPickups(){
     if(!view||disposed)return;
     const present=new Set(),daily=ensureDailyCaptureTracker();
     for(const bonus of getAllActiveHarvestBonuses()){
+      if(!pickupPlacement?.safe(bonus))continue;
       const section=scene.sections.find(s=>s.id===bonus.regionId);if(!section)continue;
       const type=normalizeHarvestBonusType(bonus.type),remaining=getHarvestBonusRemaining(type,daily);
       let node=pickupNodes.get(bonus.id);
@@ -62,7 +63,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
       const pending=pendingHarvestBonusIds.has(bonus.id);node.disabled=!areasReady||pending||remaining<=0;
       node.setAttribute("aria-busy",String(pending));node.setAttribute("aria-label",`${pending?"Collecting":"Harvest"} ${type} pickup`);
       node.title=remaining>0?`Harvest ${type} · ${remaining} left today`:`Daily ${type} limit reached`;
-      const b=section.gameBounds;node.worldPoint={x:section.x+(bonus.x-b.left)/b.width*section.width,y:section.y+(bonus.y-b.top)/b.height*section.height};present.add(bonus.id);
+      const b=section.gameBounds;node.worldPoint={x:section.x+(bonus.x-b.left)/b.width*section.width,y:section.y+(bonus.y-b.top)/b.height*section.height};node.bonus=bonus;present.add(bonus.id);
     }
     for(const[id,node]of pickupNodes)if(!present.has(id)){node.remove();pickupNodes.delete(id);}
   }
@@ -229,7 +230,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     onFrame: ({camera,project,size}) => {
       frameView={project,size};updateMainCityReturnButton();
       if (getOnlineSessionRequestScope() !== session) { dispose(); return; }
-      for(const node of pickupNodes.values()){const p=project(node.worldPoint);node.hidden=!areasReady||p.x< -30||p.y< -30||p.x>size.width+30||p.y>size.height+30;node.style.left=`${p.x}px`;node.style.top=`${p.y}px`;node.style.transform=`translate(-50%,-50%) scale(${Math.min(1,camera.zoom/SeamlessModel.forWorld(scene).limits(size).max)})`;}
+      for(const node of pickupNodes.values()){const p=project(node.worldPoint);node.hidden=!areasReady||!pickupPlacement.safe(node.bonus,{size})||p.x< -30||p.y< -30||p.x>size.width+30||p.y>size.height+30;node.style.display=node.hidden?"none":"";node.style.left=`${p.x}px`;node.style.top=`${p.y}px`;node.style.transform=`translate(-50%,-50%) scale(${.8*Math.min(1,camera.zoom/SeamlessModel.forWorld(scene).limits(size).max)})`;}
       if (areasReady&&!sendMode&&!bridge.running&&!transitioning&&bridge.selected&&view.selectedKey
           && !selectedSourceId&&!selectedTargetId&&!selectedTowerMapId
           && view.getObject(view.selectedKey)?.kind!=="troop") view.clear();
@@ -250,16 +251,95 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     },
   });
   } catch (error) { dispose(); throw error; }
+  pickupPlacement=createContinuousHarvestPlacement(view);
+  createHarvestBonusPoint=pickupPlacement.create;isHarvestBonusPlacementSafe=pickupPlacement.safe;
   // Useful native panels still open from the real HUD; no replacement HUD.
   clearSelection(false);view.home();renderPickups();
   root.querySelector("#load-status").textContent="Connected";
   function dispose() {
     if(disposed)return;disposed=true;window.removeEventListener("pagehide",dispose);bridge.dispose();view?.dispose();host.remove();overlay.remove();pickups.remove();pickupNodes.clear();mapWorld.hidden=false;setMainCityReturnHudMode(false);
     ({renderCities,renderArmies,renderPaths,renderHarvestBonuses,centerOnMap,centerOnCity,centerOnWorldPoint,beginMapVisualTransition,updateMainCityReturnButton,
-      renderWorldMap,renderIslandTeleporters,preloadIslandMap,preloadNearbyIslandMaps,getNearbyScoutCandidates,getNearbyRegroupCandidates,toggleScoutNearby,toggleRegroup}=original);
+      renderWorldMap,renderIslandTeleporters,preloadIslandMap,preloadNearbyIslandMaps,getNearbyScoutCandidates,getNearbyRegroupCandidates,toggleScoutNearby,toggleRegroup,createHarvestBonusPoint,isHarvestBonusPlacementSafe}=original);
     delete window.CrownlandsContinuousControls;
     delete window.CrownlandsContinuousWorld;cityRenderSignature="";renderedMapBoundsSignature="";renderAll();
   }
   window.CrownlandsContinuousWorld={view,bridge,dispose,root,locate,snapshot:()=>({section:getActiveMapRegionId(),source:selectedSourceId,target:selectedTargetId,sendMode,pending:bridge.running})};
   window.addEventListener("pagehide",dispose,{once:true});
 };
+
+// The connected renderer spreads cities independently of their saved game
+// coordinates. Use its authenticated artwork rectangles, then convert the
+// chosen point back for the existing reservation/collection API.
+function createContinuousHarvestPlacement(view) {
+  let cached;
+  const overlaps = (p, radius, r) => p.x + radius >= r.left && p.x - radius <= r.right
+    && p.y + radius >= r.top && p.y - radius <= r.bottom;
+  function context(regionId, frame) {
+    const scene=view.scene, labels=window.SeamlessAppearance?.labelBounds;
+    const snapshot=view.snapshot(), size=frame?.size || snapshot.size;
+    const feed=snapshot.feed, section=scene.sections.find(s=>s.id===regionId);
+    const ready=section && feed && !feed.failed && !feed.authExpired && feed.ids.includes(regionId)
+      && scene.objects.some(o=>o.sectionId===regionId);
+    if(cached?.regionId===regionId && cached.objects===scene.objects && cached.labels===labels
+      && cached.width===size.width && cached.height===size.height && cached.ready===ready) return cached;
+    cached={regionId,objects:scene.objects,labels,width:size.width,height:size.height,ready,section,checked:new Map()};
+    if(!ready)return cached;
+    const maxZoom=SeamlessModel.forWorld(scene).limits(size).max;
+    // Include the 20%-smaller art, ring and outer glow at the largest relative
+    // footprint. Both marker and terrain scale proportionally after that.
+    cached.radius=72*.8/maxZoom+4;
+    cached.maxZoom=maxZoom;
+    const center={x:section.x+section.width/2,y:section.y+section.height/2};
+    const range=Math.min(section.width,section.height)*.35;
+    cached.center=center;cached.range=range;
+    const boxes=[];
+    for(const o of scene.objects){
+      const art={left:o.left,top:o.top,right:o.left+o.width,bottom:o.top+o.height};
+      if(!Object.values(art).every(Number.isFinite))continue;
+      if(overlaps(center,range+cached.radius,art))boxes.push(art);
+      if(o.kind!=="scenery"){
+        const label=labels?.get(o.key) || {left:o.x-100,right:o.x+100,top:o.top-110,bottom:o.top};
+        if(overlaps(center,range+cached.radius,label))boxes.push(label);
+      }
+    }
+    cached.boxes=boxes;
+    return cached;
+  }
+  function project(point,c){
+    const s=c.section,b=s.gameBounds;
+    return {x:s.x+(point.x-b.left)/b.width*s.width,y:s.y+(point.y-b.top)/b.height*s.height};
+  }
+  function clear(point,c){
+    if(!c.ready || !Number.isFinite(point.x) || !Number.isFinite(point.y))return false;
+    const p=project(point,c),key=point.x+":"+point.y;
+    let safe=c.checked.get(key);
+    if(safe===undefined){
+      safe=Math.hypot(p.x-c.center.x,p.y-c.center.y)<=c.range+1
+        && !c.boxes.some(r=>overlaps(p,c.radius,r))
+        && isHarvestBonusTerrainSafePoint(point.x,point.y,c.regionId);
+      if(c.checked.size>=1024)c.checked.clear();
+      c.checked.set(key,safe);
+    }
+    // A moving army can temporarily cross otherwise clear ground. Never
+    // reserve or expose a pickup underneath its token or selected controls.
+    return safe && !view.scene.marches.some(m=>m.position && Math.hypot(p.x-m.position.x,p.y-m.position.y)
+      < c.radius+(view.selectedKey===m.key?110:55)/c.maxZoom);
+  }
+  return {
+    safe(bonus,frame){return clear(bonus,context(bonus.regionId,frame));},
+    create(regionId){
+      const c=context(regionId);if(!c.ready)return null;
+      const s=c.section,b=s.gameBounds;
+      for(const fraction of HARVEST_BONUS_CENTER_SEARCH_FRACTIONS){
+        const angle=Math.random()*Math.PI*2,offset=Math.random();
+        for(let i=0;i<HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE;i++){
+          const r=Math.min(s.width,s.height)*fraction*Math.sqrt((offset+(i+.5)/HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE)%1);
+          const a=angle+i*HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE;
+          const p={x:Math.round(b.left+(s.width/2+Math.cos(a)*r)/s.width*b.width),y:Math.round(b.top+(s.height/2+Math.sin(a)*r)/s.height*b.height)};
+          if(clear(p,c))return p;
+        }
+      }
+      return null;
+    }
+  };
+}

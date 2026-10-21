@@ -1,29 +1,35 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "030e98913a16d4e46e1932737f467df3a758a140",
+  "baseCommit": "2ef80addc945bd9979ccf506e393bdad18ddac49",
   "coverage": [
     {
       "paths": [
-        "world/model.js",
-        "world/preview.js",
-        "tools/check-continuous-zoom-limit.js",
-        "tools/test-local-postgres-native-auth-world.js"
+        "world/native.js",
+        "world/appearance.js",
+        "tools/check-continuous-marches.js",
+        "tools/check-continuous-pickup-repair.js",
+        "tools/validate-continuous-pickup-placement.js",
+        "tools/test-local-postgres-native-auth-world.js",
+        "world/preview.css"
       ],
       "tests": [
+        "tools/validate-continuous-pickup-placement.js",
+        "tools/validate-pickup-runtime.js",
         "tools/test-local-postgres-production-world.js",
+        "tools/test-local-postgres-native-auth-world.js",
         "tools/validate-continuous-map-labels.js",
         "tools/validate-continuous-game-ui.js",
         "tools/validate-production-artifact.js",
         "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Limit the production continuous camera above its shared city/detail threshold. The isolated authenticated PostgreSQL browser harness checks wheel, repeated pinch, camera controls, navigation, resize, anchored zoom, pan and Home on desktop and both landscape phone sizes with rendered cities and active bounded area feeds. Its existing checks cover shared model consumers: castle labels/actions, pickups, real march paths and From/To, catalog changes, privacy and native gameplay. The new helper runs only for the production entry; the separate prototype is unchanged. Retain published asset and payload limits. No server-authoritative changes or emulator suites are needed."
+      "reason": "Shrink connected-map Gold/troop/Crown markers by 20% and use current authenticated display geometry, measured label rectangles and troop positions for bounded pickup clearance. Unit checks cover all object types, mobile glow, relocated cities, availability loss, coordinate conversion, bounded retries and cache invalidation. Actual isolated PostgreSQL browser commands verify an obstructed reservation stays hidden and relocates without changing its ID, type, creation/expiry, allowance or deadline, then all three types collect normally at desktop and landscape sizes. Existing shared label, march/UI, production/private integration and asset/build gates protect geometry, privacy, restored global hooks, compatible publication and loading budgets. No backend/authority changes or emulator suites required. Keep the placement helper lazy with the live camera and remove only unreferenced prototype-control CSS from the production copy to remain within existing world and installation budgets."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the owner-confirmed live map zoom-out limit and preserve the separate Inner Castle camera, private prototype and Atlas directory; no additional runtime behavior."
+      "reason": "Record the owner-approved smaller pickup presentation and current-world clearance, preserving rewards, timers and server reservation authority; deployment verified separately."
     }
   ]
 }

@@ -69,12 +69,24 @@ exports.pickup = async (page,bonus,output) => {
   const results=[],button=page.locator(`#continuous-world-pickups [data-harvest-bonus-id="${bonus.id}"]`);
   for(const [width,height] of sizes){
     await page.setViewportSize({width,height});
+    await frames(page);
+    await page.evaluate(()=>updateServerHarvestBonuses());
+    await page.waitForFunction(id=>{const b=getAllActiveHarvestBonuses().find(b=>b.id===id);return b&&isHarvestBonusPlacementSafe(b)&&!harvestSpawnRequestInFlight;},bonus.id);
+    await button.waitFor({state:"attached"});
     for(const fraction of [1,.5,.2]){
       await button.evaluate((node,fraction)=>{const v=nativeContinuousWorld.view;v.view(node.worldPoint.x,node.worldPoint.y,SeamlessModel.forWorld(v.scene).limits(v.snapshot().size).max*fraction);},fraction);
       await frames(page);
-      const sample=await button.evaluate(node=>{const b=node.getBoundingClientRect(),i=node.querySelector("img").getBoundingClientRect();return {width:b.width,height:b.height,art:i.width,ring:getComputedStyle(node,"::before").width};});
-      assert(Math.abs(sample.width-44*fraction)<.1,"Pickup hit area/glow grows at overview");
-      assert(Math.abs(sample.art-62*fraction)<.1,"Pickup artwork ignores camera scale");
+      const sample=await button.evaluate(node=>{
+        const b=node.getBoundingClientRect(),i=node.querySelector("img").getBoundingClientRect();
+        const overlaps=[...nativeContinuousWorld.root.querySelectorAll(".object>img,.object .city-label")].filter(n=>{
+          const r=n.getBoundingClientRect(),s=getComputedStyle(n);return r.width>0&&r.height>0&&s.visibility!=="hidden"&&s.display!=="none"&&r.left<i.right&&r.right>i.left&&r.top<i.bottom&&r.bottom>i.top;
+        }).length;
+        return {width:b.width,height:b.height,art:i.width,ring:getComputedStyle(node,"::before").width,safe:isHarvestBonusPlacementSafe(node.bonus),overlaps};
+      });
+      assert(sample.safe,"Pickup overlaps current map artwork");
+      assert.equal(sample.overlaps,0,"Pickup overlaps a rendered image or label");
+      assert(Math.abs(sample.width-44*.8*fraction)<.1,"Pickup hit area/glow ignores its smaller camera scale");
+      assert(Math.abs(sample.art-62*.8*fraction)<.1,"Pickup artwork ignores its smaller camera scale");
       results.push({viewport:{width,height},fraction,...sample});
       if(width===844&&fraction!==.5)await page.screenshot({path:path.join(output,`pickup-${bonus.type}-${fraction===1?"close":"overview"}.png`)});
     }
