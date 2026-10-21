@@ -216,9 +216,9 @@ window.createContinuousWorldView = async function (options = {}) {
       for (const [key, node] of nodes) if (!visibleKeys.has(key)) { node.remove(); nodes.delete(key); }
       for (const item of [...interactive, ...visibleMarches]) {
         const node = nodes.get(item.key) || createObject(item); if (item.kind !== "troop") setImage(node.firstChild, item.asset);
-        window.SeamlessAppearance?.render(node,item,{visible:camera.zoom>=.6});
+        window.SeamlessAppearance?.render(node,item,{selected:item.key===selected,zoom:camera.zoom});
         node.classList.toggle("selected", item.key === selected);
-        if (item.kind === "troop") { const pixels = `${Math.max(22, 36 * camera.zoom)}px`; if (node.style.width !== pixels) { node.style.width = pixels; node.style.height = pixels; } }
+
       }
       world.classList.toggle("close-view", camera.zoom >= M.limits(size).home);
       world.classList.toggle("overview", overview);
@@ -227,6 +227,7 @@ window.createContinuousWorldView = async function (options = {}) {
       const stats = assets.stats();
       $("load-status").textContent = stats.failed ? "Some artwork unavailable · retry" : feed?.authExpired ? "Sign in to reconnect" : feed?.failed ? "Reconnecting…" : "Connected";
       if (options.nativeUi && !stats.failed && !feed?.failed) $("load-status").textContent = "Connected";
+      $("load-status").closest("footer").hidden = !stats.failed && !feed?.failed && !feed?.authExpired;
       $("retry").hidden = !stats.failed && !feed?.failed; $("retry").textContent = feed?.authExpired ? "Sign in" : "Retry loading";
     }
     function frame(now) {
@@ -254,12 +255,13 @@ window.createContinuousWorldView = async function (options = {}) {
         const visible = activeMarches.filter(m => M.intersects(view, m.position.x-18,m.position.y-18,36,36));
         const keys = new Set(visible.map(m=>m.key));
         for (const [key,node] of nodes) if(node.classList.contains("troop") && !keys.has(key)) { node.remove();nodes.delete(key); }
-        for (const m of visible) { const node=nodes.get(m.key)||createObject(m); const pixels=`${Math.max(22,36*camera.zoom)}px`;node.style.width=pixels;node.style.height=pixels; }
+        for (const m of visible) { const node=nodes.get(m.key)||createObject(m); window.SeamlessAppearance?.render(node,m,{selected:m.key===selected,zoom:camera.zoom}); }
         patrolPlanAt=now;
       }
       const cameraKey = `${camera.x}:${camera.y}:${camera.zoom}:${size.width}:${size.height}`;
       if (cameraKey !== sceneryCamera) { sprites.scenery(scenery, camera, size); sceneryCamera = cameraKey; }
-      sprites.patrols(activeMarches, camera, size, selected, (root.activeElement || document.activeElement)?.dataset.key);
+      // Moving tokens retain the original DOM icon/count/timer presentation.
+      for(const march of activeMarches){const node=nodes.get(march.key);if(node)window.SeamlessAppearance?.tickMarch(node,march,sceneTime);}
       options.onFrame?.({ camera, size, project: p => M.project(camera, p, size) });
       if (disposed) return;
       world.style.transform = `translate3d(${size.width / 2 - camera.x * camera.zoom}px,${size.height / 2 - camera.y * camera.zoom}px,0) scale(${camera.zoom})`;
