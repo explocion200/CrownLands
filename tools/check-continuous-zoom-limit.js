@@ -1,0 +1,85 @@
+"use strict";
+const assert = require("node:assert/strict"), fs = require("node:fs"), path = require("node:path");
+const model = require("../world/model");
+const sizes = [[1440,900],[844,390],[568,320]];
+const frames = page => page.evaluate(() => new Promise(done => requestAnimationFrame(() => requestAnimationFrame(done))));
+module.exports = async function checkZoomLimit(page, source, select, output) {
+  // Anchoring and the floor must remain independent of catalog growth.
+  for (const sections of [3,12,30]) for (const [width,height] of sizes) {
+    const size={width,height}, world={width:sections*1448,height:sections*1086}, M=model.forWorld(world), range=M.limits(size);
+    assert(range.min>range.detail && range.min<range.home);
+    const camera={x:world.width/2,y:world.height/2,zoom:range.home}, anchor={x:width*.6,y:height*.4};
+    const before=M.unproject(camera,anchor,size), after=M.zoomAt(camera,size,anchor,range.min/100);
+    assert.equal(after.zoom,range.min);
+    const projected=M.project(after,before,size);
+    assert(Math.hypot(projected.x-anchor.x,projected.y-anchor.y)<1e-8,"Zoom at the floor loses its anchor");
+    assert.equal(M.clamp({...camera,zoom:0},size).zoom,range.min);
+    assert.equal(M.clamp({...camera,zoom:range.max*100},size).zoom,range.max);
+  }
+  const results=[];
+  async function check(input) {
+    await frames(page);
+    await page.waitForFunction(() => {
+      const f=nativeContinuousWorld.view.snapshot().feed;
+      return f.ids.length && !f.pending && !f.failed;
+    });
+    const sample=await page.evaluate(() => {
+      const v=nativeContinuousWorld.view, s=v.snapshot(), root=nativeContinuousWorld.root;
+      const cities=[...root.querySelectorAll(".object.castle")].filter(n=>{
+        const r=n.getBoundingClientRect();
+        return r.width>0 && r.height>0 && r.right>0 && r.bottom>0 && r.left<s.size.width && r.top<s.size.height && getComputedStyle(n).display!=="none";
+      }).length;
+      return {zoom:s.camera.zoom,range:SeamlessModel.forWorld(v.scene).limits(s.size),size:s.size,cities,areas:s.feed.ids.length,overview:root.querySelector("#world").classList.contains("overview"),assets:s.assets};
+    });
+    assert(Math.abs(sample.zoom-sample.range.min)<1e-8,"Zoom input bypassed the floor: "+input);
+    assert(sample.zoom>sample.range.detail && !sample.overview && sample.cities>0 && sample.areas>0,"Zoom hides cities or stops their feed: "+input);
+    assert(sample.assets.full<=4 && sample.assets.peakRequests<=2);
+    results.push({input,...sample});
+  }
+  try {
+    await page.evaluate(()=>{modal.close();clearSelection(false);nativeContinuousWorld.view.clear();});
+    for (const [width,height] of sizes) {
+      await page.setViewportSize({width,height}); await frames(page);
+      await select(page,source);
+      await page.evaluate(()=>{const v=nativeContinuousWorld.view,o=v.getObject(v.selectedKey);v.clear();v.view(o.x,o.y,SeamlessModel.forWorld(v.scene).limits(v.snapshot().size).home);});
+      const viewport=page.locator("#continuous-game-surface #viewport"), box=await viewport.boundingBox();
+      const center={x:box.x+box.width/2,y:box.y+box.height/2};
+      await page.mouse.move(center.x,center.y);
+      for(let i=0;i<8;i++){await page.mouse.wheel(0,600);await frames(page);}
+      await check("wheel");
+      await page.screenshot({path:path.join(output,`zoom-limit-${width}.png`)});
+      // Native controls use the same floor even though their prototype toolbar
+      // is hidden in the restored game HUD.
+      await page.evaluate(()=>{for(let i=0;i<20;i++)nativeContinuousWorld.root.querySelector("#minus").click();});
+      await check("minus control");
+      await page.evaluate(()=>nativeContinuousWorld.root.querySelector("#plus").click());await frames(page);
+      assert(await page.evaluate(()=>{const v=nativeContinuousWorld.view,s=v.snapshot();return s.camera.zoom>SeamlessModel.forWorld(v.scene).limits(s.size).min;}),"Zoom-in stuck at floor");
+      const cdp=await page.context().newCDPSession(page);
+      try {
+        for(let i=0;i<3;i++){
+          const points=distance=>[{x:center.x-distance,y:center.y,id:1},{x:center.x+distance,y:center.y,id:2}];
+          await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:points(90)});
+          for(const distance of [65,40,15,5]){await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:points(distance)});await frames(page);}
+          await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});
+        }
+      } finally { await cdp.detach(); }
+      await check("pinch");
+      // Panning and Home remain usable after repeated clamped gestures.
+      const before=await page.evaluate(()=>nativeContinuousWorld.view.snapshot().camera);
+      await page.mouse.move(center.x,center.y);await page.mouse.down();await page.mouse.move(center.x+65,center.y+15,{steps:8});await page.mouse.up();
+      const after=await page.evaluate(()=>nativeContinuousWorld.view.snapshot().camera);
+      assert(Math.hypot(after.x-before.x,after.y-before.y)>1,"Panning stuck at minimum zoom");
+      await check("drag at floor");
+      await page.evaluate(()=>{const v=nativeContinuousWorld.view,c=v.snapshot().camera;v.view(c.x,c.y,0.000001);});
+      await check("navigation clamp");
+      await page.setViewportSize({width:width+20,height:height+10});await check("resize");
+      await page.setViewportSize({width,height});await check("resize back");
+      await page.evaluate(()=>nativeContinuousWorld.view.home());await frames(page);
+      assert(await page.evaluate(()=>{const v=nativeContinuousWorld.view,s=v.snapshot();return Math.abs(s.camera.zoom-SeamlessModel.forWorld(v.scene).limits(s.size).home)<1e-8;}),"Home no longer restores the fitted view");
+    }
+    fs.writeFileSync(path.join(output,"zoom-limit-checks.json"),JSON.stringify(results,null,2));
+  } finally {
+    await page.setViewportSize({width:1440,height:900});await frames(page);
+    await page.evaluate(()=>nativeContinuousWorld.view.home());await select(page,source);
+  }
+};

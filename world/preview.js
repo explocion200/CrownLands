@@ -193,7 +193,7 @@ window.createContinuousWorldView = async function (options = {}) {
     const observer = new ResizeObserver(resize); observer.observe(viewport); resize();
     function renderScene() {
       const view = M.visible(camera, size, 75), exact = M.visible(camera, size);
-      const overview = camera.zoom < M.limits(size).home * 0.56;
+      const overview = camera.zoom < M.limits(size).detail;
       const ordered = [...scene.sections].sort((a, b) => Math.hypot(a.x + 724 - camera.x, a.y + 543 - camera.y) - Math.hypot(b.x + 724 - camera.x, b.y + 543 - camera.y));
       const visibleSections = ordered.filter(s => M.intersects(exact, s.x, s.y, s.width, s.height));
       const fullSections = overview ? [] : [...visibleSections, ...ordered.filter(s => !visibleSections.includes(s))].slice(0, 4);
@@ -248,7 +248,7 @@ window.createContinuousWorldView = async function (options = {}) {
       if (lastFrame && !document.hidden) { frameTimes.push(now - lastFrame); if (frameTimes.length > 900) frameTimes.shift(); }
       sceneTime = frozenTime ?? now / 1000 + serverTimeOffset;
       const view = M.visible(camera, size, 100);
-      activeMarches = (fullCatalog && camera.zoom < M.limits(size).home * .56 ? [] : marches).filter(m => M.intersects(view, m.bounds.left, m.bounds.top, m.bounds.right - m.bounds.left, m.bounds.bottom - m.bounds.top));
+      activeMarches = (fullCatalog && camera.zoom < M.limits(size).detail ? [] : marches).filter(m => M.intersects(view, m.bounds.left, m.bounds.top, m.bounds.right - m.bounds.left, m.bounds.bottom - m.bounds.top));
       for (const march of activeMarches) {
           let progress = Math.min(1, Math.max(0, (sceneTime - march.departAt) / (march.arriveAt - march.departAt)));
           if(march.returning)progress=march.returnStartProgress*(1-Math.min(1,Math.max(0,(sceneTime-march.recalledAt)/(march.arriveAt-march.recalledAt))));
