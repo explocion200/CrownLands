@@ -4,7 +4,7 @@ const {Store}=require("../../../local-backend/store");
 const {LiveReader}=require("./live-reader");
 const {fixture,catalog,imageToGame}=require("./live-catalog");
 const topology=require("../../../functions/coreExpansionTopology");
-async function createFixture({players=100,crowded=false,appearances=false}={}){
+async function createFixture({players=100,crowded=false,appearances=false,openWorld=false}={}){
   const schema="migration_reader_test_"+crypto.randomBytes(6).toString("hex"),store=new Store({schema});
   const realm={worldId:"main-realm-reader-test",resetGeneration:"realm-reader-test",realmShardId:"shard_0001"};
   const island=id=>`islands/${realm.worldId}--${realm.realmShardId}--${id}`;
@@ -19,7 +19,7 @@ async function createFixture({players=100,crowded=false,appearances=false}={}){
   if(appearances)for(const [i,g]of grants.entries())await store.doc("playerCosmetics/"+g.uid).set({equipped:{city:i%2?"templar_city":"halloween_city"},privateSecret:"not-a-map-field"});
   const {Pool}=require("../../../local-backend/node_modules/pg");
   readPool=new Pool({host:"/var/run/postgresql",database:"crownlands_migration",max:2,connectionTimeoutMillis:250,options:"-c default_transaction_read_only=on",application_name:"world-reader-isolated-load"});
-  const reader=new LiveReader({pool:readPool,schema});await reader.initialize(grants[0].uid);
+  const reader=new LiveReader({pool:readPool,schema,openWorld});await reader.initialize(grants[0].uid);
   const writes=[];const batch={set:(ref,data)=>writes.push([ref,data])};
   for(const section of reader.manifest.sections){
     const base=fixture.sections.find(s=>s.id===section.templateId);

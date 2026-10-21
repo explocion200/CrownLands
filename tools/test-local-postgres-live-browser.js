@@ -4,9 +4,9 @@ const {CdpClient}=require("./map-benchmark/cdp-client");
 const {startBrowserSession,waitForProcessExit,removeBrowserProfile}=require("./validate-focused-browser-smoke");
 const {createFixture}=require("./map-benchmark/seamless/live-test-fixture"),{createLiveServer}=require("./map-benchmark/seamless/live-server");
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-async function main(){
- const f=await createFixture({players:2,crowded:true,appearances:true}),server=await createLiveServer({reader:f.reader,grants:f.grants}),address=await server.listen();
- const browsers=[],clients=[],errors=[],external=[],measurements=[];const output=path.resolve("release-artifacts/continuous-live-reader");fs.mkdirSync(output,{recursive:true});
+async function main({openWorld=false}={}){
+ const f=await createFixture({players:2,crowded:true,appearances:true,openWorld}),server=await createLiveServer({reader:f.reader,grants:f.grants}),address=await server.listen();
+ const browsers=[],clients=[],errors=[],external=[],measurements=[];const output=path.resolve(openWorld?"release-artifacts/continuous-open-routing":"release-artifacts/continuous-live-reader");fs.mkdirSync(output,{recursive:true});
  try{
   for(let i=0;i<2;i++){
    const browser=await startBrowserSession(process.env.CHROME_PATH||"/usr/bin/google-chrome");browsers.push(browser);
@@ -45,9 +45,38 @@ async function main(){
   // Wait explicitly with the identity in the expression; no global game data.
   for(let n=0;n<30;n++){if(await evaluate(0,key=>seamlessPreview.scene.objects.find(o=>o.key===key)?.troopVisibility==="hidden",city.key))break;await sleep(200);}
   assert.equal(await evaluate(0,key=>seamlessPreview.scene.objects.find(o=>o.key===key).troopVisibility,city.key),"hidden");
+  if(openWorld){
+   await evaluate(0,()=>seamlessPreview.home());await sleep(1200);
+   const endpoints=await evaluate(0,()=>{
+    const s=seamlessPreview.scene,home=s.sections.find(s=>s.id===seamlessPreview.scene.homeSectionId),east=s.sections.find(s=>s.x===home.x+1448&&s.y===home.y);
+    const from=s.objects.filter(o=>o.kind==="castle"&&o.sectionId===home.id&&o.previewLocal.x>1300).sort((a,b)=>a.y-b.y)[0];
+    const to=s.objects.filter(o=>o.kind==="castle"&&o.sectionId===east.id&&o.previewLocal.x<120).sort((a,b)=>Math.abs(a.y-from.y)-Math.abs(b.y-from.y))[0];
+    return{from,to};
+   });assert.ok(endpoints.from&&endpoints.to);
+   await evaluate(0,o=>{seamlessPreview.view(o.x,o.y);seamlessPreview.select(o.key);document.getElementById("route-from").click();},endpoints.from);
+   await evaluate(0,o=>{seamlessPreview.view(o.x,o.y);seamlessPreview.select(o.key);document.getElementById("route-to").click();},endpoints.to);
+   await wait(0,()=>!!seamlessPreview.routeDraft.snapshot().route);
+   const route=await evaluate(0,()=>seamlessPreview.routeDraft.snapshot().route);
+   assert.deepEqual(route.points[0],{x:endpoints.from.x,y:endpoints.from.y});assert.deepEqual(route.points.at(-1),{x:endpoints.to.x,y:endpoints.to.y});
+   await evaluate(0,()=>document.getElementById("route-follow").click());await sleep(400);
+   assert.equal(await evaluate(0,()=>seamlessPreview.routeDraft.snapshot().following),true);
+   await evaluate(0,()=>seamlessPreview.view(seamlessPreview.snapshot().camera.x+30,seamlessPreview.snapshot().camera.y));
+   assert.equal(await evaluate(0,()=>seamlessPreview.routeDraft.snapshot().following),false);
+   await evaluate(0,()=>{document.getElementById("route-to").click();document.getElementById("route-clear").click();});await sleep(1100);
+   assert.equal(await evaluate(0,()=>seamlessPreview.routeDraft.snapshot().route),null,"Obsolete route response restored cleared state");
+  }
   for(const [width,height]of[[1440,900],[844,390],[568,320]]){
    await clients[0].send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:width<1000});await clients[0].send("Emulation.setCPUThrottlingRate",{rate:width<1000?4:1});
    await evaluate(0,()=>seamlessPreview.home());await sleep(1100);
+   if(openWorld){
+    await evaluate(0,()=>{const o=seamlessPreview.scene.objects.find(o=>o.kind==="castle");seamlessPreview.select(o.key);});
+    const touch=width<1000;
+    const point=await evaluate(0,()=>{const r=document.getElementById("route-from").getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2};});
+    if(touch){await clients[0].send("Emulation.setTouchEmulationEnabled",{enabled:true});await clients[0].send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[point]});await clients[0].send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});}
+    else{await clients[0].send("Input.dispatchMouseEvent",{type:"mousePressed",...point,button:"left",clickCount:1});await clients[0].send("Input.dispatchMouseEvent",{type:"mouseReleased",...point,button:"left",clickCount:1});}
+    assert.ok(await evaluate(0,()=>seamlessPreview.routeDraft.snapshot().source));
+    assert.equal(await evaluate(0,()=>{const a=document.querySelector(".open-route-panel").getBoundingClientRect(),b=document.getElementById("inspector").getBoundingClientRect();return a.right>b.left&&a.bottom>b.top;}),false,"Mobile route panels overlap");
+   }
    const result=await evaluate(0,async()=>{const base=seamlessPreview.snapshot().camera;seamlessPreview.resetMetrics();const start=performance.now();await new Promise(resolve=>{function move(t){const n=(t-start)/1000;seamlessPreview.view(base.x+Math.sin(n)*350,base.y+Math.cos(n)*180,base.zoom*(1+0.08*Math.sin(n)));if(n<6)requestAnimationFrame(move);else resolve();}requestAnimationFrame(move);});const s=seamlessPreview.snapshot(),frames=s.frameTimes.slice().sort((a,b)=>a-b);return{fps:1000/(frames.reduce((a,b)=>a+b,0)/frames.length),p95:frames[Math.floor(frames.length*.95)],assets:s.assets,nodes:s.nodes,listeners:s.listeners};});
    measurements.push({width,height,...result});assert.ok(result.assets.full<=4&&result.assets.thumbnails<=16&&result.assets.peakRequests<=2);assert.equal(result.assets.failed,0);
    assert.equal(await evaluate(0,()=>document.documentElement.scrollWidth>innerWidth),false);
@@ -70,6 +99,7 @@ async function main(){
   await evaluate(0,()=>seamlessPreview.home());await sleep(1500);
   await f.store.doc(`players/${f.grants[0].uid}`).update({resetGeneration:"old"});await wait(0,()=>seamlessPreview.snapshot().feed.authExpired);
   assert.equal(await evaluate(0,()=>seamlessPreview.snapshot().feed.objects),0);assert.equal(await evaluate(0,()=>seamlessPreview.snapshot().selected),null);
+  if(openWorld)assert.equal(await evaluate(0,()=>seamlessPreview.routeDraft.snapshot().source),null,"Revocation retained draft data");
   assert.deepEqual(errors,[]);assert.deepEqual(external,[]);
   fs.writeFileSync(path.join(output,"browser.json"),JSON.stringify({at:new Date().toISOString(),fictionalAccounts:2,measurements,errors,external},null,2));
   console.log("Two independent viewers: disclosure isolation, live ownership update, 112-section overview, desktop/mobile rendering, revoked membership and no external requests passed.");
@@ -78,4 +108,5 @@ async function main(){
   await server.close();await f.close();
  }
 }
-main().catch(e=>{console.error(e);process.exitCode=1;});
+if(require.main===module)main().catch(e=>{console.error(e);process.exitCode=1;});
+module.exports={main};

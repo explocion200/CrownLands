@@ -22,7 +22,7 @@
       const path = M.preparePath(points);
       return { ...m, points, path, position: points[0], bounds: { left: Math.min(...points.map(p => p.x)), top: Math.min(...points.map(p => p.y)), right: Math.max(...points.map(p => p.x)), bottom: Math.max(...points.map(p => p.y)) } };
     }
-    let marches = scene.marches.map(m => prepareMarch(m, m.points)), activeMarches = marches, feed = null, feedEpoch = null, feedViewer = null, selectedSnapshot = null;
+    let marches = scene.marches.map(m => prepareMarch(m, m.points)), activeMarches = marches, feed = null, feedEpoch = null, feedViewer = null, selectedSnapshot = null, routeDraft = null;
     const byMarch = new Map(marches.map(m => [m.key, m]));
     const nodes = new Map(), terrain = new Map();
     let patrolPlanAt = 0;
@@ -38,7 +38,7 @@
     const homeSection = scene.sections.find(s => s.id === scene.homeSectionId);
     function on(target, event, handler, options) { target.addEventListener(event, handler, options); listenerCount++; cleanups.push(() => target.removeEventListener(event, handler, options)); }
     function center() { return { x: size.width / 2, y: size.height / 2 }; }
-    function home() { following = null; camera = M.clamp({ x: homeSection.x + 724, y: homeSection.y + 543, zoom: M.limits(size).home }, size); dirty = true; refreshInspector(); }
+    function home() { following = null; routeDraft?.cancelFollow(); camera = M.clamp({ x: homeSection.x + 724, y: homeSection.y + 543, zoom: M.limits(size).home }, size); dirty = true; refreshInspector(); }
     function resize() {
       const previous = size; size = { width: viewport.clientWidth, height: viewport.clientHeight };
       if (!camera) home();
@@ -74,9 +74,10 @@
     function refreshInspector() {
       const item = objects.get(selected) || byMarch.get(selected) || (selectedSnapshot?.key === selected ? selectedSnapshot : null);
       $("inspector").hidden = !item;
+      routeDraft?.update();
       if (!item) return;
       selectedSnapshot = item;
-      $("kind").textContent = item.kind === "troop" ? `${scene.liveReadOnly ? "March" : "Sample march"} · read only` : `${item.kind} · read only`;
+      $("kind").textContent = item.kind === "troop" ? `${item.recordedRoute?"Existing march · original route":scene.liveReadOnly ? "March" : "Sample march"} · read only` : `${item.layoutUnmapped?"Castle · draft position needs review":item.kind} · read only`;
       $("name").textContent = item.name;
       const sectionName = item.kind === "troop" ? sectionAt(item.position)?.name : item.sectionName;
       $("section").textContent = `${sectionName || "Preview edge"}${fullCatalog && (feed?.failed || (!objects.has(selected) && !byMarch.has(selected))) ? " · last received" : ""}`; lastInspectorSection = sectionName;
@@ -87,7 +88,7 @@
       $("follow").textContent = following === selected ? "Stop following" : "Follow";
     }
     function select(key) { if (objects.get(key)?.selectable || byMarch.has(key)) { selected = key; dirty = true; refreshInspector(); } }
-    function cancelFollow() { if (following) { following = null; refreshInspector(); } }
+    function cancelFollow() { routeDraft?.cancelFollow(); if (following) { following = null; refreshInspector(); } }
     function point(event) { const rect = viewport.getBoundingClientRect(); return { x: event.clientX - rect.left, y: event.clientY - rect.top }; }
     function beginGesture() {
       const points = [...pointers.values()];
@@ -145,7 +146,7 @@
     on($("fit"), "click", () => { cancelFollow(); camera = M.clamp({ x: scene.width / 2, y: scene.height / 2, zoom: M.limits(size).min }, size); dirty = true; });
     for (const [id, factor] of [["plus", 1.25], ["minus", 0.8]]) on($(id), "click", () => { camera = M.zoomAt(camera, size, center(), camera.zoom * factor); dirty = true; });
     on($("close"), "click", () => { selected = null; cancelFollow(); dirty = true; refreshInspector(); });
-    on($("follow"), "click", () => { following = following === selected ? null : selected; dirty = true; refreshInspector(); });
+    on($("follow"), "click", () => { routeDraft?.cancelFollow(); following = following === selected ? null : selected; dirty = true; refreshInspector(); });
     on($("retry"), "click", () => { if (feed?.authExpired) { location.replace("./login"); return; } assets.retry(); feed?.refresh(); dirty = true; });
     if (fullCatalog) {
       const Feed = stageThree ? window.SeamlessDeltaFeed.DeltaFeed : window.SeamlessFeed.AreaFeed;
@@ -154,6 +155,8 @@
         if (data.viewer) feedViewer = data.viewer;
         const epochChanged = stageThree && data.epoch && data.epoch !== feedEpoch;
         if (data.epoch) feedEpoch = data.epoch;
+        if (principalChanged || epochChanged || data.authExpired) routeDraft?.clear();
+        if (data.removed?.includes(routeDraft?.source?.key)) routeDraft.clear();
         if (stageThree && Number.isFinite(data.serverTime)) serverTimeOffset = data.serverTime - data.receivedAt;
         const inspectedSections = selectedSnapshot?.kind === "troop" ? selectedSnapshot.sections : [selectedSnapshot?.sectionId];
         const inspectedAreaPresent = inspectedSections.some(id => data.sections.some(s => s.id === id));
@@ -179,7 +182,7 @@
       const poll = setInterval(() => { if (!document.hidden) feed.refresh(); }, stageThree ? 1000 : 5000); cleanups.push(() => clearInterval(poll));
       on(window, "online", () => feed.refresh());
       if (stageThree) {
-        document.querySelector("header small").textContent = scene.liveReadOnly ? "Private preview · read-only game data" : "Private Stage 3 · sample data";
+        document.querySelector("header small").textContent = scene.openWorldDraft ? "Private open-world draft · read-only game data" : scene.liveReadOnly ? "Private preview · read-only game data" : "Private Stage 3 · sample data";
         const logout = document.createElement("button"); logout.textContent = scene.cohortReadOnly ? "Return to game" : "Sign out"; logout.id = "sign-out"; document.querySelector("header nav").append(logout);
         on(logout, "click", async () => {
           if(scene.cohortReadOnly){location.assign("/play/");return;}
@@ -200,6 +203,7 @@
       });
     }
     const observer = new ResizeObserver(resize); observer.observe(viewport); resize();
+    if(scene.openWorldDraft){routeDraft=new window.SeamlessRoutePreview({scene,viewport,selected:()=>objects.get(selected)||byMarch.get(selected),navigate:p=>{if(following){following=null;refreshInspector();}camera=M.clamp({...camera,...p},size);}});cleanups.push(()=>routeDraft.dispose());}
     function renderScene() {
       const view = M.visible(camera, size, 75), exact = M.visible(camera, size);
       const overview = camera.zoom < M.limits(size).home * 0.56;
@@ -262,6 +266,7 @@
         }
       }
       if (following) { const m = byMarch.get(following); camera = M.clamp({ ...camera, ...m.position }, size); }
+      routeDraft?.tick(now);
       // Camera transforms remain frame-synchronous. Reconcile the larger scene
       // only when its culling margin or zoom requires it. Patrol hit targets
       // reconcile separately every 120ms; their visual positions update each frame.
@@ -279,6 +284,7 @@
       if (cameraKey !== sceneryCamera) { sprites.scenery(scenery, camera, size); sceneryCamera = cameraKey; }
       sprites.patrols(activeMarches, camera, size, selected, document.activeElement?.dataset.key);
       world.style.transform = `translate3d(${size.width / 2 - camera.x * camera.zoom}px,${size.height / 2 - camera.y * camera.zoom}px,0) scale(${camera.zoom})`;
+      routeDraft?.draw(camera,size);
       for (const march of activeMarches) { const node = nodes.get(march.key); if (node) { const p = M.project(camera, march.position, size); node.style.transform = `translate3d(${p.x}px,${p.y}px,0) translate(-50%,-50%)`; } }
       const selectedMarch = byMarch.get(selected);
       if (selectedMarch && sectionAt(selectedMarch.position)?.name !== lastInspectorSection) refreshInspector();
@@ -290,8 +296,8 @@
     on(window, "pagehide", () => { cancelAnimationFrame(raf); observer.disconnect(); sprites.dispose(); assets.dispose(); feed?.dispose(); cleanups.forEach(fn => fn()); });
     // Deliberately present only in this loopback document, for deterministic QA.
     window.seamlessPreview = {
-      scene, home, select, refresh: () => feed?.refresh(),
-      snapshot: () => ({ camera: { ...camera }, size: { ...size }, selected, following, assets: assets.stats(), feed: feed?.stats(), nodes: nodes.size, listeners: listenerCount, frameTimes: [...frameTimes], workTimes: [...workTimes], marches: marches.map(m => ({ key: m.key, position: m.position })) }),
+      scene, home, select, routeDraft, refresh: () => feed?.refresh(),
+      snapshot: () => ({ camera: { ...camera }, size: { ...size }, selected, following, assets: assets.stats(), feed: feed?.stats(), nodes: nodes.size, listeners: listenerCount+(routeDraft?.cleanups.length||0), frameTimes: [...frameTimes], workTimes: [...workTimes], marches: marches.map(m => ({ key: m.key, position: m.position })) }),
       view: (x, y, zoom) => { cancelFollow(); camera = M.clamp({ x, y, zoom: zoom ?? camera.zoom }, size); },
       time: value => { frozenTime = value; dirty = true; },
       resetMetrics: () => { frameTimes.length = 0; workTimes.length = 0; }
