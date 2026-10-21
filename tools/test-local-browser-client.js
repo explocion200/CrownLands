@@ -15,7 +15,7 @@ const { COOKIE, CSRF } = require("../local-backend/auth-http");
   const owner = { localId: "fixture-browser", email: "browser@example.test", emailVerified: true, providerUserInfo: [{ providerId: "google.com", rawId: "fixture-browser-google" }] };
   const scope = { resetGeneration: "realm-2026-10", worldId: "main-realm-2026-10", realmShardId: "shard_0001" };
   const island = scope.worldId + "--" + scope.realmShardId + "--fixture";
-  let server, client, signed, nextId = 0, reads = 0, pauseWatch, resumeWatch, logOut = false, writeConflict = false, activeRequests = 0, peakRequests = 0, holdCalls = false;
+  let server, client, signed, nextId = 0, reads = 0, worldReads = 0, pauseWatch, resumeWatch, logOut = false, writeConflict = false, activeRequests = 0, peakRequests = 0, holdCalls = false;
   const releaseCalls = [];
   const timers = new Map(), intervals = new Map();
   try {
@@ -26,7 +26,11 @@ const { COOKIE, CSRF } = require("../local-backend/auth-http");
     await store.doc("players/" + owner.localId).set({ ...scope, uid: owner.localId, marchPercent: 70, scoutReports: { stale: 1, keep: 2 }, updatedAt: new Timestamp(1700000000, 123456789) });
     for (let i = 1; i <= 3; i++) await store.doc(`islands/${island}/cities/city${i}`).set({ ...scope, ownerUid: owner.localId, rank: i });
     await store.doc(`islands/${island}/cities/other`).set({ ...scope, ownerUid: "someone-else", rank: 4 });
-    server = createGameServer({ store, auth, routes: [{ name: "fixtureEcho", kind: "callable", handler: async req => ({ value: req.data.value, uid: req.auth.uid }) }], ownerUid: owner.localId, expiresAt: new Date(Date.now() + 600000).toISOString() });
+    server = createGameServer({ store, auth, worldData: { schema, async read(identity, operation) {
+      worldReads++; assert.equal(identity.uid, owner.localId);
+      if (operation === "areas") throw Object.assign(Error("Realm changed"), { code: "failed-precondition", status: 409 });
+      return { ready: true };
+    } }, routes: [{ name: "fixtureEcho", kind: "callable", handler: async req => ({ value: req.data.value, uid: req.auth.uid }) }], ownerUid: owner.localId, expiresAt: new Date(Date.now() + 600000).toISOString() });
     await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
     const root = {
       location: { origin: auth.origin, pathname: "/api/local-game/rehearsal/" }, document: { hidden: false },
@@ -43,7 +47,7 @@ const { COOKIE, CSRF } = require("../local-backend/auth-http");
         activeRequests++; peakRequests = Math.max(peakRequests, activeRequests);
         if (holdCalls) await new Promise(resolve => releaseCalls.push(resolve));
         return new Promise((resolve, reject) => {
-          const request = http.request({ hostname: "127.0.0.1", port: server.address().port, path: url, method: options.method,
+          const request = http.request({ hostname: "127.0.0.1", port: server.address().port, path: url, method: options.method, signal: options.signal,
             headers: { ...options.headers, Host: "playcrownlands.com", Origin: auth.origin,
               Cookie: `${CSRF}=${csrf}; ${COOKIE}=${signed.token}`, "X-Crownlands-Client-IP": "192.168.1.145", "Sec-Fetch-Site": "same-origin" } }, response => {
             const chunks = []; response.on("data", chunk => chunks.push(chunk));
@@ -75,6 +79,15 @@ const { COOKIE, CSRF } = require("../local-backend/auth-http");
     const burst = await Promise.all(Array.from({ length: 30 }, (_, value) => client.functions.httpsCallable({}, "fixtureEcho")({ value })));
     assert.deepEqual(burst.map(result => result.data.value), Array.from({ length: 30 }, (_, value) => value));
     assert.equal(peakRequests, 6, "Startup bursts must queue below the server admission limit");
+    holdCalls = true;
+    const occupied = Array.from({ length: 6 }, () => client.functions.httpsCallable({}, "fixtureEcho")({ value: 1 }));
+    await new Promise(resolve => setImmediate(resolve)); assert.equal(releaseCalls.length, 6);
+    const cancel = new AbortController(), obsolete = client.world.read("catalog", {}, cancel.signal);
+    cancel.abort(); await assert.rejects(obsolete, { name: "AbortError" });
+    holdCalls = false; for (const release of releaseCalls.splice(0)) release(); await Promise.all(occupied);
+    assert.equal(worldReads, 0, "Cancelled queued camera requests must never reach the server");
+    assert.deepEqual(await client.world.read("catalog"), { ready: true });
+    await assert.rejects(client.world.read("areas", { realm: "changed", ids: [] }), { status: 409 });
     let attempts = 0; writeConflict = true;
     await f.runTransaction(db, async tx => { attempts++; const before = await tx.get(profile); tx.update(profile, { marchPercent: before.get("marchPercent") + 1 }); });
     assert.equal(attempts, 2); assert.equal((await f.getDoc(profile)).get("marchPercent"), 41);

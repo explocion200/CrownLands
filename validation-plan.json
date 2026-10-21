@@ -1,23 +1,101 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "d47de14cdee3d3ed53f426602a5eadd8f274056e",
+  "baseCommit": "f060085ca45cd292ebfc0f8bfdac47ef9cb49a20",
   "coverage": [
     {
       "paths": [
-        ".github/workflows/crownlands-local-publish.yml"
+        "firebaseClient.js",
+        "local-client.js",
+        "tools/test-local-browser-client.js"
       ],
       "tests": [
-        "tools/test-local-deployment.js",
-        "tools/validate-production-artifact.js"
+        "tools/test-local-browser-client.js",
+        "tools/test-local-chat-client.js",
+        "tools/test-local-production-client.js",
+        "tools/test-local-postgres-native-auth-world.js",
+        "functions/test/emulator-army-listener-rules.js"
       ],
-      "reason": "Recent publish runs fail at dependency installation because pnpm refuses the unapproved Sharp build script. Match the already-validated frozen script-free install; preserve exact-head PR checks, signature, immutable release, runtime compatibility and rollback. Verify publisher security tests plus the real production build/artifact using locked prebuilt dependencies. Also tested a fresh temporary install and Sharp native image transform with install scripts disabled."
+      "reason": "The optional area facade uses real local sessions and bounded client transport. Verify queued abort/disposal, HTTP status preservation, auth revocation, exact production minification and unchanged chat/normal RPC; exercise actual cookie-authenticated UI and existing army disclosure rules."
     },
     {
       "paths": [
-        "docs/AUTOMATIC_LOCAL_DEPLOYMENT.md"
+        "local-backend/game-http.js",
+        "tools/test-local-postgres-game-http.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-game-http.js",
+        "tools/test-local-postgres-native-auth-world.js"
+      ],
+      "reason": "Reader capability remains absent by default and same-schema only; exercise real cookie/CSRF/origin/owner checks, no-store, input allowlist, post-read revocation, separate polling quotas and normal deadline/transaction guards. Real two-account tests use actual HTTP handlers in disposable schemas."
+    },
+    {
+      "paths": [
+        "game.js",
+        "tools/map-benchmark/seamless/native-game.js"
+      ],
+      "tests": [
+        "tools/validate-continuous-game-ui.js",
+        "tools/test-local-postgres-native-auth-world.js",
+        "tools/test-local-postgres-native-world-ui.js",
+        "tools/validate-authoritative-army-orders.js",
+        "tools/validate-holding-tower-client-lifecycle.js",
+        "functions/test/emulator-bulk-army-orders.js"
+      ],
+      "reason": "Qualified Nearby/Regroup inputs and alternate Tower action surface are inert outside the private adapter. Test normal/native buttons, identities, action affordability/confirmation, source retention, restored legacy renderer, control bounds and authoritative bulk range/idempotency behavior."
+    },
+    {
+      "paths": [
+        "tools/map-benchmark/seamless/preview.js"
+      ],
+      "tests": [
+        "tools/validate-seamless-world.js",
+        "tools/validate-seamless-world-browser.js",
+        "tools/test-local-postgres-native-auth-world.js"
+      ],
+      "reason": "Injected real area deltas, march reconciliation, native inspector and selection invalidation affect existing preview shared paths. Verify seams, anchored zoom/touch, asset failures, four-image/two-request limits, Follow and permission-loss handling; no scene rebuild per pointer move."
+    },
+    {
+      "paths": [
+        "tools/map-benchmark/seamless/live-reader.js",
+        "tools/test-local-postgres-live-reader.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-live-reader.js",
+        "tools/test-local-postgres-native-auth-world.js"
+      ],
+      "reason": "Unmaterialized current-catalog Towers use the same neutral defaults as the real server without creating documents. Verify exact/hidden isolation, current realm and shard, no reader writes, catalog changes, revocation and current/generated section geometry."
+    },
+    {
+      "paths": [
+        "tools/map-benchmark/seamless/gameplay-pilot.js",
+        "tools/map-benchmark/seamless/native-auth-harness.js",
+        "tools/test-local-postgres-native-auth-world.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-native-auth-world.js",
+        "tools/validate-continuous-game-ui.js"
+      ],
+      "reason": "Expose real registered handlers only through the existing in-process disposable-world capability. Run two normal authenticated browser clients, real saved attacks/scouts/recalls/reinforcements/rallies, UI target parity, transient outage, worker retry, private visibility, CPU-throttled viewports and zero external traffic; keep production package and optional pilot inactive."
+    },
+    {
+      "paths": [
+        "tools/test-local-postgres-world-commands.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-world-commands.js",
+        "tools/validate-world-command-routing.js"
+      ],
+      "reason": "Extend movement compatibility evidence with a fresh server process that has no draft routing provider. Persist and settle both old/new paths unchanged after restart/rollback, retain real-handler retry/arrival/recall and three-player rally cases, and recheck bounded worker throughput."
+    },
+    {
+      "paths": [
+        "docs/CONTINUOUS_WORLD_NATIVE_UI.md",
+        "docs/CONTINUOUS_WORLD_ROLLOUT.md",
+        "docs/CONTINUOUS_WORLD_GAMEPLAY_PILOT.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Document the existing validator/publisher install policy alignment; no gameplay, dependency versions, permission grants, installed publisher or backend policy changes."
+      "reason": "Record owner-approved authenticated integration, exact scope of test evidence, waived human pilot and concrete backend/client sequencing with remaining production gates. These documentation edits do not enable production routing or claim a deployment."
     }
   ]
 }

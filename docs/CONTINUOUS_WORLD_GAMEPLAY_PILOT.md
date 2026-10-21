@@ -26,7 +26,7 @@ Desktop 1440×900 and landscape 844×390 / 568×320 use actual browser input; mo
 
 ## Remaining production integration
 
-The [first normal-game UI rehearsal](CONTINUOUS_WORLD_NATIVE_UI.md) now connects native city controls and verifies a real cross-section order in isolated tests. Its authenticated area feed and remaining HUD actions are still unfinished.
+The [authenticated normal-game UI rehearsal](CONTINUOUS_WORLD_NATIVE_UI.md) connects session-checked area updates, persisted movements and native controls in two-account isolated tests. Follow, recovery, disclosure and saved old/new routes through a fresh backend process are covered. The [rollout contract](CONTINUOUS_WORLD_ROLLOUT.md) distinguishes this milestone from required production provider, package and protocol work.
 
 Skipping the hands-on pilot removes that scheduling gate. It does not complete the following engineering work:
 

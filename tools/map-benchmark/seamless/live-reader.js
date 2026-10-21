@@ -3,7 +3,8 @@ const crypto=require("node:crypto");
 const {Store}=require("../../../local-backend/store");
 const {Access}=require("../../../local-backend/access");
 const {decode}=require("../../../local-backend/values");
-const {buildCatalog,safeAsset,catalog,fixture,gameToImage}=require("./live-catalog");
+const {buildCatalog,safeAsset,catalog,fixture,gameToImage,imageToGame}=require("./live-catalog");
+const Towers=require("../../../functions/holding-towers");
 const {CASTLE_SIZE}=require("./layout");
 const {createDisplayLayout}=require("./open-world-layout");
 const Cosmetics=require("../../../functions/cosmetics");
@@ -169,6 +170,15 @@ class LiveReader {
     const towers=await this.store.get(this.store.collection("holdingTowers").where("worldId","==",realm.worldId).where("resetGeneration","==",realm.resetGeneration).where("realmShardId","==",realm.sharedRealmId).limit(32),client);
     const rows=result.rows.map(row=>({path:row.path,data:this.decode(row.body)}));
     for(const tower of towers.docs){const data=tower.data();if(ids.includes(data.regionId))rows.push({path:tower.ref.path,data});}
+    // The normal game materializes an unclaimed tower from its definition even
+    // before a tower document exists. Match that public default without writes.
+    for(const tower of Towers.TOWERS){
+      const section=this.sections.get(tower.regionId);
+      if(!section||!ids.includes(section.id)||rows.some(row=>row.path===`holdingTowers/${tower.id}`))continue;
+      const point=imageToGame(section,{x:tower.reservedX,y:tower.reservedY});
+      rows.push({path:`holdingTowers/${tower.id}`,data:{...Towers.createNeutralTowerState(tower.id,{worldId:realm.worldId,resetGeneration:realm.resetGeneration,nowMs:now}),
+        realmShardId:realm.sharedRealmId,regionId:section.id,x:Math.round(point.x),y:Math.round(point.y)}});
+    }
     const owners=[...new Set(rows.map(r=>r.data.ownerUid||r.data.holderUid).filter(uid=>typeof uid==="string"&&uid.length<=128&&!uid.includes("/")))];
     const appearances=owners.length?await client.query(`SELECT path,body#>>'{fields,equipped,mapValue,fields,city,stringValue}' AS skin FROM ${this.schema}.documents WHERE path=ANY($1::text[])`,[owners.map(uid=>"playerCosmetics/"+uid)]):{rows:[]};
     const skins=new Map(appearances.rows.map(r=>[r.path.slice("playerCosmetics/".length),r.skin]));

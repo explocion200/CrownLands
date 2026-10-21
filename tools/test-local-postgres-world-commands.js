@@ -141,6 +141,37 @@ const { createTravelFixture, canonicalCity } = require("./world-travel-test-fixt
     const reversed = { id: returning.id, ...await read(db.doc(`armies/${returning.id}`)) };
     assert(reversed.pathSegments.every(s => s.geometryId === returning.pathSegments[0].geometryId));
     await settle(leader, reversed); scenarios.push("recall retains original geometry version");
+    // An actual fresh server process must settle persisted routes with the
+    // draft provider absent. This tests restart/rollback, not just a boolean.
+    routing.setEnabled(false);
+    const restartOld = (await call("sendArmyOrder", leader, payload(source, target))).movement;
+    routing.setEnabled(true);
+    const restartNew = await launch(leader, source, target);
+    await due(restartOld); await due(restartNew);
+    const restartScript = `
+      const assert=require('node:assert/strict');
+      const input=JSON.parse(process.argv[1]);
+      if(!/^migration_game_worldtest_[a-f0-9]{12}$/.test(process.env.CROWNLANDS_REHEARSAL_SCHEMA))throw Error('Disposable schema required');
+      const platform=require('./functions/platform'),game=require('./functions');
+      (async()=>{try{
+        assert.equal(platform.privateWorldRouting,undefined);
+        for(const id of input.ids){
+          const ref=platform.store.doc('armies/'+id),before=(await ref.get()).data();
+          assert.equal(before.status,'active');
+          const result=await game.resolveArmyOrder({auth:{uid:input.uid,token:{email_verified:true,firebase:{sign_in_provider:'google.com'}}},
+            data:{armyId:id,routeRegionIds:before.routeRegionIds,...input.scope}});
+          assert(result.ok);
+          const after=(await ref.get()).data();assert.equal(after.status,'resolved');
+          assert.deepEqual(after.pathSegments,before.pathSegments);
+          assert.equal(after.launchedAtMs,before.launchedAtMs);assert.equal(after.arrivesAtMs,before.arrivesAtMs);
+        }
+      }finally{await platform.store.close();}})().catch(e=>{console.error(e);process.exitCode=1});`;
+    require("node:child_process").execFileSync(process.execPath, ["-e", restartScript, JSON.stringify({
+      uid: leader.uid, ids: [restartOld.id, restartNew.id], scope: { clientReleaseId: identity.releaseId,
+        clientWorldId: identity.worldId, clientResetGeneration: identity.resetGeneration, clientRealmShardId: identity.realmShardId },
+    })], { cwd: path.resolve(__dirname,".."), timeout: 30000, stdio: ["ignore","pipe","pipe"] });
+    for(const movement of [restartOld,restartNew]) assert.equal((await read(db.doc("armies/"+movement.id))).status,"resolved");
+    scenarios.push("fresh backend process settles saved old/new routes without draft provider");
     // Exercise full real rally join, withdrawal, rejoin, cancellation and fallback
     // returns through the same shared cases used by the production adapter.
     await require("../functions/test/rally-recall-rejoin-cases")({ db, call, actor,
