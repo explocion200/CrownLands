@@ -148,6 +148,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
         const button=page.locator(`#continuous-world-pickups [data-harvest-bonus-id="${bonus.id}"]`);
         await button.waitFor({state:"attached"});
         await button.evaluate(node=>CrownlandsContinuousWorld.view.focus(node.worldPoint));
+        await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
         // The existing pickup pulses continuously. Use an ordinary pointer
         // click at its center instead of waiting for animation-free geometry.
         const box=await button.boundingBox();assert(box);
@@ -275,6 +276,12 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       await page.waitForFunction(() => modal.open && modalBody.textContent.length > 30, null, { timeout: 5000 });
       assert((await page.locator("#modal").innerText()).includes(expectedName), "Wrong information panel for " + kind);
       inspected.push(kind); await page.evaluate(() => modal.close());
+    }
+    if(production){
+      const objectives=["camp","stronghold","citadel","tower"].map(kind=>{
+        const o=[...pilot.reader.artObjects.values()].find(o=>o.kind===kind);return {id:o.id,regionId:o.sectionId};
+      });
+      await require("./check-continuous-control-scale")(page,[source,ally,...objectives],select,output);
     }
     await page.bringToFront();
     for (const [width, height] of [[1440, 900], [844, 390], [568, 320]]) {
