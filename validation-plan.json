@@ -50,6 +50,17 @@
       ],
       "tests": [],
       "reason": "Record the owner-requested repair of existing road-only placement and respawn behavior without changing economy, cooldown or archived-world design rules. Documentation does not claim deployment."
+    },
+    {
+      "paths": [
+        "tools/asset-performance-budgets.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Account for the measured 1,043 delivered bytes required for visible-area countdowns and bounded respawn wake-up: installation shell 4,629,522 bytes, 1,042 over the previous cap, bounded by 1.5 KiB. NPC source group 64,498 bytes fits one additional KiB. Preserve artwork, lazy-world, request and remaining budgets; no added polling or dependencies."
     }
   ]
 }
