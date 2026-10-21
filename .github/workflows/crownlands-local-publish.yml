@@ -41,7 +41,7 @@ jobs:
           install: false
       - name: Build and validate exact merged commit
         run: |
-          pnpm install --frozen-lockfile
+          pnpm install --frozen-lockfile --ignore-scripts
           node tools/sync-runtime-data.js --check
           node tools/generate-release-manifest.js
           node tools/build-production-client.js

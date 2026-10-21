@@ -14,7 +14,10 @@ and never deploys Firebase functions, rules, indexes, accounts or player data.
 2. A merge to main starts **Publish local game** on a GitHub-hosted runner. It
    verifies that the commit belongs to a merged PR and that the PR's required
    checks and latest release-gate run succeeded.
-3. The exact merged commit is built and artifact-validated. A dedicated Crownlands
+3. The exact merged commit is built and artifact-validated. Development dependencies
+   are installed with `pnpm install --frozen-lockfile --ignore-scripts`, matching
+   the validation workflow. Sharp uses the locked platform binary packages; the
+   publisher does not approve or execute dependency install scripts. A dedicated Crownlands
    Ed25519 key signs the package digest, repository ID, commit, main ref, workflow,
    runner environment, run/attempt and merged-PR authorization receipt. The package
    and `provenance.json` signature are uploaded to a private per-commit prerelease
