@@ -56,16 +56,18 @@ After an initial warm-up trip, the extended test completed 5 further visits to e
 
 The largest recorded area response was 1.29 MiB (1,347,870 bytes including HTTP overhead). This makes incremental production updates a priority even though the local test recovers correctly from a 200ms-latency, 250KB/s download connection and from offline mode.
 
-The extended evidence is retained as `release-artifacts/seamless-catalog/extended-report.json`; `report.json` may be replaced by shorter subsequent focused-validation runs. The nine-section comparison is retained in `nine-section-regression.json`. Physical-phone validation is still pending.
+The extended evidence is retained as `release-artifacts/seamless-catalog/extended-report.json`; `report.json` may be replaced by shorter subsequent focused-validation runs. The nine-section comparison is retained in `nine-section-regression.json`. The owner subsequently tested the full-catalog preview on an Android phone on home Wi-Fi and reported “Loads and feels smooth.” This is a qualitative result, without a phone model, instrumented FPS or separate crowded-mode confirmation. The temporary LAN endpoint and firewall rule were removed afterward.
 
 ## Decision and remaining gates
 
 This validates the private area-loading approach and identifies what still needs work before live gameplay integration. A merge of this test harness does not enable a continuous live map.
 
-1. Test on an actual phone. CDP touch input, viewport sizes and CPU throttling do not measure a phone's GPU, thermal limits, memory pressure or browser chrome. This computer's preview stays loopback-only; a phone cannot open its `127.0.0.1` URL directly. For the owner’s Android phone on home Wi-Fi, use the separate, explicitly started `phone-server.js` described below. Keep the unrestricted benchmark server on loopback and add no public router forward.
+1. Initial physical-phone check completed with the owner’s smoothness confirmation; repeat it after material renderer or authenticated-feed changes. CDP touch input, viewport sizes and CPU throttling do not measure a phone's GPU, thermal limits, memory pressure or browser chrome. This computer's preview stays loopback-only; a phone cannot open its `127.0.0.1` URL directly. For the owner’s Android phone on home Wi-Fi, use the separate, explicitly started `phone-server.js` described below. Keep the unrestricted benchmark server on loopback and add no public router forward.
 2. Improve the crowded/throttled rendering budget further before a large real multiplayer scene. Preserve readable individual markers; evaluate a dedicated renderer or measured level-of-detail approach using this fixture rather than claiming that desktop FPS proves mobile capacity.
 3. Replace the synthetic whole-area snapshots with an authenticated, authorized production feed using initial snapshots plus versioned deltas, resumable reconnects and explicit deletion/movement handling. The current five-second JSON snapshots intentionally expose payload and allocation costs; they are not the final production wire format. Establish bandwidth/rate/security limits before attaching live accounts.
 4. Audit/compose the remaining terrain seams using the approved art workflow, and verify actual player placements, travel semantics, visibility and rollout/rollback controls in a separate approved stage.
+
+The first authenticated fixture-feed milestone is tracked in [Stage 3](CONTINUOUS_WORLD_STAGE_THREE.md).
 
 No live game services are restarted, no production data changes, and no extra database backup is created by these tests.
 
@@ -81,6 +83,6 @@ The specified address must belong to a private interface on this computer. Only 
 
 If the host firewall blocks the test port, use only an explicitly temporary rule from the home subnet to this exact interface/address/port. Schedule its deletion before adding the rule, and remove it when testing finishes. Do not open the router or bind the benchmark server to all interfaces. The phone server itself never changes the firewall.
 
-On Android Chrome, keep Wi-Fi on, open the printed `?catalog=full` link, turn landscape, pan through several sections, pinch in/out, tap a castle and follow a sample patrol. Check that dragging stops following and Home restores Stoneward. Try `&crowded=1` separately and report the phone model and visible stuttering or loading problems. This is a physical interaction check, not an instrumented FPS measurement. All displayed ownership and troops are fictional. The physical-device outcome remains pending until the owner reports it.
+On Android Chrome, keep Wi-Fi on, open the printed `?catalog=full` link, turn landscape, pan through several sections, pinch in/out, tap a castle and follow a sample patrol. Check that dragging stops following and Home restores Stoneward. Try `&crowded=1` separately and report the phone model and visible stuttering or loading problems. This is a physical interaction check, not an instrumented FPS measurement. All displayed ownership and troops are fictional. The owner completed this initial check and reported “Loads and feels smooth”; the account-free endpoint has since been closed.
 
 `validate-seamless-phone-preview.js` checks allowlisted image/data delivery, all major forbidden file/API routes, invalid subscriptions, non-read methods, foreign Host/Origin, cross-site fetch rejection, expiry and actual listener shutdown. A headless mobile browser loads the full scene through a nondefault loopback address to exercise the phone-origin bootstrap and verifies zero failed assets, outside requests or runtime exceptions. This verifies the server path, not actual Wi-Fi connectivity or phone performance.

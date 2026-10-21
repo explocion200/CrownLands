@@ -1,4 +1,4 @@
-/* Local-only demonstration: no live client, identity, subscriptions or orders. */
+/* Private demonstration: no production accounts, subscriptions or orders. */
 (async function () {
   "use strict";
   // Only the separate, allowlisted, expiring phone server supplies this origin.
@@ -7,8 +7,9 @@
   const $ = id => document.getElementById(id);
   const viewport = $("viewport"), world = $("world"), objectsLayer = $("objects"), marchesLayer = $("marches");
   try {
-    const params = new URLSearchParams(location.search), fullCatalog = params.get("catalog") === "full", crowded = params.get("crowded") === "1";
-    const response = await fetch(`/__benchmark__/seamless/${fullCatalog ? "catalog" : "fixture"}?crowded=${crowded}`, { credentials: "omit" });
+    const stageThree = !!document.querySelector('meta[name="crownlands-stage-three"]');
+    const params = new URLSearchParams(location.search), fullCatalog = stageThree || params.get("catalog") === "full", crowded = params.get("crowded") === "1";
+    const response = await fetch(`/__benchmark__/seamless/${fullCatalog ? "catalog" : "fixture"}?crowded=${crowded}`, { credentials: stageThree ? "same-origin" : "omit" });
     if (!response.ok) throw new Error("Fixture unavailable");
     const scene = await response.json();
     const M = window.SeamlessModel.forWorld(scene);
@@ -21,11 +22,11 @@
       const path = M.preparePath(points);
       return { ...m, points, path, position: points[0], bounds: { left: Math.min(...points.map(p => p.x)), top: Math.min(...points.map(p => p.y)), right: Math.max(...points.map(p => p.x)), bottom: Math.max(...points.map(p => p.y)) } };
     }
-    let marches = scene.marches.map(m => prepareMarch(m, m.points)), activeMarches = marches, feed = null, selectedSnapshot = null;
+    let marches = scene.marches.map(m => prepareMarch(m, m.points)), activeMarches = marches, feed = null, feedEpoch = null, feedViewer = null, selectedSnapshot = null;
     const byMarch = new Map(marches.map(m => [m.key, m]));
     const nodes = new Map(), terrain = new Map();
     let size, camera, selected = null, following = null, dirty = true, raf = 0, lastFrame = 0;
-    let sceneTime = 0, frozenTime = null, lastInspectorSection = "", lastPlan = "", plannedCamera = null, plannedAt = 0;
+    let serverTimeOffset = 0, sceneTime = 0, frozenTime = null, lastInspectorSection = "", lastPlan = "", plannedCamera = null, plannedAt = 0;
     const frameTimes = [], workTimes = [], pointers = new Map();
     let gesture = null, dragged = false, clickKey = null, suppressClick = false, listenerCount = 0;
     const cleanups = [];
@@ -140,23 +141,44 @@
     for (const [id, factor] of [["plus", 1.25], ["minus", 0.8]]) on($(id), "click", () => { camera = M.zoomAt(camera, size, center(), camera.zoom * factor); dirty = true; });
     on($("close"), "click", () => { selected = null; cancelFollow(); dirty = true; refreshInspector(); });
     on($("follow"), "click", () => { following = following === selected ? null : selected; dirty = true; refreshInspector(); });
-    on($("retry"), "click", () => { assets.retry(); feed?.refresh(); dirty = true; });
+    on($("retry"), "click", () => { if (feed?.authExpired) { location.replace("./login"); return; } assets.retry(); feed?.refresh(); dirty = true; });
     if (fullCatalog) {
-      feed = new window.SeamlessFeed.AreaFeed(data => {
+      const Feed = stageThree ? window.SeamlessDeltaFeed.DeltaFeed : window.SeamlessFeed.AreaFeed;
+      feed = new Feed(data => {
+        const principalChanged = stageThree && feedViewer && data.viewer && data.viewer !== feedViewer;
+        if (data.viewer) feedViewer = data.viewer;
+        const epochChanged = stageThree && data.epoch && data.epoch !== feedEpoch;
+        if (data.epoch) feedEpoch = data.epoch;
+        if (stageThree && Number.isFinite(data.serverTime)) serverTimeOffset = data.serverTime - data.receivedAt;
+        const inspectedSections = selectedSnapshot?.kind === "troop" ? selectedSnapshot.sections : [selectedSnapshot?.sectionId];
+        const inspectedAreaLoaded = data.authoritative && inspectedSections.some(id => data.sections.some(s => s.id === id));
+        const inspectedMissing = inspectedAreaLoaded && !data.sections.some(s => s.objects.some(o => o.key === selected)) && !data.marches.some(m => m.key === selected);
+        if (principalChanged || data.authExpired || data.removed?.includes(selected) || inspectedMissing) { selected = null; selectedSnapshot = null; following = null; }
+        if (data.removed?.includes(following)) following = null;
         scene.objects = data.sections.flatMap(s => s.objects); objects.clear(); scene.objects.forEach(o => objects.set(o.key, o));
         const routes = new Map(data.routes.map(r => [r.id, r.points]));
         marches = data.marches.map(m => {
-          const old = byMarch.get(m.key); return old ? { ...old, troops: m.troops } : prepareMarch(m, routes.get(m.routeId));
+          const old = byMarch.get(m.key); return old && !epochChanged && old.routeId === m.routeId ? { ...old, ...m } : prepareMarch(m, routes.get(m.routeId));
         });
-        if (following && !marches.some(m => m.key === following) && byMarch.has(following)) marches.push(byMarch.get(following));
+        if (following && !data.authExpired && !marches.some(m => m.key === following) && byMarch.has(following)) marches.push(byMarch.get(following));
         byMarch.clear(); marches.forEach(m => byMarch.set(m.key, m)); scene.marches = marches;
         refreshInspector(); dirty = true;
-      }, async (ids, signal) => {
-        const response = await fetch(`/__benchmark__/seamless/areas?crowded=${crowded}&ids=${encodeURIComponent(ids.join(","))}`, { signal, credentials: "omit" });
-        if (!response.ok) throw new Error(`Area HTTP ${response.status}`); return response.json();
+      }, async (ids, signal, cursor) => {
+        const query = new URLSearchParams({ crowded: String(crowded), ids: ids.join(",") });
+        if (stageThree) { query.set("realm", scene.realmId); if (cursor) { query.set("epoch", cursor.epoch); query.set("revision", cursor.revision); } }
+        const response = await fetch(`/__benchmark__/seamless/${stageThree ? "changes" : "areas"}?${query}`, { signal, credentials: stageThree ? "same-origin" : "omit" });
+        if (!response.ok) throw Object.assign(new Error(`Area HTTP ${response.status}`), { status: response.status }); return response.json();
       });
-      const poll = setInterval(() => { if (!document.hidden) feed.refresh(); }, 5000); cleanups.push(() => clearInterval(poll));
+      const poll = setInterval(() => { if (!document.hidden) feed.refresh(); }, stageThree ? 1000 : 5000); cleanups.push(() => clearInterval(poll));
       on(window, "online", () => feed.refresh());
+      if (stageThree) {
+        document.querySelector("header small").textContent = "Private Stage 3 · sample data";
+        const logout = document.createElement("button"); logout.textContent = "Sign out"; logout.id = "sign-out"; document.querySelector("header nav").append(logout);
+        on(logout, "click", async () => {
+          const response = await fetch("./logout", { method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" }, body: "{}" });
+          if (response.ok) location.replace("./login");
+        });
+      }
     }
     const observer = new ResizeObserver(resize); observer.observe(viewport); resize();
     function renderScene() {
@@ -198,13 +220,13 @@
       marchesLayer.classList.toggle("overview", overview);
       $("zoom").textContent = `${Math.round(camera.zoom / M.limits(size).home * 100)}%`;
       const stats = assets.stats();
-      $("load-status").textContent = stats.failed ? `${stats.failed} image(s) unavailable · navigation ready` : feed?.failed ? "Area updates interrupted · retrying" : `${overview ? `Overview${fullCatalog ? " · 81 sections" : ""}` : `${stats.full}/4 detailed sections`} · ${scene.crowded ? "Crowded" : "Normal"} sample`;
-      $("retry").hidden = !stats.failed && !feed?.failed;
+      $("load-status").textContent = stats.failed ? `${stats.failed} image(s) unavailable · navigation ready` : feed?.authExpired ? "Test session ended · reload to sign in" : feed?.failed ? "Area updates interrupted · retrying" : feed?.data.scriptHealthy === false ? "Sample updates paused · restart private test" : `${overview ? `Overview${fullCatalog ? " · 81 sections" : ""}` : `${stats.full}/4 detailed sections`} · ${scene.crowded ? "Crowded" : "Normal"} sample`;
+      $("retry").hidden = !stats.failed && !feed?.failed; $("retry").textContent = feed?.authExpired ? "Sign in" : "Retry loading";
     }
     function frame(now) {
       const start = performance.now();
       if (lastFrame && !document.hidden) { frameTimes.push(now - lastFrame); if (frameTimes.length > 900) frameTimes.shift(); }
-      sceneTime = frozenTime ?? now / 1000;
+      sceneTime = frozenTime ?? now / 1000 + serverTimeOffset;
       const view = M.visible(camera, size, 100);
       activeMarches = marches.filter(m => m.key === following || M.intersects(view, m.bounds.left, m.bounds.top, m.bounds.right - m.bounds.left, m.bounds.bottom - m.bounds.top));
       for (const march of activeMarches) {
@@ -225,7 +247,7 @@
       workTimes.push(performance.now() - start); if (workTimes.length > 900) workTimes.shift();
       lastFrame = now; raf = requestAnimationFrame(frame);
     }
-    on(document, "visibilitychange", () => { lastFrame = 0; });
+    on(document, "visibilitychange", () => { lastFrame = 0; if (stageThree && !document.hidden) feed?.refresh(); });
     raf = requestAnimationFrame(frame);
     on(window, "pagehide", () => { cancelAnimationFrame(raf); observer.disconnect(); assets.dispose(); feed?.dispose(); cleanups.forEach(fn => fn()); });
     // Deliberately present only in this loopback document, for deterministic QA.
