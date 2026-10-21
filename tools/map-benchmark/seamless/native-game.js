@@ -107,7 +107,11 @@
     view.focus({x:section.x+(point.x-b.left)/b.width*section.width,y:section.y+(point.y-b.top)/b.height*section.height});return true;
   };
   bridge = new window.ContinuousGameBridge({
-    valid: () => !disposed && areasReady && getOnlineSessionRequestScope() === session,
+    // Selection may recenter the camera and start a newer area load while the
+    // game's section subscription resolves. Keep that identity; paintWheel
+    // gates actions until fresh data arrives. Failure/permission loss cancels
+    // the bridge explicitly in onAreas/onClear.
+    valid: () => !disposed && getOnlineSessionRequestScope() === session,
     clear: clearWheel,
     busy: value => {host.setAttribute("aria-busy",String(value));},
     resolve: async item => {

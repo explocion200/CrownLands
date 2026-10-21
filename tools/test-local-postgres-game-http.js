@@ -94,9 +94,12 @@ const { COOKIE, CSRF } = require("../local-backend/auth-http");
     await new Promise(resolve => server.close(resolve));
     let areaCalls = 0, releaseArea, areaEntered;
     const entered = new Promise(resolve => { areaEntered = resolve; });
+    const releases = []; let saturated;
+    const allSlots = new Promise(resolve => { saturated = resolve; });
     const worldData = { schema, async read(identity, operation, input, signal) {
       areaCalls++; assert.equal(identity.uid, owner.localId); assert(signal instanceof AbortSignal);
       if (operation === "areas") { areaEntered(); await new Promise(resolve => { releaseArea = resolve; }); }
+      if (operation === "options") await new Promise(resolve => { releases.push(resolve); if (releases.length === 4) saturated(); });
       return { viewer: identity.uid, operation, private: "fixture-exact-count" };
     } };
     assert.throws(() => createGameServer({ store: db, auth, routes: [], worldData: { ...worldData, schema: "wrong-schema" } }), /database/);
@@ -110,6 +113,12 @@ const { COOKIE, CSRF } = require("../local-backend/auth-http");
     assert.equal((await request("world/not-allowed", {})).status, 404);
     const area = await request("world/catalog", {});
     assert.equal(area.status, 200); assert.equal(area.json.result.viewer, owner.localId); assert.equal(area.headers["cache-control"], "no-store");
+    const occupied = Array.from({ length: 4 }, () => request("world/options", { key: "fixture" }));
+    await allSlots;
+    try {
+      assert.equal((await request("world/catalog", {})).status, 429, "Area admission must stop at four requests");
+      assert.equal((await request("read", { targets: [{ path: ref.path }] })).status, 200, "Busy area readers must leave admission for game actions");
+    } finally { for (const release of releases) release(); await Promise.all(occupied); }
     const pendingArea = request("world/areas", {});
     await entered; await auth.signOut(signed.token); releaseArea();
     const revokedArea = await pendingArea;
