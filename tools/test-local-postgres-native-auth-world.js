@@ -113,6 +113,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     await sleep(1200);
     const after = await page.evaluate(key => nativeContinuousWorld.view.snapshot().marches.find(m => m.key === key).position, "march:" + march.id);
     assert(Math.hypot(before.x - after.x, before.y - after.y) > 0, "Accepted real march did not move");
+    if(production)await require("./check-continuous-marches").march(page,march,output);
+    else {
     await page.evaluate(key => nativeContinuousWorld.view.select(key), "march:" + march.id);
     await page.locator("#continuous-game-surface #follow").click();
     await page.waitForFunction(key => nativeContinuousWorld.view.snapshot().following === key, "march:" + march.id);
@@ -120,6 +122,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     await page.mouse.move(viewport.x + viewport.width / 2, viewport.y + viewport.height / 2);
     await page.mouse.down(); await page.mouse.move(viewport.x + viewport.width / 2 + 80, viewport.y + viewport.height / 2 + 25, { steps: 8 }); await page.mouse.up();
     assert.equal(await page.evaluate(() => nativeContinuousWorld.view.snapshot().following), null);
+    }
     await select(pages[1], source);
     const visible = await Promise.all(pages.map(p => p.evaluate(key => nativeContinuousWorld.view.getObject(key), source.regionId + ":" + source.id)));
     if(production){
@@ -129,6 +132,24 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       },source.regionId+":"+source.id);
       assert(foreign.banner&&foreign.text==="? troops","Restored foreign banner must not disclose private counts");
     }
+    if(production){
+      await pages[1].waitForFunction(key=>!!nativeContinuousWorld.view.getObject(key),"march:"+march.id);
+      const privacy=await pages[1].evaluate(key=>{
+        const v=nativeContinuousWorld.view,m=v.getObject(key);v.focus(m.position);
+        return {visibility:m.troopVisibility,hasCount:Object.hasOwn(m,"troops")};
+      },"march:"+march.id);
+      assert.equal(privacy.visibility,"estimate");assert.equal(privacy.hasCount,false);
+      await pages[1].waitForFunction(key=>{
+        const root=nativeContinuousWorld.root,node=[...root.querySelectorAll(".troop")].find(n=>n.dataset.key===key);
+        const m=nativeContinuousWorld.view.getObject(key);
+        return node&&node.querySelector(".army-token-count").textContent===m.troopEstimateLabel&&root.querySelector(`[data-march-key="${key}"]`);
+      },"march:"+march.id);
+    }
+    if(production)assert(await pages[1].evaluate(key=>{
+      const node=document.createElement("div"),m=nativeContinuousWorld.view.getObject(key);
+      SeamlessAppearance.render(node,{...m,missionKind:"transfer",troopVisibility:"hidden",troops:987654321});
+      return node.querySelector(".army-token-count").hidden&&!node.textContent.includes("987654321")&&!node.getAttribute("aria-label").includes("987654321");
+    },"march:"+march.id),"Hidden transfers cannot reveal a supplied count");
     assert.equal(visible[0].troopVisibility, "exact"); assert.equal(visible[1].troopVisibility, "hidden"); assert(!Object.hasOwn(visible[1], "troops"));
     // Recall uses the actual activity-panel button and recovery journal.
     await page.evaluate(() => showOutgoingAttacksModal());
@@ -149,6 +170,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
         await button.waitFor({state:"attached"});
         await button.evaluate(node=>CrownlandsContinuousWorld.view.focus(node.worldPoint));
         await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
+        await require("./check-continuous-marches").pickup(page,bonus,output);
         // The existing pickup pulses continuously. Use an ordinary pointer
         // click at its center instead of waiting for animation-free geometry.
         const box=await button.boundingBox();assert(box);
@@ -156,6 +178,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
         await page.waitForFunction(id=>!getAllActiveHarvestBonuses().some(b=>b.id===id),bonus.id);
         assert(!(await pilot.store.doc("players/"+pilot.players[0].uid).get()).data().harvestBonuses.some(b=>b.id===bonus.id));
       }
+      await page.evaluate(()=>nativeContinuousWorld.view.home());
     }
     // A temporary feed failure must remove actionable stale controls, while
     // leaving the camera usable. Recovery uses the same cookie/session.

@@ -19,7 +19,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   const overlayStyle="position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden";
   overlay.style.cssText = overlayStyle;
   const pickups = document.createElement("div"); pickups.id="continuous-world-pickups";
-  pickups.style.cssText=overlayStyle+";--map-hit-size:44px";
+  pickups.style.cssText=overlayStyle;
   // SVG fragment references resolve inside the shadow tree. Reuse the game's
   // existing symbol definitions so neutral crests and player emblems stay visible.
   const symbols=document.createElementNS("http://www.w3.org/2000/svg","svg");
@@ -57,6 +57,8 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
         node.addEventListener("click",event=>{event.stopPropagation();if(areasReady)void collectHarvestBonus(bonus.id,node);});pickups.append(node);pickupNodes.set(bonus.id,node);}
       if(node.dataset.harvestBonusType!==type){node.dataset.harvestBonusType=type;node.innerHTML=`<span aria-hidden="true">${getHarvestBonusIcon(type)}</span>`;}
       node.className=`harvest-bonus-node harvest-bonus-${type}`;
+      // Override legacy detail-far hit sizing on this screen-space layer.
+      node.style.setProperty("--map-hit-size","44px");
       const pending=pendingHarvestBonusIds.has(bonus.id);node.disabled=!areasReady||pending||remaining<=0;
       node.setAttribute("aria-busy",String(pending));node.setAttribute("aria-label",`${pending?"Collecting":"Harvest"} ${type} pickup`);
       node.title=remaining>0?`Harvest ${type} · ${remaining} left today`:`Daily ${type} limit reached`;
@@ -227,7 +229,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     onFrame: ({camera,project,size}) => {
       frameView={project,size};updateMainCityReturnButton();
       if (getOnlineSessionRequestScope() !== session) { dispose(); return; }
-      for(const node of pickupNodes.values()){const p=project(node.worldPoint);node.hidden=!areasReady||p.x< -30||p.y< -30||p.x>size.width+30||p.y>size.height+30;node.style.left=`${p.x}px`;node.style.top=`${p.y}px`;}
+      for(const node of pickupNodes.values()){const p=project(node.worldPoint);node.hidden=!areasReady||p.x< -30||p.y< -30||p.x>size.width+30||p.y>size.height+30;node.style.left=`${p.x}px`;node.style.top=`${p.y}px`;node.style.transform=`translate(-50%,-50%) scale(${Math.min(1,camera.zoom/SeamlessModel.forWorld(scene).limits(size).max)})`;}
       if (areasReady&&!sendMode&&!bridge.running&&!transitioning&&bridge.selected&&view.selectedKey
           && !selectedSourceId&&!selectedTargetId&&!selectedTowerMapId
           && view.getObject(view.selectedKey)?.kind!=="troop") view.clear();

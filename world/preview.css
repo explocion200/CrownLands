@@ -31,16 +31,6 @@ nav{display:flex;align-items:center;gap:6px}
 .object .tag{position:absolute;top:95%;left:50%;transform:translateX(-50%);font-size:12px;white-space:nowrap;color:#342d20;background:#eddfb8ed;padding:2px 5px;border-radius:2px;pointer-events:none}
 .object.castle .tag{display:none}
 #world.close-view .object.castle:hover .tag,#world.close-view .object.castle.selected .tag{display:block}
-.object.troop{width:36px;height:36px;background:#e7d6ad;border:2px solid #72363a;border-radius:50%;transform:translate(-50%,-50%);will-change:transform;z-index:3;box-shadow:0 2px 3px #0005}
-.object.troop img{border-radius:50%}
-.object.troop .tag{display:none}
-.object.troop.selected .tag{display:block}
-#inspector{position:absolute;bottom:43px;right:16px;width:290px;max-height:calc(100dvh - 112px);overflow:auto;background:#eddfbd;border:3px double #987e4c;box-shadow:0 4px 18px #211a1466;padding:14px;z-index:5}
-#inspector h1{font-size:21px;margin:4px 26px 8px 0}
-#inspector p{font:13px/1.4 system-ui;margin:5px 0}
-#kind{text-transform:uppercase;letter-spacing:1px;color:#76592f;font:11px system-ui}
-#close{position:absolute;right:6px;top:6px;min-height:28px;padding:0 8px;font-size:23px}
-#follow{margin-top:6px;background:#72363a;color:#fff3ce}
 footer{min-height:30px;z-index:4;background:#e7d9b6;display:flex;align-items:center;justify-content:space-between;padding:4px 12px;gap:10px;font:11px system-ui}
 #retry{font:11px system-ui;min-height:24px;padding:1px 8px}
 #load-status{margin-left:auto;white-space:nowrap}
@@ -50,16 +40,12 @@ header small{font-size:10px;margin-top:1px}
 nav{gap:4px}
 nav button{font-size:12px;padding:4px 8px;min-height:30px}
 #zoom{font-size:11px;min-width:34px}
-#inspector{bottom:33px;right:8px;width:245px;max-height:calc(100dvh - 90px);padding:8px}
-#inspector h1{font-size:17px;margin-bottom:5px}
-#inspector p{font-size:12px;margin:3px 0}
 footer{min-height:26px;padding:3px 8px;font-size:10px}
 header strong span{display:none}
 }
 @media(max-width:650px){#hint{max-width:225px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header strong{font-size:16px}
 header{padding:4px 7px}
-#inspector{width:222px}
 nav button{padding:4px 6px}
 }
 
@@ -82,7 +68,6 @@ nav button{padding:4px 6px}
 #world #objects{z-index:2}
 #world{z-index:auto}
 #marches{z-index:4}
-.object.troop,.object.troop:hover{background:none;border:0;box-shadow:none;will-change:auto;opacity:0}
 
 
 .phone-test #hint{display:none}
