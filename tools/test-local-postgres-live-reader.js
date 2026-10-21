@@ -43,6 +43,8 @@ async function main(){
   assert.ok([...reader.publicAreas.values()].every(area=>[...area.objects.values()].every(o=>!Object.hasOwn(o,"troops"))),"Own counts entered the shared cache");
   assert.ok(!/privateSecret|requestedTroops|attackCombatSnapshot|inventory|@example|gold/.test(JSON.stringify(packet)));
   let data=applyPacket({sections:[],marches:[],routes:[]},packet,[id],null);
+  const expanded=await reader.read(uid,[...crossing.sections],cursor);assert.equal(expanded.kind,"snapshot");assert.equal(expanded.epoch,cursor.epoch,"Changing camera area changed permission epoch");
+  packet=await reader.read(uid,[id]);cursor={epoch:packet.epoch,revision:packet.revision};
   const enemy=await reader.read(other,[id]);const same=enemy.objects.upsert.find(o=>o.key===city.key);assert.equal(same.troopVisibility,"hidden");assert.ok(!Object.hasOwn(same,"troops"));
   packet=await reader.read(uid,[id],cursor);assert.equal(packet.kind,"delta");assert.equal(packet.objects.upsert.length,0);assert.equal(packet.marches.upsert.length,0);
   const after=(await store.pool.query(`SELECT count(*)::text AS documents,(SELECT count(*) FROM ${store.schema}.changes)::text AS changes FROM ${store.schema}.documents`)).rows[0];assert.deepEqual(after,before,"Reader mutated source data");

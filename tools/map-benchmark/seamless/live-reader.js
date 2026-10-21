@@ -63,8 +63,10 @@ class LiveReader {
       // invalidate map caches. Realm/account changes do. No scouting payloads
       // or clan-only garrisons are included in this map inspector.
       const scope=hash([this.catalogSignature,uid,access.profile.clanId||null]);
-      const epoch=this.instance+":"+scope+":"+hash(ids), viewer=hash(uid), prior=this.views.get(uid);
-      const delta=cursor&&prior&&cursor.epoch===epoch&&prior.epoch===epoch&&cursor.revision===prior.revision;
+      // Camera area changes are not permission changes. Keep the permission
+      // epoch stable, but never reuse a delta cursor from a different area.
+      const epoch=this.instance+":"+scope,areaKey=ids.join(","),viewer=hash(uid),prior=this.views.get(uid);
+      const delta=cursor&&prior&&prior.areaKey===areaKey&&cursor.epoch===epoch&&prior.epoch===epoch&&cursor.revision===prior.revision;
       const packet={kind:delta?"delta":"snapshot",epoch,viewer,revision:(prior?.revision||0)+1,fromRevision:delta?prior.revision:null,
         ids,serverTime:now/1000,objects:{upsert:[],remove:[]},marches:{upsert:[],remove:[]},routes:[],scriptHealthy:true};
       for(const [kind,items] of [["objects",objects],["marches",marches]]){
@@ -74,7 +76,7 @@ class LiveReader {
       const used=new Set(packet.marches.upsert.map(m=>m.routeId));packet.routes=[...used].map(id=>routes.get(id));
       if(delta&&Buffer.byteLength(JSON.stringify(packet))>65536){packet.kind="snapshot";packet.fromRevision=null;packet.objects={upsert:[...objects.values()],remove:[]};packet.marches={upsert:[...marches.values()],remove:[]};packet.routes=[...routes.values()];}
       if(Buffer.byteLength(JSON.stringify(packet))>4*1024*1024)throw fail(413,"Snapshot exceeds private reader budget");
-      this.views.delete(uid);this.views.set(uid,{epoch,revision:packet.revision,objects,marches,hashes,at:now});
+      this.views.delete(uid);this.views.set(uid,{epoch,areaKey,revision:packet.revision,objects,marches,hashes,at:now});
       for(const [key,view] of this.views)if(this.views.size>128||now-view.at>120000)this.views.delete(key);
       return packet;
     });

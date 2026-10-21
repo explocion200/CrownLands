@@ -27,6 +27,17 @@ async function main(){
   const other=await evaluate(1,key=>seamlessPreview.scene.objects.find(o=>o.key===key),city.key);assert.equal(other.troopVisibility,"hidden");assert.ok(!Object.hasOwn(other,"troops"));
   for(let i=0;i<2;i++)await evaluate(i,o=>{seamlessPreview.view(o.x,o.y);seamlessPreview.select(o.key);},city);
   assert.notEqual(await evaluate(0,()=>document.getElementById("troops").textContent),await evaluate(1,()=>document.getElementById("troops").textContent));
+  await sleep(1200);await wait(0,()=>!seamlessPreview.snapshot().feed.pending);
+  const beforeArea=await evaluate(0,()=>seamlessPreview.snapshot().feed.snapshots);
+  await evaluate(0,o=>{
+    const s=seamlessPreview.snapshot(),model=SeamlessModel.forWorld(seamlessPreview.scene);
+    const candidates=[1600,-1600,2400,-2400,3200,-3200].flatMap(offset=>[{...s.camera,x:s.camera.x+offset},{...s.camera,y:s.camera.y+offset}]);
+    const next=candidates.find(camera=>{const ids=model.interestSections(seamlessPreview.scene.sections,camera,s.size,s.feed.ids).map(a=>a.id).sort();return ids.includes(o.sectionId)&&JSON.stringify(ids)!==JSON.stringify(s.feed.ids);});
+    if(!next)throw Error("No retained-selection boundary fixture");seamlessPreview.view(next.x,next.y);
+  },city);
+  for(let n=0;n<40;n++){if(await evaluate(0,prior=>seamlessPreview.snapshot().feed.snapshots>prior,beforeArea))break;await sleep(100);}
+  assert.ok(await evaluate(0,prior=>seamlessPreview.snapshot().feed.snapshots>prior,beforeArea),"Camera did not cross an area boundary");
+  assert.equal(await evaluate(0,()=>seamlessPreview.snapshot().selected),city.key,"Retained selection was cleared by an area change");
   await f.store.doc(`${f.island(city.sectionId)}/cities/${city.id}`).update({ownerUid:f.grants[1].uid,ownerName:"Fixture new owner"});
   // Wait explicitly with the identity in the expression; no global game data.
   for(let n=0;n<30;n++){if(await evaluate(0,key=>seamlessPreview.scene.objects.find(o=>o.key===key)?.troopVisibility==="hidden",city.key))break;await sleep(200);}
@@ -47,12 +58,12 @@ async function main(){
   await evaluate(0,m=>{seamlessPreview.select(m.key);document.getElementById("follow").click();seamlessPreview.time(m.departAt);},march);await sleep(100);
   const start=await evaluate(0,key=>seamlessPreview.snapshot().marches.find(m=>m.key===key).position,march.key);
   assert.ok(Math.hypot(start.x-route.points[0].x,start.y-route.points[0].y)<.01);
-  await evaluate(0,m=>{seamlessPreview.time(m.arriveAt+60);},march);await sleep(100);
+  await evaluate(0,m=>{seamlessPreview.time(m.arriveAt+60);},march);await sleep(1700);
   const position=await evaluate(0,key=>seamlessPreview.snapshot().marches.find(m=>m.key===key)?.position,march.key);
   const end=route.points.at(-1);assert.ok(Math.hypot(position.x-end.x,position.y-end.y)<.01);
   const followed=await evaluate(0,()=>seamlessPreview.snapshot());assert.equal(followed.following,march.key);assert.ok(Math.hypot(followed.camera.x-position.x,followed.camera.y-position.y)<.01);
   await evaluate(0,()=>{seamlessPreview.time(null);seamlessPreview.view(1000,1000);});assert.equal(await evaluate(0,()=>seamlessPreview.snapshot().following),null);
-  await evaluate(0,()=>document.getElementById("fit").click());await sleep(500);assert.equal(await evaluate(0,()=>seamlessPreview.snapshot().feed.sections),0);
+  await evaluate(0,()=>document.getElementById("fit").click());await sleep(500);assert.equal(await evaluate(0,()=>seamlessPreview.snapshot().feed.sections),0);assert.equal(await evaluate(0,()=>seamlessPreview.snapshot().selected),null);
   await evaluate(0,()=>seamlessPreview.home());await sleep(1500);
   await f.store.doc(`players/${f.grants[0].uid}`).update({resetGeneration:"old"});await wait(0,()=>seamlessPreview.snapshot().feed.authExpired);
   assert.equal(await evaluate(0,()=>seamlessPreview.snapshot().feed.objects),0);assert.equal(await evaluate(0,()=>seamlessPreview.snapshot().selected),null);
