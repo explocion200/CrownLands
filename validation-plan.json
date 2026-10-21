@@ -27,7 +27,7 @@
         "tools/validate-continuous-game-ui.js",
         "tools/validate-map-benchmark.js"
       ],
-      "reason": "Private native-HUD adapter, exact catalog identities, serialized selection, cancellation/session cleanup, opt-in nonce-bound local test commands and default benchmark isolation. The new real-PostgreSQL/browser test was also run locally at 1440x900, 844x390 and 568x320, verifying actual native order submission, control bounds, touch isolation and no external requests; CI has no configured local game PostgreSQL."
+      "reason": "Private native-HUD adapter, exact catalog identities, serialized selection, cancellation/session cleanup, opt-in nonce-bound local test commands and default benchmark isolation. The new real-PostgreSQL/browser test was also run locally at 1440x900, 844x390 and 568x320, verifying actual native order submission, control bounds, touch isolation and no external requests; The new test is automatically selected as a changed test; CI provisions its isolated PostgreSQL database through the existing workflow."
     },
     {
       "paths": [
