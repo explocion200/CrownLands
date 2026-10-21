@@ -3903,10 +3903,10 @@
     getUser: () => client.user,
     getLastError: () => client.redirectError || client.error,
     getServerRequestTimings,
-    readContinuousWorld: async (operation, input = {}, signal) => {
+    readWorld: async (op, input, signal) => {
       await init();
-      if (!LOCAL || !client.user?.uid || !client.modules?.world) throw new Error("Continuous world is unavailable for this session.");
-      return client.modules.world.read(operation, input, signal);
+      if (!LOCAL || !client.user?.uid || !client.modules?.world) throw new Error("Map unavailable.");
+      return client.modules.world.read(op, input, signal);
     },
   };
 

@@ -11900,7 +11900,7 @@ async function toggleScoutNearby(cityId) {
         sourceCityId: source.id,
         sourceRegionId: getCityRegionId(source),
         targetCityIds: options.map(option => option.city.id),
-        ...(window.CrownlandsContinuousControls?.qualifiedBulk ? { targets: options.map(({ city }) => ({ cityId: city.id, regionId: getCityRegionId(city) })) } : {}),
+        ...window.CrownlandsContinuousControls?.bulk("targets", options),
         requestId: action.requestId,
       });
       if (requestScope !== getOnlineSessionRequestScope()) return;
@@ -12068,7 +12068,7 @@ async function toggleRegroup(cityId) {
         targetCityId: target.id,
         targetRegionId: getCityRegionId(target),
         sourceCityIds: options.map(option => option.city.id),
-        ...(window.CrownlandsContinuousControls?.qualifiedBulk ? { sources: options.map(({ city }) => ({ cityId: city.id, regionId: getCityRegionId(city) })) } : {}),
+        ...window.CrownlandsContinuousControls?.bulk("sources", options),
         requestId: action.requestId,
       });
       playGoldSpendSound(result?.cost, result, soundScope);
@@ -29899,8 +29899,8 @@ function updateClanTowerActionWheelLayout(wheel = mapFrame?.querySelector(".clan
 
 function renderSelectedClanTowerWheel(towerId) {
   const visual = getHoldingTowerVisual(towerId);
-  const continuousSurface = window.CrownlandsContinuousControls?.surface;
-  if (!visual || (!continuousSurface && !cityLayer.querySelector(`[data-holding-tower-id="${towerId}"]`))) return;
+  const surface = window.CrownlandsContinuousControls?.surface;
+  if (!visual || (!surface && !cityLayer.querySelector(`[data-holding-tower-id="${towerId}"]`))) return;
   const snapshot = holdingTowerSnapshots.get(towerId);
   const available = window.CrownlandsClanTowerDetailsUi?.mapActions(snapshot) || [{action:"info",label:"Info",icon:"information"}];
   const info = available.find(entry => entry.action === "info");
@@ -29934,7 +29934,7 @@ function renderSelectedClanTowerWheel(towerId) {
     }
   }));
   wheel.dataset.scoutTarget = towerId;
-  (continuousSurface || mapTransitionStage).appendChild(wheel);
+  (surface || mapTransitionStage).appendChild(wheel);
   if (pendingDirectScoutTargets.has(towerId) || getPendingScoutMission(towerId)) renderScoutRequestFeedback(towerId);
 }
 

@@ -11,7 +11,7 @@
   const session = getOnlineSessionRequestScope();
   const readWorld = async (operation, input = {}, signal) => {
     if (getOnlineSessionRequestScope() !== session) throw Object.assign(Error("Session changed"), { status: 401 });
-    try { return await getOnlineApi().readContinuousWorld(operation, input, signal); }
+    try { return await getOnlineApi().readWorld(operation, input, signal); }
     catch (error) { error.status ||= ({ unauthenticated: 401, "permission-denied": 403, unavailable: 503, "resource-exhausted": 429 })[String(error.code).replace(/^functions\//, "")]; throw error; }
   };
   const scene = authenticated ? await readWorld("catalog") : fixture.nativeScene;
@@ -89,7 +89,9 @@
     };
     toggleScoutNearby = id => prepare(id, original.toggleScoutNearby);
     toggleRegroup = id => prepare(id, original.toggleRegroup);
-    window.CrownlandsContinuousControls = { qualifiedBulk: true, surface: cityLayer };
+    window.CrownlandsContinuousControls = { surface: cityLayer,
+      bulk: (field, options) => ({ [field]: options.map(({ city }) => ({ cityId: city.id, regionId: getCityRegionId(city) })) }),
+    };
   }
   beginMapVisualTransition = () => null;
   updateMainCityReturnButton = () => { if (mainCityReturnBtn) mainCityReturnBtn.hidden=true; };
