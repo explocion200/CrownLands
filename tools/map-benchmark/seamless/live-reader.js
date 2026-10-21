@@ -3,6 +3,7 @@ const crypto=require("node:crypto");
 const {Store}=require("../../../local-backend/store");
 const {Access}=require("../../../local-backend/access");
 const {buildCatalog,safeAsset,catalog,fixture,gameToImage}=require("./live-catalog");
+const {CASTLE_SIZE}=require("./layout");
 const hash=value=>crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex").slice(0,24);
 const fail=(status,message)=>Object.assign(Error(message),{status});
 const text=(value,max=80)=>typeof value==="string"?value.slice(0,max):"";
@@ -131,9 +132,12 @@ class LiveReader {
     const local=gameToImage(section,data);if(!local)return null;
     const landmark=this.artObjects.get(section.templateId+":"+id);
     let kind=collection==="camps"?"camp":collection==="holdingTowers"?"tower":collection==="marauders"?"npc":landmark?.kind||"castle";
-    let asset=landmark?.asset||catalog.mapPresentation.cityStageAssets[Math.min(5,Math.max(1,Math.ceil(number(data.level)/25)))];
+    // Ordinary castles use their saved level, never the rotating fictional
+    // stages from fixtures. Special landmarks retain their catalog artwork.
+    const stage=Math.min(5,Math.max(1,1+Math.floor(number(data.level)/25)));
+    let asset=(kind!=="castle"&&landmark?.asset)||catalog.mapPresentation.cityStageAssets[stage];
     if(kind==="npc")asset=`assets/marauders/${data.classification==="boss"?"boss":"solo"}${data.status==="active"?"":"-defeated"}-v1.webp`;
-    const width=landmark?.width||56,height=landmark?.height||56;
+    const width=landmark?.width||(kind==="castle"?CASTLE_SIZE:56),height=landmark?.height||(kind==="castle"?CASTLE_SIZE:56);
     const x=section.x+local.x,y=section.y+local.y;
     const dto={key:section.id+":"+id,id,sectionId:section.id,sectionName:section.name,name:text(data.name)||id,kind,
       gamePosition:{x:data.x,y:data.y},local,previewLocal:local,x,y,left:x-width/2,top:y-height/2,width,height,asset:safeAsset(data.artSrc,asset),

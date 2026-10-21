@@ -3,7 +3,7 @@ const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("n
 const {createFixture}=require("./map-benchmark/seamless/live-test-fixture");
 const {createLiveServer,readGrant}=require("./map-benchmark/seamless/live-server");
 const {applyPacket,DeltaFeed}=require("./map-benchmark/seamless/delta-feed");
-const {overview,gameToImage,imageToGame}=require("./map-benchmark/seamless/live-catalog");
+const {overview,gameToImage,imageToGame,catalog}=require("./map-benchmark/seamless/live-catalog");
 async function main(){
  const directory=fs.mkdtempSync(path.join(require("node:os").tmpdir(),"private-reader-grant-")),file=path.join(directory,"grant.json");
  try{
@@ -30,13 +30,16 @@ async function main(){
   assert.ok(packet.objects.upsert.some(o=>o.kind==="castle"&&o.troopVisibility==="hidden"&&!Object.hasOwn(o,"troops")));
   assert.ok(packet.marches.upsert.some(m=>m.troopVisibility==="exact"&&m.troops===2500));
   assert.ok(packet.marches.upsert.some(m=>m.troopVisibility==="hidden"&&!Object.hasOwn(m,"troops")));
-  for(const item of packet.objects.upsert){const art=reader.artObjects.get(item.sectionId+":"+item.id);if(art&&item.kind!=="scenery"){assert.equal(item.asset,art.asset);assert.equal(item.kind,art.kind);}}
+  for(const item of packet.objects.upsert){const art=reader.artObjects.get(item.sectionId+":"+item.id);if(art&&item.kind!=="scenery"){assert.equal(item.asset,item.kind==="castle"?catalog.mapPresentation.cityStageAssets[2]:art.asset);assert.equal(item.kind,art.kind);}}
   const crossing=packet.marches.upsert.find(m=>m.sections.length===2),route=packet.routes.find(r=>r.id===crossing.routeId);
   assert.ok(crossing.arriveAt>crossing.departAt);assert.deepEqual(route.points[1],route.points[2],"Boundary crossing has a coordinate gap");
   const section=reader.sections.get(id),source={status:"active",launchedAtMs:1,arrivesAtMs:2,sourceRegionId:id,
     pathSegments:[{regionId:id,points:Array.from({length:1200},(_,i)=>imageToGame(section,{x:i,y:543}))}]};
   assert.equal(reader.march("long",source,[id]).route.points.length,1200);
   assert.throws(()=>reader.march("oversize",{...source,pathSegments:[{regionId:id,points:Array(8193).fill(imageToGame(section,{x:1,y:1}))}]},[id]),e=>e.status===413);
+  const stageSource=fs.readFileSync(path.resolve(__dirname,"../game.js"),"utf8").match(/function getCastleStage\(level\) \{[\s\S]*?\n\}/)[0];
+  const gameStage=require("node:vm").runInNewContext(`(${stageSource})`);
+  for(const level of [1,24,25,49,50,74,75,99,100,125])assert.equal(reader.object("generated-city","cities",{...imageToGame(section,{x:100,y:100}),level},section).asset,catalog.mapPresentation.cityStageAssets[gameStage(level)]);
   assert.ok([...reader.publicAreas.values()].every(area=>[...area.objects.values()].every(o=>!Object.hasOwn(o,"troops"))),"Own counts entered the shared cache");
   assert.ok(!/privateSecret|requestedTroops|attackCombatSnapshot|inventory|@example|gold/.test(JSON.stringify(packet)));
   let data=applyPacket({sections:[],marches:[],routes:[]},packet,[id],null);
