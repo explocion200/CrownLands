@@ -70,7 +70,10 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     if (!view || !areasReady || bridge?.running || getOnlineSessionRequestScope() !== session) return clearWheel();
     const target = selectedTowerMapId ? getHoldingTowerVisual(selectedTowerMapId) : selectedTargetId ? getArmyTargetById(selectedTargetId) : selectedSourceId ? getTroopOrderSourceById(selectedSourceId) : null;
     const point = target && locate(target.id,getCityRegionId(target));
-    if (!point || sendMode || view.selectedKey !== point.key) return clearWheel();
+    if (!point || sendMode) return clearWheel();
+    // City List, shared chat locations and profiles also use the native
+    // selection functions. Adopt their identity without issuing another action.
+    if (view.selectedKey !== point.key) {view.select(point.key,false);bridge.selected=point;}
     wheelPoint = point;
     const signature = JSON.stringify([point.key,target.owner,target.troops,target.level,Math.floor(getProjectedGold()),scoutNearbySourceId,regroupSourceId,pendingBulkOrderAction?.phase]);
     if (signature === lastWheel) return;
@@ -196,7 +199,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     onClear: () => {pendingFocus=null;bulkGeneration++;bulk=null;bridge.cancel();clearSelection(false);clearWheel();},
     onZoom: () => {
       // Preserve an in-progress troop destination choice while navigating.
-      if (!sendMode) { view?.clear(); bridge.cancel(); clearSelection(false); clearWheel(); }
+      if (!sendMode && view?.getObject(view.selectedKey)?.kind!=="troop") { view?.clear(); bridge.cancel(); clearSelection(false); clearWheel(); }
     },
     onFrame: ({project,size}) => {
       frameView={project,size};updateMainCityReturnButton();

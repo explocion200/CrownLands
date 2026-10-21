@@ -12,6 +12,9 @@ module.exports=async function checkMapUI(page,source,select,output){
     }throw Error("No unobstructed fixture terrain");
   });
   await selected();const point=await ground();await page.mouse.click(point.x,point.y);await cleared();
+  await page.evaluate(({id,regionId})=>focusCityListLocation(id,regionId),source);
+  await page.waitForFunction(key=>nativeContinuousWorld.view.selectedKey===key&&document.querySelector("#continuous-game-actions").childElementCount>0,key);
+  const listGround=await ground();await page.mouse.click(listGround.x,listGround.y);await cleared();
   // Native dialogs/actions also clear their selection without a terrain click.
   await selected();await page.evaluate(()=>clearSelection(false));await cleared();
   await selected();await page.evaluate(()=>nativeContinuousWorld.root.querySelector("#viewport").dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true})));await cleared();
