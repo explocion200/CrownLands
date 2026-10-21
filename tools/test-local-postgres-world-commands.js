@@ -4,7 +4,8 @@ const { randomBytes, randomUUID } = require("node:crypto");
 const fs = require("node:fs"), path = require("node:path");
 const { createPlatform } = require("../local-backend/platform");
 const { Store } = require("../local-backend/store");
-const { createCommandRouting } = require("./map-benchmark/seamless/command-routing");
+const production=process.argv.includes("--production");
+const { createCommandRouting } = require(production?"../local-backend/world/routing":"./map-benchmark/seamless/command-routing");
 const { createTravelFixture, canonicalCity } = require("./world-travel-test-fixtures");
 
 (async () => {
@@ -100,7 +101,7 @@ const { createTravelFixture, canonicalCity } = require("./world-travel-test-fixt
       const preview = await call("previewArmyRoute", user, { fromId: from.id, toId: to.id, sourceRegionId: from.regionId,
         targetRegionId: to.regionId, kind, requestedTroops: 10 });
       const order = payload(from, to, kind), movement = (await call("sendArmyOrder", user, order)).movement;
-      assert(movement.pathSegments.every(s => s.routingVersion === "open-world-draft-v1" && /^[a-f0-9]{64}$/.test(s.geometryId)));
+      assert(movement.pathSegments.every(s => s.routingVersion === (production?"continuous-world-v1":"open-world-draft-v1") && /^[a-f0-9]{64}$/.test(s.geometryId)));
       assert.deepEqual(movement.pathSegments, preview.segments);
       assert.equal(Math.ceil(movement.total * 1000), preview.durationMs);
       const repeated = (await call("sendArmyOrder", user, order)).movement;

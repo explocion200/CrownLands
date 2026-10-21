@@ -5,11 +5,12 @@ const { JWT } = require("google-auth-library");
 const { isPolicy, GAME } = require("./deployment-policy");
 let configured;
 const NAMES = ['LINKED_ACCOUNT_IP_HMAC_KEY','STRIPE_CROWNS_TEST_SECRET_KEY','STRIPE_CROWNS_LIVE_SECRET_KEY'];
-function configure({ store, config, deployment }) {
+function configure({ store, config, deployment, world }) {
   if(configured || store.schema!==GAME || !isPolicy(deployment,GAME) || !deployment.isActive())throw Error('Permanent game activation required');
   const secrets=config.secrets || {};
   if(Object.keys(secrets).some(k=>!NAMES.includes(k)) || Object.values(secrets).some(v=>typeof v!=='string'||v.length<16||v.length>4096))throw Error('Invalid runtime credentials');
   const base=createPlatform({store,secrets:secrets.LINKED_ACCOUNT_IP_HMAC_KEY?{LINKED_ACCOUNT_IP_HMAC_KEY:secrets.LINKED_ACCOUNT_IP_HMAC_KEY}:{}});
+  if(world&&!require('./world/service').isWorldService(world,store,deployment))throw Error('Reviewed world capability required');
   let translation;
   if(config.translation) {
     const sa=config.translation;
@@ -24,7 +25,7 @@ function configure({ store, config, deployment }) {
     // The normal game service retains its imported shared monthly usage ledger.
     translation=async(...args)=>{await deployment.assertActive();const result=await google(...args);await deployment.assertActive();return result;};
   }
-  configured=Object.freeze({...base,backend:'postgres-local',chatTranslationProvider:translation,
+  configured=Object.freeze({...base,backend:'postgres-local',chatTranslationProvider:translation,privateWorldRouting:world?.routing,
     defineSecret:name=>({value:()=>{if(!deployment.isActive()||!Object.hasOwn(secrets,name))throw new HttpsError('unavailable','This service is not configured.');return secrets[name];}})});
   return configured;
 }

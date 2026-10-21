@@ -17,6 +17,7 @@ function request(port,url,options={}) {
 async function child(directory,role){
  const config={version:1,role,schema:['auth','mail'].includes(role)?AUTH:GAME,origin:'https://playcrownlands.com',rateKey:Buffer.alloc(32,1).toString('base64url')};
  if(role==='game'||role==='worker')config.secrets={LINKED_ACCOUNT_IP_HMAC_KEY:'synthetic'.repeat(8)};
+ if(role==='game'||role==='worker')config.continuousWorld={protocol:1,enabled:false};
  if(role==='mail')config.apiKey='re_syntheticOnly123';
  if(role==='push')config.keys=require('../local-backend/node_modules/web-push').generateVAPIDKeys();
  if(role==='payments')for(const mode of ['test','live'])config[mode]={key:'sk_'+mode+'_syntheticOnly123',webhookSecret:'whsec_syntheticOnly123'};
@@ -27,7 +28,7 @@ async function child(directory,role){
  control.phase='active';
  const active=await start(role,options);
  try{
-  assert.equal(active.standby,false);assert.equal(connected,['worker','game'].includes(role)?2:1);
+  assert.equal(active.standby,false);assert.equal(connected,['worker','game'].includes(role)?3:1);
   if(active.server){const endpoint=role==='auth'?'/local-auth/health':role==='game'?'/api/local-game/health':'/invalid';
    const result=await request(active.server.address().port,endpoint);assert.equal(result.status,role==='payments'?404:200);
    if(role!=='payments')assert.deepEqual(JSON.parse(result.body),{ready:true,rehearsal:false,protocol:1,epoch});}
@@ -64,6 +65,7 @@ async function child(directory,role){
     new Function('window',fs.readFileSync(path.join(__dirname,'../local-client.js'),'utf8'))(root);
     client=root.CrownlandsLocalBackend.create();
     const signed=await client.auth.signInWithEmailAndPassword(null,'permanent@example.test','Synthetic password 2026');assert.equal(signed.user.uid,'permanent-fixture');
+    assert.deepEqual(await client.world.read('catalog'),{enabled:false,protocol:1});
     const f=client.firestore,db=f.getFirestore(),profile=f.doc(db,'players','permanent-fixture');
     assert.equal((await f.getDoc(profile)).data().marchPercent,70);
     await f.updateDoc(profile,{marchPercent:65});assert.equal((await f.getDoc(profile)).data().marchPercent,65);

@@ -12,7 +12,7 @@ function storage() {
 }
 function browser() {
   return { location: { origin: "https://playcrownlands.com", pathname: "/play/" }, CROWNLANDS_LOCAL_BACKEND: { ...config },
-    localStorage: storage(), sessionStorage: storage(), document: { hidden: false }, setInterval, clearInterval, setTimeout, clearTimeout };
+    localStorage: storage(), sessionStorage: storage(), document: { hidden: false, createElement: () => ({}), head: { append: node => { assert.equal(node.src, "/world/bootstrap.js?v=continuous-v1"); } } }, setInterval, clearInterval, setTimeout, clearTimeout };
 }
 const run = (file, root) => vm.runInNewContext(read(file), { window: root });
 async function main() {

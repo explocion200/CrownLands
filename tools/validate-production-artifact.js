@@ -422,7 +422,14 @@ assert.deepEqual(campFlagFiles.map(file => path.relative(dist, file).replace(/\\
 assert(campFlagFiles.every(file => fs.statSync(file).size <= 6 * 1024), "Each camp banner must remain within 6 KiB");
 assert(!worker.includes("assets/icons/camps/"), "Camp type banners must load on demand");
 const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget + halloweenMapTransitionBudget + animatedMapBatsBudget + troopsHelmetArtworkBudget + liveCrownPurchaseBudget + crownShopTabBudget + estateArtBudget + estateModuleBudget + guildFeatureBudget;
-if (baseClientBytes > baseClientBudget + campFlagArtBudget) {
+const worldModules=["appearance.js","assets.js","bootstrap.js","delta-feed.js","feed.js","flags.css","game-bridge.js","model.js","native.js","preview.css","preview.js","sprite-layer.js","surface.html"].map(f=>"world/"+f).sort();
+const worldFiles=files.filter(f=>path.relative(dist,f).replace(/\\/g,"/").startsWith("world/"));
+assert.deepEqual(worldFiles.map(f=>path.relative(dist,f).replace(/\\/g,"/")).sort(),worldModules,"Ship only reviewed production world modules");
+const worldBytes=worldFiles.reduce((n,f)=>n+fs.statSync(f).size,0);
+assert(worldBytes<=64*1024,"Lazy continuous-world modules exceed 64 KiB");
+assert(!worker.includes('world/'),"Continuous world must not expand installation precaching");
+for(const f of worldFiles)assert(!fs.readFileSync(f,"utf8").includes('/__benchmark__/'),"No private preview endpoints in the game");
+if (baseClientBytes - worldBytes > baseClientBudget + campFlagArtBudget) {
   throw new Error(`Base production artifact exceeds ${((baseClientBudget + campFlagArtBudget) / 1024 / 1024).toFixed(2)} MiB (${(baseClientBytes / 1024 / 1024).toFixed(2)} MiB).`);
 }
 if (preparedWorldBytes > 35 * 1024 * 1024) {

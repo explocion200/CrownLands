@@ -5935,7 +5935,7 @@ function normalizePathSegments(segments = []) {
       if (points.length < 2) return null;
       return {
         regionId: normalizeRegionId(segment.regionId),
-        ...(segment.routingVersion === "open-world-draft-v1" && /^[a-f0-9]{64}$/.test(segment.geometryId || "")
+        ...(["open-world-draft-v1", "continuous-world-v1"].includes(segment.routingVersion) && /^[a-f0-9]{64}$/.test(segment.geometryId || "")
           ? { routingVersion: segment.routingVersion, geometryId: segment.geometryId } : {}),
         points,
         length: Math.max(0, safeNumber(segment.length, routeLength(points))),
@@ -7830,8 +7830,8 @@ function getServerScoutRouteSearch(source, target, searches) {
   };
 }
 
-// The optional provider exists only in an explicitly constructed isolated test
-// platform. Installed PostgreSQL/Firebase platforms never supply this capability.
+// Permanent local worlds supply an installed capability; Firebase and ordinary
+// rehearsals keep the prior policy. Accepted orders retain their saved geometry.
 async function buildServerGeneratedArmyRoute(source = {}, target = {}, options = {}) {
   if (!privateWorldRouting?.enabled) return buildCurrentServerGeneratedArmyRoute(source, target, options);
   const canonicalSource = getCanonicalArmyRouteEndpoint(source, source.regionId || source.startPool);
@@ -7878,15 +7878,20 @@ async function privateBulkCityAddresses(value, regionId, fallbackIds, limit) {
 async function selectPrivateScoutOrigin(candidates, target) {
   // Route one candidate at a time so a single order cannot exhaust the worker
   // queue. Reuse the shared City/Tower eligibility and deterministic tie rules.
-  const routes = new Map();
-  for (const candidate of candidates) {
+  const routes = new Map(); let best = Infinity, pruned = 0;
+  await ensureTravelNetworkContext();
+  const context = { worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, sharedRealmId: getCurrentRealmShardId(), activeRegionIds: REALM_REQUEST_CONTEXT.getStore()?.activeTravelRegionIds };
+  const eligible = candidates.filter(candidate => candidate?.id && candidate?.regionId && clampInt(candidate.troops, 0, Number.MAX_SAFE_INTEGER) >= 1);
+  const ordered = eligible.map(candidate => ({ candidate, bound: privateWorldRouting.lowerBound?.(getCanonicalArmyRouteEndpoint(candidate), getCanonicalArmyRouteEndpoint(target), context) || 0 })).sort((a,b) => a.bound-b.bound);
+  for (const { candidate, bound } of ordered) {
     if (!candidate?.id || !candidate?.regionId || clampInt(candidate.troops, 0, Number.MAX_SAFE_INTEGER) < 1) continue;
-    try { routes.set(candidate, await buildServerGeneratedArmyRoute(candidate, target)); }
+    if (bound > best) { pruned++; continue; }
+    try { const route = await buildServerGeneratedArmyRoute(candidate, target); routes.set(candidate, route); best = Math.min(best, route.pathLength); }
     catch (error) {
       if (error.code !== "failed-precondition") throw error;
     }
   }
-  OPERATION_TIMING.scout({ scoutOriginRoutes: routes.size, scoutOriginsPruned: 0 });
+  OPERATION_TIMING.scout({ scoutOriginRoutes: routes.size, scoutOriginsPruned: pruned });
   return HOLDING_TOWERS.selectClosestScoutOrigin(candidates, target, candidate => routes.get(candidate));
 }
 

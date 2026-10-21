@@ -16,7 +16,7 @@ Prepared October 21, 2026 for the owner's request to connect authenticated areas
 
 **Continuous-world activation:** needs a production-ready package and server provider satisfying the prerequisites below. Keep ordinary gameplay on the current map until that pair is ready. Never copy the fictional-account test harness into the live runtime.
 
-## Outstanding public-activation prerequisites
+## Prerequisites identified before production integration
 
 1. Promote renderer, terrain delivery, reader and pathfinder into audited, fingerprinted production modules. The client currently excludes them, the permanent service supplies no `worldData`, and `privateWorldRouting` accepts only disposable worldtest schemas. These boundaries remain enforced.
 2. Replace pilot-only candidates with current player/clan membership, active sections and fresh ownership. The fixture's two named players and disposal assumptions must not reach production.
@@ -24,7 +24,7 @@ Prepared October 21, 2026 for the owner's request to connect authenticated areas
 4. Add a capability/revision handshake for display geometry, travel policy and qualified bulk actions. Old tabs must not silently use old-range candidates against new policy; new tabs must not fall back to old travel after failed previews. Require refresh or reject incompatible new commands recoverably. Test old/new artifact combinations.
 5. Measure representative simultaneous **commands plus area feeds**, especially closest-source scouting, admission/retries and database time. Two-account HUD tests and a bounded worker burst are not public capacity approval. The earlier larger dispersed reader cohort still had material deferrals.
 
-The private HUD action tests and fresh-process saved-route test provide evidence for their stated scope. They do not satisfy the missing production provider, packaging, protocol or capacity checks.
+The private HUD action tests and fresh-process saved-route test provided evidence for their original scope. The subsequent owner-approved production implementation and its focused tests address these prerequisites in [the production integration record](CONTINUOUS_WORLD_PRODUCTION.md). Its deployment remains subject to verified installation and publication.
 
 ## Activation and rollback order
 
