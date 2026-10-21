@@ -1,8 +1,10 @@
 /* exported getClanRallyMaximumParticipants, installMarauderSearch, openMarauderDetails, applyOnlineMarauders, renderMarauders, updateMarauderRespawnTimers, renderBossReadiness, selectMarauder, selectedMarauderSpawnId, scoutMarauder, attackMarauder, getMarauderDetailsModel */
 /* exported getMarauderBattleTargetLabel, getMarauderBattleRuleLabel, getMarauderReportTarget, normalizeMarauderReportTarget, marauderBattleReportSide, getMarauderBattleResultLabel, getLegacyMarauderBattleSides */
+/* exported getMarauderRespawnLabel */
 /* Shared NPC targets stay separate from capturable city and camp state. */
 const marauderMaps = new Map();
 const bossReadiness = new Map();
+const continuousMarauderRequests = new WeakMap();
 let selectedMarauderSpawnId = "";
 function marauderArt(target) { return `assets/marauders/${target.classification === "boss" ? "boss" : "solo"}-v1.webp`; }
 function applyOnlineMarauders(rows, regionId) {
@@ -60,11 +62,37 @@ function renderMarauders(bounds) {
   existing.forEach(node => node.remove());
   updateMarauderRespawnTimers();
 }
+function getMarauderRespawnLabel(target, now = getArmyClockNowMs()) {
+  const seconds = Math.max(0, Math.ceil((Number(target.respawnAtMs) - now) / 1000));
+  return seconds > 0 ? `Respawn ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}` : "Awaiting respawn";
+}
 function updateMarauderRespawnTimers() {
   const now = getArmyClockNowMs(), api = getOnlineApi();
+  const connected = window.CrownlandsContinuousWorld;
+  if (connected) {
+    // Use the actual visible area objects, not the legacy active-section cache.
+    // Slot keys bound memory; a replaced identity can wake once again. A new
+    // world/session creates a new controller and discards the old request map.
+    if (!continuousMarauderRequests.has(connected)) continuousMarauderRequests.set(connected, new Map());
+    const requests = continuousMarauderRequests.get(connected), feed = connected.view.snapshot().feed;
+    for (const node of connected.root.querySelectorAll(".object.npc[data-key]")) {
+      const target = connected.view.getObject(node.dataset.key);
+      if (!target || target.selectable || !target.spawnId) continue;
+      const label = getMarauderRespawnLabel(target, now), timer = node.querySelector("[data-npc-respawn]");
+      if (timer && timer.textContent !== label) timer.textContent = label;
+      node.title = `${target.name} · Defeated · ${label}`; node.setAttribute("aria-label", node.title);
+      if (!feed?.failed && !feed?.authExpired && Number.isFinite(target.respawnAtMs) && target.respawnAtMs <= now
+        && !document.hidden && navigator.onLine && api?.isSignedIn?.() && api.refreshMarauderRespawn
+        && requests.get(target.key) !== target.spawnId) {
+        requests.set(target.key, target.spawnId);
+        api.refreshMarauderRespawn({ regionId: target.sectionId, id: target.id, spawnId: target.spawnId }).catch(() => {});
+      }
+    }
+    return;
+  }
   for (const target of visibleMarauders().filter(row => row.status === "defeated")) {
     const seconds = Math.max(0, Math.ceil((Number(target.respawnAtMs) - now) / 1000));
-    const label = seconds > 0 ? `Respawn ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}` : "Awaiting respawn";
+    const label = getMarauderRespawnLabel(target, now);
     const node = [...cityLayer.querySelectorAll("[data-marauder-id]")].find(item => item.dataset.spawnId === target.spawnId);
     if (node?.querySelector("[data-npc-respawn]")) {
       node.querySelector("[data-npc-respawn]").textContent = label;

@@ -10,9 +10,12 @@ const layout = require("../functions/core-expansion-world-layout.json");
 const roadData = require("../functions/marauder-road-points.json");
 const source = fs.readFileSync(require.resolve("../functions/index.js"), "utf8");
 
-function createPlacementFixture(travel = null) {
+function createPlacementFixture(travel = null, { routing, context: realm } = {}) {
   const planner = travel?.planner || createAuthoritativeRoutePlanner(layout, { getTerrainBlockers: getAuthoritativeTerrainBlockers });
   const context = vm.createContext({
+    privateWorldRouting: routing, ONLINE_WORLD_ID: realm?.worldId, RESET_GENERATION: realm?.resetGeneration,
+    getCurrentRealmShardId: () => realm?.sharedRealmId,
+    REALM_REQUEST_CONTEXT: { getStore: () => ({ activeTravelRegionIds: realm?.activeRegionIds }) },
     getServerCatalogRegion: id => travel ? travel.scope.getServerCatalogRegion(id) : catalog.regions.find(row => row.id === id),
     getAuthoritativeIslandSeed: id => {
       const model = planner.getModel(id), map = model.map;

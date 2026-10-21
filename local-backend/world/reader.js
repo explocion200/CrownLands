@@ -169,7 +169,8 @@ class LiveReader {
     const parents=ids.map(id=>`islands/${realm.worldId}--${realm.sharedRealmId}--${id}`),parentSections=new Map(parents.map((p,i)=>[p,ids[i]]));
     const result=await client.query(`SELECT path,body FROM ${this.schema}.documents
       WHERE parent_path=ANY($1::text[]) AND collection_id=ANY($2::text[])
-      AND (collection_id<>'armies' OR body#>>'{fields,status,stringValue}'='active') ORDER BY path LIMIT 2401`,[parents,["cities","camps","marauders","armies"]]);
+      AND (collection_id<>'armies' OR body#>>'{fields,status,stringValue}'='active')
+      AND (collection_id<>'marauders' OR body#>>'{fields,status,stringValue}' IN ('active','defeated')) ORDER BY path LIMIT 2401`,[parents,["cities","camps","marauders","armies"]]);
     if(result.rows.length>2400)throw fail(413,"Area exceeds private reader budget; zoom in");
     this.stats.maxRows=Math.max(this.stats.maxRows,result.rows.length);this.stats.sectionLoads+=ids.length;
     const towers=await this.store.get(this.store.collection("holdingTowers").where("worldId","==",realm.worldId).where("resetGeneration","==",realm.resetGeneration).where("realmShardId","==",realm.sharedRealmId).limit(32),client);
@@ -218,6 +219,7 @@ class LiveReader {
   }
   decode(body){return decode({mapValue:{fields:body.fields||{}}});}
   object(id,collection,data,section,uid,skin){
+    if(collection==="marauders"&&!["active","defeated"].includes(data.status))return null;
     const local=gameToImage(section,data);if(!local)return null;
     const landmark=this.artObjects.get(section.templateId+":"+id);
     let kind=collection==="camps"?"camp":collection==="holdingTowers"?"tower":collection==="marauders"?"npc":landmark?.kind||"castle";

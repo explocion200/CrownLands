@@ -206,6 +206,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     }
     assert(hunt, "Native NPC attack did not retain the current spawn identity");
     await page.waitForFunction(() => !sendMode && !modal.open);
+    if(production)await require("./check-continuous-npc-timers")(page,pilot,output);
     // Qualified bulk candidates must cross a section edge through the normal
     // two-step HUD controls, rather than silently using the old local radius.
     await select(page, source);
