@@ -35,6 +35,7 @@ module.exports=async(page,pilot,city,output)=>{
     await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
     const target=await marker.boundingBox();assert(target);
     await page.mouse.click(target.x+target.width/2,target.y+target.height/2);await page.waitForFunction(key=>nativeContinuousWorld.view.selectedKey===key,key);
+    await page.waitForFunction(key=>nativeContinuousWorld.root.querySelector(`[data-key="${key}"]`)?.classList.contains('selected'),key);
     assert(await marker.evaluate(n=>n.classList.contains('selected')));
     assert.equal(await page.evaluate(()=>nativeContinuousWorld.view.snapshot().following),null);
     // Repeated area refreshes must derive dimensions from unmodified packets.
