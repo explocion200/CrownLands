@@ -26,7 +26,7 @@
     const city=item.kind==="castle"?powerCity(item):null;
     const powerBand=city?getStableEnemyCityPowerBand(city):"";
     const powerLabel=getEnemyCityPowerBandLabel(powerBand,city);
-    const countdown=item.kind==="camp"?item.payoutPending?formatDuration(Math.max(0,Math.ceil((item.payoutAtMs-now)/1000))):"Securing":item.kind==="npc"&&!item.selectable?item.respawnAtMs>now?"Respawn "+formatDuration(Math.ceil((item.respawnAtMs-now)/1000)):"Awaiting respawn":"";
+    const countdown=item.kind==="camp"?item.payoutPending?formatDuration(Math.max(0,Math.ceil((item.payoutAtMs-now)/1000))):"Securing":item.kind==="npc"&&!item.selectable?getMarauderRespawnLabel(item):"";
     const main=item.isMainCity===true||(own(item)&&item.id===state.mainCityId&&item.sectionId===getMainCityRegionId());
     const signature=JSON.stringify([item.key,item.name,item.kind,item.owner,item.ownerUid,item.ownerFlag,item.ownerClanId,item.ownerClanTag,item.level,item.campType,item.classification,item.troopVisibility,item.troops,item.troopEstimateLabel,item.selectable,item.missionKind,selected,owner,countdown,main,powerBand,powerLabel]);
     if(rendered.get(node)===signature)return;
@@ -50,7 +50,7 @@
     const clan=item.ownerClanTag?`<strong class="map-city-clan-tag">[${esc(item.ownerClanTag)}]</strong>`:"";
     const ruler=`<span class="city-ruler-row"><strong class="${own(item)?"city-ruler-name":"foreign-ruler-name"}">${esc(item.owner)}</strong></span>`;
     if(item.kind==="npc"){
-      label.innerHTML=`<span class="city-label native-npc-label">${item.classification==="boss"?"Boss":"Marauder"} · ${esc(item.level??"")}${countdown?" · "+esc(countdown):""}</span>`;
+      label.innerHTML=`<span class="city-label native-npc-label">${item.classification==="boss"?"Boss":"Marauder"} · ${esc(item.level??"")}${countdown?' · <small data-npc-respawn>'+esc(countdown)+'</small>':""}</span>`;
     }else if(item.kind==="tower"){
       label.innerHTML=`<span class="city-label native-tower-label"><span class="holding-tower-clan-banner">${item.owner!=="Neutral"?ruler:""}</span><span class="holding-tower-map-label">${esc(item.name)}</span></span>`;
     }else if(item.kind==="camp"){

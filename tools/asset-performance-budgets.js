@@ -59,5 +59,8 @@
 // Existing headroom covers 1,866 bytes; bound the remainder at 1 KiB.
 // Camp map banners add 400 net shell bytes (4,628,100 total). The 2,284-byte
 // four-flag sprite loads on demand; add only 512 bytes of shell headroom.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024 + 2 * 1024 + 4 * 1024 + 512 + 1024 + 8 * 1024 + 12 * 1024 + 3 * 1024 + 5 * 1024 + 2 * 1024 + 20 * 1024 + 1024 + 512;
+// Continuous-world NPC countdowns and one-shot deadline wake-up add 1,043
+// delivered bytes (4,629,522 total), 1,042 above the previous cap. Bound this
+// repair at 1.5 KiB; reuse the combat tick with no new polling, art or libraries.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024 + 2 * 1024 + 4 * 1024 + 512 + 1024 + 8 * 1024 + 12 * 1024 + 3 * 1024 + 5 * 1024 + 2 * 1024 + 20 * 1024 + 1024 + 512 + 1536;
 module.exports = { MAX_INSTALL_PRECACHE_BYTES };

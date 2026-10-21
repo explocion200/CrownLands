@@ -93,7 +93,10 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
           existing.set(id, { ...row, ...patch }); retired++;
         } else if (row.status === "active") enemies.push(row);
       }
-      const structures = [...geometry.structures, ...cities.docs.map(doc => ({ ...doc.data(), clearance: 132 }))];
+      const structures = [...geometry.structures, ...cities.docs.map(doc => {
+        const city = { ...doc.data(), clearance: 132 };
+        return geometry.projectStructure ? geometry.projectStructure(city) : city;
+      })];
       let spawned = 0, blocked = 0;
       for (const slot of slots) {
         const id = slotId(regionId, slot.slot), previous = existing.get(id);

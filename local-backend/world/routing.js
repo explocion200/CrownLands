@@ -39,6 +39,14 @@ function createCommandRouting({ enabled: initiallyEnabled = false } = {}) {
   return {
     get enabled() { return enabled && !closed; },
     setEnabled(value) { enabled = value === true; },
+    projectStructure(endpoint, context) {
+      // NPC clearance must use the same spread-out castle positions players
+      // see. Return compatibility coordinates without changing saved cities.
+      const { display } = world(context), section = display.sections.get(endpoint.regionId);
+      const local = section && gameToImage(section, endpoint);
+      if (!local) throw error("failed-precondition", "Structure is outside the active world.");
+      return { ...endpoint, ...imageToGame(section, display.project(section, local, "castle")) };
+    },
     nearbySections(endpoint, radius, context) {
       const { display } = world(context), p = point(display, endpoint);
       const pixels = radius / display.geometry.unitsPerPixel;
