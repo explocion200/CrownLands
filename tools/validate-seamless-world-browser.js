@@ -56,7 +56,7 @@ async function main() {
     await cdp.send("Page.navigate", { url: `${address.url}/__benchmark__/seamless/fixture` });
     await sleep(100);
     const seamPixels = await evaluate(async () => {
-      const scene = await (await fetch("/__benchmark__/seamless/fixture")).json();
+      const scene = await (await fetch("/__benchmark__/seamless/catalog")).json();
       const results = [];
       for (const key of ["terrain", "thumbnail"]) for (const s of scene.sections) for (const [dx, dy] of [[1, 0], [0, 1]]) {
         const n = scene.sections.find(n => n.gridX === s.gridX + dx && n.gridY === s.gridY + dy); if (!n) continue;
@@ -75,14 +75,14 @@ async function main() {
       }
       return results;
     });
-    assert.equal(seamPixels.length, 24);
+    assert.equal(seamPixels.length, 288);
     for (const seam of seamPixels) assert.ok(seam.meanChannelDifference < 3 && seam.maxChannelDifference < 40, `Painted seam discontinuity: ${JSON.stringify(seam)}`);
     fs.writeFileSync(path.join(output, "seam-pixels.json"), JSON.stringify(seamPixels, null, 2) + "\n");
-    console.log(`Terrain: all 12 full-detail and thumbnail joins match within compression tolerance; worst mean channel difference ${Math.max(...seamPixels.map(s => s.meanChannelDifference)).toFixed(2)}/255.`);
-    const previewIds = new Set(require("./map-benchmark/seamless/fixtures").createSeamlessFixture().sections.map(s => s.id));
+    console.log(`Terrain: all 144 full-detail and thumbnail joins match within compression tolerance; worst mean channel difference ${Math.max(...seamPixels.map(s => s.meanChannelDifference)).toFixed(2)}/255.`);
+    const previewIds = new Set(require("./map-benchmark/seamless/fixtures").createSeamlessFixture(false, true).sections.map(s => s.id));
     const roadSamples = require("./map-art/clearance.json").maps.filter(m => previewIds.has(m.id));
     const roadResult = await evaluate(async maps => {
-      const scene = await (await fetch("/__benchmark__/seamless/fixture")).json();
+      const scene = await (await fetch("/__benchmark__/seamless/catalog")).json();
       let tested = 0; const failures = [];
       for (const s of scene.sections) {
         const bitmap = await createImageBitmap(await (await fetch(`/${s.terrain}`)).blob());
@@ -98,9 +98,9 @@ async function main() {
       }
       return { tested, failures };
     }, roadSamples.map(m => ({ id: m.id, points: m.roads.flatMap(line => line.filter((_, i) => i % 12 === 0 || i === line.length - 1).map(([x, y]) => [x, y])) })));
-    assert.deepEqual(roadResult.failures, [], "Road artwork must cover routes in all nine sections, not just the first tile");
+    assert.deepEqual(roadResult.failures, [], "Road artwork must cover routes in all 81 sections, not just the first tile");
     assert.ok(roadResult.tested > 500);
-    console.log(`Terrain: ${roadResult.tested} painted road-center samples passed across all nine sections.`);
+    console.log(`Terrain: ${roadResult.tested} painted road-center samples passed across all 81 sections.`);
     await navigate(`${address.url}/__benchmark__/seamless/`);
     await waitFor(() => window.seamlessPreview); await settle();
     const initial = await snapshot(); assert.equal(initial.assets.peakRequests, 2); assert.equal(initial.assets.full, 4);

@@ -4,6 +4,7 @@
 const crypto = require("node:crypto");
 const { createCatalogFeed } = require("./catalog-feed");
 const { Store } = require("../../../local-backend/store");
+const Visibility = require("./game-visibility");
 const RETAIN = 60, MAX_EVENTS = 256;
 class FixtureRealm {
   constructor(store, { crowded = false, clock = Date.now } = {}) {
@@ -15,28 +16,34 @@ class FixtureRealm {
     const seen = new Set();
     for (const section of this.manifest.sections) {
       const data = this.catalog.read([section.id], 0);
-      for (const body of data.sections[0].objects) this.initial.push({ key: body.key, kind: "object", sections: [section.id], viewers: [], body });
+      for (const body of data.sections[0].objects) {
+        const uid = body.owner.startsWith("Lady Rowan") ? "sample-rowan" : "sample-alder";
+        const source = body.selectable ? { path: body.kind === "tower" ? `holdingTowers/${body.id}` : `islands/${Visibility.CONTRACT.worldId}-${section.id}/${body.kind === "camp" ? "camps" : "cities"}/${body.id}`,
+          data: { ...Visibility.CONTRACT, ownerUid: uid } } : null;
+        this.initial.push({ key: body.key, kind: "object", sections: [section.id], viewers: [], body, source });
+      }
       for (const route of data.routes) this.routes.set(route.id, route);
       for (const body of data.marches) if (!seen.has(body.key)) {
         seen.add(body.key);
         // Synthetic permissions deliberately include private armies. Nearby
         // geography alone never grants access to another player's army.
         const uid = seen.size % 2 ? "sample-rowan" : "sample-alder";
-        this.initial.push({ key: body.key, kind: "march", sections: body.sections, viewers: [uid], body });
+        this.initial.push({ key: body.key, kind: "march", sections: body.sections, viewers: [uid], body, source: { path: `armies/${body.id}`, data: { ...Visibility.CONTRACT, ownerUid: uid, participantUids: [uid], status: "active", kind: "transfer" } } });
       }
     }
   }
   async initialize() {
+    await Visibility.seed(this.store);
     const s = this.schema, client = await this.store.pool.connect();
     try {
       await client.query("BEGIN");
       await client.query(`CREATE TABLE ${s}.world_meta (id boolean PRIMARY KEY DEFAULT true CHECK(id), revision integer NOT NULL);
         INSERT INTO ${s}.world_meta VALUES(true,0);
-        CREATE TABLE ${s}.world_rows (key text PRIMARY KEY, kind text NOT NULL, sections text[] NOT NULL, viewers text[] NOT NULL, body jsonb NOT NULL);
+        CREATE TABLE ${s}.world_rows (key text PRIMARY KEY, kind text NOT NULL, sections text[] NOT NULL, viewers text[] NOT NULL, body jsonb NOT NULL, source jsonb);
         CREATE INDEX ON ${s}.world_rows USING gin(sections);
         CREATE TABLE ${s}.world_events (revision integer NOT NULL, key text NOT NULL, before_row jsonb, after_row jsonb, PRIMARY KEY(revision,key));
         REVOKE ALL ON ALL TABLES IN SCHEMA ${s} FROM PUBLIC;`);
-      await client.query(`INSERT INTO ${s}.world_rows SELECT * FROM jsonb_to_recordset($1::jsonb) AS r(key text,kind text,sections text[],viewers text[],body jsonb)`, [JSON.stringify(this.initial)]);
+      await client.query(`INSERT INTO ${s}.world_rows SELECT * FROM jsonb_to_recordset($1::jsonb) AS r(key text,kind text,sections text[],viewers text[],body jsonb,source jsonb)`, [JSON.stringify(this.initial)]);
       await client.query("COMMIT");
     } catch (error) { await client.query("ROLLBACK"); throw error; } finally { client.release(); }
   }
@@ -54,11 +61,15 @@ class FixtureRealm {
       const revision = (await client.query(`UPDATE ${s}.world_meta SET revision=revision+1 RETURNING revision`)).rows[0].revision;
       for (const change of changes) {
         const before = (await client.query(`SELECT * FROM ${s}.world_rows WHERE key=$1`, [change.key])).rows[0] || null;
-        const after = change.row || null;
+        const after = change.row ? { ...change.row } : null;
+        // Legacy fixture helpers change viewers; keep that operation an actual
+        // authoritative ownership/participation update, rather than bypass ACLs.
+        if (before && after?.source?.path.startsWith("armies/") && JSON.stringify(after.viewers) !== JSON.stringify(before?.viewers))
+          after.source = { ...after.source, data: { ...after.source.data, ownerUid: after.viewers[0] || "sample-outsider", participantUids: after.viewers } };
         if (after) {
           if (after.key !== change.key || after.body.key !== change.key || !["object", "march"].includes(after.kind)) throw Error("Invalid fixture identity");
           this.validIds(after.sections);
-          await client.query(`INSERT INTO ${s}.world_rows VALUES($1,$2,$3,$4,$5) ON CONFLICT(key) DO UPDATE SET kind=EXCLUDED.kind,sections=EXCLUDED.sections,viewers=EXCLUDED.viewers,body=EXCLUDED.body`, [after.key, after.kind, after.sections, after.viewers, after.body]);
+          await client.query(`INSERT INTO ${s}.world_rows VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(key) DO UPDATE SET kind=EXCLUDED.kind,sections=EXCLUDED.sections,viewers=EXCLUDED.viewers,body=EXCLUDED.body,source=EXCLUDED.source`, [after.key, after.kind, after.sections, after.viewers, after.body, after.source || null]);
         } else await client.query(`DELETE FROM ${s}.world_rows WHERE key=$1`, [change.key]);
         await client.query(`INSERT INTO ${s}.world_events VALUES($1,$2,$3,$4)`, [revision, change.key, before, after]);
       }
@@ -69,11 +80,18 @@ class FixtureRealm {
   async read(uid, ids, cursor) {
     if (!["sample-rowan", "sample-alder"].includes(uid)) throw Error("Not a fixture realm member");
     ids = this.validIds(ids);
-    const viewerEpoch = this.epoch + ":" + uid;
+    let viewerEpoch;
     const client = await this.store.pool.connect(), s = this.schema;
     try {
       // Snapshot and journal watermark must describe the same committed state.
       await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      const readAt = this.clock();
+      const visibility = await Visibility.context(this.store, client, uid, readAt);
+      const expired = (await client.query(`SELECT key FROM ${s}.world_rows WHERE sections && $1::text[]
+        AND jsonb_typeof(source #> '{data,scoutReport,expiresAtMs}')='number'
+        AND (source #>> '{data,scoutReport,expiresAtMs}')::numeric <= $2 ORDER BY key`, [ids,readAt])).rows;
+      const timeScope = crypto.createHash("sha256").update(JSON.stringify(expired)).digest("hex").slice(0,12);
+      viewerEpoch = this.epoch + ":" + visibility.scope + ":" + timeScope + ":" + uid;
       const revision = (await client.query(`SELECT revision FROM ${s}.world_meta`)).rows[0].revision;
       let delta = cursor?.epoch === viewerEpoch && Number.isSafeInteger(cursor.revision) && cursor.revision >= Math.max(0, revision - RETAIN) && cursor.revision <= revision;
       let events = [];
@@ -82,8 +100,7 @@ class FixtureRealm {
         if (events.length > MAX_EVENTS) delta = false;
       }
       const rows = delta ? [] : (await client.query(`SELECT * FROM ${s}.world_rows WHERE sections && $1::text[] AND (kind='object' OR $2=ANY(viewers)) ORDER BY key`, [ids, uid])).rows;
-      await client.query("COMMIT");
-      const result = { kind: delta ? "delta" : "snapshot", epoch: viewerEpoch, viewer: uid, revision, fromRevision: delta ? cursor.revision : null, ids, serverTime: (this.clock() - this.started) / 1000,
+      const result = { kind: delta ? "delta" : "snapshot", epoch: viewerEpoch, viewer: uid, revision, fromRevision: delta ? cursor.revision : null, ids, serverTime: (readAt - this.started) / 1000,
         objects: { upsert: [], remove: [] }, marches: { upsert: [], remove: [] }, routes: [] };
       const latest = new Map();
       if (delta) for (const event of events) {
@@ -96,9 +113,14 @@ class FixtureRealm {
       for (const [key, { before, after }] of latest) {
         const was = this.visible(before, uid, ids), now = this.visible(after, uid, ids);
         if (was && (!now || before.kind !== after.kind)) result[before.kind === "object" ? "objects" : "marches"].remove.push(key);
-        if (now) result[after.kind === "object" ? "objects" : "marches"].upsert.push(after.body);
+        if (now) {
+          const projected = await Visibility.project(visibility.access, after);
+          if (projected) result[after.kind === "object" ? "objects" : "marches"].upsert.push(projected);
+          else if (was) result[before.kind === "object" ? "objects" : "marches"].remove.push(key);
+        }
       }
       result.routes = [...new Set(result.marches.upsert.map(m => m.routeId))].map(id => this.routes.get(id));
+      await client.query("COMMIT");
       return result;
     } catch (error) { await client.query("ROLLBACK"); throw error; } finally { client.release(); }
   }

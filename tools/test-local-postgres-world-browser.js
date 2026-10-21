@@ -110,15 +110,22 @@ async function main() {
     assert.ok(samples.at(-1).nodes <= samples[0].nodes + 100); assert.ok(samples.at(-1).listeners <= samples[0].listeners + 5); assert.ok(samples.at(-1).heap <= samples[0].heap * 1.25 + 1048576);
     for (const [width,height,crowded,rate] of [[1440,900,false,1],[1440,900,true,1],[1440,900,false,4],[1440,900,true,4],[844,390,false,4],[844,390,true,4],[568,320,false,4],[568,320,true,4]]) {
       await cdp.send("Emulation.setCPUThrottlingRate", { rate }); await resize(width,height); await login(crowded ? 1 : 0); await click("#home"); await settle();
+      const feedBefore = (await snapshot()).feed;
       await evaluate(() => { seamlessPreview.time(null); seamlessPreview.resetMetrics(); return new Promise(resolve => { const start=performance.now(), home=seamlessPreview.scene.sections.find(s=>s.id===seamlessPreview.scene.homeSectionId), zoom=SeamlessModel.forWorld(seamlessPreview.scene).limits(seamlessPreview.snapshot().size).home;
         function frame(now) { const t=(now-start)/1000; seamlessPreview.view(home.x+724+600*Math.sin(t*1.8),home.y+543+400*Math.cos(t*1.4),zoom*(.85+.2*Math.sin(t*2))); if(t<6) requestAnimationFrame(frame); else resolve(); } requestAnimationFrame(frame); }); });
       const s=await snapshot(), sorted=[...s.frameTimes].sort((a,b)=>a-b); bounds(s); assert.ok(sorted.length>50);
-      const result={width,height,crowded,cpuSlowdown:rate,fps:+(1000*sorted.length/sorted.reduce((a,b)=>a+b,0)).toFixed(1),frameP95:+sorted[Math.floor(sorted.length*.95)].toFixed(1),nodes:s.nodes,areas:s.feed.sections,marches:s.feed.marches}; performanceResults.push(result);
+      const result={width,height,crowded,cpuSlowdown:rate,fps:+(1000*sorted.length/sorted.reduce((a,b)=>a+b,0)).toFixed(1),frameP95:+sorted[Math.floor(sorted.length*.95)].toFixed(1),nodes:s.nodes,areas:s.feed.sections,marches:s.feed.marches,snapshotsDuringMotion:s.feed.snapshots-feedBefore.snapshots,bytesDuringMotion:s.feed.bytes-feedBefore.bytes}; performanceResults.push(result);
+      assert.ok(result.snapshotsDuringMotion <= 1,"Ordinary nearby camera motion repeatedly replaced its snapshot");
       console.log(`Authenticated preview ${width}×${height} ${crowded?'crowded':'normal'} ${rate}x: ${result.fps} FPS, p95 ${result.frameP95}ms.`);
     }
     await cdp.send("Emulation.setCPUThrottlingRate", { rate:1 }); await login(0);
     await evaluate(o => { seamlessPreview.view(o.x,o.y); seamlessPreview.select(o.key); }, castle); await settle(); assert.equal((await snapshot()).selected,castle.key);
     await evaluate(() => seamlessPreview.view(724,543)); await settle();
+    // Permission changes must clear even an offscreen last-received inspector.
+    await servers[0].store.doc("holdingTowers/changed-authority").set({fixture:true});
+    await evaluate(() => seamlessPreview.refresh());await settle();assert.equal((await snapshot()).selected,null);
+    await evaluate(o=>{seamlessPreview.view(o.x,o.y);seamlessPreview.select(o.key);},castle);await settle();
+    await evaluate(()=>seamlessPreview.view(724,543));await settle();
     // Another tab can replace a port's cookie. The old tab must discard even
     // unloaded private inspector state when the principal changes.
     await evaluate(async credential => { const r=await fetch("./login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(credential)}); if(!r.ok) throw Error("Fixture account switch failed"); },servers[0].credentials[1]);
@@ -132,7 +139,7 @@ async function main() {
     await waitFor(() => !document.getElementById("retry").hidden && document.getElementById("retry").textContent === "Sign in");
     await click("#retry"); await waitFor(() => !!document.getElementById("test-login"));
     assert.deepEqual(errors,[]); assert.deepEqual(external,[]);
-    fs.writeFileSync(path.join(output,"report.json"),JSON.stringify({measuredAt:new Date().toISOString(),browser:(await cdp.send("Browser.getVersion")).product,performance:performanceResults,payloads,retention:samples,errors,externalRequests:external,limitation:"Temporary authenticated PostgreSQL fixture realm, conservative sample army permissions, headless synthetic CPU slowdown. No production realm, physical-phone measurement or full multiplayer capacity claim."},null,2)+"\n");
+    fs.writeFileSync(path.join(output,"report.json"),JSON.stringify({measuredAt:new Date().toISOString(),browser:(await cdp.send("Browser.getVersion")).product,performance:performanceResults,payloads,retention:samples,errors,externalRequests:external,limitation:"Temporary authenticated PostgreSQL fixture realm, existing Access engine plus strict map DTO visibility, headless synthetic CPU slowdown. No production realm, physical-phone measurement or full multiplayer capacity claim."},null,2)+"\n");
     console.log("Authenticated browser passed: sign-in, incremental ownership, authoritative deletion, follow/visibility loss, overview restoration, disconnected delta resume, landscape touch, bounded repeated area visits and revocation.");
   } finally {
     if(cdp){await cdp.send("Browser.close").catch(()=>{});cdp.close();}

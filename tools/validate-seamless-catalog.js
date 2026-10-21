@@ -42,6 +42,21 @@ async function main() {
   const point = { x: 430, y: 170 }, before = M.unproject(home, point, size), zoomed = camera.zoomAt(home, size, point, home.zoom * 2);
   const after = M.unproject(zoomed, point, size); assert.ok(Math.hypot(before.x - after.x, before.y - after.y) < 1e-7);
   const fit = camera.clamp({ x: -100, y: 999999, zoom: 0 }, size); assert.equal(fit.x, manifest.width / 2); assert.equal(fit.y, manifest.height / 2);
+  // Nearby data should survive ordinary oscillating pans/zooms, especially on
+  // wide phone viewports; every visible section must remain present.
+  const homeSection = manifest.sections.find(s => s.id === manifest.homeSectionId);
+  for (const [width,height] of [[1440,800],[844,315],[568,245]]) {
+    const viewport = {width,height}; let previous = [], replacements = 0;
+    for (let frame = 0; frame < 360; frame++) {
+      const t = frame/60, c = {x:homeSection.x+724+600*Math.sin(t*1.8),y:homeSection.y+543+400*Math.cos(t*1.4),zoom:camera.limits(viewport).home*(.85+.2*Math.sin(t*2))};
+      const next = M.interestSections(manifest.sections,c,viewport,previous).map(s=>s.id).sort();
+      assert.ok(next.length <= 16);
+      assert.ok(manifest.sections.filter(s=>M.intersects(M.visible(c,viewport),s.x,s.y,s.width,s.height)).every(s=>next.includes(s.id)),"Visible section dropped from interest window");
+      if (next.join() !== previous.join()) replacements++;
+      previous = next;
+    }
+    assert.ok(replacements <= 2,`${width}: ${replacements} nearby-data replacements during six seconds of ordinary motion`);
+  }
   // Out-of-order completions cannot overwrite a newer area set or revision.
   const pending = [], changes = [], feed = new AreaFeed(data => changes.push(data), (ids, signal) => new Promise((resolve, reject) => pending.push({ ids, signal, resolve, reject })));
   feed.set([ids[0]]); feed.set([ids[1]]); assert.ok(pending[0].signal.aborted);
