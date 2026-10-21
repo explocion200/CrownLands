@@ -12,7 +12,7 @@
     }
     static async load(path, signal) {
       if (!/^(assets\/[a-zA-Z0-9_./-]+\.(webp|png|svg)|tools\/map-benchmark\/seamless\/terrain\/[a-z0-9-]+\.webp)$/.test(path) || path.includes("..")) throw new Error("Non-asset URL refused");
-      const response = await fetch(`/${path}`, { signal, credentials: "omit" });
+      const response = await fetch(`/${path}`, { signal, credentials: "same-origin" });
       if (!response.ok) throw new Error(`Image HTTP ${response.status}`);
       const url = URL.createObjectURL(await response.blob());
       try { const image = new Image(); image.src = url; await image.decode(); return url; }
