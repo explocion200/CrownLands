@@ -17,7 +17,7 @@ const CONTEXT_FIELDS=["worldId","resetGeneration","sharedRealmId","resetReadines
 const CONTEXT_SQL=CONTEXT_FIELDS.map(key=>`'${key}',body->'fields'->'${key}'`).join(",");
 class LiveReader {
   constructor({pool,schema="migration_game_live",clock=Date.now,openWorld=false}) {
-    if(schema!=="migration_game_live"&&!/^migration_reader_test_[a-f0-9]{12}$/.test(schema))throw Error("Reviewed game or isolated test schema required");
+    if(schema!=="migration_game_live"&&!/^migration_(?:reader_test|game_worldtest)_[a-f0-9]{12}$/.test(schema))throw Error("Reviewed game or isolated test schema required");
     this.pool=pool;this.store=new Store({schema,pool});this.schema=schema;this.clock=clock;this.openWorld=openWorld;
     this.instance=crypto.randomUUID();this.views=new Map();this.publicAreas=new Map();this.publicSections=new Map();this.sectionLoads=new Map();this.pending=new Set();this.active=0;
     this.stats={reads:0,rejected:0,peak:0,peakDatabase:0,maxRows:0,sharedHits:0,omittedObjects:0,omittedMarches:0,sectionLoads:0,sectionHits:0,unchangedPolls:0};
@@ -218,6 +218,7 @@ class LiveReader {
     const dto={key:section.id+":"+id,id,sectionId:section.id,sectionName:section.name,name:text(data.name)||id,kind,
       gamePosition:{x:data.x,y:data.y},local,previewLocal,x,y,left:x-width/2,top:y-height/2,width,height,asset:safeAsset(data.artSrc,asset),
       owner:text(data.ownerName||data.holderName||data.clanName)||"Neutral",selectable:true,troopVisibility:"hidden"};
+    if(kind==="npc"){dto.spawnId=text(data.spawnId,96);dto.selectable=data.status==="active";}
     if(this.display&&kind==="castle"&&!this.display.match(section,local,"castle"))dto.layoutUnmapped=true;
     if((data.ownerUid||data.holderUid)&&["castle","camp","stronghold","citadel"].includes(kind))dto.ownerFlag=Flags.normalizeFlag(data.ownerFlag||data.holderFlag,data.ownerUid||data.holderUid);
     if(uid&&(data.ownerUid===uid||data.holderUid===uid)){const count=data.troops??data.currentGarrison;if(Number.isFinite(count)){dto.troops=Math.max(0,Math.floor(count));dto.troopVisibility="exact";}}
@@ -236,8 +237,10 @@ class LiveReader {
     if(!sectionIds.some(id=>ids.includes(id)))return null;
     const routeId="route-"+hash(points),key="march:"+id;
     const body={key,id,sectionId:sectionIds[0],sections:[...new Set(sectionIds)],name:text(data.ownerName)||"March",owner:text(data.ownerName),kind:"troop",asset:"assets/icons/skills/atlas-v1/marchOrders.webp",
-      routeId,departAt:data.launchedAtMs/1000,arriveAt:data.arrivesAtMs/1000,troopVisibility:"hidden"};
-    if(this.openWorld)body.recordedRoute=true;
+      routeId,departAt:data.launchedAtMs/1000,arriveAt:data.arrivesAtMs/1000,troopVisibility:"hidden",returning:false,swiftAt:0,swiftProgress:0,returnStartProgress:0,recalledAt:0};
+    if(data.returning&&Number.isFinite(data.recalledAtMs)&&data.arrivesAtMs>data.recalledAtMs){body.returning=true;body.recalledAt=data.recalledAtMs/1000;body.returnStartProgress=Math.max(0,Math.min(1,number(data.returnStartProgress)));}
+    if(Number.isFinite(data.swiftMarchUsedAtMs)&&data.arrivesAtMs>data.swiftMarchUsedAtMs){body.swiftAt=data.swiftMarchUsedAtMs/1000;body.swiftProgress=Math.max(0,Math.min(1,number(data.swiftMarchProgressAtUse)));}
+    if(this.openWorld){body.recordedRoute=true;body.openWorldRoute=segments.every(s=>s.routingVersion==="open-world-draft-v1"&&/^[a-f0-9]{64}$/.test(s.geometryId||""));}
     // Trust only the public producer's explicit estimate/exact marker. Never
     // reconstruct exact hidden forces from another source or requestedTroops.
     if(data.troopVisibility==="estimate"){body.troopVisibility="estimate";body.troopEstimateLabel=text(data.troopEstimateLabel,40);}

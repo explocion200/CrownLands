@@ -40,6 +40,16 @@ function createCommandRouting() {
   return {
     get enabled() { return enabled && !closed; },
     setEnabled(value) { enabled = value === true; },
+    nearbySections(endpoint, radius, context) {
+      const { display } = world(context), p = point(display, endpoint);
+      const pixels = radius / display.geometry.unitsPerPixel;
+      return [...display.sections.values()].filter(s => Math.hypot(Math.max(s.x-p.x, 0, p.x-s.x-s.width), Math.max(s.y-p.y, 0, p.y-s.y-s.height)) <= pixels).map(s => s.id);
+    },
+    distance(source, target, context) {
+      const { display } = world(context);
+      const a = point(display, source), b = point(display, target);
+      return Math.hypot(a.x - b.x, a.y - b.y) * display.geometry.unitsPerPixel;
+    },
     async calculate(source, target, context) {
       const { display, geometryId, service } = world(context);
       const result = await service.route(point(display, source), point(display, target));

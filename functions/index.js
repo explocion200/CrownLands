@@ -7849,6 +7849,32 @@ async function buildServerGeneratedArmyRoute(source = {}, target = {}, options =
   return route;
 }
 
+// Radius checks and draft routes share canonical section identity and projection.
+// Installed platforms retain their existing same-map coordinate policy.
+async function withinArmyOrderRadius(source, target, radius) {
+  if (!privateWorldRouting?.enabled) return isWithinRadius(source, target, radius);
+  await ensureTravelNetworkContext();
+  const distance = privateWorldRouting.distance(getCanonicalArmyRouteEndpoint(source), getCanonicalArmyRouteEndpoint(target), {
+    worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, sharedRealmId: getCurrentRealmShardId(),
+    activeRegionIds: REALM_REQUEST_CONTEXT.getStore()?.activeTravelRegionIds,
+  });
+  return Number.isFinite(distance) && distance <= radius;
+}
+
+async function privateBulkCityAddresses(value, regionId, fallbackIds, limit) {
+  if (!privateWorldRouting?.enabled || value === undefined) return fallbackIds.map(cityId => ({ regionId, cityId }));
+  if (!Array.isArray(value) || !value.length || value.length > limit) throw new HttpsError("invalid-argument", "Invalid private city selection.");
+  const result = [], seen = new Set();
+  for (const item of value) {
+    if (!item || !/^[a-zA-Z0-9_-]{1,96}$/.test(item.cityId || "") || !/^[a-zA-Z0-9_-]{1,96}$/.test(item.regionId || "")) throw new HttpsError("invalid-argument", "Invalid private city identity.");
+    const region = await requireActiveWorldRegionId(item.regionId);
+    const key = `${region}:${item.cityId}`;
+    if (seen.has(key) || !getServerWorldTargetIds(region).has(item.cityId)) throw new HttpsError("invalid-argument", "Invalid or repeated private city.");
+    seen.add(key); result.push({ regionId: region, cityId: item.cityId });
+  }
+  return result.sort((a, b) => `${a.regionId}:${a.cityId}`.localeCompare(`${b.regionId}:${b.cityId}`));
+}
+
 async function selectPrivateScoutOrigin(candidates, target) {
   // Route one candidate at a time so a single order cannot exhaust the worker
   // queue. Reuse the shared City/Tower eligibility and deterministic tie rules.
@@ -26052,27 +26078,27 @@ exports.sendNearbyScouts = timedCallable(
     const requestId = normalizeBulkOrderRequestId(data.requestId);
     const sourceRegionId = await requireActiveWorldRegionId(data.sourceRegionId || data.regionId);
     const sourceCityId = safeString(data.sourceCityId || data.fromId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
-    const targetCityIds = normalizeBulkCityIds(data.targetCityIds || data.targetIds, MAX_NEARBY_SCOUT_TARGETS)
+    let targetCityIds = normalizeBulkCityIds(data.targetCityIds || data.targetIds, MAX_NEARBY_SCOUT_TARGETS)
       .sort();
     OPERATION_TIMING.scout({ scoutBatchSize: targetCityIds.length, scoutOriginCandidates: 1 });
     if (!sourceCityId || !getServerWorldTargetIds(sourceRegionId).has(sourceCityId)) {
       throw new HttpsError("invalid-argument", "Choose an owned source city on the current map.");
     }
-    if (!targetCityIds.length) throw new HttpsError("invalid-argument", "Choose at least one nearby city to scout.");
+    if (!targetCityIds.length && !(privateWorldRouting?.enabled && data.targets?.length)) throw new HttpsError("invalid-argument", "Choose at least one nearby city to scout.");
     if (targetCityIds.length > MAX_NEARBY_SCOUT_TARGETS) {
       throw new HttpsError("invalid-argument", `Scout Nearby supports at most ${MAX_NEARBY_SCOUT_TARGETS} targets.`);
     }
-    const allowedTargets = getServerWorldTargetIds(sourceRegionId);
-    if (targetCityIds.some(id => id === sourceCityId || !allowedTargets.has(id))) {
-      throw new HttpsError("invalid-argument", "One of the selected scout targets is not on this map.");
+    const addresses = await privateBulkCityAddresses(data.targets, sourceRegionId, targetCityIds, MAX_NEARBY_SCOUT_TARGETS);
+    if (addresses.some(a => (a.regionId === sourceRegionId && a.cityId === sourceCityId) || !getServerWorldTargetIds(a.regionId).has(a.cityId))) {
+      throw new HttpsError("invalid-argument", "One of the selected scout targets is invalid.");
     }
-
-    const signaturePayload = { sourceRegionId, sourceCityId, targetCityIds };
+    targetCityIds = addresses.map(a => a.cityId);
+    const signaturePayload = privateWorldRouting?.enabled && data.targets !== undefined ? { sourceRegionId, sourceCityId, targets: addresses } : { sourceRegionId, sourceCityId, targetCityIds };
     const signature = createBulkRequestSignature("nearby_scout", signaturePayload);
     const requestRef = bulkOrderRequestRef(uid, "nearby_scout", requestId);
     const playerRef = db.doc(`players/${uid}`);
     const sourceRef = cityRefForRegion(sourceRegionId, sourceCityId);
-    const targetRefs = targetCityIds.map(id => cityRefForRegion(sourceRegionId, id));
+    const targetRefs = addresses.map(a => cityRefForRegion(a.regionId, a.cityId));
     const leaderboardRef = leaderboardEntryRef(uid);
     const launchRateRef = armyLaunchRateLimitRef(uid);
 
@@ -26096,7 +26122,7 @@ exports.sendNearbyScouts = timedCallable(
       if (getOwnerUid(source) !== uid) {
         throw new HttpsError("permission-denied", "You can only send scouts from your own city.");
       }
-      const targets = targetSnaps.map(snapshot => ({ id: snapshot.id, ...snapshot.data() }));
+      const targets = targetSnaps.map((snapshot, i) => ({ id: snapshot.id, ...snapshot.data(), regionId: addresses[i].regionId }));
       const targetOwnerUids = [...new Set(targets.map(getOwnerUid).filter(ownerUid => ownerUid && ownerUid !== uid))];
       const defenderSnapshots = new Map();
       const defenderSnapshotEntries = await Promise.all(targetOwnerUids.map(async defenderUid => {
@@ -26139,10 +26165,10 @@ exports.sendNearbyScouts = timedCallable(
         if (targetOwnerUid === uid) {
           throw new HttpsError("failed-precondition", "Scout Nearby only targets cities you do not own.");
         }
-        if (!isWithinRadius(source, target, NEARBY_SCOUT_RADIUS)) {
+        if (!await withinArmyOrderRadius({ ...source, regionId: sourceRegionId }, target, NEARBY_SCOUT_RADIUS)) {
           throw new HttpsError("failed-precondition", `${safeString(target.name, 40) || "A target"} is outside the Scout Nearby radius.`);
         }
-        if (pendingScoutTargets.has(`${sourceRegionId}:${target.id}`)) {
+        if (pendingScoutTargets.has(`${target.regionId}:${target.id}`)) {
           throw new HttpsError("failed-precondition", `A scout is already traveling to ${safeString(target.name, 40) || "that city"}.`);
         }
         const defender = defenderSnapshots.get(targetOwnerUid) || { profile: {}, leaderboard: {}, globalStats: {} };
@@ -26218,7 +26244,7 @@ exports.sendNearbyScouts = timedCallable(
           fromId: sourceCityId,
           toId: target.id,
           sourceRegionId,
-          targetRegionId: sourceRegionId,
+          targetRegionId: target.regionId,
           fromName: safeString(source.name, 40),
           toName: safeString(target.name, 40),
           troops: 1,
@@ -26229,7 +26255,7 @@ exports.sendNearbyScouts = timedCallable(
           routeRegionIds: route.routeRegionIds,
           viewRegionIds: route.routeRegionIds,
           pathLength: route.pathLength,
-          targetKey: `${sourceRegionId}:${target.id}`,
+          targetKey: `${target.regionId}:${target.id}`,
           targetOwnerAtLaunch: targetOwnerUid ? "player" : "neutral",
           originalTargetOwnerUid: targetOwnerUid || "",
           targetOwnerUid: targetOwnerUid || "",
@@ -26341,26 +26367,27 @@ exports.sendRegroupOrders = timedCallable(
     const requestId = normalizeBulkOrderRequestId(data.requestId);
     const targetRegionId = await requireActiveWorldRegionId(data.targetRegionId || data.regionId);
     const targetCityId = safeString(data.targetCityId || data.toId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
-    const sourceCityIds = normalizeBulkCityIds(data.sourceCityIds || data.sourceIds, MAX_REGROUP_SOURCES)
+    let sourceCityIds = normalizeBulkCityIds(data.sourceCityIds || data.sourceIds, MAX_REGROUP_SOURCES)
       .sort();
     const allowedCities = getServerWorldTargetIds(targetRegionId);
     if (!targetCityId || !allowedCities.has(targetCityId)) {
       throw new HttpsError("invalid-argument", "Choose an owned regroup destination on the current map.");
     }
-    if (!sourceCityIds.length) throw new HttpsError("invalid-argument", "Choose at least one nearby source city.");
+    if (!sourceCityIds.length && !(privateWorldRouting?.enabled && data.sources?.length)) throw new HttpsError("invalid-argument", "Choose at least one nearby source city.");
     if (sourceCityIds.length > MAX_REGROUP_SOURCES) {
       throw new HttpsError("invalid-argument", `Regroup supports at most ${MAX_REGROUP_SOURCES} source cities.`);
     }
-    if (sourceCityIds.some(id => id === targetCityId || !allowedCities.has(id))) {
+    const addresses = await privateBulkCityAddresses(data.sources, targetRegionId, sourceCityIds, MAX_REGROUP_SOURCES);
+    if (addresses.some(a => (a.regionId === targetRegionId && a.cityId === targetCityId) || !getServerWorldTargetIds(a.regionId).has(a.cityId))) {
       throw new HttpsError("invalid-argument", "One of the selected regroup sources is invalid.");
     }
-
-    const signaturePayload = { targetRegionId, targetCityId, sourceCityIds };
+    sourceCityIds = addresses.map(a => a.cityId);
+    const signaturePayload = privateWorldRouting?.enabled && data.sources !== undefined ? { targetRegionId, targetCityId, sources: addresses } : { targetRegionId, targetCityId, sourceCityIds };
     const signature = createBulkRequestSignature("regroup", signaturePayload);
     const requestRef = bulkOrderRequestRef(uid, "regroup", requestId);
     const playerRef = db.doc(`players/${uid}`);
     const targetRef = cityRefForRegion(targetRegionId, targetCityId);
-    const sourceRefs = sourceCityIds.map(id => cityRefForRegion(targetRegionId, id));
+    const sourceRefs = addresses.map(a => cityRefForRegion(a.regionId, a.cityId));
     const leaderboardRef = leaderboardEntryRef(uid);
     const launchRateRef = armyLaunchRateLimitRef(uid);
 
@@ -26394,13 +26421,13 @@ exports.sendRegroupOrders = timedCallable(
       if (producedTargetEntry?.city) target = producedTargetEntry.city;
       const sources = sourceRefs.map((ref, index) => {
         const produced = getEconomyCityByRef(economy, ref)?.city;
-        return produced || { id: sourceSnaps[index].id, ...sourceSnaps[index].data() };
+        return { ...(produced || { id: sourceSnaps[index].id, ...sourceSnaps[index].data() }), regionId: addresses[index].regionId };
       });
       for (const source of sources) {
         if (getOwnerUid(source) !== uid) {
           throw new HttpsError("permission-denied", "Every regroup source must still be owned by you.");
         }
-        if (!isWithinRadius(source, target, REGROUP_RADIUS)) {
+        if (!await withinArmyOrderRadius(source, { ...target, regionId: targetRegionId }, REGROUP_RADIUS)) {
           throw new HttpsError("failed-precondition", `${safeString(source.name, 40) || "A source city"} is outside the Regroup radius.`);
         }
         if (Math.max(0, Math.floor(safeNumber(source.troops, 0))) < 1) {
@@ -26445,7 +26472,7 @@ exports.sendRegroupOrders = timedCallable(
           targetType: "city",
           fromId: source.id,
           toId: target.id,
-          sourceRegionId: targetRegionId,
+          sourceRegionId: source.regionId,
           targetRegionId,
           fromName: safeString(source.name, 40),
           toName: safeString(target.name, 40),
@@ -26495,7 +26522,7 @@ exports.sendRegroupOrders = timedCallable(
       }));
       const sourceCities = sourceCityPatches.map(entry => ({
         id: entry.city.id,
-        regionId: targetRegionId,
+        regionId: entry.city.regionId,
         troops: entry.patch.troops,
         troopFloat: entry.patch.troopFloat,
       }));
