@@ -25,7 +25,7 @@ function createPlacementFixture(travel = null) {
     serverImagePointToWorld: (id, point) => imagePointToWorld(planner.getModel(id), point),
     getAuthoritativeRoutePlannerForRegions: () => planner,
     getServerMapBounds: id => planner.getModel(id).bounds, isRegionWalkablePoint,
-    buildServerGeneratedArmyRoute: (from, to) => planner.calculate(from, to),
+    buildCurrentServerGeneratedArmyRoute: (from, to) => planner.calculate(from, to),
   });
   vm.runInContext(extractFunction(source, "getMarauderPlacementLayout"), context);
   return { planner, context, geometry: id => context.getMarauderPlacementLayout(id) };

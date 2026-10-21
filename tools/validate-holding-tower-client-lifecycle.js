@@ -65,6 +65,7 @@ function harness() {
     getHoldingTowerQaScenario: () => "", getOnlineApi: () => api,
     escapeHtml: String, formatNumber: String, formatMarchesNumber: String, renderClanShield: () => "", loadClanTreasuryStatus: async () => null,
     mountHoldingTowerTroopOrderView() {}, updateHoldingTowerTroopOrderView() {}, getPeaceShieldAttackWarning: () => "",
+    mountChatLocationShare() {}, // Sharing is not mounted in this Tower lifecycle fixture.
     confirmPeaceShieldOrder: () => true, // No active shield in this lifecycle fixture; covered by the browser confirmation test.
     // This lifecycle harness uses bare inputs, without a mounted troop selection widget.
     refreshTroopOrderSelection: () => null,

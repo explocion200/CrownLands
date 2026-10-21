@@ -15,8 +15,10 @@ function registration(kind) {
     return registered;
   };
 }
-function createPlatform({ store, secrets = {}, translation }) {
+function createPlatform({ store, secrets = {}, translation, privateWorldRouting }) {
   if (!(store instanceof storage.Store) || !/^migration_game_[a-z0-9_]{1,30}$/.test(store.schema)) throw Error("Game runtime requires a separate migration_game_* rehearsal schema");
+  if (privateWorldRouting && (!/^migration_game_worldtest_[a-f0-9]{12}$/.test(store.schema)
+    || typeof privateWorldRouting.calculate !== "function")) throw Error("Private routing requires a disposable worldtest schema");
   // Preserve the existing anti-farming HMAC in the private copy. Payments and
   // messaging remain disconnected. Translation requires a separate reservation
   // and credential; this never exposes a general cloud credential to handlers.
@@ -26,7 +28,7 @@ function createPlatform({ store, secrets = {}, translation }) {
   const chatTranslationProvider = translation ? require("./chat-translation-rehearsal").createReservedGoogleProvider({ ...translation, store }) : undefined;
   return Object.freeze({
     ...storage, HttpsError, backend: "postgres-rehearsal", store,
-    chatTranslationProvider,
+    chatTranslationProvider, privateWorldRouting,
     admin: Object.freeze({ initializeApp: () => {} }),
     getFirestore: () => store,
     getApp: () => ({ options: { credential: { getAccessToken: unavailable } } }),

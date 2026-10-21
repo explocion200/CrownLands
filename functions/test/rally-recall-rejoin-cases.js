@@ -5,7 +5,8 @@ const layout = require("../core-expansion-world-layout.json");
 const towers = require("../holding-towers");
 
 // Shared by the current-realm emulator and an isolated PostgreSQL schema.
-module.exports = async function rallyRecallRejoinCases({ db, actor, call, settleReceipt }) {
+module.exports = async function rallyRecallRejoinCases({ db, actor, call, settleReceipt,
+  getWorldMap = id => layout.maps.find(row => row.id === id) }) {
   const users = [await actor("Recall leader"), await actor("Recall ally"), await actor("Recall third")];
   const [leader, ally, third] = users;
   const realm = await call("getRealmInfo", leader);
@@ -27,7 +28,7 @@ module.exports = async function rallyRecallRejoinCases({ db, actor, call, settle
   }
   const clanRef = db.doc(`clans/${clanId}`);
   await clanRef.set({ ...identity, status: "active", leaderUid: leader.uid, name: "Recall clan", tag: "RCL", memberCount: 3 });
-  const map = layout.maps.find(row => row.id === leader.home.regionId);
+  const map = getWorldMap(leader.home.regionId);
   const assembly = { ...map.cities.find(row => !users.some(user => row.id === user.home.id)), regionId: map.id };
   const objectiveMap = layout.maps.find(row => row.objectives.length);
   const objective = { ...objectiveMap.objectives[0], regionId: objectiveMap.id };
