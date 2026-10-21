@@ -16,7 +16,7 @@ function createRouter(geometry) {
   const sections=new Map(),buckets=new Map();
   for(const s of geometry.sections){if(s.width!==width||s.height!==height||s.x%width||s.y%height)throw Error("Invalid current section footprint");sections.set(`${s.x/width},${s.y/height}`,s);}
   for(const o of geometry.obstacles){if(![o.x,o.y,o.radius].every(Number.isFinite)||o.radius<0||o.radius>400)throw Error("Invalid obstacle");
-    for(let y=Math.floor((o.y-o.radius)/bucketSize);y<=Math.floor((o.y+o.radius)/bucketSize);y++)for(let x=Math.floor((o.x-o.radius)/bucketSize);x<=Math.floor((o.x+o.radius)/bucketSize);x++){
+    for(let y=Math.floor((o.y-o.radius-.5)/bucketSize);y<=Math.floor((o.y+o.radius+.5)/bucketSize);y++)for(let x=Math.floor((o.x-o.radius-.5)/bucketSize);x<=Math.floor((o.x+o.radius+.5)/bucketSize);x++){
       const key=`${x},${y}`;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(o);
     }
   }
@@ -42,17 +42,28 @@ function createRouter(geometry) {
   function clear(a,b,ignore=new Set()) {
     if(!land(a,b))return false;
     const checked=new Set(),dx=b.x-a.x,dy=b.y-a.y,len=dx*dx+dy*dy;
-    // Traverse the spatial hash along the segment instead of its potentially
-    // enormous bounding box. Neighbor buckets cover boundary roundoff.
-    const count=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dy))/(bucketSize/2)));
-    for(let n=0;n<=count;n++){const p=lerp(a,b,n/count),bx=Math.floor(p.x/bucketSize),by=Math.floor(p.y/bucketSize);
-      for(let y=by-1;y<=by+1;y++)for(let x=bx-1;x<=bx+1;x++)for(const o of buckets.get(`${x},${y}`)||[]){
+    // Visit each crossed bucket exactly once. Obstacles are registered with
+    // their full clearance radius, so neighboring buckets need not be rescanned
+    // for every sample along a long Theta* line-of-sight check.
+    let bx=Math.floor(a.x/bucketSize),by=Math.floor(a.y/bucketSize);
+    const endX=Math.floor(b.x/bucketSize),endY=Math.floor(b.y/bucketSize);
+    const sx=Math.sign(dx),sy=Math.sign(dy),stepX=dx?bucketSize/Math.abs(dx):Infinity,stepY=dy?bucketSize/Math.abs(dy):Infinity;
+    let nextX=dx?((bx+(sx>0?1:0))*bucketSize-a.x)/dx:Infinity;
+    let nextY=dy?((by+(sy>0?1:0))*bucketSize-a.y)/dy:Infinity;
+    const limit=Math.abs(endX-bx)+Math.abs(endY-by)+1;
+    for(let n=0;n<limit;n++){
+      for(const o of buckets.get(`${bx},${by}`)||[]){
         if(ignore.has(o.key)||checked.has(o.key))continue;checked.add(o.key);
         const t=len?Math.max(0,Math.min(1,((o.x-a.x)*dx+(o.y-a.y)*dy)/len)):0;
         if(distance(o,lerp(a,b,t))<o.radius+.5)return false;
       }
+      if(bx===endX&&by===endY)return true;
+      const crossX=bx===endX?Infinity:nextX,crossY=by===endY?Infinity:nextY;
+      if(crossX<crossY){bx+=sx;nextX+=stepX;}
+      else if(crossY<crossX){by+=sy;nextY+=stepY;}
+      else{bx+=sx;by+=sy;nextX+=stepX;nextY+=stepY;}
     }
-    return true;
+    return false;
   }
   function ignoredEndpoints(a,b) {
     const ignored=new Set();

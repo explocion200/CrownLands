@@ -42,16 +42,19 @@
       "paths": [
         "tools/map-benchmark/seamless/command-routing.js",
         "tools/test-local-postgres-world-commands.js",
-        "tools/validate-world-command-routing.js"
+        "tools/validate-world-command-routing.js",
+        "tools/map-benchmark/seamless/open-world-routing.js",
+        "tools/validate-open-world-routing.js"
       ],
       "tests": [
         "tools/test-local-postgres-world-commands.js",
         "tools/validate-world-command-routing.js",
         "tools/validate-open-world-routing.js",
         "tools/validate-open-world-travel.js",
-        "tools/validate-production-artifact.js"
+        "tools/validate-production-artifact.js",
+        "tools/test-local-postgres-open-routing.js"
       ],
-      "reason": "Current active topology only: generated template coordinates, spread endpoints, 112 sections, worker offloading/admission/cache/eviction, geometry identities, active-region rejection, failed order rollback, old/new route persistence and actual multi-player commands. Reuse existing obstacle/seam and unchanged travel formula tests; require private artifacts excluded from published game. No new browser interface."
+      "reason": "Current active topology only: generated template coordinates, spread endpoints, 112 sections, worker offloading/admission/cache/eviction, geometry identities, active-region rejection, failed order rollback, old/new route persistence and actual multi-player commands. Reuse existing obstacle/seam and unchanged travel formula tests; require private artifacts excluded from published game. No new browser interface. The shared draft planner now traverses each spatial bucket once; an independent 3,000-segment collision oracle plus axis/corner/clearance cases verifies obstacle safety without raising the search budget. Recheck the existing read-only route service as an affected consumer."
     },
     {
       "paths": [
