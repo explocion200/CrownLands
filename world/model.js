@@ -18,7 +18,10 @@
   }
   function limits(size, world = WORLD) {
     const fit = Math.min(size.width / TILE.width, size.height / TILE.height);
-    return { min: Math.min(size.width / world.width, size.height / world.height), home: fit, max: fit * 3 };
+    const detail = fit * 0.56;
+    // Stop just above the detail cutoff so cities and their area feed remain
+    // visible. Apply the same floor to every camera input, including resize.
+    return { min: Math.max(detail + fit * 0.04, Math.min(size.width / world.width, size.height / world.height)), detail, home: fit, max: fit * 3 };
   }
   function clamp(camera, size, world = WORLD) {
     const range = limits(size, world);

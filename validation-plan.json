@@ -1,35 +1,29 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "0729e0772cd21f1502223c8f90a89a2822ae9c04",
+  "baseCommit": "030e98913a16d4e46e1932737f467df3a758a140",
   "coverage": [
     {
       "paths": [
-        "world/native.js",
-        "world/appearance.js",
-        "world/flags.css",
+        "world/model.js",
         "world/preview.js",
-        "world/preview.css",
-        "world/surface.html",
-        "tools/check-continuous-marches.js",
+        "tools/check-continuous-zoom-limit.js",
         "tools/test-local-postgres-native-auth-world.js"
       ],
       "tests": [
         "tools/test-local-postgres-production-world.js",
-        "tools/test-local-postgres-native-auth-world.js",
-        "tools/validate-marching-army-visibility-browser.js",
-        "tools/validate-pickup-runtime.js",
-        "tools/validate-march-path-alignment.js",
+        "tools/validate-continuous-map-labels.js",
+        "tools/validate-continuous-game-ui.js",
         "tools/validate-production-artifact.js",
         "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Restore compact Gold/troop/Crown pickups and original march markers, attached From/To navigation and authoritative cross-section paths without Follow UI. Actual isolated PostgreSQL/authenticated browser harness exercises real attack, recall and pickup claims at desktop and both landscape sizes, checks proportional sizing, touch/mouse/keyboard navigation, exact accepted routes, private counts, feed removal and session isolation. Recheck the shared private harness entry, legacy movement/route and pickup dependencies, delivered production module globals and unchanged payload budgets. No backend, rules or database changes; no server emulator suites required."
+      "reason": "Limit the production continuous camera above its shared city/detail threshold. The isolated authenticated PostgreSQL browser harness checks wheel, repeated pinch, camera controls, navigation, resize, anchored zoom, pan and Home on desktop and both landscape phone sizes with rendered cities and active bounded area feeds. Its existing checks cover shared model consumers: castle labels/actions, pickups, real march paths and From/To, catalog changes, privacy and native gameplay. The new helper runs only for the production entry; the separate prototype is unchanged. Retain published asset and payload limits. No server-authoritative changes or emulator suites are needed."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the owner-confirmed map presentation correction only; preserve gameplay and privacy rules, with deployment verification separate."
+      "reason": "Record the owner-confirmed live map zoom-out limit and preserve the separate Inner Castle camera, private prototype and Atlas directory; no additional runtime behavior."
     }
   ]
 }
