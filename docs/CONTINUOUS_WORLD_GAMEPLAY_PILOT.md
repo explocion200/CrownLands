@@ -26,6 +26,8 @@ Desktop 1440×900 and landscape 844×390 / 568×320 use actual browser input; mo
 
 ## Remaining production integration
 
+The [first normal-game UI rehearsal](CONTINUOUS_WORLD_NATIVE_UI.md) now connects native city controls and verifies a real cross-section order in isolated tests. Its authenticated area feed and remaining HUD actions are still unfinished.
+
 Skipping the hands-on pilot removes that scheduling gate. It does not complete the following engineering work:
 
 - Integrate the continuous renderer, authenticated area feed and gameplay controls into the normal game UI and production package, preserving current disclosure rules and existing UI actions.

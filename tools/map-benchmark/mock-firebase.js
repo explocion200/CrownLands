@@ -460,5 +460,17 @@
     };
   });
 
+  if (fixture.nativeWorld) {
+    const command = async (name, data) => {
+      if (!fixture.commandNonce) throw Error("This is an interface preview. Test orders require the isolated command rehearsal.");
+      const response = await fetch("/__benchmark__/native-command", { method: "POST", headers: {"content-type":"application/json", "x-native-test":fixture.commandNonce}, body:JSON.stringify({name,data}) });
+      const result = await response.json(); if (!response.ok) throw Error(result.error || "Test order unavailable"); return result.result;
+    };
+    for (const name of ["previewArmyRoute", "sendArmyOrder", "sendNearbyScouts", "sendRegroupOrders", "useRecallHorn", "returnClanReinforcement", "createClanRally", "joinClanRally", "launchClanRally", "cancelClanRally", "withdrawClanRallyContribution"]) api[name] = data => command(name,data);
+    api.submitRecoverableArmyOrder = (payload, options = {}) => {
+      options.onPending?.({id:payload.army.id});
+      return api.sendArmyOrder(payload);
+    };
+  }
   window.CrownlandsOnline = Object.freeze(api);
 })();

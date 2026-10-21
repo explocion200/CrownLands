@@ -24053,7 +24053,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
             ? "Shield dropped. Clan reinforcements moving."
             : `Clan reinforcements moving: ${source.name} \u2192 ${target.name}`);
         } else {
-          const protectionText = acceptedProtection?.mode !== "normal"
+          const protectionText = acceptedProtection && acceptedProtection.mode !== "normal"
             ? ` ${getAttackProtectionNotice(acceptedProtection)}`
             : "";
           const shieldText = peaceShieldDeactivated ? " Royal Peace Shield deactivated." : "";
@@ -24062,7 +24062,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
             ? "Shield dropped. Attack moving."
             : acceptedTroops < requestedTroops
               ? `Selected ${formatNumber(requestedTroops)} · sent ${formatNumber(acceptedTroops)} legal maximum`
-            : acceptedProtection?.mode !== "normal"
+            : acceptedProtection && acceptedProtection.mode !== "normal"
               ? `${acceptedProtection.label} moving: ${formatNumber(acceptedTroops)} troops`
               : `Attack moving: ${source.name} \u2192 ${target.name}`);
         }
