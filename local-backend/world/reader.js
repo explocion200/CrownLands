@@ -24,10 +24,15 @@ class LiveReader {
     this.stats={reads:0,rejected:0,peak:0,peakDatabase:0,maxRows:0,sharedHits:0,omittedObjects:0,omittedMarches:0,sectionLoads:0,sectionHits:0,unchangedPolls:0};
     this.artObjects=new Map(fixture.objects.filter(o=>o.kind!=="scenery").map(o=>[o.sectionId+":"+o.id,o]));
   }
-  async transaction(uid,callback) {
+  async transaction(uid,callback,lane="areas") {
     if(typeof uid!=="string"||!uid||uid.includes("/"))throw fail(403,"Invalid private viewer");
-    if(this.pending.has(uid)||this.pending.size>=32){this.stats.rejected++;throw fail(429,"Reader busy; retry shortly");}
-    this.pending.add(uid);this.stats.peak=Math.max(this.stats.peak,this.pending.size);
+    if(!["areas","options"].includes(lane))throw Error("Unknown world read lane");
+    // Foreground Nearby/Regroup reads must not make the normal area poll fail
+    // and clear the player's selection. Each lane still admits one read per
+    // viewer, sharing the same global bound and two-connection read-only pool.
+    const pendingKey=JSON.stringify([uid,lane]);
+    if(this.pending.has(pendingKey)||this.pending.size>=32){this.stats.rejected++;throw fail(429,"Reader busy; retry shortly");}
+    this.pending.add(pendingKey);this.stats.peak=Math.max(this.stats.peak,this.pending.size);
     let client;
     try {
       try{client=await this.pool.connect();}catch(error){if(error.message==="timeout exceeded when trying to connect"){this.stats.rejected++;throw fail(429,"Reader busy; retry shortly");}throw error;}
@@ -51,7 +56,7 @@ class LiveReader {
       const result=await callback({client,access,realm,now:access.now});
       await client.query("COMMIT");this.stats.reads++;return result;
     }catch(error){if(client)await client.query("ROLLBACK").catch(()=>{});throw error;}
-    finally{if(client){this.active--;client.release();}this.pending.delete(uid);}
+    finally{if(client){this.active--;client.release();}this.pending.delete(pendingKey);}
   }
   initialize(uid){return this.transaction(uid,async()=>this.manifest);}
   async routeEndpoints(uid,from,to) {

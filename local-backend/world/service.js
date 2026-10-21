@@ -82,7 +82,7 @@ function createWorldService({store,readPool,deployment,directory,enabled=false,t
       const sort=(a,b)=>a.distance-b.distance||a.key.localeCompare(b.key);
       return {key,nearby:nearbyDocs.map(d=>({id:d.id,...d.data()})).filter(c=>c.ownerUid!==uid&&!allies.has(c.ownerUid)&&!c.isMainCity&&!targets.has(address(c))&&routing.distance(anchor,c,context)<=Policy.NEARBY_SCOUT_RADIUS).map(dto).sort(sort).slice(0,Policy.MAX_NEARBY_SCOUT_TARGETS),
         regroup:owned.filter(c=>address(c)!==key&&c.troops>=1&&routing.distance(anchor,c,context)<=Policy.REGROUP_RADIUS).map(dto).sort(sort).slice(0,Policy.MAX_REGROUP_SOURCES)};
-    });
+    },"options");
   }
   const service={schema:store.schema,deployment,routing,get enabled(){return enabled&&!closed;},
     prepare:(uid)=>prepare(uid,{wait:true}),

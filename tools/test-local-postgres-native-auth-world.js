@@ -53,6 +53,42 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       await p.evaluate(()=>new Promise(requestAnimationFrame));
     };
     await select(page, source);
+    if(production){
+      // Native Location/Home commands can target an area that has been evicted.
+      // Wait for its authoritative display position without overriding a later
+      // manual drag when the area response is slow.
+      const from=pilot.reader.sections.get(source.regionId);
+      const far=[...pilot.reader.sections.values()].sort((a,b)=>Math.hypot(b.x-from.x,b.y-from.y)-Math.hypot(a.x-from.x,a.y-from.y))[0];
+      const navigate=()=>page.evaluate(async region=>{
+        if(!await switchOnlineIsland(region))throw Error("Fixture region unavailable");
+        const city=state.cities.find(c=>getCityRegionId(c)===region&&!isStronghold(c));
+        if(!city)throw Error("Fixture city unavailable");centerOnCity(city.id);return region+":"+city.id;
+      },far.id);
+      const centered=key=>page.waitForFunction(key=>{
+        const v=nativeContinuousWorld.view,o=v.getObject(key);if(!o)return false;
+        const {camera,size}=v.snapshot(),expected=SeamlessModel.forWorld(v.scene).clamp({...camera,x:o.x,y:o.y},size);
+        return Math.hypot(camera.x-expected.x,camera.y-expected.y)<1;
+      },key);
+      assert(!await page.evaluate(id=>nativeContinuousWorld.view.snapshot().feed.ids.includes(id),far.id));
+      const farKey=await navigate();await centered(farKey);
+      await page.locator("#continuous-game-surface #home").click();
+      await page.waitForFunction(()=>getActiveMapRegionId()===getMainCityRegionId()&&!isMapInteractionBlocked());
+      await centered(await page.evaluate(()=>getMainCityRegionId()+":"+state.mainCityId));
+      const originalRead=harness.worldData.read;let release,waiting=false;
+      const held=new Promise(resolve=>{release=resolve;});
+      harness.worldData.read=async(...args)=>{if(args[1]==="areas"&&args[2].ids.includes(far.id)){waiting=true;await held;}return originalRead(...args);};
+      try{
+        await navigate();for(let n=0;n<100&&!waiting;n++)await sleep(20);assert(waiting,"Delayed remote area was not requested");
+        const viewport=await page.locator("#continuous-game-surface #viewport").boundingBox();
+        await page.mouse.move(viewport.x+viewport.width/2,viewport.y+viewport.height/2);
+        await page.mouse.down();await page.mouse.move(viewport.x+viewport.width/2+90,viewport.y+viewport.height/2+30,{steps:8});await page.mouse.up();
+        const moved=await page.evaluate(()=>nativeContinuousWorld.view.snapshot().camera);release();
+        await page.waitForFunction(key=>!!nativeContinuousWorld.view.getObject(key)&&!nativeContinuousWorld.view.snapshot().feed.pending,farKey);
+        const after=await page.evaluate(()=>nativeContinuousWorld.view.snapshot().camera);
+        assert(Math.hypot(moved.x-after.x,moved.y-after.y)<1,"A delayed Location response overrode manual panning");
+      }finally{release();harness.worldData.read=originalRead;}
+      await select(page,source);
+    }
     await page.locator("#continuous-game-actions .wheel-send").click();
     await select(page, target);
     await page.waitForFunction(() => !!document.querySelector("#troopSliderConfirm") && !document.querySelector("#troopSliderConfirm").disabled);

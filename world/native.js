@@ -34,7 +34,12 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   const original = { renderCities, renderArmies, renderPaths, renderHarvestBonuses, centerOnMap, centerOnCity, centerOnWorldPoint, beginMapVisualTransition, updateMainCityReturnButton,
     renderWorldMap, renderIslandTeleporters, preloadIslandMap, preloadNearbyIslandMaps,
     getNearbyScoutCandidates, getNearbyRegroupCandidates, toggleScoutNearby, toggleRegroup };
-  let view, bridge, transitioning = false, restoringSelection = false, disposed = false, lastWheel = "", wheelPoint = null;
+  let view, bridge, transitioning = false, restoringSelection = false, disposed = false, lastWheel = "", wheelPoint = null, pendingFocus = null;
+  // A Location command can precede the bounded area's first snapshot. Resolve
+  // its exact display position when that snapshot arrives, unless the player
+  // has already chosen a new camera interaction.
+  const cancelPendingFocus = () => { pendingFocus = null; };
+  for (const type of ["pointerdown","wheel","keydown","click"]) host.addEventListener(type,cancelPendingFocus,true);
   let areasReady = !authenticated, bulk = null, bulkGeneration = 0;
   const pickupNodes=new Map();
   function renderPickups(){
@@ -111,15 +116,16 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   }
   beginMapVisualTransition = () => null;
   updateMainCityReturnButton = () => { if (mainCityReturnBtn) mainCityReturnBtn.hidden=true; };
-  centerOnMap = () => { if (!transitioning && !restoringSelection) { const s=view?.scene.sections.find(s=>s.id===getActiveMapRegionId());if(s)view.focus({x:s.x+s.width/2,y:s.y+s.height/2}); } };
-  centerOnCity = id => { const c = getArmyTargetById(id); const o = c && locate(id,getCityRegionId(c)); if (!transitioning && !restoringSelection && o) view?.focus(o); };
+  centerOnMap = () => { if (!transitioning && !restoringSelection) { pendingFocus=null;const s=view?.scene.sections.find(s=>s.id===getActiveMapRegionId());if(s)view.focus({x:s.x+s.width/2,y:s.y+s.height/2}); } };
+  centerOnCity = id => { const c = getArmyTargetById(id); if(c)centerOnWorldPoint(c,getCityRegionId(c)); };
   centerOnWorldPoint = (point,region=getActiveMapRegionId()) => {
     if (transitioning || restoringSelection) return true;
     const exact = point?.id && locate(point.id,region);
-    if (exact) {view.focus(exact);return true;}
+    if (exact) {pendingFocus=null;view.focus(exact);return true;}
     const section = view?.scene.sections.find(s=>s.id===region);
     if (!section || !Number.isFinite(point?.x) || !Number.isFinite(point?.y)) return false;
     const b = getIslandMapBounds(region);
+    pendingFocus=point.id?section.id+":"+point.id:null;
     view.focus({x:section.x+(point.x-b.left)/b.width*section.width,y:section.y+(point.y-b.top)/b.height*section.height});return true;
   };
   bridge = new window.ContinuousGameBridge({
@@ -157,10 +163,11 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
           // Recentring on a valid selection can change the area window. Keep
           // its identity while that fresh snapshot loads; only a real failure
           // or permission loss cancels the native action context.
-          if (data.failed || data.authExpired) { bridge.cancel(); clearSelection(false); }
+          if (data.failed || data.authExpired) { pendingFocus=null;bridge.cancel(); clearSelection(false); }
         }
         lastWheel=""; paintWheel();
         renderPickups();
+        if(areasReady&&pendingFocus&&view){const target=view.getObject(pendingFocus);if(target){pendingFocus=null;view.focus(target);}}
         if(areasReady&&restoreSelection&&view&&data.sections.some(s=>restoreSelection.startsWith(s.id+":"))){
           const selected=view.getObject(restoreSelection);restoreSelection=null;
           if(selected?.selectable){restoringSelection=true;view.select(selected.key);}
@@ -170,7 +177,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
       if (!["castle","camp","stronghold","citadel","npc","tower"].includes(item.kind) || !areasReady) {bridge.cancel();clearSelection(false);return;}
       void bridge.select(item).then(ok=>{lastWheel="";paintWheel();if(!ok && bridge.error)showToast(bridge.error);requestAnimationFrame(()=>{restoringSelection=false;});});
     },
-    onClear: () => {bulkGeneration++;bulk=null;bridge.cancel();clearSelection(false);},
+    onClear: () => {pendingFocus=null;bulkGeneration++;bulk=null;bridge.cancel();clearSelection(false);},
     onFrame: ({project,size}) => {
       if (getOnlineSessionRequestScope() !== session) { dispose(); return; }
       for(const node of pickupNodes.values()){const p=project(node.worldPoint);node.hidden=!areasReady||p.x< -30||p.y< -30||p.x>size.width+30||p.y>size.height+30;node.style.left=`${p.x}px`;node.style.top=`${p.y}px`;}
@@ -180,7 +187,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     },
   });
   } catch (error) { dispose(); throw error; }
-  root.querySelector("#home").addEventListener("click",()=>centerOnCity(state.mainCityId));
+  root.querySelector("#home").addEventListener("click",()=>{pendingFocus=null;void returnToMainCity();});
   // Useful native panels still open from the real HUD; no replacement HUD.
   clearSelection(false);view.home();renderPickups();
   root.querySelector("#load-status").textContent="Connected";

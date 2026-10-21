@@ -51,7 +51,7 @@
         "tools/test-local-postgres-production-routes.js",
         "tools/test-local-postgres-production-world.js"
       ],
-      "reason": "Production catalog, reader, terrain and routing share approved geometry and current realm authority. Cover generated growth, seasons, retired membership, 512-section bound, all seams/corners, corruption recovery, private exact counts, 24-player combined command/chat load, real march animation and saved paths. Frozen art inputs must remain byte-identical and contain no fictional ownership."
+      "reason": "Production catalog, reader, terrain and routing share approved geometry and current realm authority. Cover generated growth, seasons, retired membership, 512-section bound, all seams/corners, corruption recovery, private exact counts, 24-player combined command/chat load, real march animation and saved paths. Frozen art inputs must remain byte-identical and contain no fictional ownership. Overlap the same viewer's foreground Nearby/Regroup reads and area polls while retaining per-lane admission and the shared two-connection bound."
     },
     {
       "paths": [
@@ -95,7 +95,7 @@
         "tools/validate-production-world.js",
         "tools/test-local-postgres-pickups.js"
       ],
-      "reason": "Exercise lazy minified production modules with real cookie-authenticated clients, native action controls and live saved marches. Verify visibility, stale queued command revisions, selection/camera across generated expansion, reconnect/logout, desktop and mobile CPU-throttled rendering; retain unchanged chat transport and disabled-world compatibility. Preserve gold/troop/Crown pickup buttons and real claim transactions in the continuous camera."
+      "reason": "Exercise lazy minified production modules with real cookie-authenticated clients, native action controls and live saved marches. Verify visibility, stale queued command revisions, selection/camera across generated expansion, reconnect/logout, desktop and mobile CPU-throttled rendering; retain unchanged chat transport and disabled-world compatibility. Preserve gold/troop/Crown pickup buttons and real claim transactions in the continuous camera. Verify offscreen native Location and Home navigation resolves the exact displayed castle after area loading, and delayed responses respect subsequent manual panning."
     },
     {
       "paths": [

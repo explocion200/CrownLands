@@ -61,6 +61,18 @@ const stats=values=>{const sorted=values.toSorted((a,b)=>a-b);return {count:sort
     assert(options.nearby.some(c=>c.id===target.id&&c.regionId===target.regionId));
     assert(options.nearby.every(c=>!Object.hasOwn(c,"troops")));
     await assert.rejects(world.read({uid:pilot.players[1].uid},"options",{...input([]),key}),e=>e.code==="permission-denied");
+    // A slow foreground options read must coexist with the same player's map
+    // poll (and vice versa), without admitting duplicate reads in either lane.
+    for(const lane of ["areas","options"]){
+      let enter,release;const entered=new Promise(r=>{enter=r;}),held=new Promise(r=>{release=r;});
+      const pending=entry.reader.transaction(uid,async()=>{enter();await held;},lane);
+      try{
+        await entered;
+        await assert.rejects(entry.reader.transaction(uid,async()=>{},lane),e=>e.status===429);
+        const result=await request(0,lane==="areas"?"world/options":"world/areas",lane==="areas"?{protocol:1,revision:scene.revision,realm:scene.realmId,key}:input([source.regionId]),"area",false);
+        assert.equal(result.status,200,"Foreground options and background areas collided");
+      }finally{release();await pending;}
+    }
     // Concurrent exploration (overlapping then dispersed), real scouting and
     // committed chat all share one HTTP admission gate and one action pool.
     const channel="globalChat/"+pilot.identity.resetGeneration+"--"+pilot.identity.realmShardId+"/messages";
