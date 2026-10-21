@@ -1,5 +1,5 @@
 const { onCall: firebaseOnCall, onRequest, HttpsError, onSchedule, onDocumentCreated, onDocumentWritten,
-  admin, getApp, FieldPath, FieldValue, Filter, Timestamp, getFirestore, getMessaging, defineSecret, chatTranslationProvider } = require("./platform");
+  admin, getApp, FieldPath, FieldValue, Filter, Timestamp, getFirestore, getMessaging, defineSecret, chatTranslationProvider, privateWorldRouting } = require("./platform");
 const crypto = require("node:crypto");
 const { AsyncLocalStorage } = require("node:async_hooks");
 const OPERATION_TIMING = require("./operation-timing");
@@ -5935,6 +5935,8 @@ function normalizePathSegments(segments = []) {
       if (points.length < 2) return null;
       return {
         regionId: normalizeRegionId(segment.regionId),
+        ...(segment.routingVersion === "open-world-draft-v1" && /^[a-f0-9]{64}$/.test(segment.geometryId || "")
+          ? { routingVersion: segment.routingVersion, geometryId: segment.geometryId } : {}),
         points,
         length: Math.max(0, safeNumber(segment.length, routeLength(points))),
       };
@@ -7147,7 +7149,7 @@ function getMarauderPlacementLayout(regionId) {
     accessible: point => {
       const origin = [...seed.cities].sort((a, b) => Math.hypot(a.x - point.x, a.y - point.y) - Math.hypot(b.x - point.x, b.y - point.y))[0];
       if (!origin) return false;
-      try { return Boolean(buildServerGeneratedArmyRoute(origin, point)?.pathLength); }
+      try { return Boolean(buildCurrentServerGeneratedArmyRoute(origin, point)?.pathLength); }
       catch { return false; }
     } };
 }
@@ -7789,7 +7791,7 @@ function reverseArmyRoute(pathSegments = []) {
     .reverse()
     .map(segment => {
       const points = [...segment.points].reverse();
-      return { regionId: segment.regionId, points, length: routeLength(points) };
+      return { ...segment, points, length: routeLength(points) };
     });
   if (!segments.length) return null;
   return {
@@ -7828,7 +7830,41 @@ function getServerScoutRouteSearch(source, target, searches) {
   };
 }
 
-function buildServerGeneratedArmyRoute(source = {}, target = {}, options = {}) {
+// The optional provider exists only in an explicitly constructed isolated test
+// platform. Installed PostgreSQL/Firebase platforms never supply this capability.
+async function buildServerGeneratedArmyRoute(source = {}, target = {}, options = {}) {
+  if (!privateWorldRouting?.enabled) return buildCurrentServerGeneratedArmyRoute(source, target, options);
+  const canonicalSource = getCanonicalArmyRouteEndpoint(source, source.regionId || source.startPool);
+  const canonicalTarget = getCanonicalArmyRouteEndpoint(target, target.regionId || target.startPool);
+  await ensureTravelNetworkContext();
+  const route = await OPERATION_TIMING.measure("routePlanning", () => privateWorldRouting.calculate(canonicalSource, canonicalTarget, {
+    worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, sharedRealmId: getCurrentRealmShardId(),
+    activeRegionIds: REALM_REQUEST_CONTEXT.getStore()?.activeTravelRegionIds,
+  }));
+  if (!route?.pathSegments?.length || !(route.pathLength > 0)
+    || route.routeRegionIds.length > MAX_ROUTE_REGION_COUNT || route.pathSegments.length > MAX_ROUTE_SEGMENT_COUNT
+    || route.pathSegments.some(segment => segment.points.length > MAX_ROUTE_POINTS_PER_SEGMENT)) {
+    throw new HttpsError("failed-precondition", "The private march route is unavailable or too complex.");
+  }
+  return route;
+}
+
+async function selectPrivateScoutOrigin(candidates, target) {
+  // Route one candidate at a time so a single order cannot exhaust the worker
+  // queue. Reuse the shared City/Tower eligibility and deterministic tie rules.
+  const routes = new Map();
+  for (const candidate of candidates) {
+    if (!candidate?.id || !candidate?.regionId || clampInt(candidate.troops, 0, Number.MAX_SAFE_INTEGER) < 1) continue;
+    try { routes.set(candidate, await buildServerGeneratedArmyRoute(candidate, target)); }
+    catch (error) {
+      if (error.code !== "failed-precondition") throw error;
+    }
+  }
+  OPERATION_TIMING.scout({ scoutOriginRoutes: routes.size, scoutOriginsPruned: 0 });
+  return HOLDING_TOWERS.selectClosestScoutOrigin(candidates, target, candidate => routes.get(candidate));
+}
+
+function buildCurrentServerGeneratedArmyRoute(source = {}, target = {}, options = {}) {
   const sourceRegionId = requireKnownWorldRegionId(source.regionId || source.startPool);
   const targetRegionId = requireKnownWorldRegionId(target.regionId || target.startPool);
   const canonicalSource = getCanonicalArmyRouteEndpoint(source, sourceRegionId);
@@ -7853,7 +7889,7 @@ function buildServerGeneratedArmyRoute(source = {}, target = {}, options = {}) {
   return route;
 }
 
-function getCampReturnRoute(camp = {}, destination = {}) {
+async function getCampReturnRoute(camp = {}, destination = {}) {
   const destinationRegionId = normalizeRegionId(destination.regionId || destination.startPool);
   const storedSourceId = safeString(camp.returnSourceCityId, 96);
   const storedSourceRegionId = normalizeRegionId(camp.returnSourceRegionId);
@@ -10961,7 +10997,7 @@ function getDailyMissionSourceForTarget(regularEntries = [], target = {}, maximu
     .sort((left, right) => right.availableTroops - left.availableTroops || left.city.id.localeCompare(right.city.id));
   for (const entry of sources) {
     try {
-      buildServerGeneratedArmyRoute(entry.city, target);
+      buildCurrentServerGeneratedArmyRoute(entry.city, target);
       return {
         city: entry.city,
         troops: Math.min(entry.availableTroops, troopCeiling),
@@ -12771,7 +12807,7 @@ function getRallyReturnDestination(economy = null, profile = {}, participant = {
     || null;
 }
 
-function createRallyReturnMovement({
+async function createRallyReturnMovement({
   rally = {},
   participant = {},
   source = {},
@@ -12787,7 +12823,7 @@ function createRallyReturnMovement({
     throw new HttpsError("failed-precondition", "The rally participant has no owned return destination.");
   }
   const destination = destinationEntry.city;
-  const route = buildServerGeneratedArmyRoute(source, destination);
+  const route = await buildServerGeneratedArmyRoute(source, destination);
   const rawId = normalizeRallyId(movementId || `${rally.id}_${participant.uid}_return_${nowMs.toString(36)}`);
   const troops = Math.max(0, Math.floor(safeNumber(participant.survivors, participant.troops)));
   const sourceRegionId = normalizeRegionId(source.regionId || rally.targetRegionId || rally.assemblyRegionId);
@@ -12996,7 +13032,7 @@ function createRallySourceRecaptureMovement({
   };
 }
 
-function createRelinquishContinuationMovement({
+async function createRelinquishContinuationMovement({
   army = {},
   source = {},
   destinationEntry = null,
@@ -13009,7 +13045,7 @@ function createRelinquishContinuationMovement({
     throw new HttpsError("failed-precondition", "No owned city is available for the relinquished troops.");
   }
   const destination = destinationEntry.city;
-  const route = buildServerGeneratedArmyRoute(source, destination);
+  const route = await buildServerGeneratedArmyRoute(source, destination);
   const continuationCount = clampInt(army.relinquishContinuationCount, 0, 999) + 1;
   const rawOriginId = safeString(army.relinquishOriginArmyId || army.id, 72)
     .replace(/[^a-zA-Z0-9_-]/g, "_") || "relinquish";
@@ -13084,7 +13120,7 @@ function getReinforcementTargetRef(contribution = {}) {
     : cityRefForRegion(regionId, targetId);
 }
 
-function createReinforcementReturnMovement({
+async function createReinforcementReturnMovement({
   contribution = {},
   source = {},
   destinationEntry = null,
@@ -13097,7 +13133,7 @@ function createReinforcementReturnMovement({
     throw new HttpsError("failed-precondition", "The troop owner has no available return holding.");
   }
   const destination = destinationEntry.city;
-  const route = buildServerGeneratedArmyRoute(source, destination);
+  const route = await buildServerGeneratedArmyRoute(source, destination);
   const revision = clampInt(contribution.returnRevision, 0, 999999) + 1;
   const rawId = safeString(contribution.id || "reinforcement", 64).replace(/[^a-zA-Z0-9_-]/g, "_");
   const suffix = `_return_${revision}`;
@@ -13267,7 +13303,7 @@ async function beginReinforcementReturn({
     if (!destinationEntry?.city) {
       throw new HttpsError("failed-precondition", "The troop owner has no available return holding.");
     }
-    const movement = createReinforcementReturnMovement({
+    const movement = await createReinforcementReturnMovement({
       contribution,
       source: target,
       destinationEntry,
@@ -19739,7 +19775,7 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
       // Relinquishment is a city action, not a client-authored army order. The server chooses
       // the destination and rebuilds the complete route so stale or unloaded client map data
       // cannot prevent an otherwise valid relinquishment.
-      const validatedRoute = buildServerGeneratedArmyRoute(source, destination);
+      const validatedRoute = await buildServerGeneratedArmyRoute(source, destination);
       if (!validatedRoute.routeRegionIds.length) {
         throw new HttpsError("invalid-argument", "The relinquish march has no valid island route.");
       }
@@ -21700,8 +21736,9 @@ async function returnDepartingHoldingTowerGarrisons(uid = "", clanId = "", reaso
     const destinationEntry = getOwnedMainCityDestination(economy, profile)
       || economy.cityEntries.find(entry => entry?.city && getOwnerUid(entry.city) === playerUid);
     if (!destinationEntry?.city) throw new HttpsError("failed-precondition", "No safe Main City is available for Tower troop return.");
-    const movements = stationed.map(({ state, garrisonSnap, troops }) => {
-      const movement = createRallyReturnMovement({
+    const movements = [];
+    for (const { state, garrisonSnap, troops } of stationed) {
+      const movement = await createRallyReturnMovement({
         rally: {
           id: `tower_departure_${state.id}_${playerUid}`,
           clanId: currentClanId,
@@ -21726,8 +21763,8 @@ async function returnDepartingHoldingTowerGarrisons(uid = "", clanId = "", reaso
       });
       transaction.delete(garrisonSnap.ref);
       writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
-      return movement;
-    });
+      movements.push(movement);
+    }
     const totalTroops = stationed.reduce((total, entry) => total + entry.troops, 0);
     writePreparedEconomy(transaction, economy, {
       towerGarrisonTroops: Math.max(0, getProfileTowerGarrisonTroops(profile) - totalTroops),
@@ -23390,7 +23427,7 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
       throw new HttpsError("failed-precondition", "You cannot form a rally against your own or a current clan ally's objective.");
     }
     // Persist only server-generated rally geometry; client route fields are compatibility-only.
-    const validatedRoute = buildServerGeneratedArmyRoute(source, target);
+    const validatedRoute = await buildServerGeneratedArmyRoute(source, target);
     const economy = await prepareEconomyCollection(transaction, uid, nowMs, {
       profileRef: playerRef,
       profileSnap: playerSnap,
@@ -23653,7 +23690,7 @@ exports.joinClanRally = timedCallable("joinClanRally", { region: "us-central1", 
       targetRegionId: rally.assemblyRegionId,
     };
     // Rally contributions use the same canonical terrain and portal planner as direct marches.
-    const validatedRoute = buildServerGeneratedArmyRoute(source, assembly);
+    const validatedRoute = await buildServerGeneratedArmyRoute(source, assembly);
     const economy = await prepareEconomyCollection(transaction, uid, nowMs, {
       profileRef: playerRef,
       profileSnap: playerSnap,
@@ -23809,7 +23846,7 @@ async function withdrawClanRallyContributionRequest(request) {
           ? { id: participantSourceSnap.id, ...participantSourceSnap.data(), regionId: participant.sourceRegionId }
           : null
       );
-      movement = createRallyReturnMovement({
+      movement = await createRallyReturnMovement({
         rally,
         participant,
         source: { id: assemblySnap.id, ...assemblySnap.data(), regionId: rally.assemblyRegionId },
@@ -24199,7 +24236,7 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       pathLength: rally.pathLength,
     };
     // Rebuild at launch so a stored forming-rally route can never become trusted geometry.
-    const validatedRoute = buildServerGeneratedArmyRoute(assembly, target);
+    const validatedRoute = await buildServerGeneratedArmyRoute(assembly, target);
     const activeParticipants = activeRallyParticipants(rally);
     const inboundParticipants = activeParticipants.filter(participant => participant.status === RALLY_PARTICIPANT_INBOUND);
     const assembledParticipants = assembledRallyParticipants(rally);
@@ -25208,7 +25245,7 @@ exports.previewArmyRoute = timedCallable(
       // the validated client-visible request for its travel band; the launch
       // transaction remains authoritative for actual troop availability.
       const troops = kind === "scout" ? 1 : order.requestedTroops;
-      const route = buildServerGeneratedArmyRoute(source, target);
+      const route = await buildServerGeneratedArmyRoute(source, target);
       const profile = playerSnap.exists ? playerSnap.data() || {} : {};
       const globalStats = globalStatsSnap.exists ? globalStatsSnap.data() || {} : {};
       const marchSpeedBonusPercent = Math.max(
@@ -26143,7 +26180,8 @@ exports.sendNearbyScouts = timedCallable(
         );
       }
 
-      const routes = targets.map(target => buildServerGeneratedArmyRoute(source, target));
+      const routes = [];
+      for (const target of targets) routes.push(await buildServerGeneratedArmyRoute(source, target));
       const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
       const attackerKingPower = Math.max(0, Math.floor(safeNumber(stats?.kingPower, 0)))
         || getPlayerPowerSnapshot({
@@ -26371,7 +26409,8 @@ exports.sendRegroupOrders = timedCallable(
       }
 
       const profile = economy.profileAfter || playerSnap.data() || {};
-      const routes = sources.map(source => buildServerGeneratedArmyRoute(source, target));
+      const routes = [];
+      for (const source of sources) routes.push(await buildServerGeneratedArmyRoute(source, target));
       const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
       const ownerKingPower = Math.max(0, Math.floor(safeNumber(stats?.kingPower, 0)))
         || getPlayerPowerSnapshot({
@@ -26680,10 +26719,12 @@ async function launchAutomaticScoutOrder(request, uid, order, nowMs = Date.now()
       garrisonRef: garrisonRefs[HOLDING_TOWERS.TOWERS.findIndex(tower => tower.id === candidate.id)],
     }));
     OPERATION_TIMING.scout({ scoutOriginCandidates: cityCandidates.length + towerCandidates.length });
-    const source = HOLDING_TOWERS.selectClosestScoutOrigin(
+    const source = privateWorldRouting?.enabled
+      ? await selectPrivateScoutOrigin([...cityCandidates, ...towerCandidates], { ...target, regionId: order.targetRegionId })
+      : HOLDING_TOWERS.selectClosestScoutOrigin(
       [...cityCandidates, ...towerCandidates],
       { ...target, regionId: order.targetRegionId },
-      (from, to, maxDistance) => buildServerGeneratedArmyRoute(from, to, { searches: scoutRouteSearches, maxDistance }),
+      (from, to, maxDistance) => buildCurrentServerGeneratedArmyRoute(from, to, { searches: scoutRouteSearches, maxDistance }),
       {
         lowerBound: (from, to) => {
           const scoped = getServerScoutRouteSearch(from, to, scoutRouteSearches);
@@ -27010,7 +27051,7 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
       if (!availableTroops || troops > availableTroops) {
         throw new HttpsError("failed-precondition", "Not enough troops at the selected Holding Tower origin.");
       }
-      const validatedRoute = buildServerGeneratedArmyRoute(
+      const validatedRoute = await buildServerGeneratedArmyRoute(
         { ...source, regionId: order.sourceRegionId },
         { ...target, regionId: order.targetRegionId }
       );
@@ -27327,7 +27368,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
     }
     // Client geometry remains accepted for payload compatibility, but the server always rebuilds
     // the authoritative route from trusted city coordinates and the current portal graph.
-    const validatedRoute = buildServerGeneratedArmyRoute(source, target);
+    const validatedRoute = await buildServerGeneratedArmyRoute(source, target);
     armyRefs = armyRefsForRegions(validatedRoute.routeRegionIds, order.id);
     const attackerEconomy = await prepareEconomyCollection(transaction, uid, nowMs, {
       profileRef: playerRef,
@@ -28819,7 +28860,7 @@ async function resolveMarauderArmyById({ armyId, callerUid = "", nowMs = Date.no
     }) : null;
     // All reads above; the battle, each reward, and every return commit together.
     if (detailedBattleSnapshot) writeDetailedBattleSnapshot(transaction, detailedBattleSnapshot);
-    allocations.forEach(participant => {
+    for (const participant of allocations) {
       const index = participants.findIndex(p => p.uid === participant.uid);
       const economy = economies[index], profile = economy.profileAfter;
       const progress = buildPlayerProgressPatch(profile, { gold: loot?.gold[participant.uid] || 0,
@@ -28840,7 +28881,7 @@ async function resolveMarauderArmyById({ armyId, callerUid = "", nowMs = Date.no
       if (itemAwarded) shopItems[itemAwarded] = (shopItems[itemAwarded] || 0) + 1;
       if (refund && army.swiftMarchUsedAtMs && participant.uid === army.ownerUid) shopItems[SWIFT_MARCH_ORDER_ITEM_ID] = (shopItems[SWIFT_MARCH_ORDER_ITEM_ID] || 0) + 1;
       const origin = origins[index]?.exists ? { id: origins[index].id, ...origins[index].data(), regionId: participant.sourceRegionId } : null;
-      const movement = participant.survivors > 0 ? createRallyReturnMovement({ rally: rally || {}, participant,
+      const movement = participant.survivors > 0 ? await createRallyReturnMovement({ rally: rally || {}, participant,
         source: encounter, destinationEntry: getRallyReturnDestination(economy, profile, participant, origin), economy, profile,
         nowMs, reason: invalid ? "marauder_unavailable" : "marauder_survivors", movementId: `hunt_return_${crypto.createHash("sha256").update(`${armyId}|${participant.uid}`).digest("hex").slice(0, 40)}` }) : null;
       const patch = { character: progress.character, gold: progress.gold, goldFloat: progress.goldFloat, shopItems,
@@ -28876,7 +28917,7 @@ async function resolveMarauderArmyById({ armyId, callerUid = "", nowMs = Date.no
       // NPC IDs are slot-local; scout intel is keyed by immutable spawn identity.
       if (scoutReport) writeScoutReport(transaction, participant.uid, army.targetSpawnId, scoutReport, economy.profileSnap);
       reports.push(report); patches.push({ uid: participant.uid, ...patch });
-    });
+    }
     staminaService.writeChanges(transaction, staminaChanges);
     if (!invalid && !isScout) {
       const status = result.success ? "defeated" : "active";
@@ -29622,7 +29663,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           - defensePackages.reinforcements.reduce((total, row) => total + row.basePower, 0)
       ),
     };
-    const continueRallyReturnToMainCity = (reason = "return_destination_unavailable") => {
+    const continueRallyReturnToMainCity = async (reason = "return_destination_unavailable") => {
       const destinationEntry = getOwnedMainCityDestination(attackerEconomy, attackerProfile)
         || attackerEconomy?.cityEntries.find(entry => entry?.city && getOwnerUid(entry.city) === attackerUid)
         || null;
@@ -29639,7 +29680,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         .digest("hex")
         .slice(0, 40)}`;
       const movement = {
-        ...createRallyReturnMovement({
+        ...await createRallyReturnMovement({
           rally: {
             id: army.rallyId,
             clanId: army.rallyClanId,
@@ -30141,8 +30182,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         contributorXp: xpAllocation.contributorXp,
       };
     };
-    const continueRelinquishMarch = ({ destinationEntry = null, reason = "released_destination", reportSummary = "" } = {}) => {
-      const movement = createRelinquishContinuationMovement({
+    const continueRelinquishMarch = async ({ destinationEntry = null, reason = "released_destination", reportSummary = "" } = {}) => {
+      const movement = await createRelinquishContinuationMovement({
         army,
         source: { ...target, regionId: targetRegionId },
         destinationEntry,
@@ -33572,7 +33613,7 @@ async function settleRallyCancellationReceipt(event) {
             nowMs,
             movementId: `${receipt.rallyId}_${contributorUid}_cancel_attack`,
           })
-          : createRallyReturnMovement({
+          : await createRallyReturnMovement({
             rally: cancellationRally,
             participant,
             source: assembly,
@@ -33820,7 +33861,7 @@ async function settleRallyBattleReceipt(event) {
           ? { id: participantOriginSnap.id, ...participantOriginSnap.data(), regionId: participantOriginRegionId }
           : null
       );
-      movement = createRallyReturnMovement({
+      movement = await createRallyReturnMovement({
         rally: {
           id: receipt.rallyId,
           clanId: receipt.clanId,
@@ -34439,7 +34480,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
 
     let returnArmy = null;
     if (returningTroops > 0) {
-      const route = getCampReturnRoute(camp, returnDestination);
+      const route = await getCampReturnRoute(camp, returnDestination);
       const returnArmyId = safeString(`camp_return_${camp.id}_${payoutAtMs}_${holderUid}`, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
       const duration = calculateTravelTime({
         pathLength: route.pathLength,
@@ -34904,7 +34945,7 @@ exports.recallRewardCampGarrison = onCall({ region: "us-central1", maxInstances:
     const returningTroops = Math.max(0, Math.floor(safeNumber(rawCamp.currentGarrison, rawCamp.troops)));
     let movement = null;
     if (returningTroops > 0) {
-      const route = getCampReturnRoute(rawCamp, returnDestination);
+      const route = await getCampReturnRoute(rawCamp, returnDestination);
       const armyId = safeString(`camp_recall_${camp.id}_${nowMs}_${uid}`, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
       const duration = calculateTravelTime({
         pathLength: route.pathLength,

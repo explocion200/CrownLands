@@ -13,6 +13,21 @@ function verify(router,result,a,b){assert.equal(result.status,"ok",JSON.stringif
  assert.ok(Math.abs(result.length-length)<1e-6);for(let i=1;i<result.segments.length;i++)assert.deepEqual(result.segments[i-1].points.at(-1),result.segments[i].points[0]);
 }
 async function main(){
+ // Independent brute-force oracle for the spatial hash: horizontal, vertical,
+ // reverse, zero-length, exact bucket corners and sub-pixel clearance edges.
+ let seed=351;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+ const obstacles=Array.from({length:300},(_,i)=>({key:`oracle-${i}`,x:10+random()*2800,y:10+random()*2100,radius:random()*60}));
+ obstacles.push({key:"clearance",x:127.75,y:256,radius:0});
+ const oracle=createRouter(geometry([section(0,0),section(1,0),section(0,1),section(1,1)],obstacles));
+ function check(a,b){const dx=b.x-a.x,dy=b.y-a.y,len=dx*dx+dy*dy;
+  const expected=!obstacles.some(o=>{const t=len?Math.max(0,Math.min(1,((o.x-a.x)*dx+(o.y-a.y)*dy)/len)):0;return Math.hypot(o.x-a.x-dx*t,o.y-a.y-dy*t)<o.radius+.5;});
+  assert.equal(oracle.clear(a,b),expected,`Spatial hash differs from exact obstacle test: ${JSON.stringify([a,b])}`);
+ }
+ for(let i=0;i<3000;i++)check({x:1+random()*2800,y:1+random()*2100},{x:1+random()*2800,y:1+random()*2100});
+ for(const x of [128,256,1408])for(const y of [128,256,1024])for(const [a,b]of [
+  [{x,y},{x,y}],[{x,y:1},{x,y:2100}],[{x:1,y},{x:2800,y}],
+  [{x,y},{x:x+128,y:y+128}],[{x:x+128,y:y+128},{x,y}],
+  [{x:x+128,y},{x,y:y+128}],[{x,y:y+128},{x:x+128,y}]])check(a,b);
  const simple=createRouter(geometry([section(0,0),section(1,0),section(0,1),section(1,1)]));
  // Every interior edge coordinate is legal; no road midpoint or old arrow is needed.
  for(const y of [12,80,200,740,1000,1074]){const a={x:1400,y},b={x:1500,y},r=simple.route(a,b);verify(simple,r,a,b);assert.equal(r.points.length,2);assert.equal(r.length,100);}
