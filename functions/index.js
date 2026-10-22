@@ -7142,14 +7142,18 @@ function getMarauderPlacementLayout(regionId) {
   const structures = [...seed.cities, ...seed.camps].map(city => ({ ...city, clearance: Math.max(132, city.size || 0) }));
   HOLDING_TOWERS.TOWERS.filter(tower => tower.regionId === regionId).forEach(tower => structures.push({
     ...serverImagePointToWorld(regionId, { x: tower.reservedX, y: tower.reservedY }), clearance: 350 }));
-  const projectStructure = privateWorldRouting?.enabled && privateWorldRouting.projectStructure
-    ? point => privateWorldRouting.projectStructure({ ...point, regionId }, {
+  const placementContext = {
       worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, sharedRealmId: getCurrentRealmShardId(),
       activeRegionIds: REALM_REQUEST_CONTEXT.getStore()?.activeTravelRegionIds,
-    }) : point => point;
+    };
+  const projectStructure = privateWorldRouting?.enabled && privateWorldRouting.projectStructure
+    ? point => privateWorldRouting.projectStructure({ ...point, regionId }, placementContext) : point => point;
+  const prepared = privateWorldRouting?.enabled && privateWorldRouting.npcPlacement
+    ? privateWorldRouting.npcPlacement(regionId, placementContext) : null;
   const model = getAuthoritativeRoutePlannerForRegions([regionId]).getModel(regionId);
   return { bounds: getServerMapBounds(regionId), structures: structures.map(projectStructure), projectStructure, rectangles,
     roadPoints: (MARAUDER_ROAD_POINTS.templates[templateId] || []).map(([x, y]) => serverImagePointToWorld(regionId, { x, y })),
+    ...(prepared || {}),
     walkable: (point, padding) => isRegionWalkablePoint({ regions: { [regionId]: model.workerRegion } }, point.x, point.y, regionId, padding),
     accessible: point => {
       const origin = [...seed.cities].sort((a, b) => Math.hypot(a.x - point.x, a.y - point.y) - Math.hypot(b.x - point.x, b.y - point.y))[0];

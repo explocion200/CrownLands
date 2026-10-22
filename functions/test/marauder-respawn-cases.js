@@ -96,5 +96,36 @@ module.exports = async function respawnCases({ db, geometry }) {
   assert.equal((await soloPopulation.refresh(request, due + 60000)).spawned, 1);
   assert.equal((await rows[1].ref.get()).data().status, "defeated");
   assert.equal((await rows[1].ref.get()).data().spawnId, other.spawnId);
+  // Four reserved alternatives do not create four slots. Inspect each at most
+  // once, retain active encounters, and rotate exactly one due identity.
+  const reserved=[{x:1300,y:1300},{x:3700,y:1300},{x:1300,y:3700},{x:3700,y:3700}];
+  const fixedIsland=db.doc(`islands/${world.worldId}--fixed-sites`);await fixedIsland.set({...world});
+  const fixed=createMarauderPopulation({db,runTransaction:work=>db.runTransaction(work),context:()=>world,
+    activeRegions:async()=>[soloId],descriptor:()=>solo,
+    layout:()=>({...soloArea,roadPoints:reserved,fixedRoadSites:true}),islandId:()=>fixedIsland.id});
+  const initial=await Promise.all([fixed.populate(soloId,now),fixed.populate(soloId,now)]);
+  assert.equal(initial.reduce((n,r)=>n+r.spawned,0),2);
+  const fixedRows=(await fixedIsland.collection("marauderCombat").get()).docs;
+  assert.equal(fixedRows.length,2);assert.equal((await fixed.populate(soloId,now)).spawned,0);
+  const unchanged=fixedRows[1].data(),current=fixedRows[0].data();
+  const fixedPublic=fixedIsland.collection("marauders").doc(fixedRows[0].id),fixedPrivate=fixedRows[0].ref;
+  const fixedRequest={regionId:soloId,id:fixedRows[0].id,spawnId:current.spawnId},fixedDue=now+120000;
+  await fixedPrivate.set({status:"defeated",respawnAtMs:fixedDue},{merge:true});
+  await fixedPublic.set({status:"defeated",respawnAtMs:fixedDue},{merge:true});
+  assert.equal((await fixed.refresh(fixedRequest,fixedDue-1)).spawned,0);
+  const blockers=[];
+  for(const [i,p]of reserved.entries()){
+    const ref=fixedIsland.collection("cities").doc("block-"+i);await ref.set(p);blockers.push(ref);
+  }
+  assert.equal((await fixed.refresh(fixedRequest,fixedDue)).blocked,1,"Occupied reserved sites do not fall back to arbitrary ground");
+  assert.equal((await fixedPublic.get()).data().spawnId,current.spawnId);
+  // Leave exactly one valid replacement: even unlucky random starts must find it.
+  const free=reserved.findIndex(p=>Math.hypot(p.x-current.x,p.y-current.y)>0&&Math.hypot(p.x-unchanged.x,p.y-unchanged.y)>128);
+  await blockers[free].delete();
+  const rotated=await Promise.all([fixed.refresh(fixedRequest,fixedDue+60000),fixed.refresh(fixedRequest,fixedDue+60000)]);
+  assert.equal(rotated.reduce((n,r)=>n+r.spawned,0),1);
+  const final=(await fixedPrivate.get()).data();assert.equal(final.x,reserved[free].x);assert.equal(final.y,reserved[free].y);
+  assert.notEqual(final.spawnId,current.spawnId);assert.deepEqual((await fixedRows[1].ref.get()).data(),unchanged);
+  assert.equal((await fixedIsland.collection("marauders").get()).size,2);
   console.log("Respawn regression passed: Southhaven and Crown Citadel actual roads, unchanged cooldowns/buildings, fresh position/identity, concurrent replacement, other remains, and blocked Lionwatch.");
 };

@@ -104,7 +104,8 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
         if (previous?.status === "active" || previous?.respawnAtMs > now) continue;
         if (enemies.length >= slots.length) { blocked++; continue; }
         // Crowded Core interiors need more chances; keep each slot's search bounded.
-        const maxAttempts = slot.classification === "boss" ? 512 : 48;
+        const maxAttempts = geometry.fixedRoadSites ? roadPoints.length : slot.classification === "boss" ? 512 : 48;
+        const firstSite = geometry.fixedRoadSites && roadPoints.length ? crypto.randomInt(roadPoints.length) : 0;
         // This slot's remains disappear atomically with its replacement. Only
         // other remains still occupy space; buildings and living NPCs keep
         // their existing clearance. Never reuse the exact previous position.
@@ -112,7 +113,10 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
           .filter(([otherId, row]) => otherId !== id && row.status === "defeated").map(([, row]) => row)];
         let point = null;
         for (let attempt = 0; roadPoints.length && attempt < maxAttempts; attempt++) {
-          const candidate = { ...roadPoints[crypto.randomInt(roadPoints.length)], regionId };
+          // Inspect each reserved alternative once; random resampling could
+          // repeatedly miss the only free site on a crowded map.
+          const index = geometry.fixedRoadSites ? (firstSite + attempt) % roadPoints.length : crypto.randomInt(roadPoints.length);
+          const candidate = { ...roadPoints[index], regionId };
           if (previous && candidate.x === previous.x && candidate.y === previous.y) continue;
           if (!isClear(candidate, { ...geometry, structures: obstacles, enemies })) continue;
           if (!geometry.accessible(candidate)) continue;
