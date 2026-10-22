@@ -21,14 +21,37 @@ const codes = new Set([
 ]);
 const countKeys = ["scanned", "resolved", "skipped", "failed", "paid", "backlogPending"];
 const levels = ["log", "warn", "error", "info", "debug"];
+const timingCounters = ["transactionAttempts", "dbReadQueries", "dbReadRows", "dbTransactionAttempts", "dbSerializationFailures", "dbDeadlocks", "dbRetries", "dbDocumentCacheHits", "routeCacheHits", "routeCacheMisses"];
+const timingPhases = ["realmContext", "worldValidation", "documentReads", "economyPreparation", "routePlanning", "transaction", "dbPoolWait", "dbRead", "dbCommit", "dbBackoff"];
+const arrivalSampleLimit = 32;
 const pgNotice = "DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.\n(Use `node --trace-deprecation ...` to show where the warning was created)";
 const ownValue = (object, key) => object && typeof object === "object"
   ? Object.getOwnPropertyDescriptor(object, key)?.value : undefined;
+const boundedNumber = value => typeof value === "number" && Number.isFinite(value) && value >= 0
+  ? Math.min(1000000, Math.round(value)) : undefined;
+
+function arrivalSample(details) {
+  const operation = ownValue(details, "operation"), outcome = ownValue(details, "outcome");
+  const requestDurationMs = boundedNumber(ownValue(details, "requestDurationMs"));
+  if (operation !== "scheduledArmyArrival" || !["resolved", "skipped", "error"].includes(outcome) || requestDurationMs === undefined) return null;
+  const sample = { operation, outcome, requestDurationMs, phaseDurationMs: {} };
+  for (const key of timingCounters) {
+    const value = boundedNumber(ownValue(details, key));
+    if (value !== undefined) sample[key] = value;
+  }
+  const phases = ownValue(details, "phaseDurationMs");
+  for (const key of timingPhases) {
+    const value = boundedNumber(ownValue(phases, key));
+    if (value !== undefined) sample.phaseDurationMs[key] = value;
+  }
+  return sample;
+}
 
 class WorkerDiagnostics {
   constructor() {
     this.counts = Object.fromEntries(levels.map(level => [level, 0]));
     this.events = new Map();
+    this.arrivalTimings = [];
   }
   record(level, label, details) {
     if (!levels.includes(level)) return;
@@ -38,6 +61,16 @@ class WorkerDiagnostics {
       level = "warn"; label = "PostgreSQL client concurrent-query deprecation";
     }
     this.counts[level]++;
+    // Permanent workers intercept console output. Retain only a small numeric
+    // window in their private status, without forwarding raw handler payloads.
+    if (level === "log" && label === "crownlands_arrival_timing") {
+      const sample = arrivalSample(details);
+      if (sample) {
+        this.arrivalTimings.push(sample);
+        if (this.arrivalTimings.length > arrivalSampleLimit) this.arrivalTimings.shift();
+      }
+      return;
+    }
     if (!labels.has(label)) return;
     const key = level + ":" + label;
     let event = this.events.get(key);
@@ -51,7 +84,7 @@ class WorkerDiagnostics {
       if (Number.isSafeInteger(value) && value >= 0) event.outcomes[name] = (event.outcomes[name] || 0) + value;
     }
   }
-  snapshot() { return structuredClone({ counts: this.counts, events: [...this.events.values()] }); }
+  snapshot() { return structuredClone({ counts: this.counts, events: [...this.events.values()], ...(this.arrivalTimings.length ? { arrivalTimings: this.arrivalTimings } : {}) }); }
   capture(target = console) {
     const original = Object.fromEntries(levels.map(level => [level, target[level]]));
     for (const level of levels) target[level] = (...args) => this.record(level, ...args);

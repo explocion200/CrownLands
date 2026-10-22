@@ -2,7 +2,15 @@
 const { AsyncLocalStorage } = require("node:async_hooks");
 const { performance } = require("node:perf_hooks");
 const context = new AsyncLocalStorage();
-const phases = new Set(["realmContext", "worldValidation", "documentReads", "economyPreparation", "routePlanning", "transaction"]);
+const phases = new Set(["realmContext", "worldValidation", "documentReads", "economyPreparation", "routePlanning", "transaction", "dbPoolWait", "dbRead", "dbCommit", "dbBackoff"]);
+
+const counters = new Set(["dbReadQueries", "dbReadRows", "dbTransactionAttempts", "dbSerializationFailures", "dbDeadlocks", "dbRetries", "dbDocumentCacheHits"]);
+function count(key, amount = 1) {
+  const timing = context.getStore();
+  if (!timing || !counters.has(key) || !Number.isFinite(amount) || amount < 0) return;
+  const values = timing.database ||= {};
+  values[key] = Math.min(1000000, (values[key] || 0) + Math.floor(amount));
+}
 
 function run(operation) {
   return context.run({ startedAt: performance.now(), phases: {}, transactionAttempts: 0 }, operation);
@@ -60,10 +68,11 @@ function snapshot() {
     transactionAttempts: timing.transactionAttempts,
     phaseDurationMs: Object.fromEntries(Object.entries(timing.phases).map(([phase, duration]) => [phase, Math.round(duration)])),
     ...(timing.scout || {}),
+    ...(timing.database || {}),
     ...(timing.routeCacheHits || timing.routeCacheMisses ? {
       routeCacheHits: timing.routeCacheHits || 0, routeCacheMisses: timing.routeCacheMisses || 0,
     } : {}),
   };
 }
 
-module.exports = { run, measure, transactionAttempt, scout, routeCache, snapshot };
+module.exports = { run, measure, transactionAttempt, scout, routeCache, count, snapshot };

@@ -10513,22 +10513,16 @@ function cleanCityUpdate(city = {}, patch = {}) {
 
 async function getProfileSnapshots(transaction, uids) {
   const uniqueUids = [...new Set(uids.filter(Boolean))];
-  const entries = await Promise.all(uniqueUids.map(async uid => {
-    const ref = db.doc(`players/${uid}`);
-    const snap = await transaction.get(ref);
-    return [uid, { ref, snap, data: snap.exists ? snap.data() || {} : {} }];
-  }));
-  return new Map(entries);
+  const refs = uniqueUids.map(uid => db.doc(`players/${uid}`));
+  const snapshots = refs.length ? await transaction.getAll(...refs) : [];
+  return new Map(uniqueUids.map((uid, i) => [uid, { ref: refs[i], snap: snapshots[i], data: snapshots[i].exists ? snapshots[i].data() || {} : {} }]));
 }
 
 async function getGlobalStatsSnapshots(transaction, uids) {
   const uniqueUids = [...new Set((Array.isArray(uids) ? uids : []).filter(Boolean))];
-  const entries = await Promise.all(uniqueUids.map(async uid => {
-    const ref = playerGlobalStatsRef(uid);
-    const snap = await transaction.get(ref);
-    return [uid, snap.exists ? snap.data() || {} : {}];
-  }));
-  return new Map(entries);
+  const refs = uniqueUids.map(uid => playerGlobalStatsRef(uid));
+  const snapshots = refs.length ? await transaction.getAll(...refs) : [];
+  return new Map(uniqueUids.map((uid, i) => [uid, snapshots[i].exists ? snapshots[i].data() || {} : {}]));
 }
 
 async function getAuthoritativeDefensePackages(transaction, {
@@ -29078,7 +29072,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
   const candidateRefs = [canonicalArmyRef(armyId), ...armyViewRefsForRegions(requestedRegions, armyId)];
 
   const resolution = await runTransactionWithInfrastructureRetry(async transaction => {
-    const candidateSnaps = await Promise.all(candidateRefs.map(ref => transaction.get(ref)));
+    const candidateSnaps = await transaction.getAll(...candidateRefs);
     const firstArmySnap = candidateSnaps.find(snapshot => snapshot.exists);
     if (!firstArmySnap) return { ok: true, status: "missing" };
     const army = { id: firstArmySnap.id, ...firstArmySnap.data() };
@@ -29101,11 +29095,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const targetRef = targetType === "camp"
       ? campRefForRegion(targetRegionId, army.toId)
       : cityRefForRegion(targetRegionId, army.toId);
-    const [sourceSnap, targetSnap, sourceGarrisonSnap] = await Promise.all([
-      transaction.get(sourceRef),
-      transaction.get(targetRef),
-      sourceGarrisonRef ? transaction.get(sourceGarrisonRef) : Promise.resolve(null),
-    ]);
+    const [sourceSnap, targetSnap, sourceGarrisonSnap = null] = await transaction.getAll(
+      sourceRef, targetRef, ...(sourceGarrisonRef ? [sourceGarrisonRef] : []),
+    );
     const isReturning = Boolean(army.returning);
     const isCampReturn = Boolean(army.campReturn);
     const isReinforcementReturn = Boolean(army.reinforcementReturn);
@@ -29186,12 +29178,10 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       const rallyId = normalizeRallyId(army.rallyId);
       const rallyRef = clanId && rallyId ? clanRallyRef(clanId, rallyId) : null;
       const [rallySnap, attackerProfileSnap, clanSnap, memberSnap] = rallyRef
-        ? await Promise.all([
-          transaction.get(rallyRef),
-          transaction.get(db.doc(`players/${attackerUid}`)),
-          transaction.get(db.doc(`clans/${clanId}`)),
-          transaction.get(db.doc(`clans/${clanId}/members/${attackerUid}`)),
-        ])
+        ? await transaction.getAll(
+          rallyRef, db.doc(`players/${attackerUid}`), db.doc(`clans/${clanId}`),
+          db.doc(`clans/${clanId}/members/${attackerUid}`),
+        )
         : [null, null, null, null];
       const rally = normalizeClanRally(rallySnap);
       const participant = rally ? getRallyParticipant(rally, attackerUid) : null;
@@ -36451,7 +36441,8 @@ exports.resolveDueArmyOrders = onSchedule({
       oldestLateByMs = Math.max(oldestLateByMs, Math.max(0, nowMs - target.arrivesAtMs));
     });
 
-    await processWithConcurrency(targets, SCHEDULED_ARMY_RESOLVE_CONCURRENCY, async target => {
+    await processWithConcurrency(targets, SCHEDULED_ARMY_RESOLVE_CONCURRENCY, async target => OPERATION_TIMING.run(async () => {
+      let outcome = "skipped";
       try {
         const result = await runWithRealmShard(target.realmShardId, () => resolveArmyOrderById({
           armyId: target.armyId,
@@ -36459,14 +36450,14 @@ exports.resolveDueArmyOrders = onSchedule({
           callerUid: "",
           nowMs,
         }));
-        if (result?.status === "resolved") resolved += 1;
+        if (result?.status === "resolved") { resolved += 1; outcome = "resolved"; }
         else skipped += 1;
       } catch (error) {
         if (isExpectedScheduledResolveError(error)) {
           skipped += 1;
           return;
         }
-        failed += 1;
+        failed += 1; outcome = "error";
         console.error("Scheduled army resolution failed", {
           armyId: target.armyId,
           ownerUid: target.ownerUid,
@@ -36475,8 +36466,15 @@ exports.resolveDueArmyOrders = onSchedule({
           message: error?.message || String(error),
           code: error?.code || "",
         });
+      } finally {
+        const timing = OPERATION_TIMING.snapshot();
+        // Keep operational diagnostics bounded and free of army/player IDs,
+        // source documents and SQL. Fast successful arrivals do not add logs.
+        if (timing.requestDurationMs >= 500 || outcome === "error") {
+          console.log("crownlands_arrival_timing", { operation: "scheduledArmyArrival", outcome, ...timing });
+        }
       }
-    });
+    }));
 
     if (page.exhausted || !scanCursor) break;
   }
