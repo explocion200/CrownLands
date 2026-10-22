@@ -25,6 +25,7 @@ const rootFiles = [
   "clan-treasury-ui.js", "clan-treasury-ui.css",
   "training-grounds-ui.js", "training-grounds-ui.css",
   "engineers-workshop-ui.js", "engineers-workshop-ui.css",
+  "clan-intelligence-ui.js", "clan-support-buildings-ui.js",
   "estate-economy-ui.js", "estate-economy-ui.css",
     "guild-config.js", "guild-rules.js", "guild-ui.js", "guild-ui.css",
   "app-entry.js",

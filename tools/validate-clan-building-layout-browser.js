@@ -65,13 +65,18 @@ async function main() {
       await ev(() => {
         window.__CROWNLANDS_BENCHMARK__.closeModal();
         const api = getOnlineApi();
-        window.layoutQa = { calls: [], reads: 0, balance: 4260000000, fail: false };
+        window.layoutQa = { calls: [], reads: 0, balance: 4260000000, fail: false, scoutedAtMs: Date.now() - 30000 };
         window.layoutTower = HOLDING_TOWER_UI.createQaSnapshot(getHoldingTowerVisual(HOLDING_TOWER_DEFINITIONS[0].id), "owner");
-        Object.assign(layoutTower, { buildings: { shop: 4, workshop: 4, infirmary: 4, training: 4 }, buildingProject: null, wallIntegrityBps: 10000, attackBlocked: false, repairActive: false });
+        Object.assign(layoutTower, { clanTowerSupportVersion: 1, buildings: { shop: 4, workshop: 4, infirmary: 4, training: 4, stables: 4, scout_lodge: 4 }, buildingProject: null, wallIntegrityBps: 10000, attackBlocked: false, repairActive: false });
         state.clanId = layoutTower.clanId; state.gold = 5000000;
         clanTreasuryClanId = state.clanId; clanTreasuryStatus = { treasury: { balance: layoutQa.balance } };
         loadClanTreasuryStatus = async () => { clanTreasuryStatus = { treasury: { balance: layoutQa.balance } }; return clanTreasuryStatus; };
         getOnlineApi = () => ({ ...api, isReady: () => true, isSignedIn: () => true, subscribeHoldingTowerState: () => () => {},
+          clanIntelligence: async input => {
+            if (layoutQa.intelFailure) throw Error("Clan intelligence access ended.");
+            const entry = { key: "a".repeat(64), targetName: "Fictional Stonekeep", scoutName: "Fictional Scout", sharedByUid: "qa", troops: 12345, location: { regionId: layoutTower.regionId, targetType: "city", targetId: "fictional" }, scoutedAtMs: layoutQa.scoutedAtMs, expiresAtMs: layoutQa.scoutedAtMs + 600000, canRemove: true };
+            return { version: 1, clanId: layoutTower.clanId, towerId: layoutTower.id, ownershipRevision: layoutTower.ownershipRevision, serverTimeMs: Date.now(), capacity: 20, entries: layoutQa.intelRemoved ? [] : [entry], ...(input.action === "detail" ? { entry: { ...entry, snapshot: { troops: 12345, totalDefense: 22222, fortification: { startingWallPower: 6000 } } } } : {}) };
+          }, subscribeClanIntelligence: (_id, changed, error) => { layoutQa.intelSignal = changed; layoutQa.intelDenied = error; return () => { layoutQa.intelSignal = layoutQa.intelDenied = null; }; },
           getHoldingTowerState: async () => { layoutQa.reads++; return { worldActive: true, towers: [{ ...layoutTower }] }; },
           getClanTowerShop: async () => ({ clanShop: { level: layoutTower.buildings.shop, eligible: true, items: CrownlandsClanTowerBuildings.shopStatus(layoutTower.buildings.shop, {}, Date.now()).map(item => ({ ...item, price: 1000 })) } }),
           startClanTowerBuilding: async payload => { layoutQa.calls.push(payload); if (layoutQa.fail) throw Error("Construction not confirmed. Please retry."); layoutTower.buildingProject = { buildingId: payload.buildingId, targetLevel: 5, remainingMs: 21600000, progressStartedAtMs: Date.now() }; return { tower: layoutTower }; },
@@ -91,7 +96,7 @@ async function main() {
       await ready(() => modalBody.dataset.clanShopReady === "true");
       assert.deepEqual(await frameStyle(), towerFrame, "Buildings tab must keep the Tower size and theme");
       let reference;
-      for (const id of ["workshop", "infirmary", "training", "shop"]) {
+      for (const id of ["workshop", "infirmary", "training", "stables", "scout_lodge", "shop"]) {
         await ev(id => openClanTowerBuilding(layoutTower.id, id), id);
         await ready(id => modalBody.dataset[id === "shop" ? "clanShopReady" : id + "Ready"] === "true", id);
         await ev(() => modalBody.querySelector("#buildingArt").decode());
@@ -110,7 +115,7 @@ async function main() {
             buttonVisible: r.height >= 44 && r.top >= 0 && r.bottom <= innerHeight && button.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)),
             overflow: modal.scrollWidth > modal.clientWidth + 1 || [...shell.querySelectorAll(".detail-scroll")].filter(n => !n.hidden).some(n => n.scrollWidth > n.clientWidth + 1) };
         });
-        assert.equal(result.overview, "true"); assert.equal(result.benefitCount, 2); assert.equal(result.choices, 4);
+        assert.equal(result.overview, "true"); assert.equal(result.benefitCount, 2); assert.equal(result.choices, 6);
         assert.equal(result.cost, ["infirmary", "training"].includes(id) ? "4 / 10" : "80,000,000"); assert(result.buttonVisible && !result.overflow, JSON.stringify({ id, width, ...result }));
         if (!reference) reference = result;
         else for (const key of ["header", "sidebar", "footer", "goldFont"]) assert.deepEqual(result[key], reference[key], id + ": inconsistent " + key + " at " + width);
@@ -133,6 +138,19 @@ async function main() {
         await click('[data-tower-tab="buildings"]');
         await ready(id => modalBody.dataset[id === "shop" ? "clanShopReady" : id + "Ready"] === "true", id);
       }
+      await ev(() => openClanTowerBuilding(layoutTower.id, "scout_lodge", { section: "intelligence" }));
+      await ready(() => modalBody.querySelector(".intel-entry"));
+      assert.match(await ev(() => modalBody.querySelector("#intelligencePanel").textContent), /1 \/ 20 reports/);
+      await screenshot(`${width}-intelligence-list.png`);
+      await click("[data-intel-detail]");
+      await ready(() => modalBody.querySelector(".intel-breakdown"));
+      assert.match(await ev(() => modalBody.querySelector("#intelligencePanel").textContent), /12,345/);
+      await screenshot(`${width}-intelligence-detail.png`);
+      await ev(() => layoutQa.intelDenied(Error("Membership ended")));
+      assert.equal(await ev(() => modalBody.querySelectorAll(".intel-breakdown,.intel-entry").length), 0);
+      assert.match(await ev(() => modalBody.querySelector("#intelligencePanel").textContent), /Membership ended/);
+      await ev(() => openClanTowerBuilding(layoutTower.id, "shop"));
+      await ready(() => modalBody.dataset.clanShopReady === "true");
       // Shop construction follows the same restrictions, retry identity and authoritative completion as the other buildings.
       await click("#tab-overview");
       for (const scenario of ["funds", "balance", "walls", "attack", "member", "other", "maximum", "unbuilt"]) {

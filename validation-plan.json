@@ -1,54 +1,112 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "921af6f8cc599f53ccd665d1401f9e26f7597e5f",
+  "baseCommit": "cda910c636504bbe2eca09dfb30713db5e552c71",
   "coverage": [
     {
       "paths": [
-        "functions/index.js",
-        "functions/marauder-population.js",
-        "functions/test/marauder-respawn-cases.js",
-        "local-backend/world/routing.js",
-        "local-backend/world/npc-sites.json",
-        "local-backend/world/placements.json",
-        "tools/prepare-npc-sites.js",
-        "tools/prepare-world-placements.js",
-        "tools/validate-npc-road-sites.js"
-      ],
-      "tests": [
-        "tools/validate-npc-road-sites.js",
-        "tools/validate-world-spacing.js",
-        "tools/validate-marauder-terrain.js",
-        "tools/validate-marauder-rules.js",
-        "tools/test-local-postgres-continuous-npcs.js",
-        "tools/test-local-postgres-marauder-respawn.js",
-        "functions/test/emulator-marauder-population.js"
-      ],
-      "reason": "Bounded reserved-road alternatives are scoped to the installed continuous Core/active New Lands routing provider. Verify all 81 templates and 65 generated sections, road identity, unchanged ground/inset/active separation, current visible decorations and fixed structures, independent pickup areas, reachable routes, generated-template mapping and solo partner availability. Existing packing validation preserves city/fixed objective positions and overall spacing. Shared PostgreSQL/emulator cases exercise two-solo/one-boss caps, four alternatives, active encounter preservation, cooldowns, dynamic city obstruction, no fallback, exact-once concurrent respawn and blocked retries. Existing rule checks preserve all rewards/balance. Legacy geometry behavior is unchanged when the continuous hook is absent."
-    },
-    {
-      "paths": [
-        "world/appearance.js",
-        "world/flags.css",
-        "world/model.js",
-        "world/preview.js",
-        "tools/test-local-postgres-npc-labels-browser.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-npc-labels-browser.js",
-        "tools/validate-npc-road-sites.js",
-        "tools/validate-continuous-map-labels.js",
-        "tools/validate-world-spacing.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "reason": "Pin active/defeated NPC name and countdown immediately above its marker in world coordinates, with bounded two-line text and collision-aware city labels. Preserve existing encounter coordinates while suppressing decoration overlaps. Actual production browser harness uses disposable accounts, current PostgreSQL population and real artwork at 1440x900, 844x390 and 568x320 across zooms and crowded Core/New Lands; checks visible exact anchors and label collisions with all network intercepted. Shared solver validation covers all catalog city banners, selected priority, edge/corner overlaps, deterministic feed order and zoom; package validator protects build budgets. The lazy bundle receives a bounded 512-byte allowance for 385 added bytes; the site catalog remains server-only and installation precaching is unchanged."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/CLAN_SUPPORT_BUILDINGS_ROLLOUT.md"
       ],
       "tests": [],
-      "reason": "Record the owner-confirmed request for up to four road alternatives without extra active NPCs, preserving crowded-map limits, existing encounters and cooldowns. Describe attached labels and current-layout clearance; deployment must be verified separately."
+      "reason": "Record the explicitly confirmed six-building rules, private snapshot lifecycle and additive speed eligibility; document the additive local PostgreSQL rollout and pending backend installation without claiming deployment."
+    },
+    {
+      "paths": [
+        "docs/art-prompts/clan-buildings/prompts.json",
+        "assets/clan-buildings/scout_lodge-1.png",
+        "assets/clan-buildings/scout_lodge-1.webp",
+        "assets/clan-buildings/scout_lodge-2.png",
+        "assets/clan-buildings/scout_lodge-2.webp",
+        "assets/clan-buildings/scout_lodge-3.png",
+        "assets/clan-buildings/scout_lodge-3.webp",
+        "assets/clan-buildings/scout_lodge-4.png",
+        "assets/clan-buildings/scout_lodge-4.webp",
+        "assets/clan-buildings/stables-1.png",
+        "assets/clan-buildings/stables-1.webp",
+        "assets/clan-buildings/stables-2.png",
+        "assets/clan-buildings/stables-2.webp",
+        "assets/clan-buildings/stables-3.png",
+        "assets/clan-buildings/stables-3.webp",
+        "assets/clan-buildings/stables-4.png",
+        "assets/clan-buildings/stables-4.webp",
+        "docs/art-prompts/clan-buildings/support-theme-reference.jpg"
+      ],
+      "tests": [
+        "tools/validate-clan-tower-buildings.js",
+        "tools/validate-clan-tower-buildings-browser.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Eight generated building stages match the attached reference and existing transparent 512px anchored sprite convention. Verify stage files, six-building courtyard mouse/touch selection and controls, optimized WebP production inclusion and bounded payload; source art/provenance remain outside the package."
+    },
+    {
+      "paths": [
+        "clan-tower-buildings.js",
+        "functions/clan-tower-buildings.js",
+        "functions/index.js",
+        "local-backend/access.js",
+        "functions/clan-tower-support.js",
+        "functions/test/clan-tower-support-cases.js",
+        "functions/test/emulator-clan-support.js",
+        "tools/test-local-postgres-clan-support-commands.js",
+        "tools/test-local-postgres-clan-support.js"
+      ],
+      "tests": [
+        "tools/validate-clan-tower-buildings.js",
+        "tools/test-local-postgres-clan-support.js",
+        "tools/test-local-postgres-clan-support-commands.js",
+        "tools/validate-gear-bonus-gameplay.js",
+        "tools/validate-peace-shield-returns.js",
+        "tools/validate-layer1-travel.js",
+        "tools/validate-clan-rallies.js",
+        "tools/validate-holding-towers.js",
+        "functions/test/emulator-clan-support.js",
+        "functions/test/emulator-holding-tower-lifecycle.js",
+        "functions/test/emulator-holding-tower-donation-concurrency.js",
+        "functions/test/emulator-scout-report-lifecycle.js"
+      ],
+      "reason": "Additive building normalization uses unchanged project, Treasury, wall and capture lifecycle. Exercise all levels, paused retired buildings, concurrent charges/receipts, authoritative commands and completion. Stables eligibility/caps/preview-dispatch/immutable launch and no-bonus returns depend on shared gear, routing, rallies and return logic. Private intelligence tests cover bounded transactional capacity, server-owned reports, expiry, forged/foreign records, NPC identity, removal, capture/reacquisition/reset/disband and direct/watch permission revocation on disposable PostgreSQL plus the emulator; existing Tower and scout lifecycle suites protect shared dependency behavior."
+    },
+    {
+      "paths": [
+        "firebaseClient.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-clan-support.js",
+        "tools/validate-clan-building-layout-browser.js",
+        "functions/test/emulator-clan-support.js",
+        "functions/test/emulator-scout-report-lifecycle.js"
+      ],
+      "reason": "The actual local callable and scoped subscription adapters carry private requests and only an opaque clan signal. Verify local watch reauthorization and current-realm report ownership; UI clears access/errors without browser persistence. Existing public report and personal-scout contracts stay unchanged."
+    },
+    {
+      "paths": [
+        "clan-tower-buildings-ui.css",
+        "clan-tower-buildings-ui.js",
+        "game.js",
+        "index.html",
+        "scout-report-ui.js",
+        "tools/build-production-client.js",
+        "tools/validate-clan-building-layout-browser.js",
+        "tools/validate-clan-tower-buildings-browser.js",
+        "tools/validate-clan-tower-buildings.js",
+        "tools/validate-gear-bonus-gameplay.js",
+        "tools/validate-holding-tower-client-lifecycle.js",
+        "tools/validate-production-artifact.js",
+        "tools/validate-troop-selection-browser.js",
+        "troop-orders-ui.js",
+        "clan-intelligence-ui.js",
+        "clan-support-buildings-ui.js"
+      ],
+      "tests": [
+        "tools/validate-clan-building-layout-browser.js",
+        "tools/validate-clan-tower-buildings-browser.js",
+        "tools/validate-troop-selection-browser.js",
+        "tools/validate-holding-tower-client-lifecycle.js",
+        "tools/validate-gear-bonus-gameplay.js",
+        "tools/validate-scout-report-ui.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Actual game fixtures exercise six-building frame/navigation, fixed actions, level-table scrolling and Intelligence list/detail/access clearing at desktop and landscape widths down to 568x320. Tower and personal movement previews retain current selection/power/route controls, show additive nominal/effective support and invalidate cached clan ownership/level state. Shared scout presentation renders only snapshot fields. Production artifact checks ensure scripts/assets are shipped, sources remain excluded and the bounded lazy-art budget preserves entry/precache behavior."
     }
   ]
 }

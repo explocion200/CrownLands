@@ -154,6 +154,7 @@ async function main() {
       return safeString(value, 80);
     },
   };
+  movementContext.require = require("node:module").createRequire(require("node:path").resolve(__dirname, "../functions/index.js"));
   vm.createContext(movementContext);
   vm.runInContext([
     extractFunction(serverSource, "getTroopTravelBandIndex"),
@@ -289,6 +290,8 @@ async function main() {
     ONLINE_WORLD_ID: "world_test",
     RESET_GENERATION: "reset_test",
     selectedTroopAmount: 100,
+    activeRallyOrderContext: { rallyId: "rally_1" },
+    clanStablesPreviewScope() { return "fixture"; },
     supportsAuthoritativeArmyRoutes() { return true; },
     getOnlineApi() {
       return {
@@ -308,6 +311,7 @@ async function main() {
   const previewRoute = await previewContext.requestAuthoritativeOrderRoute({ id: "source" }, { id: "assembly" }, "rally_join", 100);
   assert.ok(previewRequest, previewRoute?.authoritativeError || "The route preview did not reach the backend adapter.");
   assert.equal(previewRequest.targetType, "city");
+  assert.equal(previewRequest.rallyId, "rally_1", "Rally preview must resolve its current forming assembly.");
   assert.equal(previewRequest.kind, "rally_join", "The client still previews rally assembly as a transfer.");
 
   const productionProfile = createGearProfile([

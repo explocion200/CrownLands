@@ -9,9 +9,16 @@ const now = Date.parse("2026-09-21T12:00:00Z"), minute = 60000;
 const owned = patch => ({ ...T.createNeutralTowerState(T.TOWERS[0].id, { nowMs: now }), ownerKind: "clan", clanId: "clan-a", ownershipRevision: 1, wallIntegrityBps: 10000, ...patch });
 const start = (s, id, at = now) => T.startBuilding(s, id, 30e9, { uid: "leader" }, at, "order").state;
 const advance = T.materializeTowerState;
-assert.deepEqual(B.normalizeLevels({ shop: 11, training: -1 }), {shop:10,workshop:0,infirmary:0,training:0});
-assert.equal(B.DEFINITIONS.reduce((sum) => sum + Array.from({length:10}, (_,i) => B.cost(i+1)).reduce((a,b)=>a+b), 0), 20.46e9);
-assert.equal(B.DURATION_MINUTES.reduce((a,b)=>a+b)*4, 14*24*60+6*60);
+assert.deepEqual(B.normalizeLevels({ shop: 11, training: -1 }), {shop:10,workshop:0,infirmary:0,training:0,stables:0,scout_lodge:0});
+assert.equal(B.DEFINITIONS.reduce((sum) => sum + Array.from({length:10}, (_,i) => B.cost(i+1)).reduce((a,b)=>a+b), 0), 30.69e9);
+assert.equal(B.DURATION_MINUTES.reduce((a,b)=>a+b)*2, 7*24*60+3*60);
+const expectedGold = [5000000,10000000,20000000,40000000,80000000,160000000,320000000,640000000,1280000000,2560000000];
+const expectedMinutes = [30,60,120,240,360,480,600,720,1080,1440];
+for (let level=1;level<=10;level++) { assert.equal(B.cost(level),expectedGold[level-1]);assert.equal(B.duration(level),expectedMinutes[level-1]*minute);assert.equal(B.bonus("stables",level),2*level);assert.equal(B.intelligenceCapacity(level),5*level); }
+assert.equal(B.bonus("stables",0),0);assert.equal(B.intelligenceCapacity(0),0);
+const inherited = T.conquerTower(owned({ buildings: { stables: 10, scout_lodge: 1 } }), { id: "captor" }, now);
+assert.equal(inherited.buildings.stables,9);assert.equal(inherited.buildings.scout_lodge,1);
+
 for (const id of B.DEFINITIONS.map(d=>d.id)) {
   let tower = owned(), at = now;
   for (let level = 1; level <= 10; level++) {
@@ -54,7 +61,7 @@ assert.equal(advance(legacy,now+600000).wallLevel,91);
 const repair = T.startPaidRepair(owned({buildings:{workshop:10},wallIntegrityBps:5000}),1e8,()=>1,()=>60,{uid:"leader"},now,"repair").state;
 assert.equal(repair.repair.completeAtMs-now,15*minute);
 const capture = T.conquerTower(start(owned({buildings:{shop:10,workshop:1,infirmary:0,training:4}}),"workshop"),{id:"clan-b"},now+minute);
-assert.deepEqual(capture.buildings,{shop:9,workshop:1,infirmary:0,training:3});assert.equal(capture.buildingProject,null);
+assert.deepEqual(capture.buildings,{shop:9,workshop:1,infirmary:0,training:3,stables:0,scout_lodge:0});assert.equal(capture.buildingProject,null);
 assert.deepEqual(T.createNeutralTowerState(T.TOWERS[0].id).buildings,B.normalizeLevels());
 // Every catalogue stage, UTC daily reset, rolling Shield cooldown, and level-loss accounting.
 for(let level=0;level<=10;level++) for(const item of B.shopStatus(level,{},now)) {
@@ -90,4 +97,4 @@ assert.equal(Object.entries(breakdown).filter(([k])=>k!=="totalAttackPower").red
 assert(breakdown.clanTrainingBonusPower>0);
 assert.equal(context.createRallyParticipantSnapshot({uid:"one",source:{id:"city"},profile,troops:1000}).clanTrainingPercent,0);
 assert.equal(fs.readFileSync(path.join(__dirname,"../functions/clan-tower-buildings.js"),"utf8"),fs.readFileSync(path.join(__dirname,"../clan-tower-buildings.js"),"utf8"));
-console.log("Clan buildings: all 40 levels, costs/timers, pause/resume, simultaneous queues, legacy wall timers, Workshop repairs, capture/reset, all Shop tiers/stock/cooldowns, recovery cap/attribution and rally launch snapshots passed.");
+console.log("Clan buildings: all 60 levels, costs/timers, pause/resume, simultaneous queues, legacy wall timers, Workshop repairs, capture/reset, all Shop tiers/stock/cooldowns, recovery cap/attribution and rally launch snapshots passed.");

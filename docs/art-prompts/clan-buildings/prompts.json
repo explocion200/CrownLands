@@ -132,6 +132,114 @@
       "runtime": "assets/clan-buildings/training-4.webp",
       "reference": "training-2.png",
       "prompt": "Create ONE upgraded production sprite of this exact building. Preserve its architectural identity, south-facing front entrance/gate toward the bottom edge, camera angle, pale warm olive-grey stone, aged dark timber, ochre tile roofs, dark brown ink outlines and restrained hand-painted medieval map style. Build on the reference, do not redesign into a different culture or rotate it. True transparent alpha background on square canvas, complete isolated subject with generous clear margin, small contact shadow and a few tiny foundation tufts only, NO broad ground tile or surrounding terrain, text, labels, UI, people, glow or other buildings. Keep the overall footprint compact. FOURTH final visual stage at Level 10. Elite compact training yard: low stone-and-timber boundary, five practice dummies, a finely built ochre-roofed stone-and-timber equipment shelter at rear right, neat weapon racks, two small plain burgundy pennants and reinforced stone gateposts at SOUTH front gate. Keep center mostly open dirt, no huge arena or fortifications. Actual transparency outside yard."
+    },
+    {
+      "id": "stables-1",
+      "file": "assets/clan-buildings/stables-1.png",
+      "runtime": "assets/clan-buildings/stables-1.webp",
+      "reference": "support-theme-reference.jpg",
+      "sourceTool": "Built-in image_gen",
+      "generatedSource": "exec-3a44556e-319f-455b-99c9-6f8c333c68aa.png",
+      "levels": [
+        1,
+        2,
+        3
+      ],
+      "prompt": "Stage 1: modest horse stable in the attached inked medieval map style; timber and stone, ochre roof, paddock, hay, tack, restrained horse details. Transparent sprite, elevated south-facing entrance, no text or background."
+    },
+    {
+      "id": "stables-2",
+      "file": "assets/clan-buildings/stables-2.png",
+      "runtime": "assets/clan-buildings/stables-2.webp",
+      "reference": "support-theme-reference.jpg",
+      "sourceTool": "Built-in image_gen",
+      "generatedSource": "exec-cadd8128-8892-4803-9263-561e6678cc07.png",
+      "levels": [
+        4,
+        5,
+        6
+      ],
+      "prompt": "Create ONE final transparent medieval game building sprite: stables upgrade art stage 2. Expand the stable with a second timber wing, more stalls, a neat fenced paddock and hay loft; retain central entrance, ochre roof and recognisable stage-one silhouette. PRIMARY style is first reference attached illustrated world map: hand-inked outlines, muted olive/ochre/pale warm stone, fine restrained hatching and diffuse daylight; ignore black margins. Second reference is stage-one building to preserve design language, elevated south-facing entrance with a little right wall visible. Center entire building on square transparent canvas, complete silhouette with clear margins and common south entrance/bottom baseline. Tiny compatible contact shadow and tufts directly at foundations only. No rectangular ground tile, background scenery, text, labels, numbers, UI, modern objects, watermark, glow. Readable and crisp at small game size; illustrated 2D, not photorealistic or 3D."
+    },
+    {
+      "id": "stables-3",
+      "file": "assets/clan-buildings/stables-3.png",
+      "runtime": "assets/clan-buildings/stables-3.webp",
+      "reference": "support-theme-reference.jpg",
+      "sourceTool": "Built-in image_gen",
+      "generatedSource": "exec-0a2b0259-9674-41d5-acce-1b3c7b03fdfe.png",
+      "levels": [
+        7,
+        8,
+        9
+      ],
+      "prompt": "Create ONE final transparent medieval game building sprite: stables upgrade art stage 3. A substantial stable complex: twin stone-and-timber wings, long ochre stable roofs, organized wagon supplies, two restrained horse details, tack room, enclosed paddock and broad central entry. Keep stable identity, no tower. PRIMARY style is first reference attached illustrated world map: hand-inked outlines, muted olive/ochre/pale warm stone, fine restrained hatching and diffuse daylight; ignore black margins. Second reference is stage-one building to preserve design language, elevated south-facing entrance with a little right wall visible. Center entire building on square transparent canvas, complete silhouette with clear margins and common south entrance/bottom baseline. Tiny compatible contact shadow and tufts directly at foundations only. No rectangular ground tile, background scenery, text, labels, numbers, UI, modern objects, watermark, glow. Readable and crisp at small game size; illustrated 2D, not photorealistic or 3D."
+    },
+    {
+      "id": "stables-4",
+      "file": "assets/clan-buildings/stables-4.png",
+      "runtime": "assets/clan-buildings/stables-4.webp",
+      "reference": "support-theme-reference.jpg",
+      "sourceTool": "Built-in image_gen",
+      "generatedSource": "exec-e9408734-e40d-45c8-a71f-ef955bfc7bdb.png",
+      "levels": [
+        10
+      ],
+      "prompt": "Create ONE final transparent medieval game building sprite: stables upgrade art stage 4. Maximum-level master stable complex with elegant strong stone arcades, multiple timber stall wings, broad ochre roofs, organized tack and supply stores, a very small exercise paddock and restrained horses. Clearly more developed than stage 3 but retain central stable silhouette, no towers. PRIMARY style is first reference attached illustrated world map: hand-inked outlines, muted olive/ochre/pale warm stone, fine restrained hatching and diffuse daylight; ignore black margins. Second reference is stage-one building to preserve design language, elevated south-facing entrance with a little right wall visible. Center entire building on square transparent canvas, complete silhouette with clear margins and common south entrance/bottom baseline. Tiny compatible contact shadow and tufts directly at foundations only. No rectangular ground tile, background scenery, text, labels, numbers, UI, modern objects, watermark, glow. Readable and crisp at small game size; illustrated 2D, not photorealistic or 3D."
+    },
+    {
+      "id": "scout_lodge-1",
+      "file": "assets/clan-buildings/scout_lodge-1.png",
+      "runtime": "assets/clan-buildings/scout_lodge-1.webp",
+      "reference": "support-theme-reference.jpg",
+      "sourceTool": "Built-in image_gen",
+      "generatedSource": "exec-262e19e6-98d4-4cdf-a0fb-1bf6f20aad31.png",
+      "levels": [
+        1,
+        2,
+        3
+      ],
+      "prompt": "Stage 1: compact scouting/cartography lodge in the attached inked medieval map style; timber and pale stone, ochre gable roof, map porch, scroll cases and rear wooden lookout. Transparent sprite, elevated south-facing entrance, no text or background."
+    },
+    {
+      "id": "scout_lodge-2",
+      "file": "assets/clan-buildings/scout_lodge-2.png",
+      "runtime": "assets/clan-buildings/scout_lodge-2.webp",
+      "reference": "support-theme-reference.jpg",
+      "sourceTool": "Built-in image_gen",
+      "generatedSource": "exec-53a9204e-5229-4050-9f1e-bd284b83e158.png",
+      "levels": [
+        4,
+        5,
+        6
+      ],
+      "prompt": "Create ONE final transparent medieval game building sprite: scout_lodge upgrade art stage 2. Expand the lodge with a second map-room wing, stronger stone foundations and taller timber lookout, scroll racks and surveying table. Keep the original ochre gabled lodge silhouette. PRIMARY style is first reference attached illustrated world map: hand-inked outlines, muted olive/ochre/pale warm stone, fine restrained hatching and diffuse daylight; ignore black margins. Second reference is stage-one building to preserve design language, elevated south-facing entrance with a little right wall visible. Center entire building on square transparent canvas, complete silhouette with clear margins and common south entrance/bottom baseline. Tiny compatible contact shadow and tufts directly at foundations only. No rectangular ground tile, background scenery, text, labels, numbers, UI, modern objects, watermark, glow. Readable and crisp at small game size; illustrated 2D, not photorealistic or 3D."
+    },
+    {
+      "id": "scout_lodge-3",
+      "file": "assets/clan-buildings/scout_lodge-3.png",
+      "runtime": "assets/clan-buildings/scout_lodge-3.webp",
+      "reference": "support-theme-reference.jpg",
+      "sourceTool": "Built-in image_gen",
+      "generatedSource": "exec-e48e9058-64cd-4205-ade8-cb7270c47423.png",
+      "levels": [
+        7,
+        8,
+        9
+      ],
+      "prompt": "Create ONE final transparent medieval game building sprite: scout_lodge upgrade art stage 3. A substantial reconnaissance headquarters: twin map-room wings, pale stone lower floor, timber upper floor, ochre roofs, integrated wooden lookout, covered survey courtyard, scroll cases and navigation equipment. Keep scout lodge identity, no giant defensive tower. PRIMARY style is first reference attached illustrated world map: hand-inked outlines, muted olive/ochre/pale warm stone, fine restrained hatching and diffuse daylight; ignore black margins. Second reference is stage-one building to preserve design language, elevated south-facing entrance with a little right wall visible. Center entire building on square transparent canvas, complete silhouette with clear margins and common south entrance/bottom baseline. Tiny compatible contact shadow and tufts directly at foundations only. No rectangular ground tile, background scenery, text, labels, numbers, UI, modern objects, watermark, glow. Readable and crisp at small game size; illustrated 2D, not photorealistic or 3D."
+    },
+    {
+      "id": "scout_lodge-4",
+      "file": "assets/clan-buildings/scout_lodge-4.png",
+      "runtime": "assets/clan-buildings/scout_lodge-4.webp",
+      "reference": "support-theme-reference.jpg",
+      "sourceTool": "Built-in image_gen",
+      "generatedSource": "exec-98bd115e-8775-48a5-b78b-c0bc84cea853.png",
+      "levels": [
+        10
+      ],
+      "prompt": "Create ONE final transparent medieval game building sprite: scout_lodge upgrade art stage 4. Maximum-level grand reconnaissance headquarters: sophisticated pale stone and dark timber architecture, several connected map-room wings with ochre gabled roofs, integrated tall wooden lookout and roofed observation deck, a small courtyard surveying table and scroll archives. Preserve the original lodge silhouette, distinguish it from defensive Clan Tower. PRIMARY style is first reference attached illustrated world map: hand-inked outlines, muted olive/ochre/pale warm stone, fine restrained hatching and diffuse daylight; ignore black margins. Second reference is stage-one building to preserve design language, elevated south-facing entrance with a little right wall visible. Center entire building on square transparent canvas, complete silhouette with clear margins and common south entrance/bottom baseline. Tiny compatible contact shadow and tufts directly at foundations only. No rectangular ground tile, background scenery, text, labels, numbers, UI, modern objects, watermark, glow. Readable and crisp at small game size; illustrated 2D, not photorealistic or 3D."
     }
   ]
 }
