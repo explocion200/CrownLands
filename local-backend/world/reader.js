@@ -13,6 +13,16 @@ const hash=value=>crypto.createHash("sha256").update(JSON.stringify(value)).dige
 const fail=(status,message)=>Object.assign(Error(message),{status});
 const text=(value,max=80)=>typeof value==="string"?value.slice(0,max):"";
 const number=value=>Number.isFinite(Number(value))?Number(value):0;
+// Public presentation of the existing regular-city shield rule only. Do not
+// send item inventories or wall combat/repair records through the area feed.
+function shieldExpiry(data,kind,now){
+  if(kind!=="castle"||!data.ownerUid||data.kind==="stronghold"||data.strongholdType)return 0;
+  const ms=value=>Math.max(0,Math.floor(number(typeof value?.toMillis==="function"?value.toMillis():value)));
+  const expires=ms(data.ownerShieldExpiresAtMs),wall=data.fortificationState||{};
+  const integrity=Number.isFinite(Number(wall.integrityBps))?Math.floor(Number(wall.integrityBps)):10000;
+  const repairing=Math.floor(number(wall.version))===1&&ms(wall.repairAtMs)>now&&integrity<10000;
+  return expires>now&&!repairing?expires:0;
+}
 const current=(data,realm)=>data?.worldId===realm.worldId && data.resetGeneration===realm.resetGeneration && data.realmShardId===realm.sharedRealmId;
 const CONTEXT_FIELDS=["worldId","resetGeneration","sharedRealmId","resetReadinessStatus","realmShardId","clanId","topologyVersion","activeRegionIds"];
 const CONTEXT_SQL=CONTEXT_FIELDS.map(key=>`'${key}',body->'fields'->'${key}'`).join(",");
@@ -242,6 +252,7 @@ class LiveReader {
       campType:["gold","troops","items","deed"].includes(data.campType)?data.campType:null,
       classification:data.classification==="boss"?"boss":"solo"};
     if(kind==="npc"){dto.spawnId=text(data.spawnId,96);dto.selectable=data.status==="active";dto.respawnAtMs=Math.max(0,number(data.respawnAtMs));}
+    if(kind==="castle")dto.peaceShieldExpiresAtMs=shieldExpiry(data,kind,this.clock());
     if(kind==="camp"){dto.payoutAtMs=Math.max(0,number(data.payoutAtMs));dto.payoutPending=data.payoutPending===true;dto.contested=data.state==="contested";}
     if(this.display&&kind==="castle"&&!this.display.match(section,local,"castle"))dto.layoutUnmapped=true;
     if((data.ownerUid||data.holderUid)&&["castle","camp","stronghold","citadel"].includes(kind))dto.ownerFlag=Flags.normalizeFlag(data.ownerFlag||data.holderFlag,data.ownerUid||data.holderUid);

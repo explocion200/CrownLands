@@ -25,10 +25,19 @@
   }
   const count=item=>item.troopVisibility==="exact"&&Number.isFinite(item.troops)?formatNumber(item.troops):item.troopVisibility==="estimate"?esc(item.troopEstimateLabel):"?";
   const flag=item=>item.ownerFlag?'<span class="kingdom-flag city-owner-flag city-kingdom-flag" aria-hidden="true"><span class="flag-symbol"></span></span>':`<span class="city-owner-flag owner-flag" aria-hidden="true">${renderCrownlandsIcon(OWNER.neutral.flagIcon,"owner-flag-icon")}</span>`;
-  function render(node,item,{inspector=false,selected=false}={}){
+  function tickShield(node,item,now){
+    const shown=item.kind==="castle"&&Boolean(item.ownerUid)&&Number.isFinite(item.peaceShieldExpiresAtMs)&&item.peaceShieldExpiresAtMs>now;
+    if(node.shieldVisible===shown)return;
+    node.shieldVisible=shown;node.classList.toggle("peace-shielded",shown);
+    node.querySelector(".city-shield-field")?.remove();
+    if(shown){const field=document.createElement("span");field.className="city-shield-field";field.setAttribute("aria-hidden","true");
+      field.innerHTML='<img src="/assets/optimized/status-peace-shield-field-192x192-ca4a297c750b.webp" alt="" draggable="false" decoding="async">';node.append(field);}
+  }
+  function render(node,item,{inspector=false,selected=false,nowMs=Date.now()}={}){
     // Sign-out clears game state before the pending camera frame is disposed.
     if(inspector||!state)return;
     if(item.kind==="scenery")return;
+    tickShield(node,item,nowMs);
     const owner=relation(item),now=Date.now();
     const city=item.kind==="castle"?powerCity(item):null;
     const powerBand=city?getStableEnemyCityPowerBand(city):"";
@@ -106,7 +115,7 @@
     }
     window.SeamlessAppearance.labelBounds=labelBounds;
   }
-  window.SeamlessAppearance={render,layout,geometry,loadIdentities,routeClass(item){return own(item)?"player-route":ally(item)?!item.returning&&["attack","rally"].includes(item.missionKind)?"clan-hostile-route":"clan-support-route":"enemy-route";},tickMarch(node,item,now){
+  window.SeamlessAppearance={render,layout,geometry,loadIdentities,tickShield,routeClass(item){return own(item)?"player-route":ally(item)?!item.returning&&["attack","rally"].includes(item.missionKind)?"clan-hostile-route":"clan-support-route":"enemy-route";},tickMarch(node,item,now){
     const timer=node.querySelector(".army-token-time"),value=formatDuration(Math.max(0,Math.ceil(item.arriveAt-now)));
     if(timer&&timer.textContent!==value)timer.textContent=value;
   }};
