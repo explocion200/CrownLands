@@ -1,44 +1,25 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "ccf7f51c456d4e4128f5f8d5379857d2c6c38657",
+  "baseCommit": "db128e760642231552a713639825ac84010444ef",
   "coverage": [
     {
       "paths": [
-        "local-backend/world/reader.js",
-        "tools/validate-continuous-city-shields.js"
+        "world/native.js",
+        "tools/test-local-postgres-castle-selection-browser.js"
       ],
       "tests": [
-        "tools/validate-continuous-city-shields.js",
-        "tools/validate-city-wall-shields.js",
-        "tools/test-local-postgres-world-service.js",
-        "functions/test/emulator-peace-shield-returns.js"
+        "tools/test-local-postgres-castle-selection-browser.js",
+        "tools/validate-castle-action-layout.js",
+        "tools/validate-production-artifact.js"
       ],
-      "reason": "The active Core area reader was omitting peace-shield presentation. Compare the narrow public expiry field with existing authoritative city-wall rules across repair and expiry boundaries, timestamp values, ownership and objective exclusions. Check shared/per-viewer area privacy and unchanged gameplay shield reversals; do not alter combat or source player records."
+      "reason": "Regular-castle selection now centers and zooms before presenting the unchanged readable controls. Exercise production area data with two isolated authenticated viewers, mouse/touch/keyboard, own/foreign cities, all three supported viewports, native City List entry, unchanged wheel/pinch/navigation/resize zoom limits, drag suppression, cancellation, first-frame sizing and troop destination camera preservation. Existing castle layout validation covers all skins/stages, native action handlers and cached geometry; artifact validation preserves package and byte budgets. No server authority or gameplay rules change."
     },
     {
       "paths": [
-        "world/appearance.js",
-        "world/flags.css",
-        "world/preview.js",
-        "tools/check-continuous-city-shields.js",
-        "tools/test-local-postgres-city-shields-browser.js"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "tests": [
-        "tools/test-local-postgres-city-shields-browser.js",
-        "tools/validate-continuous-map-labels.js",
-        "tools/validate-world-update-work.js",
-        "tools/validate-continuous-pickup-animation.js"
-      ],
-      "reason": "Exercise actual production rendering and authenticated area packets with two disposable players at desktop and both landscape phone sizes. Verify existing shield art, proportional zoom, click-through selection, stationary wall-repair activation, damage/cancellation/capture removal, no duplicated icons, sign-out, and expiry during failed polls with a skewed client clock. Label, delta identity and animated-pickup guards cover neighboring camera/appearance behavior."
-    },
-    {
-      "paths": [
-        "tools/validate-production-artifact.js"
-      ],
-      "tests": [
-        "tools/validate-production-artifact.js"
-      ],
-      "reason": "Allow at most 1 KiB of additional lazy map code to restore the existing shield sprite and timestamp tick. Preserve production file boundaries, artwork, startup and precache budgets."
+      "tests": [],
+      "reason": "Record the owner-confirmed zoom-before-castle-controls behavior and preserve existing button sizing, camera limits, objectives, dismissal and troop-destination behavior."
     }
   ]
 }
