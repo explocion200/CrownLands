@@ -6,7 +6,7 @@ const { createMapBenchmarkServer } = require("./map-benchmark/server");
 
 (async () => {
   const server = createMapBenchmarkServer(), address = await server.listen();
-  const artifacts = path.resolve(__dirname,"../release-artifacts/castle-action-wheel-draft");
+  const artifacts = path.resolve(__dirname,"../release-artifacts/castle-action-wheel-compact");
   fs.mkdirSync(artifacts,{recursive:true});
   const browser = await chromium.launch({headless:true, ...(process.env.CHROME_PATH ? {executablePath:process.env.CHROME_PATH} : {})});
   const errors = [], requests = [], records = [];
@@ -31,7 +31,7 @@ const { createMapBenchmarkServer } = require("./map-benchmark/server");
           const distance = (a,b) => Math.hypot(Math.max(a.x-b.right,b.x-a.right,0),Math.max(a.y-b.bottom,b.y-a.bottom,0));
           const buttons=[...document.querySelectorAll("#actions button")], city=rect(document.getElementById("castle"));
           const arc=document.querySelector("#arc path"), origin=rect(document.getElementById("arc"));
-          const arcGap=Math.min(...Array.from({length:181},(_,i)=>{const p=arc.getPointAtLength(arc.getTotalLength()*i/180);return distance({x:origin.x+p.x,right:origin.x+p.x,y:origin.y+p.y,bottom:origin.y+p.y},city)-4;}));
+          const arcGap=Math.min(...Array.from({length:181},(_,i)=>{const p=arc.getPointAtLength(arc.getTotalLength()*i/180);return distance({x:origin.x+p.x,right:origin.x+p.x,y:origin.y+p.y,bottom:origin.y+p.y},city)-2;}));
           return {city, arcGap, buttons:buttons.map(button => {
             const r=rect(button), label=rect(button.querySelector(".wheel-action-name"));
             return {...r,clearance:distance(r,city),labelFits:label.x>=r.x && label.right<=r.right && label.y>=r.y && label.bottom<=r.bottom,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest("button")===button};
@@ -40,11 +40,13 @@ const { createMapBenchmarkServer } = require("./map-benchmark/server");
         for (const button of metrics.buttons) {
           assert(button.width >= 44 && button.height >= 44,"Minimum touch target");
           assert(button.x>=0 && button.y>=0 && button.right<=width && button.bottom<=height,"Buttons must fit the viewport");
-          assert(button.clearance >= (height<=500 ? 11.9 : 15.9),"Button must clear castle artwork");
+          assert(button.clearance >= (height<=500 ? 3.9 : 5.9),"Button must clear castle artwork");
           assert(button.labelFits && button.hit,"Readable label and unobstructed hit target");
         }
-        assert(metrics.separation>=5.9,"Buttons must have separate hit regions");
-        assert(metrics.arcGap>= (height<=500 ? 11.9 : 15.9),"The painted arc must never touch castle artwork");
+        const wheelWidth = Math.max(...metrics.buttons.map(b=>b.right))-Math.min(...metrics.buttons.map(b=>b.x));
+        assert(wheelWidth <= (height<=500 ? 180 : 280),"Keep the complete revised menu compact");
+        assert(metrics.separation>=1.9,"Buttons must have separate hit regions");
+        assert(metrics.arcGap>= (height<=500 ? 3.9 : 5.9),"The painted arc must never touch castle artwork");
         records.push({width,height,kind,stage,zoom,minimumCastleGap:Math.min(...metrics.buttons.map(b=>b.clearance)),minimumButtonGap:metrics.separation});
         if (stage===100 && zoom===1) {
           await page.screenshot({path:path.join(artifacts,`${name}${kind==="own" ? "" : "-"+kind}.png`)});
@@ -67,7 +69,7 @@ const { createMapBenchmarkServer } = require("./map-benchmark/server");
     await page.locator("#kind").selectOption("enemy");
     await page.frameLocator("iframe").getByRole("button",{name:"Attack (sample)"}).waitFor();
     await page.getByRole("button",{name:"Small phone · 568 × 320",exact:true}).click();
-    assert.equal(await page.frameLocator("iframe").locator("#actions button").first().evaluate(node => node.getBoundingClientRect().width),56);
+    assert.equal(await page.frameLocator("iframe").locator("#actions button").first().evaluate(node => node.getBoundingClientRect().width),44);
     assert.deepEqual(errors,[]);assert.deepEqual(requests,[],"No external services or game writes");
     for (const source of ["index.html","game.js","world/native.js","service-worker.js"]) assert(!fs.readFileSync(path.resolve(__dirname,"..",source),"utf8").includes("visual-qa/castle-action-wheel"),"Draft must stay outside production entry points");
     fs.writeFileSync(path.join(artifacts,"checks.json"),JSON.stringify({passed:true,cases:records.length,errors,requests,records},null,2));

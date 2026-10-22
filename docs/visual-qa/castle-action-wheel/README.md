@@ -14,12 +14,12 @@ The owner requested larger, less cramped castle controls, with the half-circle o
 
 Proposed treatment:
 
-- Desktop buttons: 72 px with 11 px labels; landscape phone: 56 px with 9 px labels. Keep the existing hexagon, colors, icons and costs. Add an Info label for clarity.
-- The lower half-circle expands to clear the entire castle image rectangle, including transparent padding. Every button has at least 16 px clearance on PC or 12 px on phone, with at least 6 px between rectangular button hit areas.
+- Revised after owner feedback that the first draft was too large: desktop buttons are 56 px with 10 px labels; landscape phone buttons are 44 px with 8 px labels. Keep the existing hexagon, colors, icons and costs. Add an Info label for clarity.
+- The shallow, rounded lower arc keeps three owned-city actions along the bottom to avoid wide diagonal spacing, and expands to clear the entire castle image rectangle, including transparent padding. Every button has at least 6 px clearance on PC or 4 px on phone, with at least 2 px between rectangular button hit areas.
 - Castle stages retain their existing 60/70/80/90/100% footprint progression. The sample uses current close/middle/widest map zoom ratios.
 - Selected buttons remain readable at lower zoom. This is a **proposed exception** to the Master Specification's October 21 proportional selected-control sizing rule, not a confirmed change. The specification is intentionally unchanged pending approval.
 - Owned, enemy and ally menus can be inspected. Escape or a background tap dismisses the draft menu; clicking the castle selects it again. Buttons only display a preview message.
 
 This is a layout draft, not an integration test. It does not implement game camera anchoring, edge-of-screen camera adjustment, crowded-map occlusion or real action permissions. After approval those need validation in the actual renderer, preserving zoom/deselection behavior and all gameplay rules.
 
-Validation: `node tools/validate-castle-action-wheel-draft.js`. Covers 135 combinations (three viewport sizes, three ownership types, five city stages and three zoom fractions), image loading, castle/button clearance, label bounds, hit targets, local-only requests, mouse/touch/keyboard interaction, review controls and resize. Screenshots and measurements are written to ignored `release-artifacts/castle-action-wheel-draft/`.
+Validation: `node tools/validate-castle-action-wheel-draft.js`. Covers 135 combinations (three viewport sizes, three ownership types, five city stages and three zoom fractions), image loading, castle/button clearance, label bounds, hit targets, local-only requests, mouse/touch/keyboard interaction, review controls and resize. Screenshots and measurements are written to ignored `release-artifacts/castle-action-wheel-compact/`.

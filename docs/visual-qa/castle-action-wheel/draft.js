@@ -38,7 +38,7 @@ document.addEventListener("keydown", event => { if (event.key === "Escape") setS
 const neighbors = [[20,38,3,"ASHFORD"],[80,32,2,"GREENVALE"],[17,77,0,"WESTWATCH"],[83,72,4,"HIGHMOOR"]];
 document.getElementById("neighbors").innerHTML = neighbors.map(([x,y,i,name]) => `<div class="neighbor" style="left:${x}%;top:${y}%" data-stage="${i}"><span>${name}</span><img src="${imagePath(i)}" alt=""></div>`).join("");
 function layout() {
-  const phone = innerHeight <= 500, buttonSize = phone ? 56 : 72, gap = phone ? 12 : 16;
+  const phone = innerHeight <= 500, buttonSize = phone ? 44 : 56, gap = phone ? 4 : 6;
   // Same current city footprint and five-stage progression, at the requested zoom.
   const fit = Math.min(innerWidth/1448,innerHeight/1086);
   const citySize = 56 * (0.6 + [1,25,50,75,100].indexOf(stage)*0.1) * fit*3*zoom;
@@ -47,19 +47,22 @@ function layout() {
   // Both the full button rectangles and the connecting stroke stay outside the
   // sprite rectangle, including transparent padding. At small stages/zoom the
   // spacing floor prevents adjacent buttons from colliding.
-  const angles = actions.map((_,i) => Math.PI-i*Math.PI/(actions.length-1));
-  const depth = Math.max((citySize+buttonSize)/2+gap,(buttonSize+6)/Math.sin(Math.PI/(actions.length-1)));
-  const distance = (r,angle) => Math.hypot(Math.max(0,Math.abs(r*Math.cos(angle))-(citySize+buttonSize)/2),Math.max(0,Math.abs(depth*Math.sin(angle))-(citySize+buttonSize)/2));
-  let radius = Math.max(depth,(buttonSize+10)/(2*Math.sin(Math.PI/(2*(actions.length-1)))));
-  while (angles.some(angle => distance(radius,angle) < gap-0.000001)) radius += 0.5;
-  // Diagonal square hit regions need more room than their visible hexagon tips.
-  while (angles.some((a,i) => angles.slice(i+1).some(b => Math.hypot(Math.max(0,Math.abs(radius*(Math.cos(a)-Math.cos(b)))-buttonSize),Math.max(0,Math.abs(depth*(Math.sin(a)-Math.sin(b)))-buttonSize)) < 5.999))) radius += 0.5;
-  const path = `M ${-radius} 0 A ${radius} ${depth} 0 0 0 ${radius} 0`;
+  // A shallow, rounded lower arc hugs the artwork. Three owned-city actions
+  // share the lower edge; this avoids widening an ellipse for diagonal buttons.
+  const half = citySize/2, spacing = buttonSize+4;
+  const radius = Math.max(half+gap+buttonSize/2, actions.length === 5 ? spacing : spacing/2+buttonSize/2);
+  const depth = Math.max(half+gap+buttonSize/2,buttonSize+2);
+  const shoulder = Math.min(radius*.75,spacing);
+  const path = `M ${-radius} 0 Q ${-radius} ${depth} ${-shoulder} ${depth} Q 0 ${depth+16} ${shoulder} ${depth} Q ${radius} ${depth} ${radius} 0`;
   for (const p of arc.querySelectorAll("path")) p.setAttribute("d",path);
+  const slots = actions.length === 5
+    ? [[-radius,0],[-spacing,depth],[0,depth+8],[spacing,depth],[radius,0]]
+    : actions.length === 4
+      ? [[-radius,0],[-spacing/2,depth+6],[spacing/2,depth+6],[radius,0]]
+      : [[-radius,0],[0,depth+8],[radius,0]];
   [...menu.children].forEach((button,i) => {
-    const angle = angles[i];
-    button.style.left = `${radius*Math.cos(angle)}px`;
-    button.style.top = `${depth*Math.sin(angle)}px`;
+    button.style.left = `${slots[i][0]}px`;
+    button.style.top = `${slots[i][1]}px`;
   });
   for (const neighbor of document.querySelectorAll(".neighbor")) neighbor.style.width = `${56*(0.6+Number(neighbor.dataset.stage)*0.1)*fit*3*zoom}px`;
   document.documentElement.dataset.ready = "true";
