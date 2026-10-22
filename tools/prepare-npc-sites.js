@@ -10,7 +10,7 @@ const {roadPlacementPoints,isClear,minimumEnemySeparation}=require("../functions
 const output=path.resolve(__dirname,"../local-backend/world/npc-sites.json");
 const overlaps=(a,b,gap=4)=>a.left<b.right+gap&&a.right+gap>b.left&&a.top<b.bottom+gap&&a.bottom+gap>b.top;
 // The live marker is 56px. Reserve its attached two-line label as well.
-const envelope=p=>({left:p.x-48,right:p.x+48,top:p.y-54,bottom:p.y+32});
+const envelope=p=>({left:p.x-48,right:p.x+48,top:p.y-60,bottom:p.y+32});
 async function prepare(){
  const travel=createTravelFixture(56),context={worldId:"fixture",resetGeneration:"fixture",sharedRealmId:"shard_0001",activeRegionIds:travel.activeRegionIds};
  const routing=createCommandRouting({enabled:true});
@@ -44,7 +44,7 @@ async function prepare(){
    // position within it so the one boss can respawn without reusing its exact
    // old position. This does not permit two bosses or reduce active separation.
    if(chosen.length===1&&travel.scope.getServerCatalogRegion(section.id).permanentCore){
-    const alternate=candidates.filter(p=>Math.hypot(p.local.x-chosen[0].local.x,p.local.y-chosen[0].local.y)>=24)
+    const alternate=candidates.filter(p=>Math.hypot(p.local.x-chosen[0].local.x,p.local.y-chosen[0].local.y)>=8)
      .sort((a,b)=>Math.hypot(b.x-chosen[0].x,b.y-chosen[0].y)-Math.hypot(a.x-chosen[0].x,a.y-chosen[0].y))
      .find(p=>g.accessible({...p,regionId:section.id}));
     if(alternate)chosen.push(alternate);

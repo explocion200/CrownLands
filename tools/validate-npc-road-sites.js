@@ -35,7 +35,7 @@ const {placeLabels}=require("../world/model"),M=require("../functions/marauder-r
    // Exercise each site alongside the section's maximum city/landmark footprints.
    const art=items.filter(o=>o.kind!=="scenery").map(o=>({left:o.left-base.x,top:o.top-base.y,right:o.left-base.x+o.width,bottom:o.top-base.y+o.height}));
    for(const [i,p]of reserved.points.entries()){
-    const npc={key:"npc-"+i,x:p.x,y:p.y-32,width:88,height:20.8,anchored:true};
+    const npc={key:"npc-"+i,x:p.x,y:p.y-32,width:88,height:27.2,anchored:true};
     const labels=items.filter(o=>o.kind!=="scenery").map(o=>({key:o.key,x:o.x-base.x,y:o.top-base.y-4,width:110,height:70,compact:{width:64,height:56}}));
     const placed=placeLabels([...labels,npc],new Set(),0,[...art,{left:p.x-28,right:p.x+28,top:p.y-28,bottom:p.y+28}]);
     const label=placed.find(l=>l.key===npc.key);assert(!label.hidden&&label.dx===0&&Object.is(label.dy,-0),"NPC label detached");

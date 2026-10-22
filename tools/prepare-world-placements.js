@@ -68,7 +68,7 @@ function prepareSection(section) {
   }
   // Keep the approved NPC alternatives clear of decorations, including the
   // attached name/countdown above each marker. Cities/objectives do not move.
-  const npcClearings=(npcSites.sections.find(s=>s.id===section.id)?.points||[]).map(p=>rect(p.x,p.y,96,54,32));
+  const npcClearings=(npcSites.sections.find(s=>s.id===section.id)?.points||[]).map(p=>rect(p.x,p.y,96,60,32));
   const reserved=[...landmarks,...slots.map(p=>rect(p.x,p.y)),...pickupZones.map(z=>rect(z.x,z.y,164,82,82)),...npcClearings],decorationBounds=[];
   for(const item of items.filter(o=>o.kind==="scenery").sort((a,b)=>b.width*b.height-a.width*a.height||a.id.localeCompare(b.id))) {
     const original={x:item.left+item.width/2-section.x,y:item.top+item.height/2-section.y};let best,score=Infinity;
