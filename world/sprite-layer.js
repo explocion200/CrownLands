@@ -29,6 +29,7 @@
       const signature=JSON.stringify([z,size.width,size.height,dpr,items.map(o=>[o.key,o.left,o.top,o.width,o.height,this.assets.get(o.asset)])]);
       let tile=this.drawing;
       const width=Math.ceil((size.width+margin*2)*dpr),height=Math.ceil((size.height+margin*2)*dpr);
+      for(const [path,img]of this.images)if(!this.assets.get(path)){img.onload=null;this.images.delete(path);}
       if(width*height*4>48*1024*1024){
         this.drawing=null;this.tileBytes=0;this.back.style.cssText="";const ctx=this.context(this.back,size);
         for(const o of items){const img=this.image(o.asset);if(img&&Math.max(o.width,o.height)*z>=8)ctx.drawImage(img,tx+o.left*z,ty+o.top*z,o.width*z,o.height*z);}return;
@@ -41,7 +42,6 @@
         tile=this.drawing={signature,x:camera.x,y:camera.y};this.tileBytes=width*height*4;this.tileBuilds++;
       }else this.tileHits++;
       this.back.style.transform=`translate3d(${(tile.x-camera.x)*z}px,${(tile.y-camera.y)*z}px,0)`;this.draws++;
-      for(const [path,img]of this.images)if(!this.assets.get(path)){img.onload=null;this.images.delete(path);}
     }
     stats(){return {tiles:this.drawing?1:0,tileBytes:this.tileBytes,images:this.images.size,draws:this.draws,tileHits:this.tileHits,tileBuilds:this.tileBuilds};}
     dispose() {this.disposed=true;for(const img of this.images.values())img.onload=null;this.images.clear();this.drawing=null;this.tileBytes=0;this.back.remove(); }
