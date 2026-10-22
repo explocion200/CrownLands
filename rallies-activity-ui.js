@@ -102,7 +102,7 @@ function renderClanRallyOperationPanel(rallies = []) {
   if (activityRallyScope !== scope) { selectedActivityRallyId = ""; activityRallyScope = scope; }
   if (!rallies.length) {
     selectedActivityRallyId = "";
-    return `<div class="rallies-content is-empty"><section class="empty-state"><div class="empty-emblem"><img src="assets/clan-heraldry/art-set-v1/svg/full/fortress-keep.svg" alt=""></div><h3>No active clan rallies</h3><p>Leaders and Officers can begin a rally from an eligible objective on the map. Your clan's active rallies will appear here.</p><button data-close-marches type="button">Return to map</button></section></div>`;
+    return `<div class="rallies-content is-empty"><section class="empty-state"><div class="empty-emblem"><img src="assets/clan-heraldry/art-set-v1/svg/full/fortress-keep.svg" alt=""></div><h3>No active clan rallies</h3><p>Any active clan member can begin a rally from an eligible objective on the map. Your clan's active rallies will appear here.</p><button data-close-marches type="button">Return to map</button></section></div>`;
   }
   const selected = rallies.find(rally => rally.id === selectedActivityRallyId) || rallies[0];
   selectedActivityRallyId = selected.id;

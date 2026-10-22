@@ -54,7 +54,7 @@ async function main() {
       await ready('document.documentElement?.dataset.crownlandsBenchmarkReady === "true"');
       const fixture = await evaluate(`(() => {
         window.__CROWNLANDS_BENCHMARK__.closeModal();
-        state.clanId='assembly-clan';state.clanRole='leader';state.character.level=50;
+        state.clanId='assembly-clan';state.clanRole='member';state.character.level=50;
         const api=getOnlineApi();
         getOnlineApi=()=>({...api,createClanRally:async()=>({ok:true}),previewArmyRoute:async request=>{
           const from=getArmyTargetById(request.fromId),to=getArmyTargetById(request.toId);

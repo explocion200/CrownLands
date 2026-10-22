@@ -1,55 +1,52 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "27d8fe93769f2e83ccad86ab330c6d194c26522c",
+  "baseCommit": "72cb6504d388cee4cf19ebac435e0ec4cf64eb64",
   "coverage": [
     {
       "paths": [
-        "world/native.js",
-        "action-buttons.css",
-        "tools/check-continuous-control-scale.js",
-        "tools/validate-castle-action-layout.js"
+        "functions/index.js",
+        "functions/test/member-rally-cases.js",
+        "functions/test/emulator-rally-staging-defense.js",
+        "tools/test-local-postgres-member-rallies.js"
       ],
       "tests": [
-        "tools/validate-castle-action-layout.js",
-        "tools/test-local-postgres-production-world.js",
-        "tools/validate-continuous-pickup-animation.js"
+        "tools/validate-clan-rallies.js",
+        "tools/test-local-postgres-member-rallies.js",
+        "tools/test-local-postgres-rally-rejoin.js",
+        "functions/test/emulator-rally-staging-defense.js"
       ],
-      "reason": "Implement the approved original gold arc only for regular castles in the live Core connected renderer. Cover all 30 default/equipped paintings, five stages, three zooms and desktop/two landscape sizes; check pixel clearance, native button labels/handlers/disabled states, cached frame work and failed/obsolete image loads. The real production browser with two disposable PostgreSQL accounts covers camera/selection/dismissal/resize/touch, native menus and action commands, permissions and accepted movements. Update its sizing assertions only for the explicitly approved readable castle exception, retaining proportional objective sizing. Shared action CSS stays scoped; the existing pickup animation check guards adjacent native-frame logic. No server implementation, data model, gameplay or Firebase changes: no Firebase emulator suite required."
+      "reason": "Allow the existing Member role at creation and both launch validation passes; preserve rallies on demotion. Cover all four live Core target types with real commands and production continuous routing in an isolated PostgreSQL schema, plus the current Core emulator. Check authoritative missing/removed/stale membership, forged client role, inactive clan, Tower probation, creator/Clan Leader control, Ready quorum, five-active cap and replay safety. Include current shard in internal cancellation to preserve invalid-creator/departure cleanup; shared staging/recall tests cover cancellation, launch races and troop settlement. No archived topology or production player data changes."
     },
     {
       "paths": [
+        "game.js",
+        "rallies-activity-ui.js",
+        "tools/validate-clan-rallies.js",
+        "tools/validate-rally-assembly.js",
+        "tools/validate-rally-assembly-browser.js"
+      ],
+      "tests": [
+        "tools/validate-clan-rallies.js",
+        "tools/validate-rally-assembly.js",
+        "tools/validate-rally-assembly-browser.js"
+      ],
+      "reason": "Client role allowlist, boss tooltip and War Room/Kingdom Activity copy must match server permission. Exercise ordinary-member map objective creation at desktop 1440x900 and landscape 844x390/568x320, remembered source, failed permissions, creator versus other-member management, contribution confirmations and input layout. Read actual production role constant in VM checks rather than duplicate a stale test allowlist."
+    },
+    {
+      "paths": [
+        "README.md",
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/visual-qa/castle-action-wheel/README.md"
+        "clans-rallies-guide.html",
+        "guides.html",
+        "home.html",
+        "how-to-play.html",
+        "roadmap-data.js"
       ],
       "tests": [
-        "tools/validate-castle-action-layout.js",
-        "tools/test-local-postgres-production-world.js"
+        "tools/validate-public-site-content.js",
+        "tools/validate-clan-rallies.js"
       ],
-      "reason": "Record the owner-approved castle-only exception to proportional menu sizing, preserve the original arrangement and current gameplay, and document the production implementation and checks. The runtime tests validate the confirmed rule; no separate documentation runtime or emulator suite applies."
-    },
-    {
-      "paths": [
-        "docs/visual-qa/castle-action-wheel/draft.css",
-        "docs/visual-qa/castle-action-wheel/draft.js",
-        "docs/visual-qa/castle-action-wheel/index.html",
-        "docs/visual-qa/castle-action-wheel/scene.html",
-        "tools/validate-castle-action-wheel-draft.js"
-      ],
-      "tests": [
-        "tools/validate-castle-action-wheel-draft.js"
-      ],
-      "reason": "Retain the approved isolated visual reference using current Core art and actual action CSS. Cover 135 ownership/stage/zoom/viewport cases, original ellipse, pixel and button clearance, local-only assets, mouse/touch/keyboard and resize. Use installed Chromium in CI or the local Playwright runtime. Draft remains excluded from game entry points and production packages."
-    },
-    {
-      "paths": [
-        "tools/validate-production-artifact.js",
-        "tools/asset-performance-budgets.js"
-      ],
-      "tests": [
-        "tools/validate-production-artifact.js",
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "reason": "Account for the approved castle helper with 3328 more bytes of lazy-world headroom (67.5 KiB total; rebuilt modules 68987 bytes). The scoped CSS adds 1818 shell bytes; cap its 1324-byte overage with 1536 bytes (measured shell 4631340 bytes). Keep all image, precache-entry, module allowlist and overall package limits. Build/artifact/asset validators confirm no prototype, new art or new startup requests."
+      "reason": "Record the explicitly confirmed any-member creation rule and unchanged creator/Clan Leader management. Remove obsolete officer-only rally instructions from current public guides and roadmap. Existing public content/navigation validator and rally rule checks cover affected shared presentation; no separate documentation runtime tests apply."
     }
   ]
 }

@@ -18,10 +18,10 @@ async function main() {
   const messages = [], opened = [], selections = [];
   let currentRegion = "west", scope = "me:world:one", finishSwitch;
   const context = vm.createContext({
-    state: { clanId: "clan", clanRole: "leader" }, onlineClanRallies: [],
+    state: { clanId: "clan", clanRole: "member" }, onlineClanRallies: [],
     lastSelectedOwnedCityId: city.id, selectedSourceId: "", selectedTargetId: "", scoutNearbySourceId: "", regroupSourceId: "",
     sendMode: false, activeTroopOrderKind: "", activeRallyOrderContext: null, selectedTroopAmount: 0,
-    CLAN_RALLY_CREATOR_ROLES: ["leader", "officer"], holdingTowerActionsInFlight: new Set(),
+    holdingTowerActionsInFlight: new Set(),
     cityById: id => id === city.id ? city : null,
     getArmyTargetById: id => id === target.id ? target : null,
     getCurrentOnlineUid: () => "me", getCityRegionId: city => city.regionId,
@@ -42,7 +42,7 @@ async function main() {
     getOnlineRequestScope: () => scope, getActiveMapRegionId: () => currentRegion,
     switchOnlineIsland: region => new Promise(resolve => { finishSwitch = () => { currentRegion = region; resolve(true); }; }),
   });
-  vm.runInContext(presentation + "\n" +
+  vm.runInContext(game.match(/const CLAN_RALLY_CREATOR_ROLES = [^;]+;/)[0] + "\n" + presentation + "\n" +
     extract("rememberOwnedAttackSource", "getLastSelectedOwnedAttackCity") +
     extract("getLastSelectedOwnedAttackCity", "completeScoutMission") +
     extract("findLastSelectedAttackSource", "findPreferredAttackSource") +
@@ -63,8 +63,8 @@ async function main() {
   for (const change of [
     () => { city.troops = 0; }, () => { city.troops = 600; city.owner = "enemy"; },
     () => { city.owner = "player"; context.lastSelectedOwnedCityId = "missing"; },
-    () => { context.lastSelectedOwnedCityId = city.id; context.state.clanRole = "member"; },
-    () => { context.state.clanRole = "leader"; target.owner = "player"; },
+    () => { context.lastSelectedOwnedCityId = city.id; context.state.clanRole = "invalid"; },
+    () => { context.state.clanRole = "member"; target.owner = "player"; },
   ]) {
     change(); context.beginCreateClanRally(target);
     assert.equal(opened.length, 4, "Invalid source/permission must never silently pick another city");

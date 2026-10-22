@@ -389,7 +389,7 @@ const RALLY_MODEL_VERSION = 2;
 const RALLY_MIN_PARTICIPANTS = 2;
 const RALLY_MAX_PARTICIPANTS = 20;
 const CLAN_ACTIVE_RALLY_LIMIT = 5;
-const CLAN_RALLY_CREATOR_ROLES = Object.freeze(["leader", "officer"]);
+const CLAN_RALLY_CREATOR_ROLES = Object.freeze(["leader", "officer", "member"]);
 const RALLY_STATUS_FORMING = "forming";
 const RALLY_STATUS_LAUNCHED = "launched";
 const RALLY_STATUS_RECALLING = "recalling";
@@ -21570,6 +21570,7 @@ function internalRallyCallableRequest(uid = "", clanId = "", rallyId = "") {
       clientReleaseId: REALM_RELEASE_ID,
       clientResetGeneration: RESET_GENERATION,
       clientWorldId: ONLINE_WORLD_ID,
+      clientRealmShardId: getCurrentRealmShardId(),
     },
   };
 }
@@ -22037,9 +22038,6 @@ async function changeClanRole(request, nextRole) {
     writeClanAudit(transaction, clanId, uid, nextRole === "officer" ? "member_promoted" : "officer_demoted", { targetUid });
     return { ok: true, clanId, targetUid, role: nextRole };
   });
-  if (nextRole === "member") {
-    await cancelFormingRalliesCreatedBy(targetUid, clanId);
-  }
   return result;
 }
 
@@ -24114,6 +24112,7 @@ async function reconcileInvalidRallyParticipantsBeforeLaunch({ callerUid = "", c
   const assemblySnap = assemblyRef ? await assemblyRef.get() : null;
   const creatorInvalid = !creatorState.profileValid
     || !creatorState.memberValid
+    || creatorState.member?.status === "removed"
     || !CLAN_RALLY_CREATOR_ROLES.includes(creatorState.memberRole)
     || ((rally.targetType === "tower" || rally.assemblyType === "tower")
       && !isCurrentHoldingTowerMember(creatorState.member || {}, nowMs, clanId))
@@ -24207,9 +24206,10 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       || !clanSnap.exists
       || clan.status !== "active"
       || !creatorMemberSnap.exists
+      || creatorMemberSnap.data()?.status === "removed"
       || !CLAN_RALLY_CREATOR_ROLES.includes(creatorMemberSnap.data()?.role)
     ) {
-      throw new HttpsError("failed-precondition", "The rally creator is no longer an active Clan Leader or Officer.");
+      throw new HttpsError("failed-precondition", "The rally creator is no longer an active clan member.");
     }
     if (rally.targetType === "tower" || rally.assemblyType === "tower") {
       assertHoldingTowerWorldActive();
