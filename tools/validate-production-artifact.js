@@ -444,7 +444,10 @@ const cityShieldBudget=1024;
 // Attached NPC labels and exclusion of decorations over old encounters add
 // 385 bytes. The reserved road-site catalog stays on the server, never in boot.
 const npcLabelBudget=512;
-assert(worldBytes<=64*1024+256+castleActionLayoutBudget+worldClearanceBudget+cityShieldBudget+npcLabelBudget,"Lazy continuous-world modules exceed 71.25 KiB");
+// Six courtyard sprites reuse existing art/subscriptions. Their geometry,
+// selection and exclusions add 3,081 lazy bytes; no initial-load/precache growth.
+const clanCourtyardBudget=3328;
+assert(worldBytes<=64*1024+256+castleActionLayoutBudget+worldClearanceBudget+cityShieldBudget+npcLabelBudget+clanCourtyardBudget,"Lazy continuous-world modules exceed 74.5 KiB");
 assert(!worker.includes('world/'),"Continuous world must not expand installation precaching");
 for(const f of worldFiles)assert(!fs.readFileSync(f,"utf8").includes('/__benchmark__/'),"No private preview endpoints in the game");
 if (baseClientBytes - worldBytes > baseClientBudget + campFlagArtBudget) {
