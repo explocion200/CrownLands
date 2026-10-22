@@ -183,6 +183,14 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   }
   const locate = (id,region) => view?.scene.objects.find(o => o.id === id && (!region || o.sectionId === region));
   function clearWheel() { overlay.replaceChildren(); lastWheel = ""; wheelPoint = null; }
+  let castleFocusPending=false;
+  function focusCastleActions(point) {
+    if(sendMode||point.kind!=="castle")return false;
+    const {camera,size}=view.snapshot(),zoom=SeamlessModel.forWorld(scene).limits(size).max;
+    if(camera.zoom>=zoom-1e-6)return false;
+    clearWheel();view.view(point.x,point.y,zoom);castleFocusPending=true;
+    return true;
+  }
   function positionWheel(nodes,{camera,size}) {
     const p=SeamlessModel.project(camera,wheelPoint,size);
     // Other objectives retain their existing close-up control size. Below maximum zoom the
@@ -204,13 +212,16 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     }
   }
   function paintWheel() {
-    if (!view || !areasReady || bridge?.running || getOnlineSessionRequestScope() !== session) return clearWheel();
+    if (!view || castleFocusPending || !areasReady || bridge?.running || getOnlineSessionRequestScope() !== session) return clearWheel();
     const target = selectedTowerMapId ? getHoldingTowerVisual(selectedTowerMapId) : selectedTargetId ? getArmyTargetById(selectedTargetId) : selectedSourceId ? getTroopOrderSourceById(selectedSourceId) : null;
     const point = target && locate(target.id,getCityRegionId(target));
     if (!point || sendMode) return clearWheel();
     // City List, shared chat locations and profiles also use the native
     // selection functions. Adopt their identity without issuing another action.
-    if (view.selectedKey !== point.key) {view.select(point.key,false);bridge.selected=point;}
+    if (view.selectedKey !== point.key) {
+      view.select(point.key,false);bridge.selected=point;
+      if(focusCastleActions(point))return;
+    }
     wheelPoint = point;
     const signature = JSON.stringify([point.key,target.owner,target.troops,target.level,Math.floor(getProjectedGold()),scoutNearbySourceId,regroupSourceId,pendingBulkOrderAction?.phase]);
     if (signature === lastWheel) return;
@@ -339,9 +350,10 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
       },
     onSelect: item => {
       if (!["castle","camp","stronghold","citadel","npc","tower"].includes(item.kind) || !areasReady) {bridge.cancel();clearSelection(false);return;}
+      focusCastleActions(item);
       void bridge.select(item).then(ok=>{lastWheel="";paintWheel();if(!ok && bridge.error)showToast(bridge.error);requestAnimationFrame(()=>{restoringSelection=false;});});
     },
-    onClear: () => {pendingFocus=null;bulkGeneration++;bulk=null;bridge.cancel();clearSelection(false);clearWheel();},
+    onClear: () => {castleFocusPending=false;pendingFocus=null;bulkGeneration++;bulk=null;bridge.cancel();clearSelection(false);clearWheel();},
     onZoom: () => {
       // Preserve an in-progress troop destination choice while navigating.
       if (!sendMode && view?.getObject(view.selectedKey)?.kind!=="troop") { view?.clear(); bridge.cancel(); clearSelection(false); clearWheel(); }
@@ -349,6 +361,9 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     onFrame: ({camera,project,size}) => {
       frameView={project,size};updateMainCityReturnButton();
       if (getOnlineSessionRequestScope() !== session) { dispose(); return; }
+      // Reveal readable castle controls in the same paint as the close-up map,
+      // never over the preceding tiny overview sprite.
+      if(castleFocusPending){castleFocusPending=false;paintWheel();}
       for(const node of pickupNodes.values()){const p=project(node.worldPoint);node.hidden=!areasReady||!pickupPlacement.safe(node.bonus,{size})||p.x< -30||p.y< -30||p.x>size.width+30||p.y>size.height+30;node.style.display=node.hidden?"none":"";node.style.left=`${p.x}px`;node.style.top=`${p.y}px`;node.style.transform=`translate(-50%,-50%) scale(${.8*Math.min(1,camera.zoom/SeamlessModel.forWorld(scene).limits(size).max)})`;}
       if (areasReady&&!sendMode&&!bridge.running&&!transitioning&&bridge.selected&&view.selectedKey
           && !selectedSourceId&&!selectedTargetId&&!selectedTowerMapId
