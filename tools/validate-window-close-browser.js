@@ -49,7 +49,7 @@ async function main() {
     const estate = require('./guild-production-preview').fixture().snapshot();
     await evaluate(`window.closeEstateSnapshot=${JSON.stringify(estate)};
       window.closeEconomy=CrownlandsEstateEconomy.create({scope:()=>'close-ui',api:()=>({getEstateState:async()=>structuredClone(closeEstateSnapshot)}),visible:()=>true,gold:()=>closeEstateSnapshot.gold,gear:CROWNLANDS_COMMON_GEAR});
-      CrownlandsStaminaUI.sync({uid:'close-ui',api:{getStaminaState:async()=>({state:{version:1,value:70,recoveredAtMs:Date.now(),revision:1,paidDay:'',serverNowMs:Date.now()},crowns:120,walletRevision:1,huntingEnabled:true})}});
+      CrownlandsStaminaUI.sync({uid:'close-ui',api:{getStaminaState:async()=>({state:{version:2,value:70,recoveredAtMs:Date.now(),revision:1,paidDay:'',serverNowMs:Date.now()},crowns:120,walletRevision:1,huntingEnabled:true})}});
       // The offline benchmark's HUD would otherwise sign out this synthetic session.
       window.CrownlandsStaminaUI=Object.freeze({...CrownlandsStaminaUI,sync:()=>{}});
       window.closePaymentsHost=document.createElement('div');closePaymentsHost.hidden=true;document.body.append(closePaymentsHost);

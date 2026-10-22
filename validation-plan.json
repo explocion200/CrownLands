@@ -1,35 +1,54 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "2ef80addc945bd9979ccf506e393bdad18ddac49",
+  "baseCommit": "6a52b72cb555efe1df97d5ef4dc0c8afe8595a82",
   "coverage": [
     {
       "paths": [
-        "world/native.js",
-        "world/appearance.js",
-        "tools/check-continuous-marches.js",
-        "tools/check-continuous-pickup-repair.js",
-        "tools/validate-continuous-pickup-placement.js",
-        "tools/test-local-postgres-native-auth-world.js",
-        "world/preview.css"
+        "functions/index.js",
+        "functions/marauder-rules.js",
+        "functions/stamina-service.js",
+        "functions/test/emulator-marauder-combat.js",
+        "functions/test/emulator-stamina-refills.js",
+        "functions/test/emulator-crown-live-payments.js",
+        "tools/validate-marauder-rules.js"
       ],
       "tests": [
-        "tools/validate-continuous-pickup-placement.js",
-        "tools/validate-pickup-runtime.js",
-        "tools/test-local-postgres-production-world.js",
-        "tools/test-local-postgres-native-auth-world.js",
-        "tools/validate-continuous-map-labels.js",
-        "tools/validate-continuous-game-ui.js",
-        "tools/validate-production-artifact.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-marauder-rules.js",
+        "tools/validate-marauder-reports.js",
+        "functions/test/emulator-stamina-refills.js",
+        "functions/test/emulator-marauder-combat.js",
+        "functions/test/emulator-crown-live-payments.js",
+        "tools/validate-production-artifact.js"
       ],
-      "reason": "Shrink connected-map Gold/troop/Crown markers by 20% and use current authenticated display geometry, measured label rectangles and troop positions for bounded pickup clearance. Unit checks cover all object types, mobile glow, relocated cities, availability loss, coordinate conversion, bounded retries and cache invalidation. Actual isolated PostgreSQL browser commands verify an obstructed reservation stays hidden and relocates without changing its ID, type, creation/expiry, allowance or deadline, then all three types collect normally at desktop and landscape sizes. Existing shared label, march/UI, production/private integration and asset/build gates protect geometry, privacy, restored global hooks, compatible publication and loading budgets. No backend/authority changes or emulator suites required. Keep the placement helper lazy with the live camera and remove only unreferenced prototype-control CSS from the production copy to remain within existing world and installation budgets."
+      "reason": "Authoritative stamina v2 freezes automatic recovery with one deployment cutoff for existing accounts, retaining pre-cutoff whole points, day usage and committed receipts. Exercise missing/invalid cutoff, late login and concurrent idempotent migration; verify unchanged proportional Crown prices, daily resets, exact-once purchases, wallet/pickup/cosmetic/live-payment races, solo 10 and boss 20 launch/readiness/atomic participant charges, duplicate launches and old 10/new 20 cancellation refunds and reports. No combat balance or archived world changes. Backend/client installation is coordinated separately."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "stamina-ui.js",
+        "marauders-ui.js",
+        "tools/test-stamina-display-recovery.js",
+        "tools/validate-marauders-browser.js",
+        "tools/validate-window-close-browser.js",
+        "game.js",
+        "troop-orders-ui.js",
+        "scout-report-ui.js"
+      ],
+      "tests": [
+        "tools/test-stamina-display-recovery.js",
+        "tools/validate-marauders-browser.js",
+        "tools/validate-window-close-browser.js",
+        "tools/validate-marauder-reports-browser.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Current stamina state and server rules are shared by HUD, refill window, NPC/rally preparation and report presentation. Test no time-based client refill, subscription recovery/dedup/privacy, per-target 10/20 cost labels, split remaining hunt counts, preserved Crown review/Shop/drafts, daily allowance, and modal close/focus behavior at desktop and landscape mobile sizes. Use v2 fixtures without changing cosmetic/reward versions; check source and production delivery."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/STAMINA_RECOVERY_STOP_ROLLOUT.md"
       ],
       "tests": [],
-      "reason": "Record the owner-approved smaller pickup presentation and current-world clearance, preserving rewards, timers and server reservation authority; deployment verified separately."
+      "reason": "Record the explicit owner decision and pending deployment status, fixed operator-created stop time, original-cost refunds, unchanged Crown pricing/allowance, coordinated backend/client activation and compatible rollback. Documentation does not activate the policy or mutate production."
     }
   ]
 }

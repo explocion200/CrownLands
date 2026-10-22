@@ -17,7 +17,7 @@ const profileRef = db.doc(`players/${uid}`), stateRef = stamina.stateRef(uid), w
 let sequence = 0;
 const request = offer => ({ requestId: `refill_test_${++sequence}`, offer });
 async function seed(value, crowns, paidDay = "") {
-  await Promise.all([stateRef.set({ version: 1, value, recoveredAtMs: now, revision: sequence, paidDay }),
+  await Promise.all([stateRef.set({ version: M.STAMINA_VERSION, value, recoveredAtMs: now, revision: sequence, paidDay }),
     walletRef.set(C.normalize({ crowns, revision: sequence }))]);
 }
 async function snapshot() { return { state: (await stateRef.get()).data(), wallet: (await walletRef.get()).data() }; }
@@ -25,6 +25,27 @@ async function main() {
   await profileRef.set({ resetGeneration: "test-current", character: { level: 1 } });
   const initialized = await stamina.load(uid);
   assert.equal(initialized.state.value, 100);
+  const policyRef = db.doc("staminaPolicy/recovery-stop-v2");
+  const cutoff = now;
+  const oldState = { version: 1, value: 66, recoveredAtMs: cutoff - M.RECOVERY_MS * 1.5, revision: 1, paidDay: M.day(now) };
+  await stateRef.set(oldState);
+  await policyRef.delete();
+  await assert.rejects(stamina.load(uid), /transition is unavailable/);
+  assert.deepEqual((await stateRef.get()).data(), oldState, "Missing cutoff cannot discard accrued stamina");
+  for (const policy of [{version:1,stoppedAtMs:cutoff},{version:2,stoppedAtMs:cutoff+1},{version:2,stoppedAtMs:-1}]) {
+    await policyRef.set(policy);
+    await assert.rejects(stamina.load(uid), /transition is unavailable/);
+  }
+  await policyRef.set({ version: M.STAMINA_VERSION, stoppedAtMs: cutoff });
+  now += 365 * 86400000;
+  const migrated = await Promise.all([stamina.load(uid), stamina.load(uid)]);
+  for (const row of migrated) {
+    assert.equal(row.state.value,67); assert.equal(row.state.version,M.STAMINA_VERSION);
+    assert.equal(row.state.revision,2); assert.equal(row.state.paidDay,oldState.paidDay);
+  }
+  assert.equal((await stateRef.get()).data().value,67);
+  await stamina.load(uid); assert.equal((await stateRef.get()).data().revision,2,"Migration is idempotent");
+  now = cutoff;
   for (const [value, price] of [[0, 30], [66, 11], [67, 10], [70, 9], [99, 1], [100, 0]]) for (const crowns of new Set([0, Math.max(0, price - 1), price, price + 1, 29, 30, 120])) {
     await seed(value, crowns);
     const offer = (await stamina.load(uid)).offer, purchase = request(offer), before = await snapshot();
@@ -68,16 +89,12 @@ async function main() {
     assert.deepEqual(await snapshot(), before);
     assert.equal((await stamina.receiptRef(uid, purchase.requestId).get()).exists, false);
   }
-  // Offline recovery crosses a price boundary; only a newly reviewed quote may purchase.
-  await seed(66, 120); const beforeRecovery = (await stamina.load(uid)).offer;
-  assert.equal(beforeRecovery.price, 11); now += M.RECOVERY_MS;
-  const recoveredSnapshot = await snapshot();
-  await assert.rejects(stamina.purchase(uid, request(beforeRecovery)), /offer changed/);
-  assert.deepEqual(await snapshot(), recoveredSnapshot);
-  const recoveredOffer = (await stamina.load(uid)).offer;
-  assert.equal(recoveredOffer.price, 10);
-  const recoveredPurchase = await stamina.purchase(uid, request(recoveredOffer));
-  assert.equal(recoveredPurchase.receipt.restored, 33); assert.equal(recoveredPurchase.crowns, 110);
+  // Waiting does not regenerate stamina or invalidate a same-day reviewed quote.
+  await seed(66, 120); const beforeWait = (await stamina.load(uid)).offer;
+  now += M.RECOVERY_MS;
+  assert.deepEqual((await stamina.load(uid)).offer, beforeWait);
+  const waitedPurchase = await stamina.purchase(uid, request(beforeWait));
+  assert.equal(waitedPurchase.receipt.restored, 34); assert.equal(waitedPurchase.crowns, 109);
   await seed(0, 120);
   const quote = (await stamina.load(uid)).offer;
   const race = await Promise.allSettled([stamina.purchase(uid, request(quote)), stamina.purchase(uid, request(quote))]);
@@ -96,9 +113,8 @@ async function main() {
   await assert.rejects(stamina.purchase(uid, request(oldDayOffer)), /offer changed/);
   assert.deepEqual(await snapshot(), beforeRollover);
   assert.equal((await stamina.purchase(uid, request((await stamina.load(uid)).offer))).crowns, 90);
-  // Regeneration, spending, and wallet changes all invalidate reviewed values.
+  // Spending and wallet changes invalidate reviewed values.
   for (const mutate of [
-    async () => { now += M.RECOVERY_MS; },
     async () => db.runTransaction(async transaction => { const changes = await stamina.prepareChange(transaction, [uid], -10, now); stamina.writeChanges(transaction, changes); }),
     async () => walletRef.update({ crowns: 119, revision: sequence + 1 }),
   ]) {

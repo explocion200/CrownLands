@@ -118,7 +118,7 @@ async function main() {
 
   const walletRef = db.doc('players/'+users[0].uid+'/cosmetics/state');
   await walletRef.set({ version:1,crowns:120,revision:1 });
-  await staminaRef.set({version:1,value:70,recoveredAtMs:Date.now(),revision:1,paidDay:''});
+  await staminaRef.set({version:2,value:70,recoveredAtMs:Date.now(),revision:1,paidDay:''});
   const today = new Date().toISOString().slice(0,10);
   await profileRef.set({ daily:{date:today,harvestedGoldBonuses:0,harvestedTroopBonuses:0,harvestedBonuses:0},
     harvestBonuses:[{id:'hunt_refill_pickup',type:'crowns',regionId:region,x:1000,y:1000,createdAtMs:Date.now()}] },{merge:true});
@@ -131,7 +131,7 @@ async function main() {
   strictEqual(pickupRace[1].status,'fulfilled');
   strictEqual((await walletRef.get()).data().crowns,121-(pickupRace[0].status==='fulfilled'?9:0));
   strictEqual((await staminaRef.get()).data().paidDay,today && pickupRace[0].status==='fulfilled'?today:'');
-  await staminaRef.set({version:1,value:100,recoveredAtMs:Date.now(),revision:10,paidDay:''});
+  await staminaRef.set({version:2,value:100,recoveredAtMs:Date.now(),revision:10,paidDay:''});
   const previewPayload={...request('attack',200).army,requestedTroops:200};
   const unscouted=await callFunction('previewArmyProtection',users[0].token,previewPayload);strictEqual(unscouted.combatForecast.status,'unavailable');
   const scout=await launch('scout',1);strictEqual((await staminaRef.get()).data().value,100);
@@ -220,7 +220,7 @@ async function main() {
   strictEqual((await staminaRef.get()).data().value,beforeRetirement+10,'No duplicate retirement refund');
   strictEqual((await profileRef.get()).data().shopItems.swift_march_order,1,'No duplicate retirement consumable refund');
   await arrive(retiredResult.movements[0]);enemy=await seed();
-  await staminaRef.set({version:1,value:9,recoveredAtMs:Date.now(),revision:99,paidDay:''});await rejects(launch('attack',200),/stamina/);strictEqual((await staminaRef.get()).data().value,9);
+  await staminaRef.set({version:2,value:9,recoveredAtMs:Date.now(),revision:99,paidDay:''});await rejects(launch('attack',200),/stamina/);strictEqual((await staminaRef.get()).data().value,9);
   // Private stamina and current defender counts must never be readable by another player.
   async function readAs(user,path){return fetch('http://'+firestoreHost+'/v1/projects/'+projectId+'/databases/(default)/documents/'+path,{headers:{authorization:'Bearer '+user.token}});}
   strictEqual((await readAs(users[1],staminaRef.path)).status,403);strictEqual((await readAs(users[0],targetRef.path)).status,403);strictEqual((await readAs(users[1],publicRef.path)).status,200);
@@ -251,11 +251,19 @@ async function main() {
   const ready=await callFunction('getBossRallyReadiness',users[1].token,{clanId,rallyId});assert(ready.participants.every(p=>Object.keys(p).sort().join(',')==='ready,uid'),'Only readiness is public');strictEqual(ready.participants.find(p=>p.uid===users[0].uid).ready,false);
   await rejects(callFunction('getBossRallyReadiness',users[2].token,{clanId,rallyId}),/clan members/);
   await rejects(callFunction('launchClanRally',users[0].token,{clanId,rallyId}),/stamina/);strictEqual((await staminaRef.get()).data().value,9);
-  await staminaRef.set({version:1,value:100,recoveredAtMs:Date.now(),revision:100,paidDay:''});
+  for(const value of [10,19]) {
+    await staminaRef.set({version:2,value,recoveredAtMs:Date.now(),revision:100,paidDay:''});
+    const readiness=await callFunction('getBossRallyReadiness',users[0].token,{clanId,rallyId});
+    strictEqual(readiness.participants.find(p=>p.uid===users[0].uid).ready,false);
+    await rejects(callFunction('launchClanRally',users[0].token,{clanId,rallyId}),/20 stamina/);
+    strictEqual((await staminaRef.get()).data().value,value);
+  }
+  await staminaRef.set({version:2,value:100,recoveredAtMs:Date.now(),revision:100,paidDay:''});
   const launched=await callFunction('launchClanRally',users[0].token,{clanId,rallyId,armyId:rallyId+'_attack'});
-  strictEqual((await staminaRef.get()).data().value,90);strictEqual((await db.doc('players/'+users[1].uid+'/stamina/state').get()).data().value,90);
+  strictEqual((await staminaRef.get()).data().value,80);strictEqual((await db.doc('players/'+users[1].uid+'/stamina/state').get()).data().value,80);
   strictEqual((await profileRef.get()).data().itemEffects.shieldExpiresAtMs,shieldUntil,'Neutral boss launch preserves shield');
-  await callFunction('launchClanRally',users[0].token,{clanId,rallyId});strictEqual((await staminaRef.get()).data().value,90);
+  await callFunction('launchClanRally',users[0].token,{clanId,rallyId});strictEqual((await staminaRef.get()).data().value,80);
+  strictEqual(launched.movement.staminaCost,20);
   const bossBattle=await arrive(launched.movement);strictEqual(bossBattle.outcome,'victory');
   const deadBoss=(await bossRef.get()).data(),publicBoss=(await db.doc('islands/'+bossIsland+'/marauders/'+boss.id).get()).data();
   strictEqual(publicBoss.status,'defeated');strictEqual(publicBoss.respawnAtMs,deadBoss.updatedAtMs+1800000);
@@ -289,14 +297,16 @@ async function main() {
   const join2=await callFunction('joinClanRally',users[1].token,{clanId,rallyId:rally2,army:{id:rally2+'_join',kind:'rally_join',fromId:claims[1].cityId,sourceRegionId:claims[1].regionId||claims[1].mainRegionId,troops:20000000,requestedTroops:20000000}});
   await db.doc('armies/'+join2.movement.id).set({arrivesAtMs:Date.now()-1000},{merge:true});await callFunction('resolveArmyOrder',users[1].token,{armyId:join2.movement.id});
   const launch2=await callFunction('launchClanRally',users[0].token,{clanId,rallyId:rally2});
-  strictEqual((await staminaRef.get()).data().value,80);await bossRef.delete();
-  strictEqual((await arrive(launch2.movement)).outcome,'target_unavailable');
-  for(const user of users.slice(0,2))strictEqual((await db.doc('players/'+user.uid+'/stamina/state').get()).data().value,90);
+  strictEqual((await staminaRef.get()).data().value,60);await bossRef.delete();
+  const canceledBoss=await arrive(launch2.movement);strictEqual(canceledBoss.outcome,'target_unavailable');
+  strictEqual(canceledBoss.reports[0].staminaRefunded,20);
+  await callFunction('resolveArmyOrder',users[0].token,{armyId:launch2.movement.id});
+  for(const user of users.slice(0,2))strictEqual((await db.doc('players/'+user.uid+'/stamina/state').get()).data().value,80);
   strictEqual((await db.doc('marauderBattles/'+launch2.movement.id).get()).data().loot,null);
   // The same callables preserve legacy spawns above and settle new v2 spawns below.
   enemy=await seed(10,M.balance(10,2).defenders);
   await Promise.all([targetRef.set({balanceVersion:2},{merge:true}),publicRef.set({balanceVersion:2},{merge:true})]);
-  await staminaRef.set({version:1,value:100,recoveredAtMs:Date.now(),revision:200,paidDay:''});
+  await staminaRef.set({version:2,value:100,recoveredAtMs:Date.now(),revision:200,paidDay:''});
   await profileRef.set({character:{level:1,xp:0}},{merge:true});
   const modernSolo=await launch('attack',10000),modernSoloResult=await arrive(modernSolo.movement);
   strictEqual(modernSolo.movement.targetBalanceVersion,2);
@@ -324,7 +334,7 @@ async function main() {
     await bossRef.set({...boss,troops:M.balance(100,2).defenders});
     await db.doc('islands/'+bossIsland+'/marauders/'+boss.id).set(boss);
     for(const [i,user] of users.entries()){
-      await db.doc('players/'+user.uid+'/stamina/state').set({version:1,value:100,recoveredAtMs:Date.now(),revision:300,paidDay:''});
+      await db.doc('players/'+user.uid+'/stamina/state').set({version:2,value:100,recoveredAtMs:Date.now(),revision:300,paidDay:''});
       await db.doc('islands/'+claims[i].islandId+'/cities/'+claims[i].cityId).set({troops:100000000,troopFloat:100000000,productionUpdatedAtMs:Date.now()},{merge:true});
     }
     const id='v2_'+label+'_'+crypto.randomBytes(5).toString('hex');
@@ -379,7 +389,7 @@ async function main() {
   strictEqual(departure.bossContribution.eligible,true);
   strictEqual(departure.bossRewardVersion,M.BOSS_REWARD_VERSION);
   strictEqual(departing.movement.bossRewardVersion,M.BOSS_REWARD_VERSION);
-  for(const u of users.slice(0,5))strictEqual((await db.doc('players/'+u.uid+'/stamina/state').get()).data().value,90);
+  for(const u of users.slice(0,5))strictEqual((await db.doc('players/'+u.uid+'/stamina/state').get()).data().value,80);
   // Invalid or mismatched saved policies cannot settle or credit rewards.
   const armyRef=db.doc('armies/'+departing.movement.id);
   for(const invalidVersion of [3,1]){
@@ -423,6 +433,17 @@ async function main() {
     for(const field of ['gold','goldFloat','character','shopItems','gear','battleReports'])
       strictEqual(JSON.stringify(after[field]),JSON.stringify(before[field]),'Duplicate settlement changed '+field);
   }
+  // Preserve the amount actually charged by a pre-update boss departure.
+  const legacyCancel=await modernRally('legacy-stamina',[10000000,1]);await assemble(legacyCancel);
+  const legacyMarch=await callFunction('launchClanRally',users[0].token,{clanId,rallyId:legacyCancel.id});
+  await db.doc('armies/'+legacyMarch.movement.id).update({staminaCost:FieldValue.delete()});
+  for(const u of users.slice(0,2)) await db.doc('players/'+u.uid+'/stamina/state').update({value:90});
+  await bossRef.delete();
+  const legacyRefund=await arrive(legacyMarch.movement);
+  strictEqual(legacyRefund.outcome,'target_unavailable');strictEqual(legacyRefund.reports[0].staminaRefunded,10);
+  await callFunction('resolveArmyOrder',users[0].token,{armyId:legacyMarch.movement.id});
+  for(const u of users.slice(0,2))strictEqual((await db.doc('players/'+u.uid+'/stamina/state').get()).data().value,100);
+  strictEqual((await readAs(users[0],'staminaPolicy/recovery-stop-v2')).status,403,'The recovery cutoff is server-only');
   console.log('V2 callables: legacy/missing versions, fixed uncapped solo XP, solo wounds, five inbound slots, one-troop eligibility, full rewards even after total losses, legacy departure shares, rejected policy mismatch, boss recovery, personal drops and duplicate settlement passed.');
   console.log('Marauder combat passed: real callables, routes, scouting privacy, departure charge, duplicate launch/settlement, shield preservation, normal combat/returns, simultaneous arrivals, failed survivors, immutable spawn refunds, insufficient stamina and Firestore privacy.');
 }

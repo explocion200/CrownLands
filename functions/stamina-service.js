@@ -3,6 +3,7 @@ const M = require("./marauder-rules");
 
 function createStaminaService({ db, HttpsError, runTransaction, assertCurrentPlayerProfile, cosmeticService,
   clock = Date.now, readAvailability = async () => true }) {
+  const recoveryPolicyRef = db.doc("staminaPolicy/recovery-stop-v2");
   const stateRef = uid => db.doc(`players/${uid}/stamina/state`);
   const receiptRef = (uid, id) => db.doc(`players/${uid}/staminaReceipts/${id}`);
   function translate(action) {
@@ -10,7 +11,10 @@ function createStaminaService({ db, HttpsError, runTransaction, assertCurrentPla
   }
   async function read(transaction, uid, now) {
     const ref = stateRef(uid), snap = await transaction.get(ref);
-    return { ref, exists: snap.exists, state: translate(() => M.stamina(snap.exists ? snap.data() : null, now)) };
+    const raw = snap.exists ? snap.data() : null;
+    const policy = raw?.version === 1 ? (await transaction.get(recoveryPolicyRef)).data() : null;
+    const state = translate(() => M.stamina(raw, now, policy?.version === M.STAMINA_VERSION ? policy.stoppedAtMs : undefined));
+    return { ref, exists: snap.exists, migrated: raw?.version === 1, state };
   }
   function response(account, wallet, now, receipt = null, replayed = false) {
     const state = M.view(account, now), utcDay = M.day(now), price = M.refillPrice(state.value);
@@ -27,6 +31,7 @@ function createStaminaService({ db, HttpsError, runTransaction, assertCurrentPla
       if (!profile.exists) throw new HttpsError("failed-precondition", "Load your kingdom first.");
       assertCurrentPlayerProfile(profile.data());
       if (!account.exists) transaction.create(account.ref, account.state);
+      else if (account.migrated) transaction.set(account.ref, account.state);
       return { ...response(account.state, wallet.state, now), huntingEnabled: enabled };
     });
   }

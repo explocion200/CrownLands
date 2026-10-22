@@ -22,7 +22,7 @@ async function main(built = false) {
         assert(fs.readFileSync(path.resolve(__dirname,'../dist',file)).equals(fs.readFileSync(path.resolve(__dirname,'..',file))),'Built defeated artwork is stale');
       }
       const delivered={};
-      for(const file of ['marauders-ui.js','marauders-ui.css','city-details-ui.js','city-details-ui.css','scout-report-ui.js','scout-report-ui.css','stamina-ui.js']){
+      for(const file of ['marauders-ui.js','marauders-ui.css','city-details-ui.js','city-details-ui.css','scout-report-ui.js','scout-report-ui.css','stamina-ui.js','troop-orders-ui.js']){
         delivered[file]=fs.readFileSync(path.resolve(__dirname,'../dist',file),'utf8');
         const source=fs.readFileSync(path.resolve(__dirname,'..',file),'utf8').replace(/\r\n/g,'\n');
         assert.equal(delivered[file].replace(/\r\n/g,'\n'),file==='marauders-ui.js'?require('./estate-delivery').minifyEstate(source):source,'Built NPC Info asset is stale: '+file);
@@ -47,6 +47,7 @@ async function main(built = false) {
       await ev('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
       await ev('Promise.all(modal.getAnimations({subtree:true}).filter(a=>a.effect.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})))');
       assert(await ev('modal.open'),'NPC Info must remain open after painting');
+      assert.equal(await ev("Number(modalBody.querySelector('[data-hunt-stamina]').dataset.huntStamina)"),classification === 'boss' ? 20 : 10);
       const info=await ev(`(()=>{
         const ledger=modalBody.querySelector('.cd-ledger'),actions=modalBody.querySelector('.cd-actions');ledger.scrollTop=0;
         const rect=node=>{const r=node.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}};
@@ -109,7 +110,7 @@ async function main(built = false) {
       __CROWNLANDS_BENCHMARK__.closeModal();
       const now=Date.now(), qa=window.huntQA={uid:'hunt-fixture', purchases:[], sends:0, count:0};
       getCurrentOnlineUid=()=>qa.uid;
-      const api={getStaminaState:async()=>({state:{version:1,value:70,recoveredAtMs:now,revision:1,paidDay:'',serverNowMs:now},crowns:120,walletRevision:1,huntingEnabled:true,offer:{version:2,price:9,stamina:70,staminaRevision:1,walletRevision:1,utcDay:CrownlandsMarauders.day(now)}}),subscribeStamina:callbacks=>{qa.callbacks=callbacks;return()=>{};},refillStamina:request=>{qa.purchases.push(request);return new Promise(resolve=>qa.resolve=resolve);}};
+      const api={getStaminaState:async()=>({state:{version:2,value:70,recoveredAtMs:now,revision:1,paidDay:'',serverNowMs:now},crowns:120,walletRevision:1,huntingEnabled:true,offer:{version:2,price:9,stamina:70,staminaRevision:1,walletRevision:1,utcDay:CrownlandsMarauders.day(now)}}),subscribeStamina:callbacks=>{qa.callbacks=callbacks;return()=>{};},refillStamina:request=>{qa.purchases.push(request);return new Promise(resolve=>qa.resolve=resolve);}};
       qa.api=api; getOnlineApi=()=>api;
       CrownlandsStaminaUI.sync({uid:qa.uid,api,onWallet:()=>{}});
       onlineCombatAuthorization={uid:qa.uid,shieldExpiresAtMs:now+900000,retaliation:[{id:'hunt-retake',cityId:'fixture-city',cityName:'Thornford',regionId:getActiveMapRegionId(),status:'available',expiresAtMs:now+600000}]};renderCombatTimers();
@@ -249,12 +250,16 @@ async function main(built = false) {
       assert(Math.abs(hud.card.y-hud.currencies.y)<2,'Stamina beside currencies');assert(hud.card.x>=hud.currencies.right,'No overlap');assert(hud.timers.y>=hud.card.bottom-2,'Timers below group');
       await ev("document.getElementById('staminaButton').focus();document.getElementById('staminaButton').click()");await wait("!!document.querySelector('.stamina-panel[open]')");
       assert.equal(await ev('huntQA.purchases.length'),0,'Opening never purchases');
-      assert(!await ev("document.querySelector('.stamina-panel details').open"),'Recovery details start collapsed');
+      assert(!await ev("document.querySelector('.stamina-panel details').open"),'Hunt details start collapsed');
+      assert.equal(await ev("document.querySelector('[data-hunts]').textContent"),'7');
+      assert.equal(await ev("document.querySelector('[data-boss-hunts]').textContent"),'3');
+      assert(await ev("document.querySelector('.stamina-panel details').textContent.includes('does not recover automatically')"));
+      assert(!await ev("!!document.querySelector('[data-next],[data-full]')"));
       assert.equal(await ev("document.querySelector('[data-refill-stamina]').textContent"),'70 → 100 · Restores 30');
       await ev("huntQA.callbacks.onError(new Error('Synthetic disconnect'))");
       assert.equal(await ev("document.querySelector('[data-stamina-value]').textContent"),'—/100');
       assert(await ev("document.querySelector('[data-stamina-feedback]').textContent.includes('Reconnect to continue')"));
-      await ev("huntQA.callbacks.onState({version:1,value:70,recoveredAtMs:Date.now(),revision:1,paidDay:''})");
+      await ev("huntQA.callbacks.onState({version:2,value:70,recoveredAtMs:Date.now(),revision:1,paidDay:''})");
       assert.equal(await ev("document.querySelector('[data-stamina-value]').textContent"),'70/100');
       assert.equal(await ev("document.querySelector('[data-stamina-fill]').style.width"),'70%');
       assert(!await ev("document.querySelector('[data-stamina-feedback]').textContent.includes('Reconnect to continue')"),'Recovered snapshots clear the connection warning');
@@ -286,7 +291,7 @@ async function main(built = false) {
     await ev("document.querySelector('#modal [data-open-stamina]').click()");
     await wait("!document.querySelector('[data-refill-buy]').disabled");
     await ev("document.querySelector('[data-refill-buy]').click();document.querySelector('[data-refill-buy]').click()");assert.equal(await ev('huntQA.purchases.length'),1);
-    await ev("huntQA.resolve({state:{version:1,value:100,recoveredAtMs:Date.now(),revision:2,paidDay:CrownlandsMarauders.day(Date.now())},crowns:111,walletRevision:2,receipt:{restored:30,price:9}})");
+    await ev("huntQA.resolve({state:{version:2,value:100,recoveredAtMs:Date.now(),revision:2,paidDay:CrownlandsMarauders.day(Date.now())},crowns:111,walletRevision:2,receipt:{restored:30,price:9}})");
     await wait("document.querySelector('[data-refill-buy]').textContent==='Stamina full'");
     assert(await ev("document.querySelector('[data-stamina-feedback]').textContent.includes('30 stamina restored for 9 Crowns')"),'Confirmation uses the receipt charge');
     await ev("document.querySelector('[data-stamina-close]').click()");
@@ -299,7 +304,7 @@ async function main(built = false) {
     assert.equal(await ev('activeRallyOrderContext.rallyId'),'preserved-rally');
     // Insufficient Crowns opens the real Shop, then restores the exact draft nodes.
     await ev(`(()=>{const qa=huntQA;qa.crowns=0;qa.walletRevision=3;qa.shopEnabled=true;qa.shopMode='live';qa.catalogReads=0;qa.checkoutCalls=0;
-      qa.stamina={version:1,value:9,recoveredAtMs:Date.now(),revision:3,paidDay:''};qa.callbacks.onState(qa.stamina);
+      qa.stamina={version:2,value:9,recoveredAtMs:Date.now(),revision:3,paidDay:''};qa.callbacks.onState(qa.stamina);
       qa.api.getStaminaState=async()=>({state:{...qa.stamina,serverNowMs:Date.now()},crowns:qa.crowns,walletRevision:qa.walletRevision,huntingEnabled:true,offer:{version:2,price:Math.ceil((100-qa.stamina.value)*3/10),stamina:qa.stamina.value,staminaRevision:qa.stamina.revision,walletRevision:qa.walletRevision,utcDay:CrownlandsMarauders.day(Date.now())}});
       qa.api.getLiveCrownPaymentCatalog=async()=>{qa.catalogReads++;if(qa.catalogFailure)throw Error('Unavailable');return{enabled:qa.shopEnabled,mode:qa.shopMode,packs:[{id:'fixture',crowns:1000,amountMinor:499,currency:'usd'}]};};
       qa.api.getCrownPaymentCatalog=async()=>({enabled:false,mode:'test',packs:[]});qa.api.createLiveCrownCheckout=async()=>{qa.checkoutCalls++;throw Error('No checkout should be created by navigation');};
@@ -347,7 +352,7 @@ async function main(built = false) {
     await wait("document.querySelector('[data-refill-buy]').textContent==='Buy Crowns'");
     await ev("huntQA.loadShop=ensureOptionalUiScripts;ensureOptionalUiScripts=(names,host,ready)=>{huntQA.shopReady=ready;return false;};document.querySelector('[data-refill-buy]').click();document.querySelector('[data-stamina-close]').click();huntQA.shopReady();ensureOptionalUiScripts=huntQA.loadShop");
     assert(await ev("modal.open && !modal.classList.contains('shop-modal') && !document.querySelector('.stamina-panel[open]') && huntQA.input===document.getElementById('troopExactAmount')"),'Late Shop load cannot reopen a canceled review');
-    await ev("modal.close();huntQA.callbacks.onState({version:1,value:9,recoveredAtMs:Date.now(),revision:3,paidDay:''})");assert.equal(await ev("document.querySelector('[data-stamina-value]').textContent"),'9/100');
+    await ev("modal.close();huntQA.callbacks.onState({version:2,value:9,recoveredAtMs:Date.now(),revision:3,paidDay:''})");assert.equal(await ev("document.querySelector('[data-stamina-value]').textContent"),'9/100');
     await ev("openMarauderDetails(huntQA.target.id)");assert(await ev("modalBody.textContent.includes('Scout this spawn')"));assert(!await ev("modalBody.textContent.includes('Scouted defenders:')"));
     await ev(`(()=>{const now=Date.now();mergeServerScoutReport({type:'scout',cityId:huntQA.target.id,targetType:'marauder',targetSpawnId:'fixture-spawn',scoutReport:{targetType:'marauder',targetSpawnId:'fixture-spawn',troops:87,totalDefense:87,regionId:huntQA.target.regionId,scoutedAtMs:now,expiresAtMs:now+600000}});openMarauderDetails(huntQA.target.id);})()`);
     assert(await ev("modalBody.textContent.includes('Scouted defenders:')"));
@@ -389,6 +394,7 @@ async function main(built = false) {
           map:!!modalBody.querySelector('[data-report-jump]:not(:disabled)'),timers:!!b.closest('.scout-ledger-shell').querySelector('[data-scout-report-age]')&&!!modalBody.querySelector('[data-scout-report-expires]')};})()`);
         assert(scout.loaded&&scout.art.includes(classification==='boss'?'boss-v1':'solo-v1')&&scout.cards===2&&scout.table&&!scout.fakeCity&&!scout.overflow&&scout.fit&&scout.map&&scout.timers,JSON.stringify(scout));
         assert(scout.text.includes(troops.toLocaleString('en-US'))&&scout.text.includes('1.00 defense per defender')&&scout.text.includes('only to this spawn'));
+        assert.equal(await ev("Number(modalBody.querySelector('[data-hunt-stamina]').dataset.huntStamina)"),classification==='boss'?20:10);
         assert.deepEqual(scout.sections,['Overview','Defenses','Hunt']);
         await ev("modalBody.querySelector('[data-scout-jump=\"scoutDetail-defense\"]').focus()");
         await client.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,text:'\r'});
@@ -412,6 +418,19 @@ async function main(built = false) {
     assert(await ev("(()=>{CrownlandsScoutReportUI.updateTiming(modalBody,20);return document.querySelector('.expiry').classList.contains('urgent')})()"));
     await ev("document.querySelector('[data-scout-close]').click()");
     assert(!await ev('modal.open'));
+    // Actual launch confirmation must direct 19 stamina to refill, and accept 20.
+    for(const amount of [19,20]) {
+      await ev(`modal.close();huntQA.stamina={...huntQA.stamina,value:${amount}};huntQA.callbacks.onState(huntQA.stamina);
+        huntQA.confirmed=null;void confirmClanRallyAction({id:'cost-check',targetType:'marauder',targetRegionId:huntQA.target.regionId,participants:[]},'launch').then(value=>huntQA.confirmed=value)`);
+      assert.equal(await ev("Number(modalBody.querySelector('[data-hunt-stamina]').dataset.huntStamina)"),20);
+      await ev("modalBody.querySelector('[data-rally-confirm=accept]').click()");
+      if(amount===19) {
+        await wait("!!document.querySelector('.stamina-panel[open]')");
+        assert.equal(await ev('huntQA.confirmed'),null);
+        await ev("document.querySelector('[data-stamina-close]').click();modal.close()");
+      } else {await wait('huntQA.confirmed===true');}
+    }
+    await ev("huntQA.stamina={...huntQA.stamina,value:9};huntQA.callbacks.onState(huntQA.stamina)");
     await ev("bossReadiness.set('rally-fixture',{checkedAtMs:Date.now(),participants:[{uid:'ally',ready:false}],combatForecast:{status:'unavailable'}})");
     assert(await ev("renderBossReadiness({id:'rally-fixture',participants:[{uid:'ally',ownerName:'Ally'}]}).includes('Ally: Needs stamina')"));
     await ev("bossReadiness.set('balance-v2',{rallyUpdatedAtMs:10,participants:[],contribution:{eligible:false,maxSharePercent:40,members:[{uid:'ally',attackPower:100,minimumPower:4000000,sharePercent:1,eligible:false,reason:'Needs at least 10% of full defense.',gold:100,xp:20,estimatedLosses:10}]},combatForecast:{status:'scouted',attackPower:100,defensePower:40000000,estimatedAttackerLosses:10}})");

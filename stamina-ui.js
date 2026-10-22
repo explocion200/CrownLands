@@ -72,8 +72,9 @@
       card.setAttribute("aria-label", state ? `Stamina ${state.value} of 100. Refill stamina.` : "Stamina unavailable. Open refill review.");
     }
     document.querySelectorAll("[data-hunt-stamina]").forEach(element => {
-      element.textContent = `Stamina ${state ? `${state.value}/100` : "—/100"} · Cost 10`;
-      element.classList.toggle("stamina-low", Boolean(state && state.value < 10));
+      const cost = Number(element.dataset.huntStamina) === M.BOSS_HUNT_COST ? M.BOSS_HUNT_COST : M.HUNT_COST;
+      element.textContent = `Stamina ${state ? `${state.value}/100` : "—/100"} · Cost ${cost}`;
+      element.classList.toggle("stamina-low", Boolean(state && state.value < cost));
     });
     const s = session, dialog = s?.dialog;
     if (!dialog?.open) return;
@@ -83,8 +84,7 @@
     const progress = dialog.querySelector("progress"); progress.value = state?.value || 0;
     progress.setAttribute("aria-label", state ? `Stamina ${state.value} of 100` : "Stamina unavailable");
     set("[data-hunts]", state ? number(state.hunts) : "—");
-    set("[data-next]", !state ? "—" : state.value === 100 ? "Full" : duration(state.nextPointAtMs));
-    set("[data-full]", !state ? "—" : state.value === 100 ? "Full" : duration(state.fullAtMs));
+    set("[data-boss-hunts]", state ? number(state.bossHunts) : "—");
     set("[data-refill-stamina]", state ? `${state.value} → 100 · Restores ${100 - state.value}` : "—");
     set("[data-refill-crowns]", s.crowns === null ? "—" : `${number(s.crowns)}${price > 0 && s.crowns >= price ? ` → ${number(s.crowns - price)}` : ""}`);
     set("[data-refill-used]", state ? `${state.paidRefillsToday}/1` : "—/1");
@@ -131,8 +131,8 @@
         <h3>Your stamina <strong data-panel-value>—/100</strong></h3><progress max="100" value="0"></progress>
         <h3>Refill stamina</h3><p class="stamina-offer" data-refill-stamina>—</p><dl><div><dt>Crowns</dt><dd data-refill-crowns>—</dd></div><div><dt>Paid refills today</dt><dd data-refill-used>—/1</dd></div></dl>
         <p data-stamina-feedback role="status"></p><button type="button" data-stamina-refresh>Refresh review</button>
-        <div data-stamina-shop-loading hidden></div><details><summary>Recovery &amp; hunts</summary><p>Available hunts: <strong data-hunts>—</strong> · 10 stamina each</p>
-        <p>Recover 1 stamina every 12 minutes.<br>Next point: <strong data-next>—</strong> · Full in: <strong data-full>—</strong></p></details></div>
+        <div data-stamina-shop-loading hidden></div><details><summary>Hunt costs &amp; refill rules</summary><p>Solo hunts: <strong data-hunts>—</strong> · 10 stamina each<br>Boss rallies: <strong data-boss-hunts>—</strong> · 20 stamina per member</p>
+        <p>Stamina does not recover automatically. Refill with Crowns once per UTC day.</p></details></div>
         <footer><button type="button" data-refill-buy disabled>Loading stamina…</button></footer></section><section data-enemy-search aria-label="Find enemies"></section></div>`;
       document.body.append(dialog);
       s.search = root.installMarauderSearch?.(dialog, { isCurrent: () => session === s && dialog.open,

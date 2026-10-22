@@ -170,7 +170,7 @@ async function main() {
       runTransaction: action => db.runTransaction(action), assertCurrentPlayerProfile: () => {},
       cosmeticService: refillWallet, clock: () => clock });
     await refillWallet.stateRef(refillUid).set({ version: 1, crowns: 120, revision: 1 });
-    await refill.stateRef(refillUid).set({ version: 1, value: 70, recoveredAtMs: clock, revision: 1, paidDay: '' });
+    await refill.stateRef(refillUid).set({ version: 2, value: 70, recoveredAtMs: clock, revision: 1, paidDay: '' });
     tamper = null;
     const paidOrder = await service.create(refillUid, { ...request, requestId: 'refill_credit_race' });
     const paidSession = [...sessions.values()].find(session => session.client_reference_id === paidOrder.order.orderId);

@@ -27366,7 +27366,7 @@ function confirmClanRallyAction(rally, action) {
       ${launching
         ? `<p>All ${formatNumber((rally.participants || []).filter(participant => participant.status === "assembled").length)} Ready participants will march as one army at the speed of the slowest contribution.</p>${inbound.length ? `<p class="clan-warning">These incoming contributions will turn back now:</p>${inboundList}` : ""}`
         : `<p>The creator's troops return to the assembly city. Assembled allies and inbound contributions will travel back normally.</p>`}
-      ${launching && rally.targetType === "marauder" ? renderHuntStamina("Charged to each assembled participant when you launch.") : ""}
+      ${launching && rally.targetType === "marauder" ? renderHuntStamina("Charged to each assembled participant when you launch.", true) : ""}
       <footer>
         <button type="button" class="profile-secondary-btn" data-rally-confirm="cancel">Keep Forming</button>
         <button type="button" class="${launching ? "profile-primary-btn" : "danger-action"}" data-rally-confirm="accept">${launching ? "Launch Rally" : "Cancel Rally"}</button>
@@ -27386,7 +27386,7 @@ function confirmClanRallyAction(rally, action) {
       if (modal.open) modal.close();
     });
     modalBody.querySelector("[data-rally-confirm='accept']")?.addEventListener("click", () => {
-      if (launching && rally.targetType === "marauder" && (!CrownlandsStaminaUI.value() || CrownlandsStaminaUI.value().value < 10)) { CrownlandsStaminaUI.open(); return; }
+      if (launching && rally.targetType === "marauder" && (!CrownlandsStaminaUI.value() || CrownlandsStaminaUI.value().value < CrownlandsMarauders.BOSS_HUNT_COST)) { CrownlandsStaminaUI.open(); return; }
       finish(true);
       if (modal.open) modal.close();
     });

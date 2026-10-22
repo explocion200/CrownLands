@@ -6,7 +6,7 @@
   "use strict";
   const VERSION = 1;
   // Approved October 19 fixed values: level, defenders, Gold, XP, item bps, box bps, Uncommon upgrade bps.
-  // Version 1 remains readable; stamina VERSION is independent of enemy balance.
+  // Version 1 remains readable; stamina STAMINA_VERSION is independent of enemy balance.
   const BALANCE_VERSION = 2;
   // Frozen on departure, separately from the NPC's immutable balance version.
   const BOSS_REWARD_VERSION = 2;
@@ -113,7 +113,8 @@
     [100, 40000000, 271977950, 43672116, 10000, 9000, 1000],
   ].map(Object.freeze));
   const REFILL_VERSION = 2;
-  const MAX_STAMINA = 100, HUNT_COST = 10, RECOVERY_MS = 12 * 60 * 1000, FULL_REFILL_PRICE = 30;
+  const STAMINA_VERSION = 2;
+  const MAX_STAMINA = 100, HUNT_COST = 10, BOSS_HUNT_COST = 20, RECOVERY_MS = 12 * 60 * 1000, FULL_REFILL_PRICE = 30;
   const ANCHORS = Object.freeze([
     [1, 100, 100, 20], [20, 10000, 5000, 500], [40, 100000, 50000, 2500],
     [60, 1000000, 500000, 10000], [79, 10000000, 5000000, 25000],
@@ -153,28 +154,40 @@
     return [{ slot: 0, classification: "solo", min: 1, max: 10 },
       { slot: 1, classification: "solo", min: 11, max: 79 }];
   }
-  function stamina(raw, now) {
+  function stamina(raw, now, recoveryStoppedAtMs) {
     if (!Number.isSafeInteger(now) || now < 0) fail("Invalid server time.");
-    if (raw == null) return { version: VERSION, value: MAX_STAMINA, recoveredAtMs: now, revision: 0, paidDay: "" };
-    if (raw.version !== VERSION || !Number.isInteger(raw.value) || raw.value < 0 || raw.value > MAX_STAMINA
+    if (raw == null) return { version: STAMINA_VERSION, value: MAX_STAMINA, recoveredAtMs: now, revision: 0, paidDay: "" };
+    if (![1, STAMINA_VERSION].includes(raw.version) || !Number.isInteger(raw.value) || raw.value < 0 || raw.value > MAX_STAMINA
       || !Number.isSafeInteger(raw.recoveredAtMs) || raw.recoveredAtMs < 0
       || !Number.isSafeInteger(raw.revision) || raw.revision < 0) fail("Stamina state is unavailable. Please retry later.");
-    const elapsed = Math.max(0, now - raw.recoveredAtMs);
-    const recovered = Math.floor(elapsed / RECOVERY_MS);
-    const value = Math.min(MAX_STAMINA, raw.value + recovered);
-    return { version: VERSION, value, recoveredAtMs: value === MAX_STAMINA ? now : raw.recoveredAtMs + recovered * RECOVERY_MS,
-      revision: raw.revision, paidDay: typeof raw.paidDay === "string" ? raw.paidDay : "" };
+    const legacy = raw.version === 1;
+    // All legacy accounts use one deployment cutoff, including accounts that
+    // return months later. Never use login time to award additional recovery.
+    if (legacy && (!Number.isSafeInteger(recoveryStoppedAtMs) || recoveryStoppedAtMs < 0 || recoveryStoppedAtMs > now)) {
+      fail("Stamina recovery transition is unavailable. Please retry later.");
+    }
+    const recovered = legacy ? Math.floor(Math.max(0, recoveryStoppedAtMs - raw.recoveredAtMs) / RECOVERY_MS) : 0;
+    return { version: STAMINA_VERSION, value: Math.min(MAX_STAMINA, raw.value + recovered),
+      recoveredAtMs: legacy ? recoveryStoppedAtMs : raw.recoveredAtMs,
+      revision: raw.revision + (legacy ? 1 : 0), paidDay: typeof raw.paidDay === "string" ? raw.paidDay : "" };
   }
   function changeStamina(raw, delta, now) {
     const state = stamina(raw, now);
-    if (!Number.isInteger(delta) || state.value + delta < 0) fail("Not enough stamina. A hunt costs 10 stamina.");
+    if (!Number.isInteger(delta) || state.value + delta < 0) fail(`Not enough stamina. This hunt costs ${Math.abs(delta)} stamina.`);
     return { ...state, value: Math.min(MAX_STAMINA, state.value + delta), revision: state.revision + 1 };
+  }
+  function staminaRefund(army) {
+    if (army.staminaCommitted !== true) return 0;
+    // Departures before cost snapshots always paid 10, even for a boss.
+    const cost = army.staminaCost ?? HUNT_COST;
+    if (cost !== HUNT_COST && !(army.rallyAttack === true && cost === BOSS_HUNT_COST)) fail("Invalid committed stamina cost.");
+    return cost;
   }
   function view(raw, now) {
     const state = stamina(raw, now);
-    return { ...state, max: MAX_STAMINA, hunts: Math.floor(state.value / HUNT_COST), serverNowMs: now,
-      nextPointAtMs: state.value < MAX_STAMINA ? state.recoveredAtMs + RECOVERY_MS : null,
-      fullAtMs: state.value < MAX_STAMINA ? state.recoveredAtMs + (MAX_STAMINA - state.value) * RECOVERY_MS : now,
+    return { ...state, max: MAX_STAMINA, hunts: Math.floor(state.value / HUNT_COST),
+      bossHunts: Math.floor(state.value / BOSS_HUNT_COST), serverNowMs: now,
+      nextPointAtMs: null, fullAtMs: null,
       paidRefillsToday: state.paidDay === day(now) ? 1 : 0,
       resetsAtMs: Date.parse(day(now)) + 86400000 };
   }
@@ -265,6 +278,6 @@
     }
     return { balanceVersion: VERSION, damage, gold, xp, item, recipientUid, rolls: [...rolls] };
   }
-  return Object.freeze({ VERSION, BALANCE_VERSION, BOSS_REWARD_VERSION, BALANCE_V2, REFILL_VERSION, MAX_STAMINA, HUNT_COST, RECOVERY_MS, FULL_REFILL_PRICE, ANCHORS, ITEMS,
-    day, refillPrice, balance, slots, stamina, changeStamina, view, allocate, bossEligibility, rewards });
+  return Object.freeze({ VERSION, BALANCE_VERSION, BOSS_REWARD_VERSION, BALANCE_V2, REFILL_VERSION, STAMINA_VERSION, MAX_STAMINA, HUNT_COST, BOSS_HUNT_COST, RECOVERY_MS, FULL_REFILL_PRICE, ANCHORS, ITEMS,
+    day, refillPrice, balance, slots, stamina, changeStamina, staminaRefund, view, allocate, bossEligibility, rewards });
 });

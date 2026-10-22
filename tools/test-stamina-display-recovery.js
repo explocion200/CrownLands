@@ -43,7 +43,7 @@ async function check(source) {
     assert(timer, "Expected a recovery poll"); timers.delete(id); await timer.fn(); await flush();
   };
   try {
-    state = { version: 1, value: 70, recoveredAtMs: Date.now(), revision: 1, paidDay: "" };
+    state = { version: 2, value: 70, recoveredAtMs: Date.now(), revision: 1, paidDay: "" };
     await client.auth.reload(); ui.sync({ uid: "fixture", api }); await flush(); await tick();
     assert.equal(value.textContent, "70/100"); assert.equal(fill.style.width, "70%");
     const initial = deliveries; await tick(); assert.equal(deliveries, initial, "Healthy unchanged snapshots stay deduplicated");
@@ -59,7 +59,7 @@ async function check(source) {
     state = { ...state, value: 9, revision: 2 }; await tick();
     assert.equal(value.textContent, "9/100"); assert.equal(fill.style.width, "9%"); assert(classes.has("stamina-low"));
     state = { ...state, recoveredAtMs: Date.now() - 12 * 60 * 1000 }; await tick();
-    assert.equal(value.textContent, "10/100"); assert(!classes.has("stamina-low"));
+    assert.equal(value.textContent, "9/100"); assert(classes.has("stamina-low"), "Time must not refill stamina");
     failure = "permission-denied"; await tick(); assert.equal(value.textContent, "—/100");
     assert.equal(timers.size, 0, "Permission revocation still stops the listener");
     assert.equal(calls.filter(call => call.url.endsWith("/call/getStaminaState")).length, 1, "Recovery uses the existing subscription, not extra callable polling");

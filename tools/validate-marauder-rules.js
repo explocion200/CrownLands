@@ -66,23 +66,39 @@ assert.deepEqual(M.slots({}), []);
 const now = Date.UTC(2026, 9, 12), interval = M.RECOVERY_MS;
 let stamina = M.changeStamina(null, -10, now);
 assert.equal(stamina.value, 90);
-assert.equal(M.stamina(stamina, now + interval - 1).value, 90);
-assert.equal(M.stamina(stamina, now + interval).value, 91);
-stamina = M.changeStamina(stamina, -10, now + interval / 2);
-assert.equal(M.stamina(stamina, now + interval).value, 81); // Spending preserves fractional recovery.
-assert.equal(M.stamina(stamina, now + 86400000).value, 100);
+for (const elapsed of [interval - 1, interval, 86400000, 365 * 86400000]) {
+  assert.equal(M.stamina(stamina, now + elapsed).value, 90, "Time never restores v2 stamina");
+}
+stamina = M.changeStamina(stamina, -20, now + interval / 2);
+assert.equal(M.stamina(stamina, now + 86400000).value, 70);
 assert.equal(M.changeStamina(stamina, 100, now).value, 100);
-assert.throws(() => M.changeStamina({ ...stamina, value: 9 }, -10, now));
+assert.throws(() => M.changeStamina({ ...stamina, value: 19 }, -20, now), /20 stamina/);
+assert.throws(() => M.changeStamina({ ...stamina, value: 9 }, -10, now), /10 stamina/);
 assert.equal(M.view({ ...stamina, paidDay: M.day(now) }, now).paidRefillsToday, 1);
 assert.equal(M.view({ ...stamina, paidDay: M.day(now) }, now + 86400000).paidRefillsToday, 0);
-assert.equal(86400000 / interval / M.HUNT_COST, 12);
+assert.equal(M.view(stamina, now).bossHunts, 3);
+assert.equal(M.view(stamina, now).hunts, 7);
+assert.equal(M.view(stamina, now).nextPointAtMs, null);
+assert.equal(M.view(stamina, now).fullAtMs, null);
+const legacy = { version: 1, value: 66, recoveredAtMs: now, revision: 5, paidDay: M.day(now) };
+for (const cutoff of [undefined, -1, NaN, now + 2 * interval]) assert.throws(() => M.stamina(legacy, now + interval, cutoff));
+for (const [elapsed, expected] of [[0,66],[interval-1,66],[interval,67],[interval*100,100]]) {
+  const cutoff = now + elapsed, migrated = M.stamina(legacy, cutoff + 365 * 86400000, cutoff);
+  assert.equal(migrated.value, expected); assert.equal(migrated.version, M.STAMINA_VERSION);
+  assert.equal(migrated.revision, 6); assert.equal(migrated.paidDay, legacy.paidDay);
+  assert.deepEqual(M.stamina(migrated, cutoff + 366 * 86400000), migrated);
+}
+assert.equal(M.staminaRefund({ staminaCommitted: false, staminaCost: 20 }), 0);
+for (const rallyAttack of [false, true]) {
+  assert.equal(M.staminaRefund({ staminaCommitted: true, rallyAttack }), 10);
+  assert.equal(M.staminaRefund({ staminaCommitted: true, rallyAttack, staminaCost: 10 }), 10);
+}
+assert.equal(M.staminaRefund({ staminaCommitted: true, rallyAttack: true, staminaCost: 20 }), 20);
+for (const staminaCost of [0, 30, -10, "20", 10.5]) assert.throws(() => M.staminaRefund({ staminaCommitted: true, rallyAttack: true, staminaCost }));
+assert.throws(() => M.staminaRefund({ staminaCommitted: true, staminaCost: 20 }));
 assert.equal(M.MAX_STAMINA / M.HUNT_COST, 10);
-// Maximum daily pools at a fixed level before losses, XP caps, and random items.
-const totals = [1, 20, 79, 80, 100].map(level => ({ level,
-  naturalGold: M.balance(level).gold * 12, paidExtraGold: M.balance(level).gold * 10,
-  bankedExtraGold: M.balance(level).gold * 10,
-  naturalXpPool: M.balance(level).xp * 12, paidExtraXpPool: M.balance(level).xp * 10 }));
-console.log(JSON.stringify({ passed: true, rewardBudget: totals }));
+assert.equal(M.MAX_STAMINA / M.BOSS_HUNT_COST, 5);
+console.log("Stamina: no recovery, fixed rollout cutoff, Crown pricing, solo/boss costs and departure refunds passed.");
 
 // Exercise the existing server combat and departure-recovery implementations
 // with NPC defense, including exact-power losses and very large armies.
@@ -163,7 +179,7 @@ for (const cells of expected) {
 }
 for(const version of [0,3,null,'2',NaN])assert.throws(()=>M.balance(80,version));
 assert.deepEqual(M.balance(80),M.balance(80,1),'Missing version remains legacy');
-assert.equal(M.stamina({version:1,value:50,recoveredAtMs:0,revision:1,paidDay:''},0).value,50);
+assert.equal(M.stamina({version:2,value:50,recoveredAtMs:0,revision:1,paidDay:''},0).value,50);
 const contribution=(powers,level=80)=>M.bossEligibility(level,powers.map((attackPower,i)=>({uid:'p'+i,attackPower})));
 for(const [powers,valid] of [
   [[500000,500000],true],[[499999,500000],false],[[7000000,3000000],true],[[7000001,2999999],false],
