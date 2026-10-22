@@ -1,19 +1,33 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "7af7d53708da364f3914fbdb4e0245d5811e1d02",
+  "baseCommit": "870bb78a290d17d677d14f3d6b88136b7ea49740",
   "coverage": [
     {
       "paths": [
-        "social-ui.js",
-        "tools/validate-social-browser.js"
+        "world/appearance.js",
+        "world/native.js",
+        "world/preview.js",
+        "world/preview.css",
+        "tools/test-local-postgres-clan-courtyard.js",
+        "tools/validate-continuous-city-stages.js",
+        "tools/validate-continuous-pickup-placement.js"
       ],
       "tests": [
-        "tools/validate-social-browser.js",
-        "tools/validate-chat.js",
-        "tools/test-private-notifications.js",
+        "tools/test-local-postgres-clan-courtyard.js",
+        "tools/validate-continuous-city-stages.js",
+        "tools/validate-continuous-pickup-placement.js",
+        "tools/validate-continuous-game-ui.js",
+        "tools/validate-clan-tower-buildings.js",
         "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Recover failed Friends/Messages startup using one account-scoped request, bounded backoff, chat reopen/visibility/online events and cancellable logout cleanup. Real browser cases reproduce missing tabs after initial failure; verify retry, backend disabled capability, concurrent starts, stale-account completion, failed-list reload and unchanged shared chat layouts across desktop/landscape/mobile. Existing chat and private notification tests protect shared tab lifecycle, unread and alert behavior; asset budgets keep the recovery code bounded. No backend, schema, social permissions or gameplay changes; no emulator suite is affected."
+      "reason": "Restore the missing courtyard in the production continuous renderer using existing scoped Tower subscriptions, retaining native building panels and armed Tower selection. Reduce Tower and six child sprites within the previous objective footprint; cover all four locations, all staged art, desktop and two landscape sizes, click/touch and drag, authoritative snapshot changes/capture/neutralization, bounded assets and unchanged scene reuse through an isolated PostgreSQL/authenticated browser harness. Shared city geometry, label placement, pickup exclusion, async selection, building definitions and package budgets are affected dependencies. No server/API/authorization/data schema changes; existing backend commands are only exercised, so no emulator change is required."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
+      "tests": [],
+      "reason": "Record the owner-confirmed smaller visible courtyard and existing completed/unbuilt behavior, explicitly preserving the separate backend deployment hold."
     }
   ]
 }

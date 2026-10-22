@@ -9,11 +9,21 @@ window.createContinuousWorldView = async function (options = {}) {
     const stageThree = true, fullCatalog = true;
     const scene = options.scene;
     const M = window.SeamlessModel.forWorld(scene);
-    scene.objects = (scene.objects || []).map(SeamlessAppearance.geometry); scene.marches ||= [];
+    let rawObjects=scene.objects||[],courtyardSignature="";
+    scene.objects = rawObjects.map(SeamlessAppearance.geometry); scene.marches ||= [];
     world.style.width = `${scene.width}px`; world.style.height = `${scene.height}px`;
     world.classList.toggle("full-catalog", fullCatalog);
     viewport.setAttribute("aria-label", `${scene.sections.length}-section world. Drag to explore, scroll or pinch to zoom. Select to inspect.`);
     const objects = new Map(scene.objects.map(o => [o.key, o]));
+    function updateObjects(force=false){
+      const towers=rawObjects.filter(o=>o.kind==="tower");
+      const states=new Map(towers.map(o=>[o.id,options.getTowerState?.(o.id)]));
+      const signature=JSON.stringify(towers.map(o=>{const s=states.get(o.id);return [o.key,o.ownerClanId,s?.ownerKind,s?.clanId,s?.ownershipRevision,s?.buildings,s?.buildingProject?.buildingId];}));
+      if(!force&&signature===courtyardSignature)return;
+      courtyardSignature=signature;
+      scene.objects=rawObjects.map(SeamlessAppearance.geometry).flatMap(o=>o.kind==="tower"?[o,...SeamlessAppearance.courtyard(o,states.get(o.id))]:[o]);
+      objects.clear();scene.objects.forEach(o=>objects.set(o.key,o));
+    }
     function prepareMarch(m, points) {
       const path = M.preparePath(points);
       return { ...m, points, path, position: points[0], bounds: { left: Math.min(...points.map(p => p.x)), top: Math.min(...points.map(p => p.y)), right: Math.max(...points.map(p => p.x)), bottom: Math.max(...points.map(p => p.y)) } };
@@ -72,12 +82,13 @@ window.createContinuousWorldView = async function (options = {}) {
       if (url) { image.src = url; image.hidden = false; } else { image.removeAttribute("src"); image.hidden = true; }
     }
     function createObject(item) {
-      const node = document.createElement(["scenery","troop"].includes(item.kind) ? "div" : "button");
+      const node = document.createElement(["scenery","courtyard","troop"].includes(item.kind) ? "div" : "button");
       node.className = item.kind === "troop" ? "troop army-token" : `object ${item.kind}`; node.dataset.key = item.key;
-      if (item.kind !== "scenery") { node.type = "button"; node.setAttribute("aria-label", `${item.name} · ${item.sectionName || "Sample patrol"}`); }
+      if (!["scenery","courtyard"].includes(item.kind)) { node.type = "button"; node.setAttribute("aria-label", `${item.name} · ${item.sectionName || "Sample patrol"}`); }
+      if(item.kind==="courtyard")node.setAttribute("aria-hidden","true");
       if (item.kind === "troop") {node.setAttribute("role","button");node.tabIndex=0;}
       if (item.kind !== "troop") { const image = new Image(); image.alt = ""; image.draggable = false; node.append(image); }
-      if (!["scenery", "troop"].includes(item.kind)) { const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = item.name; node.append(tag); }
+      if (!["scenery", "courtyard", "troop"].includes(item.kind)) { const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = item.name; node.append(tag); }
       (item.kind === "troop" ? marchesLayer : objectsLayer).append(node);
       nodes.set(item.key, node); return node;
     }
@@ -183,7 +194,7 @@ window.createContinuousWorldView = async function (options = {}) {
         if (principalChanged || epochChanged || data.authExpired || data.removed?.includes(selected) || inspectedMissing
             || permissionChanged
             ) { selected = null; selectedSnapshot = null; options.onClear?.(); }
-        scene.objects = data.sections.flatMap(s => s.objects).map(SeamlessAppearance.geometry); objects.clear(); scene.objects.forEach(o => objects.set(o.key, o));
+        rawObjects=data.sections.flatMap(s=>s.objects);updateObjects(true);
         const routes = new Map(data.routes.map(r => [r.id, r.points]));
         marches = data.marches.map(m => {
           const old = byMarch.get(m.key); return old && !epochChanged && old.routeId === m.routeId ? { ...old, ...m } : prepareMarch(m, routes.get(m.routeId));
@@ -197,6 +208,7 @@ window.createContinuousWorldView = async function (options = {}) {
     }
     const observer = new ResizeObserver(resize); observer.observe(viewport); resize();
     function renderScene() {
+      updateObjects();
       const view = M.visible(camera, size, 75), exact = M.visible(camera, size);
       const overview = camera.zoom < M.limits(size).detail;
       const ordered = [...scene.sections].sort((a, b) => Math.hypot(a.x + 724 - camera.x, a.y + 543 - camera.y) - Math.hypot(b.x + 724 - camera.x, b.y + 543 - camera.y));
@@ -244,7 +256,7 @@ window.createContinuousWorldView = async function (options = {}) {
       const exclusions=[...(window.SeamlessAppearance?.labelBounds?.values()||[])];
       // Preserve existing encounter positions until natural respawn. A moved
       // decoration must never paint over one of those active/defeated markers.
-      for(const item of interactive.filter(o=>o.kind==="npc"))exclusions.push({left:item.left,top:item.top,right:item.left+item.width,bottom:item.top+item.height});
+      for(const item of interactive.filter(o=>["npc","tower","tower-building","courtyard"].includes(o.kind)))exclusions.push({left:item.left,top:item.top,right:item.left+item.width,bottom:item.top+item.height});
       const selectedObject=objects.get(selected);
       // Scenery is already packed around normal banners. Temporarily omit a
       // decoration if expanded details/controls occupy its otherwise clear spot.
