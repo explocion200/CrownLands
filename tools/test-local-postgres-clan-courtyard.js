@@ -98,6 +98,7 @@ for(const raw of fixture.objects.filter(o=>o.kind==="tower")){
     await page.evaluate(()=>modal.close());
    }
    await frame(t);await page.screenshot({path:path.join(output,`courtyard-${width}.png`)});
+   const bannerPositions=await page.locator('#continuous-game-surface .map-banner').evaluateAll(nodes=>Object.fromEntries(nodes.map(n=>[n.parentNode.dataset.key,n.style.transform])));
    await page.evaluate(id=>CrownlandsContinuousWorld.view.select(CrownlandsContinuousWorld.view.scene.objects.find(o=>o.id===id).key),t.id);
    await page.waitForFunction(()=>!CrownlandsContinuousWorld.bridge.running);
    await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
@@ -108,6 +109,11 @@ for(const raw of fixture.objects.filter(o=>o.kind==="tower")){
    for(const c of controls)for(const label of labels)assert(!overlap(c,label),"Tower actions overlap a map label: "+width+JSON.stringify({c,label}));
    const art=await page.locator('#continuous-game-surface .tower-building').evaluateAll(nodes=>nodes.map(n=>{const r=n.getBoundingClientRect();return {left:r.left,top:r.top,width:r.width,height:r.height};}));
    for(const c of controls)for(const b of art)assert(!overlap(c,b),"Tower actions obscure a building");
+   const afterPositions=await page.locator('#continuous-game-surface .map-banner').evaluateAll(nodes=>Object.fromEntries(nodes.map(n=>[n.parentNode.dataset.key,n.style.transform])));
+   assert.deepEqual(afterPositions,bannerPositions,"Selected Tower actions detached neighboring city banners");
+   await page.evaluate(()=>{CrownlandsContinuousWorld.view.clear();clearSelection(false);renderCities();});
+   await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
+   assert.equal(await page.locator('#continuous-game-surface .castle .map-banner').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).visibility==="hidden").length),0,"Neighbor banners did not return after closing Tower actions");
    const large=await page.locator('#continuous-game-surface .object.tower').first().boundingBox();
    await frame(t,"min");
    const little=await page.locator('#continuous-game-surface .object.tower').first().boundingBox();

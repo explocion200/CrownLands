@@ -142,12 +142,15 @@
     const byKey=new Map(entries.map(e=>[e.item.key,e]));
     const labels=entries.map(e=>({key:e.item.key,x:e.item.x,y:(e.item.labelTop??e.item.top)-4,anchored:e.item.kind==="npc",priority:e.node.classList.contains("selected")?1:0,...measurements.get(e.label)}));
     const labelBounds=new Map();
-    const obstacles=[...clearings,...controls,...rows.filter(({item})=>item.kind!=="courtyard").map(({item:o})=>({left:o.left,top:o.top,right:o.left+o.width,bottom:o.top+o.height}))];
+    const obstacles=[...clearings,...rows.filter(({item})=>item.kind!=="courtyard").map(({item:o})=>({left:o.left,top:o.top,right:o.left+o.width,bottom:o.top+o.height}))];
     for(const result of SeamlessModel.placeLabels(labels,new Set(),0,obstacles)){
-      if(!result.hidden)labelBounds.set(result.key,result.rect);
+      // An open action row may cover a neighboring banner on narrow screens.
+      // Temporarily suppress that banner instead of detaching it from its city.
+      const covered=!result.hidden&&controls.some(c=>SeamlessModel.intersects(c,result.rect.left,result.rect.top,result.rect.right-result.rect.left,result.rect.bottom-result.rect.top));
+      if(!result.hidden&&!covered)labelBounds.set(result.key,result.rect);
       const {banner,item}=byKey.get(result.key);
       banner.classList.toggle("compact",Boolean(result.compact));
-      banner.style.visibility=result.hidden?"hidden":"";
+      banner.style.visibility=result.hidden||covered?"hidden":"";
       banner.style.transform=`translate(${result.dx||0}px,${(result.dy||0)-4+(item.labelTop??item.top)-item.top}px) scale(.8)`;
     }
     window.SeamlessAppearance.labelBounds=labelBounds;
