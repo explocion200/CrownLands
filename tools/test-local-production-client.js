@@ -35,12 +35,29 @@ async function main() {
     assert.equal(options.cache, "no-store"); assert.equal(options.headers["X-Crownlands-Deployment"], config.epoch);
     if (url.endsWith("/health")) return Response.json({ ready: true, rehearsal: false, protocol: 1, epoch: healthEpoch });
     if (url === "/local-auth/v1/session") { authRequests++; return Response.json({ csrf: "fixture", user: { uid: "fixture" }, authTime: 1 }); }
-    assert(url.startsWith("/api/local-game/v1/")); gameRequests++; return Response.json({ result: { passed: true } });
+    assert(url.startsWith("/api/local-game/v1/")); gameRequests++;
+    if (root.CROWNLANDS_WORLD_SESSION) {
+      const input = JSON.parse(options.body).data;
+      if (!require("../local-backend/world/service").MOVEMENT.has(url.split("/").at(-1))) {
+        assert(!Object.hasOwn(input, "clientWorldProtocol")); assert(!Object.hasOwn(input, "clientWorldRevision"));
+      } else {
+        assert.equal(input.clientWorldProtocol, root.CROWNLANDS_WORLD_SESSION.protocol);
+        assert.equal(input.clientWorldRevision, root.CROWNLANDS_WORLD_SESSION.revision);
+      }
+    }
+    return Response.json({ result: { passed: true } });
   };
   run("local-client.js", root); const client = root.CrownlandsLocalBackend.create();
   await assert.rejects(client.auth.reload()); assert.equal(authRequests, 0); assert.equal(gameRequests, 0);
   healthEpoch = config.epoch; await client.auth.reload(); assert.equal(authRequests, 1);
-  assert.equal((await client.functions.httpsCallable({}, "fixture")({})).data.passed, true); assert.equal(gameRequests, 1); client.dispose();
+  assert.equal((await client.functions.httpsCallable({}, "fixture")({})).data.passed, true); assert.equal(gameRequests, 1);
+  root.CROWNLANDS_WORLD_SESSION = Object.freeze({ protocol: 1, revision: "a".repeat(64) });
+  for (const action of ["status", "list", "history", "send", "friend", "presence", "unread"]) {
+    await client.functions.httpsCallable({}, "social")({ action });
+  }
+  for (const name of ["clanIntelligence", "getHoldingTowerState", "getRealmInfo"]) await client.functions.httpsCallable({}, name)({ action: "list" });
+  for (const name of require("../local-backend/world/service").MOVEMENT) await client.functions.httpsCallable({}, name)({});
+  client.dispose();
   const invalid = browser(); run("local-client.js", invalid); assert.throws(() => invalid.CrownlandsLocalBackend.create());
 
   // Build a separate fixture artifact using the real static transport/worker.

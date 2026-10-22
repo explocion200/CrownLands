@@ -1,5 +1,8 @@
 (function initializeLocalClient(root) {
   "use strict";
+  // Match the server's movement-command boundary; private list APIs use their
+  // own strict payloads and do not accept world-command revision fields.
+  const worldCommands = new Set(["previewArmyRoute", "sendArmyOrder", "sendNearbyScouts", "sendRegroupOrders", "createClanRally", "joinClanRally", "launchClanRally", "cancelClanRally", "withdrawClanRallyContribution", "returnClanReinforcement", "useRecallHorn", "useSwiftMarch"]);
   function create() {
     const config = root.CROWNLANDS_LOCAL_BACKEND;
     const production = config?.mode === "production" && config.protocol === 1 && config.ready === true && /^[a-f0-9]{32}$/.test(config.epoch || "");
@@ -68,7 +71,7 @@
         signal?.throwIfAborted();
         if (path.startsWith("call/") && requestedWorld !== root.CROWNLANDS_WORLD_SESSION)
           throw makeError("functions/failed-precondition", "The world changed while this request waited. Please try again.");
-        if (requestedWorld) input = { ...input, data: { ...input.data,
+        if (requestedWorld && worldCommands.has(path.slice(5))) input = { ...input, data: { ...input.data,
           clientWorldProtocol: requestedWorld.protocol, clientWorldRevision: requestedWorld.revision } };
         return await performPost(path, input, false, signal);
       } finally {

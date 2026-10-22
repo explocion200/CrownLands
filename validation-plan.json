@@ -1,19 +1,23 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "7af7d53708da364f3914fbdb4e0245d5811e1d02",
+  "baseCommit": "870bb78a290d17d677d14f3d6b88136b7ea49740",
   "coverage": [
     {
       "paths": [
-        "social-ui.js",
-        "tools/validate-social-browser.js"
+        "local-client.js",
+        "tools/test-local-browser-client.js",
+        "tools/test-local-production-client.js"
       ],
       "tests": [
+        "tools/test-local-browser-client.js",
+        "tools/test-local-production-client.js",
         "tools/validate-social-browser.js",
-        "tools/validate-chat.js",
-        "tools/test-private-notifications.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/test-local-chat-client.js",
+        "tools/test-local-postgres-social.js",
+        "tools/test-local-postgres-clan-support.js",
+        "tools/test-local-postgres-world-service.js"
       ],
-      "reason": "Recover failed Friends/Messages startup using one account-scoped request, bounded backoff, chat reopen/visibility/online events and cancellable logout cleanup. Real browser cases reproduce missing tabs after initial failure; verify retry, backend disabled capability, concurrent starts, stale-account completion, failed-list reload and unchanged shared chat layouts across desktop/landscape/mobile. Existing chat and private notification tests protect shared tab lifecycle, unread and alert behavior; asset budgets keep the recovery code bounded. No backend, schema, social permissions or gameplay changes; no emulator suite is affected."
+      "reason": "The continuous-world transport attached movement revision fields to every callable, rejecting strict Friends/Messages and Scout Lodge intelligence payloads. Limit injection to the existing server movement-command boundary while retaining queued-world/session checks. Exercise real cookie HTTP and disposable PostgreSQL friends, conversation/history/unread and authorized Lodge list reads; reject forged fields. Compare the exact minified production transport against every server MOVEMENT entry and representative non-movement calls. Cover authoritative social/Lodge persistence and privacy, world command revision/rejection, responsive UI recovery and shared chat scheduling. No server, schema or authorization rule changes; relevant local PostgreSQL suites provision the CI database and replace no required checks. No emulator suite is needed for this client-only transport correction."
     }
   ]
 }
