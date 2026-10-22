@@ -49,9 +49,27 @@ The request retry/admission policy is unchanged; a failed 100-player run is a
 capacity finding, not permission to increase concurrency. Results belong under
 `release-artifacts/continuous-production/shared-load[-50|-100].json`.
 
-Required PR checks, isolated 24/50/100 comparisons and release verification are
-recorded in the delivery report. A browser FPS improvement and a synthetic load
-result do not establish full multiplayer capacity.
+Isolated sequential comparisons used the same local machine, fixture, workload
+and limits, without concurrent local browser tests. The baseline loads Store,
+reader and service from `12540859`; the optimized run uses `866f09f0`.
+
+| Players | Map p95, old/new | Command p95, old/new | Chat p95, old/new | Map retries, old/new | Exhausted map requests, old/new |
+|---|---:|---:|---:|---:|---:|
+| 24 | 64 / 65 ms | 148 / 145 ms | 80 / 88 ms | 0 / 0 | 0 / 0 |
+| 50 | 105 / 79 ms | 258 / 147 ms | 97 / 91 ms | 24 / 14 | 0 / 0 |
+| 100 | 905 / 691 ms | 147 / 190 ms | 95 / 119 ms | 464 / 341 | 3 / 1 |
+
+The 24- and 50-player scenarios passed all assertions. **Both 100-player runs
+failed** because area requests exhausted the existing eight retries. Latency
+percentiles cover completed requests and do not include exhausted requests.
+Command and chat requests completed in all runs, but their 100-player p95 was
+higher in the optimized run. This single comparison does not establish a
+production capacity or universal latency improvement. Existing admission bounds
+remain unchanged; another capacity investigation is required before promising
+100 simultaneous active map viewers. Sanitized reports are retained under
+`release-artifacts/server-read-performance/load/`.
+
+Required PR checks and release verification are recorded separately at delivery.
 
 ## Compatible rollout
 
