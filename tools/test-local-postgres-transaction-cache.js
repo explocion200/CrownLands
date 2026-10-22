@@ -36,9 +36,9 @@ const timing=require("../functions/operation-timing");
   await db._runTransaction(async tx=>{const first=await tx.get(a);await a.update({balance:40});assert.equal(first.data().balance,31);assert.equal((await tx.get(a)).data().balance,40);},undefined,"READ COMMITTED");
   await db.runTransaction(async tx=>{
    for(let i=0;i<1005;i++)await tx.get(db.doc("missing/"+i));
-   assert(tx.documents.size<=1000);assert.equal((await tx.get(a)).data().balance,40);
+   assert(tx.documents.size<=128);assert.equal((await tx.get(a)).data().balance,40);
    const foreign=new Store({schema:db.schema,pool:db.pool});await assert.rejects(async()=>tx.get(foreign.doc(a.path)),/Foreign/);
   });
-  console.log("Transaction cache: same-snapshot coalescing, independent values, missing docs, mixed batches, uncached queries, write guards, retry freshness, READ COMMITTED exclusion and 1,000-entry bound passed.");
+  console.log("Transaction cache: same-snapshot coalescing, independent values, missing docs, mixed batches, uncached queries, write guards, retry freshness, READ COMMITTED exclusion and 128-entry bound passed.");
  }finally{await db.pool.query(`DROP SCHEMA IF EXISTS ${db.schema} CASCADE`);await db.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

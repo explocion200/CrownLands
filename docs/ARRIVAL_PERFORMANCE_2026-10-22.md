@@ -15,7 +15,7 @@ request limits or active/archived world topology.
 
 - Independent arrival candidate, source/target, rally-assembly and participant
   profile/stat reads use existing `getAll` batches.
-- A transaction attempt reuses at most 1,000 direct document read promises under
+- A transaction attempt reuses at most 128 direct document read promises under
   SERIALIZABLE isolation. Queries are never cached, READ COMMITTED reads are not
   cached, and read-before-write validation still runs for a cached key. A retry
   creates a fresh cache. Snapshot `data()` returns independent decoded values.
