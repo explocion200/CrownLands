@@ -22281,10 +22281,39 @@ function holdingTowerReceiptResult(snapshot = null) {
   return raw.result && typeof raw.result === "object" ? raw.result : null;
 }
 
-function getClanShopUsage(profile = {}) {
+async function getClanShopUsage(transaction, profile, uid, nowMs) {
   const usage = profile.clanShopUsage || {};
-  return usage.worldId === ONLINE_WORLD_ID && usage.resetGeneration === RESET_GENERATION
-    && usage.realmShardId === getCurrentRealmShardId() ? usage : {};
+  const identity = { worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, realmShardId: getCurrentRealmShardId() };
+  const current = usage.worldId === identity.worldId && usage.resetGeneration === identity.resetGeneration
+    && usage.realmShardId === identity.realmShardId;
+  if (current && usage.version === 2) return usage;
+  const normalized = { ...identity, version: 2, utcDate: HOLDING_TOWERS.getUtcDateKey(nowMs), counts: {}, shieldReadyAtMs: 0 };
+  if (!current) return normalized;
+  // Older merge writes could carry yesterday's counts into today. Rebuild once
+  // from this player's successful receipts, retaining real purchases/cooldowns.
+  const receipts = await transaction.get(db.collection(`players/${uid}/clanShopReceipts`)
+    .where("createdAtMs", ">=", nowMs - CLAN_BUILDINGS.SHIELD_COOLDOWN_MS)
+    .orderBy("createdAtMs", "desc").limit(97));
+  if (receipts.size > 96) throw new HttpsError("failed-precondition", "Clan Shop allowance needs review. Please contact support.");
+  const dayStart = Date.parse(`${normalized.utcDate}T00:00:00Z`);
+  for (const snapshot of receipts.docs) {
+    const receipt = snapshot.data();
+    if (receipt.worldId !== identity.worldId || receipt.resetGeneration !== identity.resetGeneration
+      || receipt.realmShardId !== identity.realmShardId || receipt.createdAtMs > nowMs
+      || !CLAN_BUILDINGS.SHOP_ITEMS.some(item => item.id === receipt.itemId)
+      || !Number.isSafeInteger(receipt.quantity) || receipt.quantity < 1 || receipt.quantity > 2) continue;
+    if (receipt.itemId === "shield_12h") normalized.shieldReadyAtMs = Math.max(normalized.shieldReadyAtMs, receipt.createdAtMs + CLAN_BUILDINGS.SHIELD_COOLDOWN_MS);
+    else if (receipt.createdAtMs >= dayStart) normalized.counts[receipt.itemId] = (normalized.counts[receipt.itemId] || 0) + receipt.quantity;
+  }
+  return normalized;
+}
+
+function writeClanShopEconomy(transaction, economy, usage, overrides = {}) {
+  const clanShopUsage = { ...usage, version: 2, worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, realmShardId: getCurrentRealmShardId() };
+  writePreparedEconomy(transaction, economy, overrides);
+  // Replace the whole usage map: recursive merge resurrects omitted old counts
+  // when UTC/season rollover starts a new counter map.
+  transaction.update(economy.profileRef, { clanShopUsage });
 }
 
 async function readClanTowerShop(transaction, economy, towerId, nowMs) {
@@ -22308,7 +22337,7 @@ async function readClanTowerShop(transaction, economy, towerId, nowMs) {
   if (tower.clanId !== clanId || tower.ownerKind !== "clan") throw new HttpsError("permission-denied", "Your clan no longer owns this Tower.");
   const level = Math.max(0, ...states.filter(t => t.ownerKind === "clan" && t.clanId === clanId).map(t => t.buildings.shop));
   const eligibility = HOLDING_TOWERS.getEligibility(member, nowMs, clanId);
-  const usage = getClanShopUsage(profile);
+  const usage = await getClanShopUsage(transaction, profile, economy.uid, nowMs);
   return { tower, member, usage, status: {
     level, localLevel: tower.buildings.shop, eligible: eligibility.eligible, eligibleAtMs: eligibility.eligibleAtMs,
     items: CLAN_BUILDINGS.shopStatus(level, usage, nowMs).map(item => ({ ...item,
@@ -22324,7 +22353,7 @@ exports.getClanTowerShop = timedCallable("getClanTowerShop", { region: "us-centr
     const nowMs = Date.now();
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     const shop = await readClanTowerShop(transaction, economy, safeString(request.data?.towerId, 96), nowMs);
-    writePreparedEconomy(transaction, economy);
+    writeClanShopEconomy(transaction, economy, shop.usage);
     return createEconomyResponse(economy, { ok: true, clanShop: shop.status, serverTimeMs: nowMs });
   }, "getClanTowerShop");
 });
@@ -22350,7 +22379,7 @@ exports.purchaseClanTowerShopItem = timedCallable("purchaseClanTowerShopItem", {
       if (previous.towerId !== towerId || previous.itemId !== itemId || previous.quantity !== quantity) {
         throw new HttpsError("already-exists", "This purchase request was already used for another order.");
       }
-      writePreparedEconomy(transaction, economy);
+      writeClanShopEconomy(transaction, economy, shop.usage);
       return createEconomyResponse(economy, { ok: true, duplicate: true, clanShop: shop.status, spentGold: 0 });
     }
     assertHoldingTowerMemberEligible(shop.member, nowMs, shop.tower.clanId);
@@ -22364,7 +22393,7 @@ exports.purchaseClanTowerShopItem = timedCallable("purchaseClanTowerShopItem", {
     if (!Number.isSafeInteger(spentGold) || economy.goldFloat < spentGold) throw new HttpsError("failed-precondition", "Not enough personal Gold.");
     const goldFloat = economy.goldFloat - spentGold;
     const patch = { goldFloat, gold: Math.floor(goldFloat), clanShopUsage: {
-      ...usage, worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, realmShardId: getCurrentRealmShardId(),
+      ...usage, version: 2, worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, realmShardId: getCurrentRealmShardId(),
     } };
     if (itemId === COMMON_GEAR_BOX_ITEM_ID) {
       patch.gear = normalizeCommonGear(economy.profileAfter);
@@ -22373,7 +22402,7 @@ exports.purchaseClanTowerShopItem = timedCallable("purchaseClanTowerShopItem", {
     } else {
       patch.shopItems = { ...economy.shopItems, [itemId]: Math.max(0, Math.floor(safeNumber(economy.shopItems[itemId], 0))) + quantity };
     }
-    writePreparedEconomy(transaction, economy, patch);
+    writeClanShopEconomy(transaction, economy, usage, patch);
     transaction.create(receiptRef, { operationId, towerId, itemId, quantity, spentGold,
       worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, realmShardId: getCurrentRealmShardId(), createdAtMs: nowMs });
     return createEconomyResponse(economy, { ok: true, ...patch, spentGold, purchasedQuantity: quantity,

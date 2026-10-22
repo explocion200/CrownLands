@@ -24,6 +24,7 @@ async function main(){
     const api=getOnlineApi();window.shopQa={calls:[],usage:{},fail:false,hold:false,unavailable:false,gold:5000000,boxes:2,items:{recall_horn:1},level:10,eligible:true,eligibleAt:Date.now()+3600000};
     window.shopTower=HOLDING_TOWER_UI.createQaSnapshot(getHoldingTowerVisual(HOLDING_TOWER_DEFINITIONS[0].id),'owner');
     Object.assign(shopTower,{buildings:{shop:10,workshop:1,infirmary:1,training:1},buildingProject:null,wallIntegrityBps:10000,attackBlocked:false,repairActive:false});
+    shopTower.permissions.manage=false;shopTower.garrison=[];shopTower.ownStationedTroops=0;
     state.clanId=shopTower.clanId;state.gold=shopQa.gold;state.gear.commonGearBoxes=2;
     clanTreasuryClanId=state.clanId;clanTreasuryStatus={treasury:{balance:3400000000}};
     loadClanTreasuryStatus=async()=>clanTreasuryStatus;
@@ -91,6 +92,20 @@ async function main(){
    assert(await ev(`modalBody.querySelector('#upgradeShop').disabled`));
    await ev(`shopTower.attackBlocked=false;shopTower.permissions.manage=false;refreshHoldingTower(shopTower.id)`);
    assert(await ev(`modalBody.querySelector('#upgradeShop').disabled`));
+   // An ordinary member without stationed troops can select/buy every unlocked
+   // item, to its own limit, while the Treasury construction action stays locked.
+   await ev(`shopTower.buildings.shop=10;shopQa.level=10;shopQa.gold=5000000;shopQa.usage={};refreshHoldingTower(shopTower.id)`);
+   await ev(`modalBody.querySelector('#tab-wares').click()`);
+   const memberItems=await ev(`CrownlandsClanTowerBuildings.shopStatus(10,{},Date.now()).map(i=>({id:i.id,limit:i.limit}))`);
+   for(const item of memberItems){
+    await ev(`modalBody.querySelector('[data-item="${item.id}"]').click()`);
+    for(let n=0;n<item.limit;n++){
+     assert.equal(await ev(`modalBody.querySelector('#purchase').disabled`),false,item.id+' was blocked for an ordinary member');
+     await ev(`modalBody.querySelector('#purchase').click()`);await ready('holdingTowerActionsInFlight.size === 0');
+    }
+    assert(await ev(`modalBody.querySelector('#purchase').disabled`),item.id+' exceeded its limit');
+   }
+   await screenshot(width+'-member-allowance');
    // Losing ownership removes the purchase view entirely.
    await ev(`shopTower.ownerMember=false;shopTower.ownerKind='neutral';shopTower.clanId='';refreshHoldingTower(shopTower.id)`);
    assert.equal(await ev('modal.classList.contains("clan-shop-modal")'),false);

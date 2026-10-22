@@ -1,35 +1,28 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "5707cc61708ddaa5631f6be828c2356156ed28df",
+  "baseCommit": "ac382ffba96dcb316f33d8e0d586c1d77c48755f",
   "coverage": [
     {
       "paths": [
-        "world/appearance.js",
-        "world/native.js",
-        "world/preview.js",
-        "world/preview.css",
-        "tools/test-local-postgres-clan-courtyard.js",
-        "tools/validate-continuous-city-stages.js",
-        "tools/validate-continuous-pickup-placement.js",
-        "tools/validate-production-artifact.js"
+        "functions/index.js",
+        "functions/test/emulator-holding-tower-lifecycle.js",
+        "tools/test-local-postgres-clan-shop.js",
+        "tools/validate-clan-shop-browser.js"
       ],
       "tests": [
-        "tools/test-local-postgres-clan-courtyard.js",
-        "tools/validate-continuous-city-stages.js",
-        "tools/validate-continuous-pickup-placement.js",
-        "tools/validate-continuous-game-ui.js",
+        "tools/test-local-postgres-clan-shop.js",
+        "tools/validate-clan-shop-browser.js",
         "tools/validate-clan-tower-buildings.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-production-artifact.js"
+        "functions/test/emulator-holding-tower-lifecycle.js"
       ],
-      "reason": "Restore the missing courtyard in the production continuous renderer using existing scoped Tower subscriptions, retaining native building panels and armed Tower selection. Reduce Tower and six child sprites within the previous objective footprint; cover all four locations, all staged art, desktop and two landscape sizes, click/touch and drag, selected-action clearance from neighboring banners, authoritative snapshot changes/capture/neutralization, bounded assets and unchanged scene reuse through an isolated PostgreSQL/authenticated browser harness. Shared city geometry, label placement, pickup exclusion, async selection, building definitions and package budgets are affected dependencies. No server/API/authorization/data schema changes; existing backend commands are only exercised, so no emulator change is required. The artifact guard receives a narrow 3.75 KiB allowance for the measured 3,648 bytes of lazy courtyard integration, with no preload/precache growth. Reconciled with the merged private-list transport fix; the real authenticated courtyard harness rechecks the combined client against the current base."
+      "reason": "Fix the authoritative Clan Shop recursive-merge rollover bug and recover already contaminated personal counts from bounded current-realm purchase receipts. Exercise all roles/all seven items, member purchases without garrisons, actual PostgreSQL transactions, concurrency/retries, UTC and seasonal resets, receipt reconstruction and Shield deadlines, existing ownership/probation/prices/level gates and independent main-Shop usage. The affected shared Tower lifecycle emulator validates the same server code; the actual game browser covers desktop and two landscape sizes with ordinary-member permissions."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "docs/CLAN_SHOP_ALLOWANCE_REPAIR.md"
       ],
       "tests": [],
-      "reason": "Record the owner-confirmed smaller visible courtyard and existing completed/unbuilt behavior, explicitly preserving the separate backend deployment hold."
+      "reason": "Document the reproduced cause, unchanged rules, bounded lazy recovery, selected checks and separately authorized local backend rollout. No runtime behavior in this documentation."
     }
   ]
 }
