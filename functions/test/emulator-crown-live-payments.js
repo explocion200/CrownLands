@@ -180,9 +180,9 @@ async function main() {
     const race = await Promise.allSettled([refill.purchase(refillUid, { requestId: 'refill_credit_purchase', offer }), service.reconcile(paidSession.id)]);
     assert.equal(race[1].status, 'fulfilled');
     const charged = race[0].status === 'fulfilled';
-    assert.equal((await refillWallet.stateRef(refillUid).get()).data().crowns, 1120 - (charged ? 9 : 0));
+    assert.equal((await refillWallet.stateRef(refillUid).get()).data().crowns, 1120 - (charged ? 30 : 0));
     await service.reconcile(paidSession.id);
-    assert.equal((await refillWallet.stateRef(refillUid).get()).data().crowns, 1120 - (charged ? 9 : 0), 'Duplicate provider credit never adds twice');
+    assert.equal((await refillWallet.stateRef(refillUid).get()).data().crowns, 1120 - (charged ? 30 : 0), 'Duplicate provider credit never adds twice');
     console.log("Live Crown payment emulator passed: lost-response recovery, concurrent idempotency, owner isolation, forged prices, live/test isolation, expiry, wallet atomicity, callable auth and client-write denial.");
   } finally {
     if (previousConfig.exists) await configRef.set(previousConfig.data()); else await configRef.delete();

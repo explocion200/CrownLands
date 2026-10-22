@@ -79,7 +79,7 @@ function createMarauderPopulation({ db, runTransaction, context, activeRegions, 
       let retired = 0;
       // Reconcile the approved smaller population before filling vacancies.
       // Retired identities invalidate old marches, which settle through the
-      // existing no-loss return/stamina/consumable-refund path at arrival.
+      // existing no-loss return/consumable-refund path at arrival.
       for (const [id, row] of [...existing].sort(([a], [b]) => a.localeCompare(b))) {
         if (expected) { if (row.status === "active") enemies.push(row); continue; }
         const slot = allowed.get(id);

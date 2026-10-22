@@ -123,13 +123,13 @@ async function main() {
   await profileRef.set({ daily:{date:today,harvestedGoldBonuses:0,harvestedTroopBonuses:0,harvestedBonuses:0},
     harvestBonuses:[{id:'hunt_refill_pickup',type:'crowns',regionId:region,x:1000,y:1000,createdAtMs:Date.now()}] },{merge:true});
   const reviewed = await callFunction('getStaminaState',users[0].token);
-  strictEqual(reviewed.offer.price,9);
+  strictEqual(reviewed.offer.price,30);
   const pickupRace = await Promise.allSettled([
     callFunction('refillStamina',users[0].token,{requestId:'hunt_pickup_refill',offer:reviewed.offer}),
     callFunction('collectHarvestBonus',users[0].token,{bonusId:'hunt_refill_pickup',type:'crowns',regionId:region}),
   ]);
   strictEqual(pickupRace[1].status,'fulfilled');
-  strictEqual((await walletRef.get()).data().crowns,121-(pickupRace[0].status==='fulfilled'?9:0));
+  strictEqual((await walletRef.get()).data().crowns,121-(pickupRace[0].status==='fulfilled'?30:0));
   strictEqual((await staminaRef.get()).data().paidDay,today && pickupRace[0].status==='fulfilled'?today:'');
   await staminaRef.set({version:1,value:100,recoveredAtMs:Date.now(),revision:10,paidDay:''});
   const previewPayload={...request('attack',200).army,requestedTroops:200};
@@ -181,11 +181,11 @@ async function main() {
   const winner=await callFunction('resolveArmyOrder',users[0].token,{armyId:sorted[0].movement.id});strictEqual(winner.outcome,'victory');
   const staminaBefore=(await staminaRef.get()).data().value;
   enemy=await seed();const replacementSpawn=enemy.spawnId;
-  const refunded=await callFunction('resolveArmyOrder',users[0].token,{armyId:sorted[1].movement.id});strictEqual(refunded.outcome,'target_unavailable');strictEqual((await staminaRef.get()).data().value,staminaBefore+10);strictEqual((await targetRef.get()).data().spawnId,replacementSpawn);strictEqual((await targetRef.get()).data().troops,100);
+  const refunded=await callFunction('resolveArmyOrder',users[0].token,{armyId:sorted[1].movement.id});strictEqual(refunded.outcome,'target_unavailable');strictEqual((await staminaRef.get()).data().value,staminaBefore);strictEqual((await targetRef.get()).data().spawnId,replacementSpawn);strictEqual((await targetRef.get()).data().troops,100);
   strictEqual(refunded.reports[0].battleId,'');
   strictEqual((await db.doc(`battleSnapshots/${storage}/entries/${sorted[1].movement.id}`).get()).exists,false,'Refund fabricated battle statistics');
   const stale=await callFunction('previewArmyProtection',users[0].token,{...previewPayload,targetSpawnId:replacementSpawn});strictEqual(stale.combatForecast.status,'unavailable');
-  // Voluntary recalls spend committed stamina; server-invalid encounters refund it.
+  // Neither voluntary recalls nor unavailable targets restore committed stamina.
   // Existing Swift March restrictions still apply to hunts.
   await profileRef.set({shopItems:{recall_horn:1,swift_march_order:1}},{merge:true});
   const recalled=await launch('attack',200);const afterRecallLaunch=(await staminaRef.get()).data().value;
@@ -202,22 +202,22 @@ async function main() {
   delete swiftRequest.army.useSwiftMarchOrder;const swift=await callFunction('sendArmyOrder',users[0].token,swiftRequest);
   const beforeInvalid=(await staminaRef.get()).data().value;await targetRef.delete();
   strictEqual((await arrive(swift.movement)).outcome,'target_unavailable');
-  strictEqual((await staminaRef.get()).data().value,beforeInvalid+10);strictEqual((await profileRef.get()).data().shopItems.swift_march_order,1);
+  strictEqual((await staminaRef.get()).data().value,beforeInvalid);strictEqual((await profileRef.get()).data().shopItems.swift_march_order,1);
   enemy=await seed();
   // Population-policy retirement uses the same invalid-encounter path as a
-  // vanished spawn: return every troop and refund committed stamina once.
+  // vanished spawn: return every troop without restoring committed stamina.
   const retiredMarch=await launch('attack',200), beforeRetirement=(await staminaRef.get()).data().value;
   // Represent an already committed march consumable from before retirement.
   await profileRef.set({shopItems:{swift_march_order:0}},{merge:true});
   await db.doc('armies/'+retiredMarch.movement.id).set({swiftMarchUsedAtMs:Date.now()},{merge:true});
   await Promise.all([targetRef.set({status:'retired',retirementPolicyVersion:4},{merge:true}),publicRef.set({status:'retired'},{merge:true})]);
   const retiredResult=await arrive(retiredMarch.movement);
-  strictEqual(retiredResult.outcome,'target_unavailable');strictEqual((await staminaRef.get()).data().value,beforeRetirement+10);
+  strictEqual(retiredResult.outcome,'target_unavailable');strictEqual((await staminaRef.get()).data().value,beforeRetirement);
   strictEqual((await profileRef.get()).data().shopItems.swift_march_order,1);
   const retiredReceipt=(await db.doc('marauderBattles/'+retiredMarch.movement.id).get()).data();strictEqual(retiredReceipt.loot,null);
   strictEqual(retiredResult.movements.reduce((sum,row)=>sum+row.troops,0),200);
   await callFunction('resolveArmyOrder',users[0].token,{armyId:retiredMarch.movement.id});
-  strictEqual((await staminaRef.get()).data().value,beforeRetirement+10,'No duplicate retirement refund');
+  strictEqual((await staminaRef.get()).data().value,beforeRetirement,'Retry cannot restore spent stamina');
   strictEqual((await profileRef.get()).data().shopItems.swift_march_order,1,'No duplicate retirement consumable refund');
   await arrive(retiredResult.movements[0]);enemy=await seed();
   await staminaRef.set({version:1,value:9,recoveredAtMs:Date.now(),revision:99,paidDay:''});await rejects(launch('attack',200),/stamina/);strictEqual((await staminaRef.get()).data().value,9);
@@ -291,7 +291,7 @@ async function main() {
   const launch2=await callFunction('launchClanRally',users[0].token,{clanId,rallyId:rally2});
   strictEqual((await staminaRef.get()).data().value,80);await bossRef.delete();
   strictEqual((await arrive(launch2.movement)).outcome,'target_unavailable');
-  for(const user of users.slice(0,2))strictEqual((await db.doc('players/'+user.uid+'/stamina/state').get()).data().value,90);
+  for(const user of users.slice(0,2))strictEqual((await db.doc('players/'+user.uid+'/stamina/state').get()).data().value,80);
   strictEqual((await db.doc('marauderBattles/'+launch2.movement.id).get()).data().loot,null);
   // The same callables preserve legacy spawns above and settle new v2 spawns below.
   enemy=await seed(10,M.balance(10,2).defenders);

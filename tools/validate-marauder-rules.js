@@ -1,15 +1,8 @@
 "use strict";
 const assert = require("node:assert/strict");
 const M = require("../functions/marauder-rules");
-for (const [stamina, crowns] of [[0,30],[1,30],[50,15],[66,11],[67,10],[70,9],[90,3],[96,2],[97,1],[99,1],[100,0]]) {
-  assert.equal(M.refillPrice(stamina), crowns);
-}
-for (let stamina = 0; stamina <= 100; stamina++) {
-  const price = M.refillPrice(stamina), missing = 100 - stamina;
-  assert(Number.isSafeInteger(price) && price >= 0 && price <= 30);
-  assert(price * 100 >= missing * 30 && (price - 1) * 100 < missing * 30, 'Charge the smallest whole Crown amount covering the missing stamina');
-  if (stamina) assert(price <= M.refillPrice(stamina - 1), 'More stamina never costs more');
-}
+for (let value = 0; value <= 100; value++) assert.equal(M.refillPrice(value), value === 100 ? 0 : 30);
+assert.equal(M.REFILL_VERSION, 3);
 for (const invalid of [-1, 101, 1.5, NaN, Infinity, null, '70']) assert.throws(() => M.refillPrice(invalid));
 for (const [level, defenders, gold, xp] of M.ANCHORS) assert.deepEqual(
   [M.balance(level).defenders, M.balance(level).gold, M.balance(level).xp], [defenders, gold, xp]);
@@ -63,26 +56,22 @@ for (const region of catalog.regions) {
 assert.equal(M.slots({ permanentCore: false, spawnEligible: false }).length, 2);
 assert.deepEqual(M.slots({ permanentCore: false }).map(({ min, max }) => [min, max]), [[1, 10], [11, 79]]);
 assert.deepEqual(M.slots({}), []);
-const now = Date.UTC(2026, 9, 12), interval = M.RECOVERY_MS;
+const now = Date.UTC(2026, 9, 22);
 let stamina = M.changeStamina(null, -10, now);
 assert.equal(stamina.value, 90);
-assert.equal(M.stamina(stamina, now + interval - 1).value, 90);
-assert.equal(M.stamina(stamina, now + interval).value, 91);
-stamina = M.changeStamina(stamina, -10, now + interval / 2);
-assert.equal(M.stamina(stamina, now + interval).value, 81); // Spending preserves fractional recovery.
-assert.equal(M.stamina(stamina, now + 86400000).value, 100);
-assert.equal(M.changeStamina(stamina, 100, now).value, 100);
+for (const elapsed of [0, 12*60000, 86400000, 90*86400000]) {
+  assert.equal(M.stamina(stamina, now + elapsed).value, 90);
+  assert.equal(M.view(stamina, now + elapsed).nextPointAtMs, null);
+  assert.equal(M.view(stamina, now + elapsed).fullAtMs, null);
+}
+stamina = M.changeStamina(stamina, -10, now + 86400000);
+assert.equal(stamina.value, 80);
+assert.throws(() => M.changeStamina(stamina, 10, now), /30-Crown refill/);
 assert.throws(() => M.changeStamina({ ...stamina, value: 9 }, -10, now));
 assert.equal(M.view({ ...stamina, paidDay: M.day(now) }, now).paidRefillsToday, 1);
 assert.equal(M.view({ ...stamina, paidDay: M.day(now) }, now + 86400000).paidRefillsToday, 0);
-assert.equal(86400000 / interval / M.HUNT_COST, 12);
+assert.equal(M.view({ ...stamina, paidDay: M.day(now) }, now + 86400000).value, 80);
 assert.equal(M.MAX_STAMINA / M.HUNT_COST, 10);
-// Maximum daily pools at a fixed level before losses, XP caps, and random items.
-const totals = [1, 20, 79, 80, 100].map(level => ({ level,
-  naturalGold: M.balance(level).gold * 12, paidExtraGold: M.balance(level).gold * 10,
-  bankedExtraGold: M.balance(level).gold * 10,
-  naturalXpPool: M.balance(level).xp * 12, paidExtraXpPool: M.balance(level).xp * 10 }));
-console.log(JSON.stringify({ passed: true, rewardBudget: totals }));
 
 // Exercise the existing server combat and departure-recovery implementations
 // with NPC defense, including exact-power losses and very large armies.
