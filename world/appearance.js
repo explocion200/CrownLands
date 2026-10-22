@@ -80,7 +80,7 @@
   }
   let measurements=new WeakMap(),measured=0,lastLayout="",layoutSize="";
   document.fonts?.addEventListener("loadingdone",()=>{measurements=new WeakMap();lastLayout="";});
-  function layout(rows){
+  function layout(rows,clearings=[]){
     const size=`${innerWidth}:${innerHeight}`;
     if(size!==layoutSize){layoutSize=size;measurements=new WeakMap();lastLayout="";}
     const entries=rows.map(({node,item})=>({node,item,banner:node.querySelector(".map-banner"),label:node.querySelector(".city-label")})).filter(e=>e.label);
@@ -96,7 +96,8 @@
     const byKey=new Map(entries.map(e=>[e.item.key,e]));
     const labels=entries.map(e=>({key:e.item.key,x:e.item.x,y:e.item.top-4,priority:e.node.classList.contains("selected")?1:0,...measurements.get(e.label)}));
     const labelBounds=new Map();
-    for(const result of SeamlessModel.placeLabels(labels)){
+    const obstacles=[...clearings,...rows.map(({item:o})=>({left:o.left,top:o.top,right:o.left+o.width,bottom:o.top+o.height}))];
+    for(const result of SeamlessModel.placeLabels(labels,new Set(),0,obstacles)){
       if(!result.hidden)labelBounds.set(result.key,result.rect);
       const {banner}=byKey.get(result.key);
       banner.classList.toggle("compact",Boolean(result.compact));

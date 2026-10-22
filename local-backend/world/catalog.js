@@ -8,7 +8,20 @@ const ROOT = path.resolve(__dirname, "../..");
 const catalog = require("./source/catalog.json");
 const worldLayout=require("../../functions/core-expansion-world-layout.json");
 const {getMapBounds,getWorldSize,imagePointToWorld}=require("../../functions/authoritative-route-planner");
-const fixture = require("./templates.json");
+const placements = require("./placements.json");
+const layoutRevision = require("node:crypto").createHash("sha256").update(JSON.stringify(placements)).digest("hex");
+const fixture = JSON.parse(JSON.stringify(require("./templates.json")));
+if (placements.topology !== "core-expansion-v1" || placements.version !== 1) throw Error("Unsupported display layout");
+for (const section of fixture.sections) {
+  const placement = placements.sections.find(s=>s.id===section.id);
+  if (!placement) throw Error("Missing section placement");
+  section.pickupZones = placement.pickupZones;
+  for (const item of fixture.objects.filter(o=>o.sectionId===section.id)) {
+    const p=placement.positions[item.id]; if (!p) continue;
+    const dx=p.x+section.x-item.x,dy=p.y+section.y-item.y;
+    item.x+=dx;item.y+=dy;item.left+=dx;item.top+=dy;item.previewLocal={...p};
+  }
+}
 const approvedAssets = new Set(fixture.assets);
 const templates = catalog.regions.filter(r => topology.parseNewLandsRegionId(r.id))
   .sort((a,b) => topology.parseNewLandsRegionId(a.id).activationOrdinal - topology.parseNewLandsRegionId(b.id).activationOrdinal);
@@ -57,4 +70,4 @@ function gameToImage(section,p){
   return{x:Math.min(section.width,Math.max(0,x)),y:Math.min(section.height,Math.max(0,y))};
 }
 function imageToGame(section,p){return imagePointToWorld({bounds:section.gameBounds,dimensions:{width:section.width,height:section.height}},p);}
-module.exports={buildCatalog,safeAsset,catalog,fixture,ROOT,gameToImage,imageToGame};
+module.exports={buildCatalog,safeAsset,catalog,fixture,ROOT,gameToImage,imageToGame,layoutRevision};

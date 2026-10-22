@@ -2,6 +2,7 @@
 const fs=require("node:fs/promises"),path=require("node:path"),crypto=require("node:crypto"),{Worker}=require("node:worker_threads");
 const {Store}=require("../store"),{isPolicy}=require("../deployment-policy");
 const {LiveReader}=require("./reader"),{createCommandRouting}=require("./routing");
+const {layoutRevision}=require("./catalog");
 const Policy=require("../../functions/authoritative-route-policy");
 const VERSION="continuous-world-v1",PROTOCOL=1;
 const capabilities=new WeakSet();
@@ -19,7 +20,7 @@ function createWorldService({store,readPool,deployment,directory,enabled=false,t
     if(!realm||realm.resetReadinessStatus!=="ready")throw fail("unavailable","The realm is preparing.");
     const expansion=(await readStore.doc(`realmGenerations/${realm.resetGeneration}/expansion/current`).get()).data();
     if(expansion?.topologyVersion!=="core-expansion-v1"||expansion.worldId!==realm.worldId||expansion.resetGeneration!==realm.resetGeneration||expansion.realmShardId!==realm.sharedRealmId)throw fail("unavailable","World catalog unavailable.");
-    return {realm,expansion,revision:digest([PROTOCOL,VERSION,realm.worldId,realm.resetGeneration,realm.sharedRealmId,[...(expansion.activeRegionIds||[])].sort()])};
+    return {realm,expansion,revision:digest([PROTOCOL,VERSION,layoutRevision,realm.worldId,realm.resetGeneration,realm.sharedRealmId,[...(expansion.activeRegionIds||[])].sort()])};
   };
   const render=terrainBuilder||((manifest)=>new Promise((resolve,reject)=>{
     const active=worker=new Worker(path.join(__dirname,"terrain-worker.js"),{workerData:{manifest,directory}});

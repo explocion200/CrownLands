@@ -432,7 +432,10 @@ const worldBytes=worldFiles.reduce((n,f)=>n+fs.statSync(f).size,0);
 // The approved castle arc adds bounded silhouette/layout caches and preserves
 // native action handlers. Allow only 3.25 KiB more; no art or precache additions.
 const castleActionLayoutBudget=3328;
-assert(worldBytes<=64*1024+256+castleActionLayoutBudget,"Lazy continuous-world modules exceed 67.5 KiB");
+// Display clearings, dynamic UI/scenery exclusion and empty-delta reuse add
+// about 2 KiB of lazy code. Static placements remain server-side, not in boot.
+const worldClearanceBudget=2304;
+assert(worldBytes<=64*1024+256+castleActionLayoutBudget+worldClearanceBudget,"Lazy continuous-world modules exceed 69.75 KiB");
 assert(!worker.includes('world/'),"Continuous world must not expand installation precaching");
 for(const f of worldFiles)assert(!fs.readFileSync(f,"utf8").includes('/__benchmark__/'),"No private preview endpoints in the game");
 if (baseClientBytes - worldBytes > baseClientBudget + campFlagArtBudget) {
