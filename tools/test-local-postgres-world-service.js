@@ -23,6 +23,18 @@ const stats=values=>{const sorted=values.toSorted((a,b)=>a-b);return {count:sort
     await pilot.routing.close();Object.defineProperties(pilot.routing,Object.getOwnPropertyDescriptors(world.routing));
     const entry=await world.prepare(pilot.players[0].uid),scene=entry.manifest;
     const token={clientWorldProtocol:1,clientWorldRevision:scene.revision};
+    const oldRevision=crypto.createHash("sha256").update(JSON.stringify([1,"continuous-world-v1",entry.realm.worldId,entry.realm.resetGeneration,entry.realm.sharedRealmId,[...entry.expansion.activeRegionIds].sort()])).digest("hex");
+    assert.notEqual(scene.revision,oldRevision,"Changed display geometry must invalidate pre-layout clients");
+    await assert.rejects(world.validateCommand("sendArmyOrder",{...token,clientWorldRevision:oldRevision}),e=>e.status===409);
+    // A route accepted before this display change keeps its recorded geometry
+    // and clock. The reader must not snap its endpoints to the new city slots.
+    const oldFixture=require("../local-backend/world/templates.json"),section=scene.sections[0];
+    const oldCities=oldFixture.objects.filter(o=>o.sectionId===section.templateId&&o.kind==="castle").slice(0,2);
+    const toGame=require("../local-backend/world/catalog").imageToGame;
+    const stored={status:"active",launchedAtMs:1000,arrivesAtMs:101000,pathSegments:[{regionId:section.id,routingVersion:"continuous-world-v1",geometryId:"a".repeat(64),points:oldCities.map(o=>toGame(section,o.previewLocal))}]};
+    const saved=JSON.stringify(stored),march=entry.reader.march("accepted-before-layout",stored,[section.id],50000);
+    assert.equal(JSON.stringify(stored),saved);assert.equal(march.body.departAt,1);assert.equal(march.body.arriveAt,101);assert(march.body.openWorldRoute);
+    march.route.points.forEach((p,i)=>assert(Math.hypot(p.x-section.x-oldCities[i].previewLocal.x,p.y-section.y-oldCities[i].previewLocal.y)<1e-7));
     const identity={clientReleaseId:pilot.identity.releaseId,clientWorldId:pilot.identity.worldId,clientResetGeneration:pilot.identity.resetGeneration,clientRealmShardId:pilot.identity.realmShardId};
     const invoke=(name,uid,data)=>pilot.routes.find(r=>r.name===name).handler({auth:{uid,token:{email_verified:true,firebase:{sign_in_provider:"password"}}},data:{...identity,...data}});
     for(let i=2;i<24;i++){

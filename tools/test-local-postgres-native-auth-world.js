@@ -311,6 +311,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       });
       await require("./check-continuous-control-scale")(page,[source,ally,...objectives],select,output);
     }
+    if(production)await require("./check-world-spacing-browser")(page,pilot,output);
     await page.bringToFront();
     for (const [width, height] of [[1440, 900], [844, 390], [568, 320]]) {
       await page.setViewportSize({ width, height });
@@ -319,7 +320,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       await sleep(1200); await page.evaluate(() => nativeContinuousWorld.view.resetMetrics());
       for (let n = 0; n < 80; n++) { await page.evaluate(n => { const v = nativeContinuousWorld.view, s = v.snapshot(); v.view(s.camera.x + Math.sin(n) * 20, s.camera.y + Math.cos(n) * 10); }, n); await sleep(25); }
       const sample = await page.evaluate(() => nativeContinuousWorld.view.snapshot()), times = sample.frameTimes.sort((a,b) => a-b);
-      results.push({ width, height, fps: 1000 / (times.reduce((a,b)=>a+b,0)/times.length), p95: times[Math.floor(times.length*.95)], assets: sample.assets, feed: sample.feed });
+      results.push({ width, height, fps: 1000 / (times.reduce((a,b)=>a+b,0)/times.length), p95: times[Math.floor(times.length*.95)], workP95: [...sample.workTimes].sort((a,b)=>a-b)[Math.floor(sample.workTimes.length*.95)], assets: sample.assets, feed: sample.feed });
       assert(sample.assets.full <= 4); assert(sample.assets.peakRequests <= 2);
       await page.screenshot({ path: path.join(output, `authenticated-${width}.png`) }); await cdp.detach();
       if(production){

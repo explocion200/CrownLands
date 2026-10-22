@@ -66,7 +66,7 @@
   }
   // Lay out labels in world units, so pan/zoom cannot enlarge them or change
   // their clearance. Spatial buckets keep crowded area updates bounded.
-  function placeLabels(labels, compactKeys = new Set(), attempt = 0) {
+  function placeLabels(labels, compactKeys = new Set(), attempt = 0, obstacles = []) {
     const grid = new Map(), cell = 160, gap = 4;
     const buckets = rect => {
       const keys=[];
@@ -76,6 +76,7 @@
     };
     const add=rect=>{for(const key of buckets(rect)){if(!grid.has(key))grid.set(key,[]);grid.get(key).push(rect);}};
     const blocked=rect=>buckets(rect).some(key=>(grid.get(key)||[]).some(other=>rect.left<other.right+gap&&rect.right+gap>other.left&&rect.top<other.bottom+gap&&rect.bottom+gap>other.top));
+    obstacles.forEach(add);
     const placed=[];
     for(const label of [...labels].sort((a,b)=>(b.priority||0)-(a.priority||0)||a.y-b.y||a.key.localeCompare(b.key))){
       let result;
@@ -100,9 +101,15 @@
         const crowded=byKey.get(result.key);
         for(const label of labels)if(label.compact&&!compactKeys.has(label.key)&&Math.abs(label.x-crowded.x)<180&&Math.abs(label.y-crowded.y)<180){compactKeys.add(label.key);changed=true;}
       }
-      if(changed)return placeLabels(labels,compactKeys,attempt+1);
+      if(changed)return placeLabels(labels,compactKeys,attempt+1,obstacles);
     }
     return placed;
+  }
+  function clearScenery(items, obstacles) {
+    const grid=new Map(),cell=160;
+    const keys=r=>{const result=[];for(let x=Math.floor(r.left/cell);x<=Math.floor(r.right/cell);x++)for(let y=Math.floor(r.top/cell);y<=Math.floor(r.bottom/cell);y++)result.push(x+":"+y);return result;};
+    for(const r of obstacles)for(const key of keys(r)){if(!grid.has(key))grid.set(key,[]);grid.get(key).push(r);}
+    return items.filter(o=>!keys({left:o.left,top:o.top,right:o.left+o.width,bottom:o.top+o.height}).some(key=>(grid.get(key)||[]).some(r=>intersects(r,o.left,o.top,o.width,o.height))));
   }
   function along(path, distance) {
     distance = Math.max(0, Math.min(path.length, distance));
@@ -112,6 +119,6 @@
     return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
   }
   function forWorld(world) { return { ...api, limits: size => limits(size, world), clamp: (camera, size) => clamp(camera, size, world), zoomAt: (camera, size, anchor, zoom, nextAnchor) => zoomAt(camera, size, anchor, zoom, nextAnchor, world) }; }
-  const api = { TILE, WORLD, identity, offset, localToWorld, worldToLocal, project, unproject, limits, clamp, zoomAt, visible, intersects, interestSections, placeLabels, preparePath, along, forWorld };
+  const api = { TILE, WORLD, identity, offset, localToWorld, worldToLocal, project, unproject, limits, clamp, zoomAt, visible, intersects, interestSections, placeLabels, clearScenery, preparePath, along, forWorld };
   return api;
 });

@@ -162,11 +162,10 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     if(!view||disposed)return;
     const present=new Set(),daily=ensureDailyCaptureTracker();
     for(const bonus of getAllActiveHarvestBonuses()){
-      if(!pickupPlacement?.safe(bonus))continue;
       const section=scene.sections.find(s=>s.id===bonus.regionId);if(!section)continue;
       const type=normalizeHarvestBonusType(bonus.type),remaining=getHarvestBonusRemaining(type,daily);
       let node=pickupNodes.get(bonus.id);
-      if(!node){node=document.createElement("button");node.type="button";node.dataset.harvestBonusId=bonus.id;
+      if(!node){node=document.createElement("button");node.type="button";node.dataset.harvestBonusId=bonus.id;node.hidden=true;node.style.display="none";
         node.addEventListener("click",event=>{event.stopPropagation();if(areasReady)void collectHarvestBonus(bonus.id,node);});pickups.append(node);pickupNodes.set(bonus.id,node);}
       if(node.dataset.harvestBonusType!==type){node.dataset.harvestBonusType=type;node.innerHTML=`<span aria-hidden="true">${getHarvestBonusIcon(type)}</span>`;}
       node.className=`harvest-bonus-node harvest-bonus-${type}`;
@@ -396,8 +395,8 @@ function createContinuousHarvestPlacement(view) {
     && p.y + radius >= r.top && p.y - radius <= r.bottom;
   function context(regionId, frame) {
     const scene=view.scene, labels=window.SeamlessAppearance?.labelBounds;
-    const snapshot=view.snapshot(), size=frame?.size || snapshot.size;
-    const feed=snapshot.feed, section=scene.sections.find(s=>s.id===regionId);
+    const status=view.placementState(), size=frame?.size || status.size;
+    const feed=status.feed, section=scene.sections.find(s=>s.id===regionId);
     const ready=section && feed && !feed.failed && !feed.authExpired && feed.ids.includes(regionId)
       && scene.objects.some(o=>o.sectionId===regionId);
     if(cached?.regionId===regionId && cached.objects===scene.objects && cached.labels===labels
@@ -442,14 +441,24 @@ function createContinuousHarvestPlacement(view) {
     }
     // A moving army can temporarily cross otherwise clear ground. Never
     // reserve or expose a pickup underneath its token or selected controls.
+    const selected=view.scene.objects.find(o=>o.key===view.selectedKey);
+    if(selected && overlaps(p,c.radius,{left:selected.left-150,top:selected.top-150,right:selected.left+selected.width+150,bottom:selected.top+selected.height+150}))return false;
     return safe && !view.scene.marches.some(m=>m.position && Math.hypot(p.x-m.position.x,p.y-m.position.y)
-      < c.radius+(view.selectedKey===m.key?110:55)/c.maxZoom);
+      < c.radius+(view.selectedKey===m.key?110:55)/c.maxZoom)
+      && !getAllActiveHarvestBonuses().some(other=>other.id!==point.id && other.regionId===c.regionId
+        && Math.hypot(project(other,c).x-p.x,project(other,c).y-p.y)<c.radius*2);
   }
   return {
     safe(bonus,frame){return clear(bonus,context(bonus.regionId,frame));},
     create(regionId){
       const c=context(regionId);if(!c.ready)return null;
       const s=c.section,b=s.gameBounds;
+      // The authored clearings leave room for the largest mobile pickup glow.
+      // Recheck live labels/armies; a clearing is never permission to overlap.
+      for(const zone of s.pickupZones||[]) {
+        const p={x:Math.round(b.left+zone.x/s.width*b.width),y:Math.round(b.top+zone.y/s.height*b.height)};
+        if(clear(p,c))return p;
+      }
       for(const fraction of HARVEST_BONUS_CENTER_SEARCH_FRACTIONS){
         const angle=Math.random()*Math.PI*2,offset=Math.random();
         for(let i=0;i<HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE;i++){

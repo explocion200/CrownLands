@@ -11,6 +11,13 @@
     const delta = packet.kind === "delta";
     if (delta && (!cursor || packet.viewer !== previous.viewer || packet.epoch !== cursor.epoch || packet.fromRevision !== cursor.revision || packet.revision < cursor.revision)) throw Error("Invalid delta cursor");
     if (cursor?.epoch === packet.epoch && packet.revision < cursor.revision) throw Error("Obsolete area revision");
+    // A validated empty delta advances the clock/cursor without copying every
+    // object and rebuilding the rendered scene. Permission changes still arrive
+    // as changes (or a new epoch/snapshot) and use the normal path below.
+    if (delta && ["objects","marches"].every(kind=>Array.isArray(packet[kind]?.upsert) && !packet[kind].upsert.length
+        && Array.isArray(packet[kind].remove) && !packet[kind].remove.length) && Array.isArray(packet.routes) && !packet.routes.length) {
+      return {...previous,authoritative:true,revision:packet.revision,serverTime:packet.serverTime,scriptHealthy:packet.scriptHealthy,removed:[]};
+    }
     const objects = new Map(delta ? previous.sections.flatMap(s => s.objects).map(o => [o.key, o]) : []);
     const marches = new Map(delta ? previous.marches.map(m => [m.key, m]) : []);
     const routes = new Map(delta ? previous.routes.map(r => [r.id, r]) : []);

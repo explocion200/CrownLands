@@ -1,26 +1,66 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "37e108d79f36d8f0b49f93d5ce650c5755348513",
+  "baseCommit": "31f27d9001f29a407ccd7df5e2f79d496ef61bb1",
   "coverage": [
     {
       "paths": [
-        "world/native.js",
-        "tools/validate-castle-action-layout.js"
+        "local-backend/world/catalog.js",
+        "local-backend/world/service.js",
+        "local-backend/world/placements.json",
+        "tools/prepare-world-placements.js",
+        "tools/validate-world-spacing.js",
+        "tools/test-local-postgres-world-service.js"
       ],
       "tests": [
-        "tools/validate-castle-action-layout.js",
+        "tools/validate-world-spacing.js",
+        "tools/validate-production-world.js",
+        "tools/test-local-postgres-world-service.js",
+        "tools/test-local-postgres-production-routes.js",
+        "tools/test-local-postgres-continuous-npcs.js",
+        "functions/test/emulator-world-travel.js"
+      ],
+      "reason": "Active Core display layout affects authenticated area projection, generated sections, route geometry, nearby distances and NPC road clearance. Check all template identities/coordinates/art, city separation, scenery/label/pickup clearance and generated reuse. Real isolated PostgreSQL tests cover 24-user concurrent map/chat/commands, layout revision rejection, saved-route rendering, arrivals/recalls/restarts, authorization and NPC respawn. Existing world-travel emulator exercises the shared movement contract; no archived topology or player-data rewrite is involved."
+    },
+    {
+      "paths": [
+        "world/appearance.js",
+        "world/model.js",
+        "world/native.js",
+        "world/preview.js",
+        "world/delta-feed.js",
+        "tools/validate-world-update-work.js",
+        "tools/validate-continuous-pickup-placement.js",
+        "tools/check-world-spacing-browser.js",
+        "tools/test-local-postgres-native-auth-world.js"
+      ],
+      "tests": [
+        "tools/validate-world-update-work.js",
+        "tools/validate-world-spacing.js",
+        "tools/validate-continuous-pickup-placement.js",
+        "tools/validate-continuous-map-labels.js",
+        "tools/validate-continuous-pickup-animation.js",
+        "tools/test-local-postgres-production-world.js",
+        "functions/test/emulator-harvest-pickup-rewards.js"
+      ],
+      "reason": "Shared label/camera and pickup changes require browser checks at 1440x900, 844x390 and 568x320 with dense upgraded owned cities, actual CSS overlap detection, empty authenticated poll reuse, pointer/touch navigation, control scaling, troop paths, sign-out and permission loss. Pure delta tests retain envelope/auth/route validation while checking unchanged array identity; placement tests cover live art, selected controls, moving armies, other pickups, failed data and bounded cached work. The production browser uses two disposable local accounts and real actions/collection/relocation; emulator reward tests guard shared reservation/reward invariants."
+    },
+    {
+      "paths": [
         "tools/validate-production-artifact.js"
       ],
-      "reason": "Widen only the regular-castle SVG arc through existing fixed button centers in the live Core connected renderer. Exercise actual production layout and native click/touch handlers across 30 skin/stage paintings, three zooms and desktop 1440x900 plus landscape 844x390/568x320. Verify centerline proximity, silhouette and button clearance, labels, hit targets, cached frames, and failed/obsolete assets. Compare unchanged button rectangles against the pre-change 270-case local capture. No CSS, camera, server authority, gameplay or data changes, so no multiplayer emulator suite is affected. Build/artifact validation guards shipped module scope and payload budgets."
+      "tests": [
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Allow only 2.25 KiB additional lazy map code for measured empty-delta and UI clearance behavior; keep startup, asset count, precache, package boundary and production-only module checks intact. The placement table remains server-side and does not enlarge boot downloads."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [
-        "tools/validate-castle-action-layout.js"
+        "tools/validate-world-spacing.js"
       ],
-      "reason": "Record the user-confirmed arc-only adjustment to the preceding exact-ellipse design while preserving all existing button slots and gameplay. The geometry/browser checks exercise that presentation rule; no separate documentation runtime test applies."
+      "reason": "Record the owner-confirmed city/scenery spacing and safe pickup behavior while preserving existing styles, city identities, saved route timing and current Core scope. Layout validation exercises the confirmed rule; no independent documentation runtime applies."
     }
   ]
 }

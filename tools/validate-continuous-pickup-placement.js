@@ -7,10 +7,10 @@ function fixture(){
   const scene={width:1448*5,height:1086*5,sections:[section],objects:[{sectionId:"current",kind:"scenery",left:1450,top:1088,width:10,height:10}],marches:[]};
   const status={size:{width:1448,height:1086},feed:{ids:["current"],failed:false,authExpired:false}};
   let terrainCalls=0,land=true;
-  const view={scene,selectedKey:null,snapshot:()=>status};
+  const view={scene,selectedKey:null,placementState:()=>status,snapshot:()=>{throw Error("Diagnostic snapshot in pickup hot path");}};
   const ctx={window:{SeamlessAppearance:{labelBounds:new Map()}},SeamlessModel:model,
     HARVEST_BONUS_CENTER_SEARCH_FRACTIONS:[.15,.25,.35],HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE:300,HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE:Math.PI*(3-Math.sqrt(5)),
-    isHarvestBonusTerrainSafePoint:()=>{terrainCalls++;return land;}};
+    getAllActiveHarvestBonuses:()=>[],isHarvestBonusTerrainSafePoint:()=>{terrainCalls++;return land;}};
   vm.createContext(ctx);vm.runInContext(source,ctx);
   const placement=ctx.createContinuousHarvestPlacement(view);
   const bonus=(x,y,type="gold")=>({id:"saved",type,regionId:"current",x:9000+x*2,y:6000+y*2});
@@ -58,4 +58,14 @@ for(const kind of ["castle","camp","tower","stronghold","citadel","scenery","npc
   f.status.size={width:568,height:320};assert(!f.placement.safe(b),"Mobile glow clearance did not grow in world units");
   for(let i=0;i<30;i++){const p=f.placement.create("current");assert(p&&f.placement.safe({...p,regionId:"current"}));}
 }
-console.log("Continuous pickups: all resource types, live artwork/labels, shifted cities, mobile glow, moving troops, unloaded/failed data, bounded search and cached terrain checks passed.");
+{
+  const f=fixture();f.section.pickupZones=[{x:520,y:543,radius:82},{x:950,y:543,radius:82}];
+  const first=f.placement.create("current");assert.equal(first.x,9000+520*2,"Prefer the reserved clearing");
+  const existing={...first,id:"first",regionId:"current"};f.ctx.getAllActiveHarvestBonuses=()=>[existing];
+  const second=f.placement.create("current");assert.equal(second.x,9000+950*2,"Do not stack pickups in a clearing");
+  assert(f.placement.safe(existing),"A pickup must not collide with itself");
+  f.scene.objects=[f.object("castle",750,543)];f.view.selectedKey="castle";
+  assert(!f.placement.safe(f.bonus(950,543)),"Expanded action controls cover pickup");
+  f.view.selectedKey=null;assert(f.placement.safe(f.bonus(950,543)),"Closed controls permanently hid pickup");
+}
+console.log("Continuous pickups: resource types, reserved clearings, art/labels/controls, other pickups, mobile glow, moving troops, failed data, bounded search and no diagnostic snapshots in the hot path passed.");

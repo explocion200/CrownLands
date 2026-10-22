@@ -34,7 +34,7 @@ window.createContinuousWorldView = async function (options = {}) {
         [...node.children].forEach((line,i)=>line.setAttribute("class",`army-route-flow ${i?"":"army-route-base"} ${owner} ${kind}`));
       }
     }
-    let patrolPlanAt = 0;
+    let patrolPlanAt = 0, lastAreaData = null, lastAreaFailed = false;
     let disposed = false;
     let size, camera, selected = null, dirty = true, raf = 0, lastFrame = 0;
     let serverTimeOffset = 0, sceneTime = 0, frozenTime = null, lastPlan = "", plannedCamera = null;
@@ -46,6 +46,7 @@ window.createContinuousWorldView = async function (options = {}) {
     let scenery = [], sceneryCamera = "";
     sprites.changed = () => { sceneryCamera = ""; };
     const homeSection = scene.sections.find(s => s.id === scene.homeSectionId);
+    const pickupClearings=scene.sections.flatMap(s=>(s.pickupZones||[]).map(p=>({left:s.x+p.x-p.radius,top:s.y+p.y-p.radius,right:s.x+p.x+p.radius,bottom:s.y+p.y+p.radius})));
     function on(target, event, handler, options) { target.addEventListener(event, handler, options); listenerCount++; cleanups.push(() => target.removeEventListener(event, handler, options)); }
     function center() { return { x: size.width / 2, y: size.height / 2 }; }
     function home() { routeDraft?.cancelFollow(); camera = M.clamp({ x: homeSection.x + 724, y: homeSection.y + 543, zoom: M.limits(size).home }, size); dirty = true; refreshInspector(); }
@@ -158,6 +159,12 @@ window.createContinuousWorldView = async function (options = {}) {
     if (fullCatalog) {
       const Feed = stageThree ? window.SeamlessDeltaFeed.DeltaFeed : window.SeamlessFeed.AreaFeed;
       feed = new Feed(data => {
+        const unchanged=lastAreaData && data.sections===lastAreaData.sections && data.marches===lastAreaData.marches
+          && data.routes===lastAreaData.routes && data.viewer===lastAreaData.viewer && data.epoch===lastAreaData.epoch
+          && data.authoritative===lastAreaData.authoritative && data.authExpired===lastAreaData.authExpired && feed.failed===lastAreaFailed;
+        lastAreaData=data;lastAreaFailed=feed.failed;
+        if (stageThree && Number.isFinite(data.serverTime)) serverTimeOffset = data.serverTime - data.receivedAt;
+        if(unchanged)return;
         const principalChanged = stageThree && feedViewer && data.viewer && data.viewer !== feedViewer;
         if (data.viewer) feedViewer = data.viewer;
         const hadEpoch = Boolean(feedEpoch);
@@ -166,7 +173,6 @@ window.createContinuousWorldView = async function (options = {}) {
         if (principalChanged || epochChanged || data.authExpired) routeDraft?.clear();
         if (principalChanged || (hadEpoch && epochChanged) || data.authExpired) gameplay?.clear();
         if (data.removed?.includes(routeDraft?.source?.key)) routeDraft.clear();
-        if (stageThree && Number.isFinite(data.serverTime)) serverTimeOffset = data.serverTime - data.receivedAt;
         const inspectedSections = selectedSnapshot?.kind === "troop" ? selectedSnapshot.sections : [selectedSnapshot?.sectionId];
         const inspectedAreaPresent = inspectedSections.some(id => data.sections.some(s => s.id === id));
         const inspectedAreaLoaded = data.authoritative && inspectedAreaPresent;
@@ -234,7 +240,13 @@ window.createContinuousWorldView = async function (options = {}) {
         node.classList.toggle("selected", item.key === selected);
 
       }
-      window.SeamlessAppearance?.layout(interactive.map(item => ({item,node:nodes.get(item.key)})));
+      window.SeamlessAppearance?.layout(interactive.map(item => ({item,node:nodes.get(item.key)})),pickupClearings);
+      const exclusions=[...(window.SeamlessAppearance?.labelBounds?.values()||[])];
+      const selectedObject=objects.get(selected);
+      // Scenery is already packed around normal banners. Temporarily omit a
+      // decoration if expanded details/controls occupy its otherwise clear spot.
+      if(selectedObject)exclusions.push({left:selectedObject.left-150,top:selectedObject.top-150,right:selectedObject.left+selectedObject.width+150,bottom:selectedObject.top+selectedObject.height+150});
+      scenery=M.clearScenery(scenery,exclusions);
       world.classList.toggle("close-view", camera.zoom >= M.limits(size).home);
       world.classList.toggle("overview", overview);
       marchesLayer.classList.toggle("overview", overview);
@@ -299,6 +311,7 @@ window.createContinuousWorldView = async function (options = {}) {
       clear: () => clear(false),
       get selectedKey() { return selected; },
       scene, home, select, routeDraft, gameplay, refresh: () => feed?.refresh(),
+      placementState: () => ({size,feed:feed && {ids:feed.ids,failed:feed.failed,authExpired:feed.authExpired}}),
       snapshot: () => ({ camera: { ...camera }, size: { ...size }, selected, following: null, assets: assets.stats(), feed: feed?.stats(), nodes: nodes.size, listeners: listenerCount+(routeDraft?.cleanups.length||0)+(gameplay?.cleanups.length||0), frameTimes: [...frameTimes], workTimes: [...workTimes], marches: marches.map(m => ({ key: m.key, position: m.position })) }),
       view: (x, y, zoom) => { cancelFollow(); camera = M.clamp({ x, y, zoom: zoom ?? camera.zoom }, size); },
       time: value => { frozenTime = value; dirty = true; },
