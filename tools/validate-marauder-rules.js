@@ -1,6 +1,7 @@
 "use strict";
 const assert = require("node:assert/strict");
 const M = require("../functions/marauder-rules");
+const { migrateStamina, staminaRefund } = require("../functions/stamina-service");
 for (const [stamina, crowns] of [[0,30],[1,30],[50,15],[66,11],[67,10],[70,9],[90,3],[96,2],[97,1],[99,1],[100,0]]) {
   assert.equal(M.refillPrice(stamina), crowns);
 }
@@ -81,21 +82,21 @@ assert.equal(M.view(stamina, now).hunts, 7);
 assert.equal(M.view(stamina, now).nextPointAtMs, null);
 assert.equal(M.view(stamina, now).fullAtMs, null);
 const legacy = { version: 1, value: 66, recoveredAtMs: now, revision: 5, paidDay: M.day(now) };
-for (const cutoff of [undefined, -1, NaN, now + 2 * interval]) assert.throws(() => M.stamina(legacy, now + interval, cutoff));
+for (const cutoff of [undefined, -1, NaN, now + 2 * interval]) assert.throws(() => migrateStamina(legacy, now + interval, cutoff));
 for (const [elapsed, expected] of [[0,66],[interval-1,66],[interval,67],[interval*100,100]]) {
-  const cutoff = now + elapsed, migrated = M.stamina(legacy, cutoff + 365 * 86400000, cutoff);
+  const cutoff = now + elapsed, migrated = migrateStamina(legacy, cutoff + 365 * 86400000, cutoff);
   assert.equal(migrated.value, expected); assert.equal(migrated.version, M.STAMINA_VERSION);
   assert.equal(migrated.revision, 6); assert.equal(migrated.paidDay, legacy.paidDay);
   assert.deepEqual(M.stamina(migrated, cutoff + 366 * 86400000), migrated);
 }
-assert.equal(M.staminaRefund({ staminaCommitted: false, staminaCost: 20 }), 0);
+assert.equal(staminaRefund({ staminaCommitted: false, staminaCost: 20 }), 0);
 for (const rallyAttack of [false, true]) {
-  assert.equal(M.staminaRefund({ staminaCommitted: true, rallyAttack }), 10);
-  assert.equal(M.staminaRefund({ staminaCommitted: true, rallyAttack, staminaCost: 10 }), 10);
+  assert.equal(staminaRefund({ staminaCommitted: true, rallyAttack }), 10);
+  assert.equal(staminaRefund({ staminaCommitted: true, rallyAttack, staminaCost: 10 }), 10);
 }
-assert.equal(M.staminaRefund({ staminaCommitted: true, rallyAttack: true, staminaCost: 20 }), 20);
-for (const staminaCost of [0, 30, -10, "20", 10.5]) assert.throws(() => M.staminaRefund({ staminaCommitted: true, rallyAttack: true, staminaCost }));
-assert.throws(() => M.staminaRefund({ staminaCommitted: true, staminaCost: 20 }));
+assert.equal(staminaRefund({ staminaCommitted: true, rallyAttack: true, staminaCost: 20 }), 20);
+for (const staminaCost of [0, 30, -10, "20", 10.5]) assert.throws(() => staminaRefund({ staminaCommitted: true, rallyAttack: true, staminaCost }));
+assert.throws(() => staminaRefund({ staminaCommitted: true, staminaCost: 20 }));
 assert.equal(M.MAX_STAMINA / M.HUNT_COST, 10);
 assert.equal(M.MAX_STAMINA / M.BOSS_HUNT_COST, 5);
 console.log("Stamina: no recovery, fixed rollout cutoff, Crown pricing, solo/boss costs and departure refunds passed.");

@@ -1,6 +1,27 @@
 "use strict";
 const M = require("./marauder-rules");
 
+function fail(message) { throw Object.assign(new Error(message), { code: "failed-precondition" }); }
+function migrateStamina(raw, now, recoveryStoppedAtMs) {
+  if (raw?.version !== 1) return M.stamina(raw, now);
+  // Validate all stored values before converting. One deployment cutoff applies
+  // to every account, even if its next sign-in is months later.
+  const state = M.stamina({ ...raw, version: M.STAMINA_VERSION }, now);
+  if (!Number.isSafeInteger(recoveryStoppedAtMs) || recoveryStoppedAtMs < 0 || recoveryStoppedAtMs > now) {
+    fail("Stamina recovery transition is unavailable. Please retry later.");
+  }
+  const recovered = Math.floor(Math.max(0, recoveryStoppedAtMs - state.recoveredAtMs) / M.RECOVERY_MS);
+  return { ...state, value: Math.min(M.MAX_STAMINA, state.value + recovered),
+    recoveredAtMs: recoveryStoppedAtMs, revision: state.revision + 1 };
+}
+function staminaRefund(army) {
+  if (army.staminaCommitted !== true) return 0;
+  // Departures before cost snapshots always paid 10, even for a boss.
+  const cost = army.staminaCost ?? M.HUNT_COST;
+  if (cost !== M.HUNT_COST && !(army.rallyAttack === true && cost === M.BOSS_HUNT_COST)) fail("Invalid committed stamina cost.");
+  return cost;
+}
+
 function createStaminaService({ db, HttpsError, runTransaction, assertCurrentPlayerProfile, cosmeticService,
   clock = Date.now, readAvailability = async () => true }) {
   const recoveryPolicyRef = db.doc("staminaPolicy/recovery-stop-v2");
@@ -13,7 +34,7 @@ function createStaminaService({ db, HttpsError, runTransaction, assertCurrentPla
     const ref = stateRef(uid), snap = await transaction.get(ref);
     const raw = snap.exists ? snap.data() : null;
     const policy = raw?.version === 1 ? (await transaction.get(recoveryPolicyRef)).data() : null;
-    const state = translate(() => M.stamina(raw, now, policy?.version === M.STAMINA_VERSION ? policy.stoppedAtMs : undefined));
+    const state = translate(() => migrateStamina(raw, now, policy?.version === M.STAMINA_VERSION ? policy.stoppedAtMs : undefined));
     return { ref, exists: snap.exists, migrated: raw?.version === 1, state };
   }
   function response(account, wallet, now, receipt = null, replayed = false) {
@@ -79,4 +100,4 @@ function createStaminaService({ db, HttpsError, runTransaction, assertCurrentPla
   function writeChanges(transaction, changes) { changes.forEach(entry => transaction.set(entry.ref, entry.state)); }
   return { stateRef, receiptRef, read, load, purchase, prepareChange, writeChanges };
 }
-module.exports = { createStaminaService };
+module.exports = { createStaminaService, migrateStamina, staminaRefund };

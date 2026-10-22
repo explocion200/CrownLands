@@ -51,7 +51,7 @@ const {
 const COSMETICS = require("./cosmetics.js");
 const { createCosmeticsService } = require("./cosmetics-service.js");
 const MARAUDERS = require("./marauder-rules.js");
-const { createStaminaService } = require("./stamina-service.js");
+const { createStaminaService, staminaRefund } = require("./stamina-service.js");
 const { createMarauderPopulation } = require("./marauder-population.js");
 const { isRegionWalkablePoint } = require("./canonical-route-engine.js");
 const MARAUDER_SEASONAL_CLEARANCE = require("./marauder-seasonal-clearance.json");
@@ -28876,7 +28876,7 @@ async function resolveMarauderArmyById({ armyId, callerUid = "", nowMs = Date.no
     catch (error) { if (error.code !== "failed-precondition") throw error; invalid = true; }
     const isScout = army.kind === "scout";
     const refund = invalid && army.staminaCommitted === true;
-    const refundCost = refund ? MARAUDERS.staminaRefund(army) : 0;
+    const refundCost = refund ? staminaRefund(army) : 0;
     const staminaChanges = refund ? await staminaService.prepareChange(transaction, participants.map(p => p.uid), refundCost, nowMs) : [];
     const troops = participants.reduce((total, p) => total + p.troops, 0);
     const attackPower = participants.reduce((total, p) => total + p.effectivePower, 0);
