@@ -117,7 +117,7 @@
       label.innerHTML=`<span class="city-label player-city-label"><span class="player-city-banner"><span class="city-owner-column">${flag(item)}${level}</span><span class="player-city-data">${clan}${ruler}${name}<span class="city-army-count">${count(item)} troops</span></span></span>`;
     }else{
       node.classList.add("city-node");
-      label.innerHTML=selected?`<span class="city-label foreign-city-label selected-foreign-label">${clan}${ruler}<span class="foreign-selected-banner"><span class="foreign-selected-level">${esc(item.level??"")}</span><span class="foreign-selected-crest">${flag(item)}</span><span class="foreign-selected-data">${name}<span class="foreign-garrison">${count(item)} troops</span></span></span></span>`:`<span class="city-label foreign-city-label">${clan}${item.ownerUid?ruler:""}${name}<span class="foreign-city-shield">${flag(item)}${level}</span></span>`;
+      label.innerHTML=selected?`<span class="city-label foreign-city-label selected-foreign-label">${clan}${ruler}<span class="foreign-selected-banner"><span class="foreign-city-shield">${flag(item)}${level}</span><span class="foreign-selected-data">${name}<span class="foreign-garrison">${count(item)} troops</span></span></span></span>`:`<span class="city-label foreign-city-label">${clan}${item.ownerUid?ruler:""}${name}<span class="foreign-city-shield">${flag(item)}${level}</span></span>`;
     }
     node.append(label);
     if(item.ownerFlag)for(const element of label.querySelectorAll(".city-kingdom-flag"))FlagRenderer.render(element,item.ownerFlag,{stableKey:item.ownerUid||item.key,context:"city",size:"small"});

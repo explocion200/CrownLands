@@ -66,6 +66,25 @@ async function main() {
       await wait(3300);
       const stabilized = await evaluate("powerQa.read()");
       assert.equal(stabilized[1].band, "protected", "Stable new power did not update the actual map color");
+      // Selecting a foreign city must retain the same pointed flag/level unit,
+      // including each protection color and a hidden garrison.
+      const selectedBanners = await evaluate(`(() => {
+        const checks=powerQa.cities.map(c=>{
+          selectedTargetId=c.id;selectedSourceId=null;sendMode=false;renderCities(true);
+          const n=cityLayer.querySelector('[data-city-id="'+c.id+'"]'),banner=n.querySelector('.foreign-selected-banner');
+          const flag=banner.querySelector('.city-owner-flag'),level=banner.querySelector('.city-label-level,.foreign-selected-level');
+          const f=flag.getBoundingClientRect(),l=level.getBoundingClientRect();
+          return {id:c.id,shared:flag.parentElement===level.parentElement,below:l.top>=f.bottom-.5,
+            centered:Math.abs((f.left+f.right-l.left-l.right)/2)<.5,
+            color:getComputedStyle(flag.parentElement).backgroundColor,troops:banner.querySelector('.foreign-garrison').textContent};
+        });
+        selectedTargetId=null;renderCities(true);return checks;
+      })()`);
+      for (const row of selectedBanners) {
+        assert(row.shared && row.below && row.centered, `Detached selected city level: ${JSON.stringify(row)}`);
+        assert.equal(row.color, stabilized.find(city => city.id === row.id).color);
+        assert.equal(row.troops, "? troops");
+      }
       const screenshot = await client.send("Page.captureScreenshot", { format: "png" });
       fs.writeFileSync(path.join(dir, `${width}x${height}.png`), Buffer.from(screenshot.data, "base64"));
       results.push({ width, height, before, after, stabilized });

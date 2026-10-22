@@ -1,31 +1,30 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "07555469341a75adfb167b7790c757e8616f5fb4",
+  "baseCommit": "120e444002907a15c0cdfb1b0808789dfaf484eb",
   "coverage": [
     {
       "paths": [
-        "functions/index.js",
-        "tools/test-local-postgres-chat-locations.js"
+        "game.js",
+        "styles.css",
+        "world/appearance.js",
+        "tools/test-local-postgres-selected-city-banner.js",
+        "tools/validate-king-power-colors-browser.js"
       ],
       "tests": [
-        "tools/validate-transaction-retries.js",
-        "tools/test-local-postgres-transaction-retries.js",
-        "tools/test-local-postgres-chat-locations.js",
-        "functions/test/emulator-chat-locations.js"
+        "tools/test-local-postgres-selected-city-banner.js",
+        "tools/validate-king-power-colors-browser.js",
+        "tools/validate-continuous-map-labels.js",
+        "tools/validate-clans.js",
+        "tools/validate-crownlands-palette.js"
       ],
-      "reason": "Fix nightly-discovered shared-location lookup bypass of the existing bounded retry/timing wrapper. Test actual PostgreSQL callable transient retry and business-error refusal, SQL conflicts/deadlocks, and both backend chat scenarios for current-realm, clan/privacy, expiry and canonical location handling. Read-only lookup never sends troops or edits game data."
+      "reason": "Reuse the compact foreign flag/level shield when selected in both shared map markup and the production continuous-world renderer. Verify actual mouse/touch selection, deselection, two zoom levels and desktop/landscape phone sizes in the packaged client with disposable PostgreSQL accounts; assert centered contained level, unchanged flag dimensions, shield indicators, relation/protection colors and hidden enemy troop counts. The shared-renderer browser check guards fallback markup and authoritative power refresh. Catalog collision and Clan/palette validators cover affected shared label geometry and styles. No backend, authorization or gameplay rules change; no emulator suites are needed."
     },
     {
       "paths": [
-        "functions/test/emulator-rally-lifecycle.js",
-        "functions/test/emulator-rally-staging-defense.js"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
-      "tests": [
-        "functions/test/emulator-rally-lifecycle.js",
-        "functions/test/emulator-rally-staging-defense.js",
-        "tools/test-local-postgres-member-rallies.js"
-      ],
-      "reason": "Correct nightly expectation superseded by the confirmed all-members Rally permission amendment. Demotion preserves the forming rally; explicit creator cancellation still works. Run full affected lifecycle and member-permission/staging cases to retain departure/removal safeguards and troop conservation on emulator and PostgreSQL. Keep the synthetic 400-second inbound movement and its launch-time unboosted Stables return basis consistent; retain the exact proportional return assertion."
+      "tests": [],
+      "reason": "Record the explicitly requested selected-city flag attachment correction and preserve existing scaling, privacy and movement rules. Deployment remains unverified until the publisher build is checked."
     }
   ]
 }
