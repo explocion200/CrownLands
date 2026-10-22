@@ -4199,6 +4199,9 @@ function renderHoldingTowerModal(tower) {
     if (!supportOpen && !ensureModalUiStyle(buildingId, () => {
       if (isHoldingTowerModalSessionCurrent(session)) renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
     })) return;
+    if (supportOpen && !ensureModalUiScripts("clan-support", () => {
+      if (isHoldingTowerModalSessionCurrent(session)) renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
+    })) return;
     const viewKey = `${buildingId}View`;
     const buildingView = session[viewKey] || (session[viewKey] = {});
     const refreshBuilding = async (refreshBalance = false) => {
