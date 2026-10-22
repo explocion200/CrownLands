@@ -15,7 +15,8 @@ const ownActions = [
 ];
 const actions = kind === "own" ? ownActions : kind === "ally" ? [
   ["Clan Ally","disabled","reinforcement"], ["Info","info","information"], ["Reinforce","reinforce","reinforcement"],
-] : [["Scout","scout","scout"],["Info","info","information"],["Report","info","reports"],["Attack","attack","attack"]];
+] : [["Scout","scout","scout"],["Info","info","information"],["Attack","attack","attack"],["Report","info","reports"]];
+let silhouette = [], alphaMask;
 const selection = document.getElementById("selection"), castle = document.getElementById("castle"), menu = document.getElementById("actions"), arc = document.getElementById("arc");
 castle.querySelector("img").src = imagePath([1,25,50,75,100].indexOf(stage));
 document.getElementById("level").textContent = stage;
@@ -44,25 +45,38 @@ function layout() {
   const citySize = 56 * (0.6 + [1,25,50,75,100].indexOf(stage)*0.1) * fit*3*zoom;
   castle.style.width = castle.style.height = `${citySize}px`;
   document.getElementById("banner").style.top = `${-citySize/2-10}px`;
-  // Both the full button rectangles and the connecting stroke stay outside the
-  // sprite rectangle, including transparent padding. At small stages/zoom the
-  // spacing floor prevents adjacent buttons from colliding.
-  // A shallow, rounded lower arc hugs the artwork. Three owned-city actions
-  // share the lower edge; this avoids widening an ellipse for diagonal buttons.
-  const half = citySize/2, spacing = buttonSize+4;
-  const radius = Math.max(half+gap+buttonSize/2, actions.length === 5 ? spacing : spacing/2+buttonSize/2);
-  const depth = Math.max(half+gap+buttonSize/2,buttonSize+2);
-  const shoulder = Math.min(radius*.75,spacing);
-  const path = `M ${-radius} 0 Q ${-radius} ${depth} ${-shoulder} ${depth} Q 0 ${depth+16} ${shoulder} ${depth} Q ${radius} ${depth} ${radius} 0`;
-  for (const p of arc.querySelectorAll("path")) p.setAttribute("d",path);
-  const slots = actions.length === 5
-    ? [[-radius,0],[-spacing,depth],[0,depth+8],[spacing,depth],[radius,0]]
-    : actions.length === 4
-      ? [[-radius,0],[-spacing/2,depth+6],[spacing/2,depth+6],[radius,0]]
-      : [[-radius,0],[0,depth+8],[radius,0]];
-  [...menu.children].forEach((button,i) => {
-    button.style.left = `${slots[i][0]}px`;
-    button.style.top = `${slots[i][1]}px`;
+  // Keep the original 142:118 ellipse, open at the top, and the original
+  // side/bottom/upper-side action arrangement. Clear painted castle pixels,
+  // not the empty corners of the transparent square image.
+  const stroke = 8*buttonSize/64, centerY = citySize*.08;
+  const curve = radius => Array.from({length:181},(_,i) => {
+    const angle=(-45+i*1.5)*Math.PI/180;
+    return {x:radius*Math.cos(angle),y:centerY+radius*118/142*Math.sin(angle)};
+  });
+  const clear = radius => curve(radius).every(point => {
+    const px=Math.floor((point.x/citySize+.5)*256),py=Math.floor((point.y/citySize+.5)*256);
+    if(px>=0 && px<256 && py>=0 && py<256 && alphaMask[(py*256+px)*4+3]>32) return false;
+    return silhouette.every(edge=>Math.hypot(point.x-edge.x*citySize,point.y-edge.y*citySize)>=gap+stroke/2);
+  });
+  let radius=Math.max(citySize/2+gap,buttonSize*.6);
+  for(let attempt=0;attempt<400 && !clear(radius);attempt++) radius+=.5;
+  const ry=radius*118/142, tip=Math.SQRT1_2;
+  const path=`M ${radius*tip} ${centerY-ry*tip} A ${radius} ${ry} 0 1 1 ${-radius*tip} ${centerY-ry*tip}`;
+  for(const p of arc.querySelectorAll("path")) p.setAttribute("d",path);
+  arc.style.setProperty("--arc-stroke",`${stroke}px`);
+  const sideX=Math.max(radius,citySize/2+gap+buttonSize/2);
+  const sideY=centerY-1.44*buttonSize/64;
+  const infoY=Math.max(centerY+ry,citySize/2+gap+buttonSize/2,sideY+buttonSize+2);
+  const extraX=sideX+buttonSize*.55;
+  const extraY=sideY-buttonSize-2;
+  const slots=actions.length===5
+    ? [[-extraX,extraY],[-sideX,sideY],[0,infoY],[sideX,sideY],[extraX,extraY]]
+    : actions.length===4
+      ? [[-sideX,sideY],[0,infoY],[sideX,sideY],[extraX,extraY]]
+      : [[-sideX,sideY],[0,infoY],[sideX,sideY]];
+  [...menu.children].forEach((button,i)=>{
+    button.style.left=`${slots[i][0]}px`;
+    button.style.top=`${slots[i][1]}px`;
   });
   for (const neighbor of document.querySelectorAll(".neighbor")) neighbor.style.width = `${56*(0.6+Number(neighbor.dataset.stage)*0.1)*fit*3*zoom}px`;
   document.documentElement.dataset.ready = "true";
@@ -76,6 +90,17 @@ fetch("/index.html").then(response => {if(!response.ok) throw Error("Icon source
     const symbol = parsed.getElementById(`cl-icon-${id}`);
     if (symbol) sprite.appendChild(document.importNode(symbol,true));
   }
-  document.body.appendChild(sprite); layout();
+  document.body.appendChild(sprite);
+  return castle.querySelector("img").decode();
+}).then(() => {
+  const canvas=document.createElement("canvas");canvas.width=canvas.height=256;
+  const context=canvas.getContext("2d",{willReadFrequently:true});
+  context.drawImage(castle.querySelector("img"),0,0,256,256);
+  alphaMask=context.getImageData(0,0,256,256).data;
+  for(let y=0;y<256;y++)for(let x=0;x<256;x++){
+    if(alphaMask[(y*256+x)*4+3]<=32)continue;
+    if(x===0||y===0||x===255||y===255||[[-1,0],[1,0],[0,-1],[0,1]].some(([dx,dy])=>alphaMask[((y+dy)*256+x+dx)*4+3]<=32))silhouette.push({x:(x+.5)/256-.5,y:(y+.5)/256-.5});
+  }
+  layout();
 }).catch(() => {document.getElementById("feedback").textContent="Icons could not load. Refresh the local draft.";});
-window.addEventListener("resize",layout);
+window.addEventListener("resize",()=>{if(alphaMask)layout();});

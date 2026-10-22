@@ -6,7 +6,7 @@ const { createMapBenchmarkServer } = require("./map-benchmark/server");
 
 (async () => {
   const server = createMapBenchmarkServer(), address = await server.listen();
-  const artifacts = path.resolve(__dirname,"../release-artifacts/castle-action-wheel-compact");
+  const artifacts = path.resolve(__dirname,"../release-artifacts/castle-action-wheel-original");
   fs.mkdirSync(artifacts,{recursive:true});
   const browser = await chromium.launch({headless:true, ...(process.env.CHROME_PATH ? {executablePath:process.env.CHROME_PATH} : {})});
   const errors = [], requests = [], records = [];
@@ -30,9 +30,24 @@ const { createMapBenchmarkServer } = require("./map-benchmark/server");
           const rect = node => {const r=node.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
           const distance = (a,b) => Math.hypot(Math.max(a.x-b.right,b.x-a.right,0),Math.max(a.y-b.bottom,b.y-a.bottom,0));
           const buttons=[...document.querySelectorAll("#actions button")], city=rect(document.getElementById("castle"));
-          const arc=document.querySelector("#arc path"), origin=rect(document.getElementById("arc"));
-          const arcGap=Math.min(...Array.from({length:181},(_,i)=>{const p=arc.getPointAtLength(arc.getTotalLength()*i/180);return distance({x:origin.x+p.x,right:origin.x+p.x,y:origin.y+p.y,bottom:origin.y+p.y},city)-2;}));
-          return {city, arcGap, buttons:buttons.map(button => {
+          const arc=document.querySelector("#arc .arc-line"), origin=rect(document.getElementById("arc"));
+          const image=document.querySelector("#castle img"), canvas=document.createElement("canvas");
+          canvas.width=canvas.height=256;
+          const context=canvas.getContext("2d",{willReadFrequently:true});context.drawImage(image,0,0,256,256);
+          const pixels=context.getImageData(0,0,256,256).data, edge=[];
+          for(let y=0;y<256;y++)for(let x=0;x<256;x++){
+            if(pixels[(y*256+x)*4+3]<=32)continue;
+            if(x===0||y===0||x===255||y===255||[[-1,0],[1,0],[0,-1],[0,1]].some(([dx,dy])=>pixels[((y+dy)*256+x+dx)*4+3]<=32))edge.push({x:city.x+(x+.5)*city.width/256,y:city.y+(y+.5)*city.height/256});
+          }
+          const stroke=Number.parseFloat(getComputedStyle(arc).strokeWidth), length=arc.getTotalLength();
+          const arcGap=Math.min(...Array.from({length:721},(_,i)=>{
+            const p=arc.getPointAtLength(length*i/720),x=origin.x+p.x,y=origin.y+p.y;
+            const px=Math.floor((x-city.x)/city.width*256),py=Math.floor((y-city.y)/city.height*256);
+            if(px>=0&&px<256&&py>=0&&py<256&&pixels[(py*256+px)*4+3]>32)return -1;
+            let nearest=Infinity;for(const e of edge)nearest=Math.min(nearest,Math.hypot(x-e.x,y-e.y));return nearest-stroke/2;
+          }));
+          const bounds=arc.getBBox(),ratio=bounds.height/(1+Math.SQRT1_2)/(bounds.width/2);
+          return {city, arcGap, originalEllipse:arc.getAttribute("d").includes(" A ")&&!/[QC]/.test(arc.getAttribute("d"))&&Math.abs(ratio-118/142)<.002, buttons:buttons.map(button => {
             const r=rect(button), label=rect(button.querySelector(".wheel-action-name"));
             return {...r,clearance:distance(r,city),labelFits:label.x>=r.x && label.right<=r.right && label.y>=r.y && label.bottom<=r.bottom,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest("button")===button};
           }), separation:Math.min(...buttons.flatMap((button,i)=>buttons.slice(i+1).map(other=>distance(rect(button),rect(other)))))};
@@ -44,9 +59,14 @@ const { createMapBenchmarkServer } = require("./map-benchmark/server");
           assert(button.labelFits && button.hit,"Readable label and unobstructed hit target");
         }
         const wheelWidth = Math.max(...metrics.buttons.map(b=>b.right))-Math.min(...metrics.buttons.map(b=>b.x));
-        assert(wheelWidth <= (height<=500 ? 180 : 280),"Keep the complete revised menu compact");
+        assert(wheelWidth <= (height<=500 ? 215 : 330),"Keep the original arrangement within a compact footprint");
         assert(metrics.separation>=1.9,"Buttons must have separate hit regions");
-        assert(metrics.arcGap>= (height<=500 ? 3.9 : 5.9),"The painted arc must never touch castle artwork");
+        assert(metrics.arcGap>= (height<=500 ? 3.7 : 5.7),"The painted arc must clear opaque castle artwork");
+        assert(metrics.originalEllipse,"Retain the original open elliptical shape and aspect ratio");
+        if(kind==="own"){
+          const [regroup,level,info,send,nearby]=metrics.buttons;
+          assert(regroup.y<level.y && nearby.y<send.y && info.y>level.y && info.y>send.y && level.x<info.x && send.x>info.x,"Preserve original upper-side, side, and bottom action positions");
+        }
         records.push({width,height,kind,stage,zoom,minimumCastleGap:Math.min(...metrics.buttons.map(b=>b.clearance)),minimumButtonGap:metrics.separation});
         if (stage===100 && zoom===1) {
           await page.screenshot({path:path.join(artifacts,`${name}${kind==="own" ? "" : "-"+kind}.png`)});

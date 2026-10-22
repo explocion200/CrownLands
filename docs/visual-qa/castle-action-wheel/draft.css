@@ -12,7 +12,7 @@ body{font-family:Georgia,serif;color:#fff3d6;background:#b4b44d}
 #banner{position:absolute;left:0;transform:translate(-50%,-100%);text-align:center;white-space:nowrap;pointer-events:none;text-shadow:0 2px 2px #241609,1px 0 2px #241609,-1px 0 2px #241609}
 #banner span{display:block;font-size:11px}#banner strong{display:block;font-size:17px;margin:2px 0 5px}#banner b{display:inline-grid;place-items:center;font-size:16px;width:32px;height:32px;background:#6b3035;clip-path:polygon(0 0,100% 0,100% 78%,50% 100%,0 78%);padding-bottom:5px;text-shadow:none}
 #arc{position:absolute;overflow:visible;pointer-events:none;width:1px;height:1px}
-#arc path{fill:none;stroke-linecap:round}.arc-shadow{stroke:#684c2a;stroke-width:4;opacity:.75}.arc-line{stroke:#e3c881;stroke-width:2}
+#arc path{fill:none;stroke-linecap:round}.arc-shadow{display:none}.arc-line{stroke:rgba(211,161,63,.78);stroke-width:var(--arc-stroke);filter:drop-shadow(0 3px 2px rgba(0,0,0,.45))}
 #actions{position:absolute;inset:0}
 #actions .cl-action-button{transform:translate(-50%,-50%);--cl-action-size:56px;padding:4px 3px!important;gap:1px}
 #actions .cl-action-button .wheel-icon{font-size:20px!important;min-height:20px}
