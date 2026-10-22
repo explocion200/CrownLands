@@ -56,7 +56,7 @@
       host.querySelectorAll("[data-intel-expiry]").forEach(n => n.textContent = time(Number(n.dataset.intelExpiry) - now()));
     }, 250);
     const refresh = root.setInterval(() => { if (current() && !host.hidden) void request(); }, 5000);
-    const unsubscribe = options.api.subscribeClanIntelligence?.(options.tower.clanId, () => void request(), failure => { if (current()) { sequence++; busy = false; clear(failure?.message || "Clan intelligence access unavailable."); } });
+    const unsubscribe = options.api.subscribeClanIntelligence?.(options.tower.clanId, () => void request(), failure => { if (current()) { sequence++; busy = false; clear(failure?.message || "Clan intelligence access unavailable."); } }, { towerId: options.tower.id, ownershipRevision: options.tower.ownershipRevision });
     function cleanup() { alive = false; sequence++; board = detail = null; operations.clear(); root.clearInterval(clock); root.clearInterval(refresh); unsubscribe?.(); host.removeEventListener("click", click); }
     void request();
     return cleanup;

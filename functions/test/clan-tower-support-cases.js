@@ -92,6 +92,14 @@ module.exports = async function run({ db, access = false }) {
     await member(ally).update({ status: "active" });
     await profile(ally).update({ clanId: "other_clan" }); assert.equal((await readAccess(ally)).signal, false);
     await profile(ally).update({ clanId });
+    // A newly acquired revision has an empty authorized stream, not a replay of old ownership signals.
+    await towerRef.update({ ownershipRevision: 5 });
+    const revisedQuery = { ...signalQuery, filters: [...signalQuery.filters,
+      { field: ["towerId"], op: "==", value: { stringValue: towerId } },
+      { field: ["ownershipRevision"], op: "==", value: { integerValue: "5" } }] };
+    assert.equal((await client.read({ uid: ally }, [revisedQuery], { partial: true }))[0].documents.length, 0);
+    await towerRef.update({ ownershipRevision: 4 });
+
   }
   await towerRef.set({ ...T.conquerTower(owned, { id: "victor" }, now + 10), ...realm });
   await denied(service.intelligence(uid), "permission-denied");

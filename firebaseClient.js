@@ -1217,12 +1217,13 @@
   }
 
   async function clanIntelligence(payload = {}) { return callServerFunction("clanIntelligence", payload); }
-  function subscribeClanIntelligence(clanId, onChange, onError) {
+  function subscribeClanIntelligence(clanId, onChange, onError, scope = {}) {
     if (!LOCAL || !client.db || !client.user?.uid) return () => {};
     const { collection, query, where, limit, documentId } = client.modules.firestore;
     return subscribeScopedSnapshot(query(collection(client.db, "clans", clanId, "scoutIntelSignals"),
       where(documentId(), "==", "current"), where("worldId", "==", ONLINE_WORLD_ID),
-      where("resetGeneration", "==", RESET_GENERATION), where("realmShardId", "==", REALM_SHARD_ID), limit(1)),
+      where("resetGeneration", "==", RESET_GENERATION), where("realmShardId", "==", REALM_SHARD_ID),
+      where("towerId", "==", scope.towerId || ""), where("ownershipRevision", "==", scope.ownershipRevision || 0), limit(1)),
       () => onChange(), onError);
   }
 
