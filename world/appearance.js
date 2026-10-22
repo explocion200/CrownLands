@@ -12,10 +12,12 @@
     if(item.kind==="tower"){
       // Fit the entire six-building courtyard inside the old Tower footprint.
       // Always start with the received dimensions; updates must not shrink it again.
-      const width=item.width*.5,height=item.height*.5;
-      return {...item,width,height,left:item.x-width/2,top:item.y-height/2,
-        asset:"assets/clan-buildings/tower.webp",labelTop:item.y-width*.58,
-        compoundBottom:item.y+width*.79};
+      const width=item.width*.5,height=item.height*.5,offsetY=width*.39;
+      // Anchor the courtyard toward the top of the reserved footprint, leaving
+      // its lower edge for actions above the next city's banner. Routes keep x/y.
+      return {...item,width,height,left:item.x-width/2,top:item.y-height/2-offsetY,
+        asset:"assets/clan-buildings/tower.webp",labelTop:item.y-offsetY-width*.58,
+        compoundBottom:item.y-offsetY+width*.79};
     }
     if(item.kind!=="castle")return item;
     // The reader's footprint is the established level-100 maximum. Derive
@@ -27,16 +29,17 @@
     const definitions=window.CrownlandsClanTowerBuildings;
     if(!definitions||snapshot?.ownerKind!=="clan"||!snapshot.clanId||snapshot.clanId!==tower.ownerClanId)return [];
     const children=[];
+    const centerY=tower.top+tower.height/2;
     for(const [i,building]of definitions.DEFINITIONS.entries()){
       const level=definitions.level(snapshot.buildings?.[building.id]),constructing=snapshot.buildingProject?.buildingId===building.id;
       if(!level&&!constructing)continue;
-      const width=tower.width*.4,x=tower.x+(i%2?1:-1)*tower.width*.72,y=tower.y+(-.38+Math.floor(i/2)*.48)*tower.width;
+      const width=tower.width*.4,x=tower.x+(i%2?1:-1)*tower.width*.72,y=centerY+(-.38+Math.floor(i/2)*.48)*tower.width;
       children.push({key:tower.key+":building:"+building.id,id:building.id,buildingId:building.id,towerKey:tower.key,towerId:tower.id,
         sectionId:tower.sectionId,sectionName:tower.sectionName,kind:"tower-building",name:building.name,level,constructing,
         x,y,left:x-width/2,top:y-width/2,width,height:width,asset:definitions.art(building.id,level),selectable:true});
     }
     if(!children.length)return children;
-    const width=tower.width*1.84,height=tower.width*1.4,x=tower.x,y=tower.y+tower.width*.1;
+    const width=tower.width*1.84,height=tower.width*1.4,x=tower.x,y=centerY+tower.width*.1;
     return [{key:tower.key+":courtyard",kind:"courtyard",sectionId:tower.sectionId,x,y,left:x-width/2,top:y-height/2,width,height,
       asset:"assets/clan-buildings/courtyard.webp",selectable:false},...children];
   }
@@ -122,7 +125,7 @@
   }
   let measurements=new WeakMap(),measured=0,lastLayout="",layoutSize="";
   document.fonts?.addEventListener("loadingdone",()=>{measurements=new WeakMap();lastLayout="";});
-  function layout(rows,clearings=[]){
+  function layout(rows,clearings=[],controls=[]){
     const size=`${innerWidth}:${innerHeight}`;
     if(size!==layoutSize){layoutSize=size;measurements=new WeakMap();lastLayout="";}
     const entries=rows.map(({node,item})=>({node,item,banner:node.querySelector(".map-banner"),label:node.querySelector(".city-label")})).filter(e=>e.label);
@@ -133,13 +136,13 @@
     fresh.forEach(e=>{if(!e.node.classList.contains("selected"))e.banner.classList.add("compact");});
     fresh.forEach((e,i)=>measurements.set(e.label,{...sizes[i],compact:e.node.classList.contains("selected")?null:{width:e.label.offsetWidth*.8,height:e.label.offsetHeight*.8},version:++measured}));
     const signature=entries.map(e=>`${e.item.key}:${measurements.get(e.label).version}:${e.item.x}:${e.item.top}`).join("|")
-      +";"+rows.filter(({item})=>item.kind==="tower-building").map(({item:o})=>`${o.key}:${o.left}:${o.top}:${o.width}:${o.height}`).join("|");
+      +";"+rows.filter(({item})=>item.kind==="tower-building").map(({item:o})=>`${o.key}:${o.left}:${o.top}:${o.width}:${o.height}`).join("|")+JSON.stringify(controls);
     if(signature===lastLayout)return;
     lastLayout=signature;
     const byKey=new Map(entries.map(e=>[e.item.key,e]));
     const labels=entries.map(e=>({key:e.item.key,x:e.item.x,y:(e.item.labelTop??e.item.top)-4,anchored:e.item.kind==="npc",priority:e.node.classList.contains("selected")?1:0,...measurements.get(e.label)}));
     const labelBounds=new Map();
-    const obstacles=[...clearings,...rows.filter(({item})=>item.kind!=="courtyard").map(({item:o})=>({left:o.left,top:o.top,right:o.left+o.width,bottom:o.top+o.height}))];
+    const obstacles=[...clearings,...controls,...rows.filter(({item})=>item.kind!=="courtyard").map(({item:o})=>({left:o.left,top:o.top,right:o.left+o.width,bottom:o.top+o.height}))];
     for(const result of SeamlessModel.placeLabels(labels,new Set(),0,obstacles)){
       if(!result.hidden)labelBounds.set(result.key,result.rect);
       const {banner,item}=byKey.get(result.key);

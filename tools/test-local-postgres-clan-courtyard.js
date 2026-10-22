@@ -100,8 +100,12 @@ for(const raw of fixture.objects.filter(o=>o.kind==="tower")){
    await frame(t);await page.screenshot({path:path.join(output,`courtyard-${width}.png`)});
    await page.evaluate(id=>CrownlandsContinuousWorld.view.select(CrownlandsContinuousWorld.view.scene.objects.find(o=>o.id===id).key),t.id);
    await page.waitForFunction(()=>!CrownlandsContinuousWorld.bridge.running);
+   await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
    const controls=await page.locator('#continuous-game-actions button').evaluateAll(nodes=>nodes.map(n=>{const r=n.getBoundingClientRect();return {left:r.left,top:r.top,width:r.width,height:r.height};}));
    assert(controls.length>0);
+   await page.screenshot({path:path.join(output,`actions-${width}.png`)});
+   const labels=await page.locator('#continuous-game-surface .city-label').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).visibility!=="hidden").map(n=>{const r=n.getBoundingClientRect();return {left:r.left,top:r.top,width:r.width,height:r.height};}));
+   for(const c of controls)for(const label of labels)assert(!overlap(c,label),"Tower actions overlap a map label: "+width+JSON.stringify({c,label}));
    const art=await page.locator('#continuous-game-surface .tower-building').evaluateAll(nodes=>nodes.map(n=>{const r=n.getBoundingClientRect();return {left:r.left,top:r.top,width:r.width,height:r.height};}));
    for(const c of controls)for(const b of art)assert(!overlap(c,b),"Tower actions obscure a building");
    const large=await page.locator('#continuous-game-surface .object.tower').first().boundingBox();

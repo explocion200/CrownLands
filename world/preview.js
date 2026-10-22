@@ -252,8 +252,9 @@ window.createContinuousWorldView = async function (options = {}) {
         node.classList.toggle("selected", item.key === selected);
 
       }
-      window.SeamlessAppearance?.layout(interactive.map(item => ({item,node:nodes.get(item.key)})),pickupClearings);
-      const exclusions=[...(window.SeamlessAppearance?.labelBounds?.values()||[])];
+      const controlClearings=options.labelClearings?.(size)||[];
+      window.SeamlessAppearance?.layout(interactive.map(item => ({item,node:nodes.get(item.key)})),pickupClearings,controlClearings);
+      const exclusions=[...controlClearings,...(window.SeamlessAppearance?.labelBounds?.values()||[])];
       // Preserve existing encounter positions until natural respawn. A moved
       // decoration must never paint over one of those active/defeated markers.
       for(const item of interactive.filter(o=>["npc","tower","tower-building","courtyard"].includes(o.kind)))exclusions.push({left:item.left,top:item.top,right:item.left+item.width,bottom:item.top+item.height});

@@ -243,6 +243,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     // an unscaled wheel while waiting for the next camera frame.
     positionWheel(controls,view.snapshot());
     for (const node of controls) { node.style.pointerEvents = "auto"; overlay.append(node); }
+    view.invalidate();
   }
   // Identity repairs, own-power subscriptions and the existing power-band
   // stabilization timer must repaint visible banners as well as action wheels.
@@ -331,6 +332,14 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     })));
     view = await window.createContinuousWorldView({ root, scene, nativeUi:true,
     getTowerState: id => holdingTowerSnapshots.get(id),
+    labelClearings: size => {
+      const count=overlay.querySelector(".clan-tower-action-wheel")?.children.length;
+      if(!count||wheelPoint?.kind!=="tower")return [];
+      const maxZoom=SeamlessModel.forWorld(scene).limits(size).max,scale=(size.height<500?.74:.9)/maxZoom;
+      const halfWidth=((count-1)*60+56)*scale/2+4,halfHeight=28*scale+4;
+      const y=wheelPoint.compoundBottom+36/maxZoom;
+      return [{left:wheelPoint.x-halfWidth,right:wheelPoint.x+halfWidth,top:y-halfHeight,bottom:y+halfHeight}];
+    },
     loadAreas: (ids, signal, cursor) => readWorld("areas", { realm: scene.realmId, ids, cursor }, signal),
       onAreas: data => {
         areasReady = !data.authExpired && !data.failed && data.authoritative === true;
