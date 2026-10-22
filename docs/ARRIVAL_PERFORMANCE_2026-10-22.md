@@ -26,7 +26,12 @@ request limits or active/archived world topology.
   numeric values; no SQL, account/order identity or payload is recorded.
 - Scheduled arrivals get isolated timing contexts. Only arrivals taking at least
   500 ms and unexpected failures add a sanitized timing record. Fast successes
-  and expected skips do not add per-arrival logs. Existing job behavior is intact.
+  and fast expected skips do not add per-arrival logs. Existing job behavior is intact.
+- The permanent worker's existing privacy filter retains the last 32 sanitized
+  arrival samples in its private `handlerLogs.arrivalTimings` status. It accepts
+  only fixed operations/outcomes and bounded numeric phases/counters, never raw
+  handler output, identifiers, arbitrary keys or logged getters. Samples reset
+  on worker restart and are not exposed in public responses.
 
 `documentReads` in the older phase timing is a duration in milliseconds, not a
 count of documents. `transactionAttempts` can include multiple normal game

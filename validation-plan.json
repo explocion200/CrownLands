@@ -133,6 +133,16 @@
       ],
       "tests": [],
       "reason": "Record approved technical performance scope, controlled measurements and separately authorized backend rollout. No gameplay design rule changes."
+    },
+    {
+      "paths": [
+        "local-backend/worker-diagnostics.js"
+      ],
+      "tests": [
+        "tools/validate-scheduled-arrival-timing.js",
+        "tools/test-local-postgres-worker-loop.js"
+      ],
+      "reason": "The permanent worker intercepts console output. Exercise actual capture with the scheduled resolver, bounded 32-sample retention, fixed numeric whitelists, rejected private fields/getters/nonfinite values, independent snapshots, and unchanged error/outcome monitoring and PostgreSQL worker leases/shutdown behavior."
     }
   ]
 }
