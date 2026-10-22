@@ -42,6 +42,16 @@
       ],
       "tests": [],
       "reason": "Document the owner-confirmed override of passive recovery, proportional price and stamina refunds, preserve initialization/allowance, and record backend-first compatibility/approval requirements without claiming deployment."
+    },
+    {
+      "paths": [
+        "terms.html",
+        "how-to-play.html"
+      ],
+      "tests": [
+        "tools/validate-public-site-content.js"
+      ],
+      "reason": "Published purchase and beginner instructions must describe flat 30-Crown refills, no automatic recovery or hunt refunds, and the retained daily allowance. Public-content validation checks page structure and links; review the changed stamina text with the shared rule tests and production-artifact validation."
     }
   ]
 }
