@@ -66,7 +66,6 @@
     if(inspector||!state)return;
     if(item.kind==="scenery"||item.kind==="courtyard")return;
     if(item.kind==="tower-building"){
-      node.querySelector(".tag")?.remove();
       node.classList.toggle("constructing",item.constructing);
       node.classList.toggle("unbuilt",!item.level);
       node.title=`${item.name} · ${item.level?"Level "+item.level:"Under construction"} · ${item.sectionName}`;
@@ -100,7 +99,7 @@
       node.setAttribute("aria-label",`${item.owner||"Ruler"} · ${item.missionKind||"Army"}${shown?" · "+count(item)+" troops":""}`);
       return;
     }
-    node.querySelector(".tag")?.remove();node.querySelector(".map-banner")?.remove();
+    node.querySelector(".map-banner")?.remove();
     const label=document.createElement("span");label.className="map-banner";
     label.style.transform=`translateY(-4px) scale(${bannerScale(item)})`;
     const name=`<strong class="city-name">${esc(item.name)}</strong>`,level=`<span class="city-label-level">${esc(item.level??"")}</span>`;

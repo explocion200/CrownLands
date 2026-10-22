@@ -1,14 +1,14 @@
-/* Viewport-sized batches for decorative sprites and moving patrols. Native
-   castle art/buttons remain sharp; patrol buttons retain keyboard semantics. */
+/* Bounded decoration drawing; native castle and troop buttons retain their
+   original artwork, banners, keyboard semantics and live presentation. */
 (function () {
   "use strict";
   class SpriteLayer {
     constructor(viewport, assets) {
-      this.assets = assets; this.images = new Map(); this.stamps = new Map();
+      this.assets = assets; this.images = new Map();
       this.drawing=null;this.tileBytes=0;this.draws=0;this.tileHits=0;this.tileBuilds=0;this.disposed=false;
-      this.back = document.createElement("canvas"); this.front = document.createElement("canvas");
-      this.back.className = "sprite-batch scenery-batch"; this.front.className = "sprite-batch patrol-batch";
-      for (const canvas of [this.back,this.front]) { canvas.setAttribute("aria-hidden","true"); viewport.append(canvas); }
+      this.back = document.createElement("canvas");
+      this.back.className = "sprite-batch scenery-batch";
+      this.back.setAttribute("aria-hidden","true");viewport.append(this.back);
     }
     image(path) {
       const url = this.assets.get(path); if (!url) return null;
@@ -41,25 +41,10 @@
         tile=this.drawing={signature,x:camera.x,y:camera.y};this.tileBytes=width*height*4;this.tileBuilds++;
       }else this.tileHits++;
       this.back.style.transform=`translate3d(${(tile.x-camera.x)*z}px,${(tile.y-camera.y)*z}px,0)`;this.draws++;
-      for(const [path,img]of this.images)if(!this.assets.get(path)){img.onload=null;this.images.delete(path);this.stamps.delete(path);}
-    }
-    patrols(items,camera,size,selected,focused) {
-      const ctx = this.context(this.front,size), z=camera.zoom, diameter=Math.max(22,36*z), r=diameter/2;
-      for (const item of items) {
-        const x=size.width/2+(item.position.x-camera.x)*z, y=size.height/2+(item.position.y-camera.y)*z;
-        if(x < -r || y < -r || x > size.width+r || y > size.height+r) continue;
-        let stamp=this.stamps.get(item.asset); const img=this.image(item.asset);
-        if (!stamp && img) {
-          stamp=document.createElement("canvas"); stamp.width=stamp.height=128;
-          const c=stamp.getContext("2d"); c.fillStyle="#e7d6ad"; c.strokeStyle="#72363a"; c.lineWidth=8;
-          c.beginPath();c.arc(64,64,60,0,Math.PI*2);c.fill();c.stroke();c.save();c.clip();c.drawImage(img,8,8,112,112);c.restore();this.stamps.set(item.asset,stamp);
-        }
-        if(stamp) ctx.drawImage(stamp,x-r,y-r,diameter,diameter);
-        if(item.key===selected || item.key===focused) { ctx.strokeStyle="#ffe394";ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,r+4,0,Math.PI*2);ctx.stroke(); }
-      }
+      for(const [path,img]of this.images)if(!this.assets.get(path)){img.onload=null;this.images.delete(path);}
     }
     stats(){return {tiles:this.drawing?1:0,tileBytes:this.tileBytes,images:this.images.size,draws:this.draws,tileHits:this.tileHits,tileBuilds:this.tileBuilds};}
-    dispose() {this.disposed=true;for(const img of this.images.values())img.onload=null;this.images.clear();this.stamps.clear();this.drawing=null;this.tileBytes=0;this.back.remove();this.front.remove(); }
+    dispose() {this.disposed=true;for(const img of this.images.values())img.onload=null;this.images.clear();this.drawing=null;this.tileBytes=0;this.back.remove(); }
   }
   window.SeamlessSpriteLayer=SpriteLayer;
 })();

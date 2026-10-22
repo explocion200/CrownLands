@@ -31,7 +31,9 @@ their displayed second changes, while positions remain frame-synchronous.
 
 An initial experiment with many world-aligned scenery tiles increased raster work
 and memory churn in the crowded test. It was replaced with the single viewport
-drawing. Camera raster hints are removed before changing zoom, preserving sharp
+drawing. Unused prototype patrol-canvas/draft paths and hidden preview-only styles were removed to retain the existing 75 KiB lazy-module limit. The actual native troop controls and private prototype files remain unchanged.
+
+Camera raster hints are removed before changing zoom, preserving sharp
 close-up artwork instead of permanently caching the first displayed scale.
 
 ## Reproducible checks

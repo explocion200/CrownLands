@@ -30,7 +30,7 @@ window.createContinuousWorldView = async function (options = {}) {
       const path = M.preparePath(points);
       return { ...m, points, path, position: points[0], bounds: { left: Math.min(...points.map(p => p.x)), top: Math.min(...points.map(p => p.y)), right: Math.max(...points.map(p => p.x)), bottom: Math.max(...points.map(p => p.y)) } };
     }
-    let marches = scene.marches.map(m => prepareMarch(m, m.points)), activeMarches = marches, feed = null, feedEpoch = null, feedViewer = null, selectedSnapshot = null, routeDraft = null, gameplay = null;
+    let marches = scene.marches.map(m => prepareMarch(m, m.points)), activeMarches = marches, feed = null, feedEpoch = null, feedViewer = null, selectedSnapshot = null;
     const byMarch = new Map(marches.map(m => [m.key, m]));
     const nodes = new Map(), pooledNodes=new Map(), terrain = new Map(), routeNodes = new Map();
     let paintedSections=new Set();
@@ -67,7 +67,7 @@ window.createContinuousWorldView = async function (options = {}) {
     const pickupClearings=scene.sections.flatMap(s=>(s.pickupZones||[]).map(p=>({left:s.x+p.x-p.radius,top:s.y+p.y-p.radius,right:s.x+p.x+p.radius,bottom:s.y+p.y+p.radius})));
     function on(target, event, handler, options) { target.addEventListener(event, handler, options); listenerCount++; cleanups.push(() => target.removeEventListener(event, handler, options)); }
     function center() { return { x: size.width / 2, y: size.height / 2 }; }
-    function home() { routeDraft?.cancelFollow(); camera = M.clamp({ x: homeSection.x + 724, y: homeSection.y + 543, zoom: M.limits(size).home }, size); dirty = true; refreshInspector(); }
+    function home() { camera = M.clamp({ x: homeSection.x + 724, y: homeSection.y + 543, zoom: M.limits(size).home }, size); dirty = true; refreshInspector(); }
     function resize() {
       const previous = size; size = { width: viewport.clientWidth, height: viewport.clientHeight };
       if (!camera) home();
@@ -80,8 +80,7 @@ window.createContinuousWorldView = async function (options = {}) {
       tile.style.cssText = `left:${section.x}px;top:${section.y}px;width:${section.width}px;height:${section.height}px;--gutter:${section.gutter ?? 2}px`;
       const thumb = new Image(), full = new Image(); thumb.alt = ""; full.alt = "";
       full.className = "full-terrain";
-      const label = document.createElement("span"); label.className = "section-label"; label.textContent = section.name;
-      tile.append(thumb, full, label); $("terrain").append(tile); terrain.set(section.id, { tile, thumb, full });
+      tile.append(thumb, full); $("terrain").append(tile); terrain.set(section.id, { tile, thumb, full });
     }
     function setImage(image, path) {
       const url = assets.get(path);
@@ -98,7 +97,6 @@ window.createContinuousWorldView = async function (options = {}) {
       if(item.kind==="courtyard")node.setAttribute("aria-hidden","true");
       if (item.kind === "troop") {node.setAttribute("role","button");node.tabIndex=0;}
       if (item.kind !== "troop") { const image = new Image(); image.alt = ""; image.draggable = false; node.append(image); }
-      if (!["scenery", "courtyard", "troop"].includes(item.kind)) { const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = item.name; node.append(tag); }
       (item.kind === "troop" ? marchesLayer : objectsLayer).append(node);
       nodes.set(item.key, node); return node;
     }
@@ -106,8 +104,7 @@ window.createContinuousWorldView = async function (options = {}) {
       selectedSnapshot = objects.get(selected) || byMarch.get(selected) || (selectedSnapshot?.key === selected ? selectedSnapshot : null);
     }
     function select(key, notify = true) { if(key===selected&&byMarch.has(key)&&notify){clear();return;} if (objects.get(key)?.selectable || byMarch.has(key)) { selected = key; dirty = true; refreshInspector(); if (notify) options.onSelect?.(objects.get(key) || byMarch.get(key)); } }
-    function clear(notify = true) { selected = null; selectedSnapshot = null; cancelFollow(); dirty = true; refreshInspector(); if (notify) options.onClear?.(); }
-    function cancelFollow() { routeDraft?.cancelFollow(); }
+    function clear(notify = true) { selected = null; selectedSnapshot = null; dirty = true; refreshInspector(); if (notify) options.onClear?.(); }
     function point(event) { const rect = viewport.getBoundingClientRect(); return { x: event.clientX - rect.left, y: event.clientY - rect.top }; }
     function beginGesture() {
       const points = [...pointers.values()];
@@ -119,7 +116,7 @@ window.createContinuousWorldView = async function (options = {}) {
       if (event.button !== 0) return;
       if (!pointers.size) { dragged = false; clickKey = event.target.closest("[data-key]")?.dataset.key || null; }
       pointers.set(event.pointerId, point(event)); viewport.setPointerCapture(event.pointerId);
-      if (pointers.size > 1) { dragged = true; cancelFollow(); options.onZoom?.(); }
+      if (pointers.size > 1) { dragged = true; options.onZoom?.(); }
       beginGesture();
     });
     on(viewport, "pointermove", event => {
@@ -129,7 +126,7 @@ window.createContinuousWorldView = async function (options = {}) {
       const midpoint = points.length > 1 ? { x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 } : points[0];
       const dx = midpoint.x - gesture.midpoint.x, dy = midpoint.y - gesture.midpoint.y;
       if (!dragged && Math.hypot(dx, dy) < 6) return;
-      dragged = true; cancelFollow(); viewport.classList.add("dragging");
+      dragged = true; viewport.classList.add("dragging");
       if (points.length > 1 && gesture.distance > 0) {
         const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
         camera = M.zoomAt(gesture.camera, size, gesture.midpoint, gesture.camera.zoom * distance / gesture.distance, midpoint);
@@ -154,15 +151,15 @@ window.createContinuousWorldView = async function (options = {}) {
       suppressClick = false;
       if (event.key === "Escape") { clear(); }
       const directions = { ArrowLeft: [-100, 0], ArrowRight: [100, 0], ArrowUp: [0, -100], ArrowDown: [0, 100] };
-      if (directions[event.key]) { event.preventDefault(); cancelFollow(); const [x, y] = directions[event.key]; camera = M.clamp({ ...camera, x: camera.x + x / camera.zoom, y: camera.y + y / camera.zoom }, size); dirty = true; }
+      if (directions[event.key]) { event.preventDefault(); const [x, y] = directions[event.key]; camera = M.clamp({ ...camera, x: camera.x + x / camera.zoom, y: camera.y + y / camera.zoom }, size); dirty = true; }
     });
     on(viewport, "wheel", event => {
-      event.preventDefault(); cancelFollow(); options.onZoom?.();
+      event.preventDefault(); options.onZoom?.();
       const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? size.height : 1);
       camera = M.zoomAt(camera, size, point(event), camera.zoom * Math.exp(-Math.max(-300, Math.min(300, delta)) * 0.002)); dirty = true;
     }, { passive: false });
     on($("home"), "click", home);
-    on($("fit"), "click", () => { cancelFollow(); options.onZoom?.(); camera = M.clamp({ x: scene.width / 2, y: scene.height / 2, zoom: M.limits(size).min }, size); dirty = true; });
+    on($("fit"), "click", () => { options.onZoom?.(); camera = M.clamp({ x: scene.width / 2, y: scene.height / 2, zoom: M.limits(size).min }, size); dirty = true; });
     for (const [id, factor] of [["plus", 1.25], ["minus", 0.8]]) on($(id), "click", () => { options.onZoom?.(); camera = M.zoomAt(camera, size, center(), camera.zoom * factor); dirty = true; });
     // The native From/To controls navigate the accepted route, including endpoints
     // outside the loaded area. Never reconstruct a route from city caches.
@@ -191,9 +188,7 @@ window.createContinuousWorldView = async function (options = {}) {
         const hadEpoch = Boolean(feedEpoch);
         const epochChanged = stageThree && data.epoch && data.epoch !== feedEpoch;
         if (data.epoch) feedEpoch = data.epoch;
-        if (principalChanged || epochChanged || data.authExpired) routeDraft?.clear();
-        if (principalChanged || (hadEpoch && epochChanged) || data.authExpired) {gameplay?.clear();pooledNodes.clear();SeamlessAppearance.resetLayout();}
-        if (data.removed?.includes(routeDraft?.source?.key)) routeDraft.clear();
+        if (principalChanged || (hadEpoch && epochChanged) || data.authExpired) {pooledNodes.clear();SeamlessAppearance.resetLayout();}
         const inspectedSections = selectedSnapshot?.kind === "troop" ? selectedSnapshot.sections : [selectedSnapshot?.sectionId];
         const inspectedAreaPresent = inspectedSections.some(id => data.sections.some(s => s.id === id));
         const inspectedAreaLoaded = data.authoritative && inspectedAreaPresent;
@@ -298,7 +293,6 @@ window.createContinuousWorldView = async function (options = {}) {
           else if(march.swiftAt&&sceneTime>=march.swiftAt)progress=march.swiftProgress+(1-march.swiftProgress)*Math.min(1,Math.max(0,(sceneTime-march.swiftAt)/(march.arriveAt-march.swiftAt)));
           march.position = M.along(march.path, march.path.length * progress);
       }
-      routeDraft?.tick(now);
       // Camera transforms remain frame-synchronous. Reconcile the larger scene
       // only when its culling margin or zoom requires it. Patrol hit targets
       // reconcile separately every 120ms; their visual positions update each frame.
@@ -324,7 +318,6 @@ window.createContinuousWorldView = async function (options = {}) {
       const transform=`translate3d(${size.width / 2 - camera.x * camera.zoom}px,${size.height / 2 - camera.y * camera.zoom}px,0) scale(${camera.zoom})`;
       if(world.style.transform!==transform)world.style.transform=transform;
       drawnCamera={...camera};
-      routeDraft?.draw(camera,size);
       for (const march of activeMarches) { const node = nodes.get(march.key); if (node) { const p = M.project(camera, march.position, size); node.style.transform = `translate3d(${p.x}px,${p.y}px,0) scale(${Math.min(1,camera.zoom/M.limits(size).max)}) translate(-50%,-50%)`; } }
       const selectedMarch = byMarch.get(selected);
       if(selectedMarch&&!M.intersects(M.visible(camera,size),selectedMarch.position.x,selectedMarch.position.y,1,1))clear();
@@ -340,13 +333,13 @@ window.createContinuousWorldView = async function (options = {}) {
       dispose,
       invalidate: () => { dirty = true; },
       getObject: key => objects.get(key) || byMarch.get(key),
-      focus: item => { cancelFollow(); camera = M.clamp({ ...camera, x: item.x, y: item.y }, size); dirty = true; },
+      focus: item => { camera = M.clamp({ ...camera, x: item.x, y: item.y }, size); dirty = true; },
       clear: () => clear(false),
       get selectedKey() { return selected; },
-      scene, home, select, routeDraft, gameplay, refresh: () => feed?.refresh(),
+      scene, home, select, routeDraft:null, gameplay:null, refresh: () => feed?.refresh(),
       placementState: () => ({size,feed:feed && {ids:feed.ids,failed:feed.failed,authExpired:feed.authExpired}}),
-      snapshot: () => ({ camera: { ...camera }, size: { ...size }, selected, following: null, assets: assets.stats(), feed: feed?.stats(), nodes: nodes.size,pooledNodes:pooledNodes.size,renderer:sprites.stats?.(), listeners: listenerCount+(routeDraft?.cleanups.length||0)+(gameplay?.cleanups.length||0), frameTimes: [...frameTimes], workTimes: [...workTimes], marches: marches.map(m => ({ key: m.key, position: m.position })) }),
-      view: (x, y, zoom) => { cancelFollow(); camera = M.clamp({ x, y, zoom: zoom ?? camera.zoom }, size); },
+      snapshot: () => ({ camera: { ...camera }, size: { ...size }, selected, following: null, assets: assets.stats(), feed: feed?.stats(), nodes: nodes.size,pooledNodes:pooledNodes.size,renderer:sprites.stats?.(), listeners: listenerCount, frameTimes: [...frameTimes], workTimes: [...workTimes], marches: marches.map(m => ({ key: m.key, position: m.position })) }),
+      view: (x, y, zoom) => { camera = M.clamp({ x, y, zoom: zoom ?? camera.zoom }, size); },
       time: value => { frozenTime = value; dirty = true; },
       resetMetrics: () => { frameTimes.length = 0; workTimes.length = 0; }
     };
