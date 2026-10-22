@@ -205,7 +205,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
         continue;
       }
       if(node.dataset.towerId){
-        const bottom=wheelPoint.top+wheelPoint.height-wheelPoint.y;
+        const bottom=(wheelPoint.compoundBottom??(wheelPoint.top+wheelPoint.height))-wheelPoint.y;
         node.style.setProperty("--tower-action-y",`${(bottom*maxZoom+36)/closeScale}px`);
       }
       node.style.left=`${p.x}px`;node.style.top=`${p.y}px`;node.style.transform=`translate(-50%,-50%) scale(${scale})`;
@@ -243,10 +243,11 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     // an unscaled wheel while waiting for the next camera frame.
     positionWheel(controls,view.snapshot());
     for (const node of controls) { node.style.pointerEvents = "auto"; overlay.append(node); }
+    view.invalidate();
   }
   // Identity repairs, own-power subscriptions and the existing power-band
   // stabilization timer must repaint visible banners as well as action wheels.
-  renderCities = () => { view?.invalidate(); paintWheel(); };
+  renderCities = () => { ensureHoldingTowerMapSubscriptions(); view?.invalidate(); paintWheel(); };
   renderArmies = renderPaths = () => {};
   renderHarvestBonuses=renderPickups;
   // A section change still loads authoritative gameplay state, but the hidden
@@ -330,6 +331,15 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
       const timer=setTimeout(()=>done(true),10000);link.onload=()=>done(false);link.onerror=()=>done(true);
     })));
     view = await window.createContinuousWorldView({ root, scene, nativeUi:true,
+    getTowerState: id => holdingTowerSnapshots.get(id),
+    labelClearings: size => {
+      const count=overlay.querySelector(".clan-tower-action-wheel")?.children.length;
+      if(!count||wheelPoint?.kind!=="tower")return [];
+      const maxZoom=SeamlessModel.forWorld(scene).limits(size).max,scale=(size.height<500?.74:.9)/maxZoom;
+      const halfWidth=((count-1)*60+56)*scale/2+4,halfHeight=28*scale+4;
+      const y=wheelPoint.compoundBottom+36/maxZoom;
+      return [{left:wheelPoint.x-halfWidth,right:wheelPoint.x+halfWidth,top:y-halfHeight,bottom:y+halfHeight}];
+    },
     loadAreas: (ids, signal, cursor) => readWorld("areas", { realm: scene.realmId, ids, cursor }, signal),
       onAreas: data => {
         areasReady = !data.authExpired && !data.failed && data.authoritative === true;
@@ -349,6 +359,18 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
         }
       },
     onSelect: item => {
+      if(item.kind==="tower-building"){
+        const tower=view.getObject(item.towerKey);
+        if(!tower||!areasReady)return;
+        view.select(tower.key,false);
+        const navigateOnly=!sendMode;
+        void bridge.select(tower).then(ok=>{
+          lastWheel="";paintWheel();
+          if(ok&&navigateOnly&&view.selectedKey===tower.key)void openClanTowerBuilding(tower.id,item.buildingId).catch(error=>showToast(error.message));
+          else if(!ok&&bridge.error)showToast(bridge.error);
+        });
+        return;
+      }
       if (!["castle","camp","stronghold","citadel","npc","tower"].includes(item.kind) || !areasReady) {bridge.cancel();clearSelection(false);return;}
       focusCastleActions(item);
       void bridge.select(item).then(ok=>{lastWheel="";paintWheel();if(!ok && bridge.error)showToast(bridge.error);requestAnimationFrame(()=>{restoringSelection=false;});});
@@ -431,7 +453,7 @@ function createContinuousHarvestPlacement(view) {
       const art={left:o.left,top:o.top,right:o.left+o.width,bottom:o.top+o.height};
       if(!Object.values(art).every(Number.isFinite))continue;
       if(overlaps(center,range+cached.radius,art))boxes.push(art);
-      if(o.kind!=="scenery"){
+      if(!["scenery","courtyard","tower-building"].includes(o.kind)){
         const label=labels?.get(o.key) || {left:o.x-100,right:o.x+100,top:o.top-110,bottom:o.top,estimated:true};
         if(overlaps(center,range+cached.radius,label))boxes.push(label);
       }

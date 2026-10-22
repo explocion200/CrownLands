@@ -19,7 +19,7 @@ const sets=[{id:"default",name:"Default cities",assets:catalog.mapPresentation.c
     assert.equal(a.gamePosition,raw.gamePosition);assert.equal(a.key,raw.key);assert.equal(a.ownerUid,raw.ownerUid);
     if(stage===5)assert.deepEqual({...a},{...raw},"Level 100+ maximum changed");
   }
-  for(const kind of ["scenery","stronghold","camp","tower","citadel","npc","troop"]){const o={kind,level:1,width:100,height:80};assert.equal(geometry(o),o);}
+  for(const kind of ["scenery","stronghold","camp","citadel","npc","troop"]){const o={kind,level:1,width:100,height:80};assert.equal(geometry(o),o);}
   const sites=fixture.objects.filter(o=>o.kind!=="scenery").map(geometry);
   const labels=sites.map(o=>({key:o.key,x:o.x,y:o.top-4,width:o.kind==="castle"?110:140,height:o.kind==="castle"?70:40,compact:{width:o.kind==="castle"?64:105,height:o.kind==="castle"?56:40}}));
   const placed=placeLabels(labels);assert(placed.every(p=>!p.hidden));

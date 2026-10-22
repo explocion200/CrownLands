@@ -27,6 +27,10 @@ nav{display:flex;align-items:center;gap:6px}
 .object:hover{background:none;filter:brightness(1.1)}
 .object>img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
 .object.scenery{pointer-events:none}
+.object.courtyard{pointer-events:none;z-index:-1;opacity:.78}
+.object.courtyard .tag{display:none}
+.object.tower-building.constructing:after{content:"";position:absolute;inset:18% 8% 12%;border:2px double #644522;background:repeating-linear-gradient(90deg,transparent 0 28%,#846037 29% 32%,transparent 33% 48%);pointer-events:none}
+.object.tower-building.unbuilt>img{opacity:.35}
 .object.selected:after{content:"";position:absolute;inset:-5px;border:3px solid #ffe394;border-radius:40%;box-shadow:0 0 0 2px #72363a;pointer-events:none}
 .object .tag{position:absolute;top:95%;left:50%;transform:translateX(-50%);font-size:12px;white-space:nowrap;color:#342d20;background:#eddfb8ed;padding:2px 5px;border-radius:2px;pointer-events:none}
 .object.castle .tag{display:none}

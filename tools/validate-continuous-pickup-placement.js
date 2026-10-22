@@ -17,7 +17,7 @@ function fixture(){
   const object=(kind,x=724,y=543)=>({key:kind,kind,sectionId:"current",x:section.x+x,y:section.y+y,left:section.x+x-40,top:section.y+y-40,width:80,height:80});
   return {section,scene,status,view,ctx,placement,bonus,object,calls:()=>terrainCalls,land:value=>{land=value;scene.objects=[...scene.objects];}};
 }
-for(const kind of ["castle","camp","tower","stronghold","citadel","scenery","npc"]){
+for(const kind of ["castle","camp","tower","tower-building","courtyard","stronghold","citadel","scenery","npc"]){
   const f=fixture();f.scene.objects=[f.object(kind)];
   for(const type of ["gold","troops","crowns"]){
     assert(!f.placement.safe(f.bonus(724,543,type)),kind+" obscures pickup");

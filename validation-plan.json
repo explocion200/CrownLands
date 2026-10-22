@@ -1,23 +1,35 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "870bb78a290d17d677d14f3d6b88136b7ea49740",
+  "baseCommit": "5707cc61708ddaa5631f6be828c2356156ed28df",
   "coverage": [
     {
       "paths": [
-        "local-client.js",
-        "tools/test-local-browser-client.js",
-        "tools/test-local-production-client.js"
+        "world/appearance.js",
+        "world/native.js",
+        "world/preview.js",
+        "world/preview.css",
+        "tools/test-local-postgres-clan-courtyard.js",
+        "tools/validate-continuous-city-stages.js",
+        "tools/validate-continuous-pickup-placement.js",
+        "tools/validate-production-artifact.js"
       ],
       "tests": [
-        "tools/test-local-browser-client.js",
-        "tools/test-local-production-client.js",
-        "tools/validate-social-browser.js",
-        "tools/test-local-chat-client.js",
-        "tools/test-local-postgres-social.js",
-        "tools/test-local-postgres-clan-support.js",
-        "tools/test-local-postgres-world-service.js"
+        "tools/test-local-postgres-clan-courtyard.js",
+        "tools/validate-continuous-city-stages.js",
+        "tools/validate-continuous-pickup-placement.js",
+        "tools/validate-continuous-game-ui.js",
+        "tools/validate-clan-tower-buildings.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
       ],
-      "reason": "The continuous-world transport attached movement revision fields to every callable, rejecting strict Friends/Messages and Scout Lodge intelligence payloads. Limit injection to the existing server movement-command boundary while retaining queued-world/session checks. Exercise real cookie HTTP and disposable PostgreSQL friends, conversation/history/unread and authorized Lodge list reads; reject forged fields. Compare the exact minified production transport against every server MOVEMENT entry and representative non-movement calls. Cover authoritative social/Lodge persistence and privacy, world command revision/rejection, responsive UI recovery and shared chat scheduling. No server, schema or authorization rule changes; relevant local PostgreSQL suites provision the CI database and replace no required checks. No emulator suite is needed for this client-only transport correction."
+      "reason": "Restore the missing courtyard in the production continuous renderer using existing scoped Tower subscriptions, retaining native building panels and armed Tower selection. Reduce Tower and six child sprites within the previous objective footprint; cover all four locations, all staged art, desktop and two landscape sizes, click/touch and drag, selected-action clearance from neighboring banners, authoritative snapshot changes/capture/neutralization, bounded assets and unchanged scene reuse through an isolated PostgreSQL/authenticated browser harness. Shared city geometry, label placement, pickup exclusion, async selection, building definitions and package budgets are affected dependencies. No server/API/authorization/data schema changes; existing backend commands are only exercised, so no emulator change is required. The artifact guard receives a narrow 3.75 KiB allowance for the measured 3,648 bytes of lazy courtyard integration, with no preload/precache growth. Reconciled with the merged private-list transport fix; the real authenticated courtyard harness rechecks the combined client against the current base."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
+      "tests": [],
+      "reason": "Record the owner-confirmed smaller visible courtyard and existing completed/unbuilt behavior, explicitly preserving the separate backend deployment hold."
     }
   ]
 }
