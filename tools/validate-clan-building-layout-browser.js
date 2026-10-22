@@ -96,7 +96,7 @@ async function main() {
       await ready(() => modalBody.dataset.clanShopReady === "true");
       assert.deepEqual(await frameStyle(), towerFrame, "Buildings tab must keep the Tower size and theme");
       let reference;
-      for (const id of ["workshop", "infirmary", "training", "stables", "scout_lodge", "shop"]) {
+      for (const id of ["workshop", "stables", "scout_lodge", "shop"]) {
         await ev(id => openClanTowerBuilding(layoutTower.id, id), id);
         await ready(id => modalBody.dataset[id === "shop" ? "clanShopReady" : id + "Ready"] === "true", id);
         await ev(() => modalBody.querySelector("#buildingArt").decode());
@@ -115,8 +115,8 @@ async function main() {
             buttonVisible: r.height >= 44 && r.top >= 0 && r.bottom <= innerHeight && button.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)),
             overflow: modal.scrollWidth > modal.clientWidth + 1 || [...shell.querySelectorAll(".detail-scroll")].filter(n => !n.hidden).some(n => n.scrollWidth > n.clientWidth + 1) };
         });
-        assert.equal(result.overview, "true"); assert.equal(result.benefitCount, 2); assert.equal(result.choices, 6);
-        assert.equal(result.cost, ["infirmary", "training"].includes(id) ? "4 / 10" : "80,000,000"); assert(result.buttonVisible && !result.overflow, JSON.stringify({ id, width, ...result }));
+        assert.equal(result.overview, "true"); assert.equal(result.benefitCount, 2); assert.equal(result.choices, 4);
+        assert.equal(result.cost, "80,000,000"); assert(result.buttonVisible && !result.overflow, JSON.stringify({ id, width, ...result }));
         if (!reference) reference = result;
         else for (const key of ["header", "sidebar", "footer", "goldFont"]) assert.deepEqual(result[key], reference[key], id + ": inconsistent " + key + " at " + width);
         await screenshot(`${width}-${id}-overview.png`);
@@ -137,6 +137,14 @@ async function main() {
         assert.deepEqual(await frameStyle(), towerFrame, "Returning from " + id + " changed the Tower frame");
         await click('[data-tower-tab="buildings"]');
         await ready(id => modalBody.dataset[id === "shop" ? "clanShopReady" : id + "Ready"] === "true", id);
+      }
+      // Saved retired selections must not resurrect removed artwork or controls.
+      for (const retired of ["infirmary", "training"]) {
+        await ev(id => openClanTowerBuilding(layoutTower.id, id), retired);
+        await ready(() => modalBody.dataset.clanShopReady === "true");
+        assert.equal(await ev(() => holdingTowerBuildingSelection), "shop");
+        assert.deepEqual(await ev(() => [...modalBody.querySelectorAll(".building-navigation option")].map(n => n.value)), ["shop", "workshop", "stables", "scout_lodge"]);
+        assert.equal(await ev(id => layoutTower.buildings[id], retired), 4);
       }
       await ev(() => openClanTowerBuilding(layoutTower.id, "scout_lodge", { section: "intelligence" }));
       await ready(() => modalBody.querySelector(".intel-entry"));

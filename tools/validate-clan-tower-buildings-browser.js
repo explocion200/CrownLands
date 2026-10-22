@@ -120,7 +120,7 @@ async function main() {
             // On narrow phones, pan each building clear of the unchanged HUD before tapping it.
             if (viewport.width < 600) await evaluate(`(()=>{const n=cityLayer.querySelector('[data-clan-building-id="${id}"]'),r=n.getBoundingClientRect();camera.x+=(r.x+r.width/2-innerWidth*.65)/zoom;camera.y+=(r.y+r.height/2-innerHeight*.48)/zoom;updateCameraTransform()})()`);
             await click(await elementPoint(`[data-clan-building-id="${id}"]`));
-            await ready(`modal.open&&holdingTowerDetailsTab==='buildings'&&holdingTowerBuildingSelection==='${id}'`);
+            await ready(`modal.open&&holdingTowerDetailsTab==='buildings'&&holdingTowerBuildingSelection==='${['infirmary','training'].includes(id)?'shop':id}'`);
             await evaluate('modal.close();clearSelection(false)');
             await delay(300);
             await frameTower();
@@ -136,7 +136,7 @@ async function main() {
       await click(await elementPoint('[data-clan-building-id="shop"]'));
       await ready('modal.open && holdingTowerDetailsTab==="buildings" && modalBody.querySelector("#itemGrid")');
       await delay(100);
-      assert.equal(await evaluate('modalBody.querySelectorAll("[data-shop-building] option").length'),6);
+      assert.equal(await evaluate('modalBody.querySelectorAll("[data-shop-building] option").length'),4);
       assert.equal(await evaluate('modalBody.querySelectorAll("[data-item]").length'),7);
       assert(await evaluate('modalBody.textContent.includes("every 72 hours")'));
       const reachable = async selector => {
@@ -149,20 +149,20 @@ async function main() {
       await reachable('[data-clan-shop-buy="recall_horn"]');
       await ready(`buildingCalls.length===${before+1} && !holdingTowerActionsInFlight.size`);
       assert.equal((await evaluate('buildingCalls.at(-1)')).itemId,'recall_horn');
-      await evaluate(`modalBody.querySelector('[data-shop-building]').value='training';modalBody.querySelector('[data-shop-building]').dispatchEvent(new Event('change'))`);
-      await ready('modalBody.dataset.trainingReady === "true"');
-      assert(await evaluate('modal.classList.contains("training-grounds-modal")'));
-      assert.equal(await evaluate('modalBody.querySelector("#currentBenefit").textContent'), '1 / 10');
+      await evaluate(`modalBody.querySelector('[data-shop-building]').value='workshop';modalBody.querySelector('[data-shop-building]').dispatchEvent(new Event('change'))`);
+      await ready('modalBody.dataset.workshopReady === "true"');
+      assert(await evaluate('modal.classList.contains("engineers-workshop-modal")'));
+      assert.equal(await evaluate('holdingTowerBuildingSelection'), 'workshop');
       await evaluate('buildingFixture.buildingProject=null;renderHoldingTowerModal({...buildingFixture,clanShop:holdingTowerSnapshots.get(buildingFixture.id).clanShop})');
       await evaluate('clanTreasuryStatus=null;treasuryLive.onTreasury({balance:0,totalDonated:0,totalSpent:0,revision:0})');
       assert(await evaluate('modalBody.querySelector("#upgrade").disabled'));
       await evaluate('treasuryLive.onTreasury({balance:20000000,totalDonated:20000000,totalSpent:0,revision:1})');
-      assert(await evaluate('modalBody.querySelector("#upgrade").disabled'), 'A donation must not enable retired building upgrades.');
+      assert(await evaluate('modalBody.querySelector("#upgrade").disabled'), 'A donation below the Workshop upgrade cost must not enable construction.');
       assert.equal(await evaluate('holdingTowerDetailsTab'), 'buildings', 'A live donation changed the selected tab.');
       assert.equal(await evaluate('modalBody.querySelector("#balance").textContent'), (20000000).toLocaleString());
       assert.equal(await evaluate('clanTreasuryStatus.treasury.balance'), 20000000, 'The shared Treasury state disagrees with the Tower.');
       // Wall services now live outside the dedicated building screen. Preserve their live-balance checks.
-      await evaluate('modalBody.querySelector("[data-training-back]").click();modalBody.querySelector("[data-tower-tab=walls]").click();treasuryLive.onTreasury({balance:0,totalDonated:0,totalSpent:0,revision:2})');
+      await evaluate('modalBody.querySelector("[data-workshop-back]").click();modalBody.querySelector("[data-tower-tab=walls]").click();treasuryLive.onTreasury({balance:0,totalDonated:0,totalSpent:0,revision:2})');
       assert(await evaluate('modalBody.querySelector("[data-tower-action=upgrade]").disabled'));
       await evaluate('modalBody.querySelector("[data-tower-upgrade-count]").value="2";treasuryLive.onTreasury({balance:20000000,totalDonated:20000000,totalSpent:0,revision:3})');
       assert(await evaluate('!modalBody.querySelector("[data-tower-action=upgrade]").disabled'), 'A clan donation did not enable wall construction.');

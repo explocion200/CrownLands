@@ -10,7 +10,7 @@
   const powerCity=item=>({...item,owner:relation(item)});
   function geometry(item){
     if(item.kind==="tower"){
-      // Fit the entire six-building courtyard inside the old Tower footprint.
+      // Fit the four active buildings inside the old Tower footprint.
       // Always start with the received dimensions; updates must not shrink it again.
       const width=item.width*.5,height=item.height*.5,offsetY=width*.39;
       // Anchor the courtyard toward the top of the reserved footprint, leaving
@@ -30,18 +30,17 @@
     if(!definitions||snapshot?.ownerKind!=="clan"||!snapshot.clanId||snapshot.clanId!==tower.ownerClanId)return [];
     const children=[];
     const centerY=tower.top+tower.height/2;
-    for(const [i,building]of definitions.DEFINITIONS.entries()){
+    // Retired buildings keep their saved levels, but have no map artwork/site.
+    for(const [i,building]of definitions.DEFINITIONS.filter(b=>!definitions.mechanicsPending(b.id)).entries()){
       const level=definitions.level(snapshot.buildings?.[building.id]),constructing=snapshot.buildingProject?.buildingId===building.id;
       if(!level&&!constructing)continue;
-      const width=tower.width*.4,x=tower.x+(i%2?1:-1)*tower.width*.72,y=centerY+(-.38+Math.floor(i/2)*.48)*tower.width;
+      const width=tower.width*.4,x=tower.x+(i%2?1:-1)*tower.width*.72,y=centerY+(-.38+Math.floor(i/2)*.96)*tower.width;
       children.push({key:tower.key+":building:"+building.id,id:building.id,buildingId:building.id,towerKey:tower.key,towerId:tower.id,
         sectionId:tower.sectionId,sectionName:tower.sectionName,kind:"tower-building",name:building.name,level,constructing,
         x,y,left:x-width/2,top:y-width/2,width,height:width,asset:definitions.art(building.id,level),selectable:true});
     }
-    if(!children.length)return children;
-    const width=tower.width*1.84,height=tower.width*1.4,x=tower.x,y=centerY+tower.width*.1;
-    return [{key:tower.key+":courtyard",kind:"courtyard",sectionId:tower.sectionId,x,y,left:x-width/2,top:y-height/2,width,height,
-      asset:"assets/clan-buildings/courtyard.webp",selectable:false},...children];
+    // The sprites are already transparent: expose the actual map floor below.
+    return children;
   }
   function loadIdentities(items){
     if(!state)return;

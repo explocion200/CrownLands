@@ -47,40 +47,22 @@ async function main(buildings = ["infirmary", "training"]) {
       })()`);
       for (const id of buildings) {
         await ev(`cleanupTower.buildingProject = null; openClanTowerBuilding(cleanupTower.id, ${JSON.stringify(id)})`);
-        await ready(`modalBody.dataset.${id}Ready === "true" && Boolean(modalBody.querySelector('#nextBenefit'))`);
-        await ev("document.fonts.ready");
-        await ready("[...modalBody.querySelectorAll('img')].every(image => image.complete && image.naturalWidth > 0)");
-        await ev("Promise.all(document.getAnimations().filter(animation => Number.isFinite(animation.effect?.getTiming().iterations)).map(animation => animation.finished.catch(() => {})))");
-        assert.equal(await ev("modalBody.querySelector('#currentBenefit').textContent"), "4 / 10");
-        assert.equal(await ev("modalBody.querySelector('#nextBenefit').textContent"), "+0%");
-        assert(await ev("modalBody.querySelector('#upgrade').disabled"));
-        await ev("modalBody.querySelector('#upgrade').click()");
-        assert.equal(await ev("cleanupQa.calls"), 0);
-        const layout = await ev(`(() => {
-          const r = modal.getBoundingClientRect(), button = modalBody.querySelector('#upgrade'), b = button.getBoundingClientRect();
-          return {fits: r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight,
-            actionVisible: b.height >= 44 && b.top >= r.top && b.bottom <= r.bottom,
-            overflow: modal.scrollWidth > modal.clientWidth + 1 || [...modalBody.querySelectorAll('.detail-scroll')].some(p => p.scrollWidth > p.clientWidth + 1)};
-        })()`);
-        assert(layout.fits && layout.actionVisible && !layout.overflow, JSON.stringify({id, width, layout}));
-        fs.writeFileSync(path.join(artifacts, `${width}-${id}-overview.png`), Buffer.from((await client.send("Page.captureScreenshot", {format: "png"})).data, "base64"));
-        await ev("modalBody.querySelector('#tab-levels').click(); modalBody.querySelector('#levelsPanel').scrollTop = 99999");
-        assert.equal(await ev("modalBody.querySelectorAll('.levels-table tbody tr').length"), 10);
-        const scroll = await ev("modalBody.querySelector('#levelsPanel').scrollTop");
-        await ev("refreshHoldingTower(cleanupTower.id)");
-        assert.equal(await ev("modalBody.querySelector('#levelsPanel').scrollTop"), scroll);
-        assert.equal(await ev("modalBody.querySelector('#tab-levels').getAttribute('aria-selected')"), "true");
+        await ready('modalBody.dataset.clanShopReady === "true"');
+        assert.equal(await ev('holdingTowerBuildingSelection'), "shop", "A saved retired selection must return to an active building");
+        assert.deepEqual(await ev('[...modalBody.querySelectorAll(".building-navigation option")].map(n => n.value)'), ["shop", "workshop"], "Unsupported backend must not expose Stables/Lodge");
+        assert.equal(await ev('typeof CrownlandsInfirmaryUi'), "undefined");
+        assert.equal(await ev('typeof CrownlandsTrainingGroundsUi'), "undefined");
+        assert.equal(await ev(`cleanupTower.buildings.${id}`), 4, "Saved retired progress must survive");
         await ev(`cleanupTower.buildingProject = {id: 'paid', buildingId: ${JSON.stringify(id)}, targetLevel: 5, remainingMs: 8100000, progressStartedAtMs: 0}; cleanupTower.attackBlocked = true; refreshHoldingTower(cleanupTower.id)`);
-        assert.match(await ev("modalBody.querySelector('[data-project-time]').textContent"), /Paused/);
-        await ev("cleanupTower.attackBlocked = false; cleanupTower.buildingProject.remainingMs = 1; cleanupTower.buildingProject.progressStartedAtMs = Date.now() - 1000; refreshHoldingTower(cleanupTower.id)");
-        await delay(200);
-        const reads = await ev("cleanupQa.reads"); await delay(1100);
-        assert.equal(await ev("cleanupQa.reads"), reads, "An expired paid project requests one authoritative refresh");
-        assert.equal(await ev(`cleanupTower.buildings.${id}`), 4, "The browser never grants a level");
+        assert(await ev("modalBody.querySelector('#upgradeShop').disabled"));
+        await ev("modalBody.querySelector('#upgradeShop').click()");
+        assert.equal(await ev("cleanupQa.calls"), 0);
+        assert.equal(await ev('cleanupTower.buildingProject.id'), 'paid');
+        fs.writeFileSync(path.join(artifacts, `${width}-${id}-removed.png`), Buffer.from((await client.send("Page.captureScreenshot", {format: "png"})).data, "base64"));
         await ev("modal.close()");
         await ready("!modal.open && holdingTowerModalSession === null");
       }
-      console.log(`Clan mechanics ${width}x${height}: preserved artwork/levels, paused upgrades, scrolling, saved tab, paid-project refresh and deferred loading passed.`);
+      console.log(`Clan mechanics ${width}x${height}: retired entries removed, saved levels/project preserved, capability gates and no retired modules loaded passed.`);
     }
     assert.deepEqual(errors, []);
   } finally {
