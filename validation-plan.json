@@ -1,21 +1,20 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "bbe6355c225f0caace3e0b820957d4d800ebe961",
+  "baseCommit": "27d8fe93769f2e83ccad86ab330c6d194c26522c",
   "coverage": [
     {
       "paths": [
-        "world/native.js",
-        "tools/validate-continuous-pickup-animation.js"
+        "docs/visual-qa/castle-action-wheel/README.md",
+        "docs/visual-qa/castle-action-wheel/draft.css",
+        "docs/visual-qa/castle-action-wheel/draft.js",
+        "docs/visual-qa/castle-action-wheel/index.html",
+        "docs/visual-qa/castle-action-wheel/scene.html",
+        "tools/validate-castle-action-wheel-draft.js"
       ],
       "tests": [
-        "tools/validate-continuous-pickup-animation.js",
-        "tools/validate-continuous-pickup-placement.js",
-        "tools/test-local-postgres-production-world.js",
-        "tools/validate-production-artifact.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-continuous-city-stages.js"
+        "tools/validate-castle-action-wheel-draft.js"
       ],
-      "reason": "The connected-map pickup container must keep its camera-owned transform while idle animation runs. Use the existing brightness-only pulse and retain its ring and motion preferences. The browser regression executes the real native pickup render/frame code and current stylesheet stack with sample-only data: all three types, full/reduced/off motion, three zoom fractions, three animation phases and desktop/landscape viewports (243 cases), centered anchors, retained glow, collection clicks and no external requests. It fails before the fix because the theme idle transform replaces the camera scale. Existing placement and isolated authenticated production-game checks cover the shared native renderer, safe spawn/repair, all three collection commands, action controls and marches; package and unchanged asset budgets guard static publication. No server, gameplay rule, stored data or emulator change. Reconciled with the merged city-stage geometry update; rerun city-artwork sizing and authenticated stage-change integration with pickup animation and clearance to protect the shared map presentation."
+      "reason": "Approval-only, local sample of castle action geometry and responsive typography. Reuses current action-buttons.css, index.html SVG definitions, Core terrain and city-stage artwork without modifying them or booting gameplay. The focused browser validator covers 135 ownership/stage/zoom/viewport combinations, asset loading, button/castle and adjacent hit-region clearance, text bounds, desktop and landscape-phone screenshots, mouse/touch/keyboard activation and dismissal, review controls/resize, local GET-only requests, and absence of the draft in production entry points. No runtime, API, database, gameplay, server-authoritative or emulator change; the Master Specification stays unchanged until the proposed sizing exception is approved. Hold this draft from merge and deployment pending visual approval. No unrelated game suites apply."
     }
   ]
 }
