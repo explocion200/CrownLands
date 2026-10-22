@@ -69,3 +69,19 @@ for(const kind of ["castle","camp","tower","stronghold","citadel","scenery","npc
   f.view.selectedKey=null;assert(f.placement.safe(f.bonus(950,543)),"Closed controls permanently hid pickup");
 }
 console.log("Continuous pickups: resource types, reserved clearings, art/labels/controls, other pickups, mobile glow, moving troops, failed data, bounded search and no diagnostic snapshots in the hot path passed.");
+{
+  const {fixture:catalog}=require("../local-backend/world/catalog");
+  for(const section of catalog.sections){
+    const f=fixture(),s={...section,gameBounds:{left:0,top:0,width:section.width,height:section.height}};
+    Object.assign(f.scene,{...catalog,sections:[s],objects:catalog.objects.filter(o=>o.sectionId===s.id),marches:[]});
+    f.status.size={width:568,height:320};f.status.feed.ids=[s.id];
+    const p=f.placement.create(s.id);
+    assert(p,"No mobile pickup clearing with off-screen labels in "+s.id);
+    assert(s.pickupZones.some(z=>Math.hypot(p.x-z.x,p.y-z.y)<=1),"Off-screen estimates consumed reserved clearings in "+s.id);
+    assert(f.placement.safe({...p,regionId:s.id}));
+    // A real measured label is never waived, even in an authored clearing.
+    f.ctx.window.SeamlessAppearance.labelBounds=new Map([[f.scene.objects.find(o=>o.kind==="castle").key,{left:s.x+p.x-10,top:s.y+p.y-10,right:s.x+p.x+10,bottom:s.y+p.y+10}]]);
+    assert(!f.placement.safe({...p,regionId:s.id}),"Measured label covered reserved pickup");
+  }
+  console.log("All 81 current templates retain a usable mobile pickup clearing with conservative off-screen label estimates.");
+}

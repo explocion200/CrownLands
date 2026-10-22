@@ -42,7 +42,7 @@
         "tools/test-local-postgres-production-world.js",
         "functions/test/emulator-harvest-pickup-rewards.js"
       ],
-      "reason": "Shared label/camera and pickup changes require browser checks at 1440x900, 844x390 and 568x320 with dense upgraded owned cities, actual CSS overlap detection, empty authenticated poll reuse, pointer/touch navigation, control scaling, troop paths, sign-out and permission loss. Pure delta tests retain envelope/auth/route validation while checking unchanged array identity; placement tests cover live art, selected controls, moving armies, other pickups, failed data and bounded cached work. The production browser uses two disposable local accounts and real actions/collection/relocation; emulator reward tests guard shared reservation/reward invariants."
+      "reason": "Shared label/camera and pickup changes require browser checks at 1440x900, 844x390 and 568x320 with dense upgraded owned cities, actual CSS overlap detection, empty authenticated poll reuse, pointer/touch navigation, control scaling, troop paths, sign-out and permission loss. Pure delta tests retain envelope/auth/route validation while checking unchanged array identity; placement tests cover live art, selected controls, moving armies, other pickups, failed data and bounded cached work, plus usable mobile clearings under conservative off-screen labels across all 81 templates. The production browser uses two disposable local accounts and real actions/collection/relocation; emulator reward tests guard shared reservation/reward invariants."
     },
     {
       "paths": [

@@ -417,7 +417,7 @@ function createContinuousHarvestPlacement(view) {
       if(!Object.values(art).every(Number.isFinite))continue;
       if(overlaps(center,range+cached.radius,art))boxes.push(art);
       if(o.kind!=="scenery"){
-        const label=labels?.get(o.key) || {left:o.x-100,right:o.x+100,top:o.top-110,bottom:o.top};
+        const label=labels?.get(o.key) || {left:o.x-100,right:o.x+100,top:o.top-110,bottom:o.top,estimated:true};
         if(overlaps(center,range+cached.radius,label))boxes.push(label);
       }
     }
@@ -433,8 +433,12 @@ function createContinuousHarvestPlacement(view) {
     const p=project(point,c),key=point.x+":"+point.y;
     let safe=c.checked.get(key);
     if(safe===undefined){
+      // The label solver reserves these clearings even for banners that are
+      // not mounted yet. A conservative off-screen estimate must not consume
+      // them; measured labels and artwork still always take precedence.
+      const clearing=(c.section.pickupZones||[]).some(z=>Math.hypot(p.x-c.section.x-z.x,p.y-c.section.y-z.y)+c.radius<=z.radius);
       safe=Math.hypot(p.x-c.center.x,p.y-c.center.y)<=c.range+1
-        && !c.boxes.some(r=>overlaps(p,c.radius,r))
+        && !c.boxes.some(r=>!(clearing&&r.estimated)&&overlaps(p,c.radius,r))
         && isHarvestBonusTerrainSafePoint(point.x,point.y,c.regionId);
       if(c.checked.size>=1024)c.checked.clear();
       c.checked.set(key,safe);
