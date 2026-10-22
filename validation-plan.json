@@ -95,7 +95,9 @@
         "tools/validate-troop-selection-browser.js",
         "troop-orders-ui.js",
         "clan-intelligence-ui.js",
-        "clan-support-buildings-ui.js"
+        "clan-support-buildings-ui.js",
+        "tools/asset-performance-budgets.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
       "tests": [
         "tools/validate-clan-building-layout-browser.js",
@@ -104,9 +106,10 @@
         "tools/validate-holding-tower-client-lifecycle.js",
         "tools/validate-gear-bonus-gameplay.js",
         "tools/validate-scout-report-ui.js",
-        "tools/validate-production-artifact.js"
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Actual game fixtures exercise six-building frame/navigation, fixed actions, level-table scrolling and Intelligence list/detail/access clearing at desktop and landscape widths down to 568x320. Tower and personal movement previews retain current selection/power/route controls, show additive nominal/effective support and invalidate cached clan ownership/level state. Shared scout presentation renders only snapshot fields. Production artifact checks ensure scripts/assets are shipped, sources remain excluded and the bounded lazy-art budget preserves entry/precache behavior."
+      "reason": "Actual game fixtures exercise six-building frame/navigation, fixed actions, level-table scrolling and Intelligence list/detail/access clearing at desktop and landscape widths down to 568x320. Tower and personal movement previews retain current selection/power/route controls, show additive nominal/effective support and invalidate cached clan ownership/level state. Shared scout presentation renders only snapshot fields. Production artifact checks ensure scripts/assets are shipped, sources remain excluded and the bounded lazy-art budget preserves entry/precache behavior. Shared shell limit gains 10 KiB for measured 9,484-byte overage; the two support interfaces remain lazy and no new precache entries or images are added."
     }
   ]
 }
