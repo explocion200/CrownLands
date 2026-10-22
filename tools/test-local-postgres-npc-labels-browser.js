@@ -15,6 +15,9 @@ const {createMarauderPopulation}=require("../functions/marauder-population");
   for(const id of regions){await p.store.doc(island(id)).set({...p.identity,regionId:id});const populated=await population.populate(id,Date.now());assert.equal(populated.spawned,id.startsWith("new-lands")?2:1);
    const rows=(await p.store.collection(island(id)+"/marauders").get()).docs;targets.push(...rows.map(r=>({key:id+":"+r.id,regionId:id,id:r.id})));
    const last=rows.at(-1),patch={status:"defeated",respawnAtMs:Date.now()+(id.startsWith("new-lands")?120000:1800000)};await last.ref.update(patch);await p.store.doc(island(id)+"/marauderCombat/"+last.id).update(patch);
+   // Crowded player banners include ruler/clan lines, not just neutral names.
+   const cities=(await p.store.collection(island(id)+"/cities").get()).docs;
+   const batch=p.store.batch();for(const [i,city]of cities.entries())batch.update(city.ref,{ownerUid:p.players[i%2].uid,ownerKind:"player",ownerName:i%2?"Long Rival Ruler Name":"Long Friendly Ruler Name",ownerClanTag:"TEST",level:100});await batch.commit();
   }
   const deployment=require("./map-benchmark/seamless/production-test-policy").productionTestPolicy(p.store);
   world=require("../local-backend/world/service").createWorldService({store:p.store,readPool:p.reader.pool,deployment,directory:path.join(out,"terrain"),enabled:true});await world.prepare(p.players[0].uid);
