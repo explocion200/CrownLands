@@ -27,7 +27,7 @@ const requireFunctions = createRequire(path.resolve(__dirname, "../functions/pac
   const game = require("../functions"), platform = require("../functions/platform"), db = platform.store;
   const routes = describe(game), counts = {};
   for (const route of routes) counts[route.kind] = (counts[route.kind] || 0) + 1;
-  assert.deepEqual(counts, { callable: 122, created: 8, written: 2, schedule: 16, http: 3 });
+  assert.deepEqual(counts, { callable: 123, created: 8, written: 2, schedule: 16, http: 3 });
   const privateRoutes = privateWorkerRoutes(routes);
   assert.equal(privateRoutes.length, 25); assert(!privateRoutes.some(route => route.name === "deliverIncomingArmyNotification"));
   const queue = new JobQueue({ store: db, routes });
@@ -86,6 +86,6 @@ const requireFunctions = createRequire(path.resolve(__dirname, "../functions/pac
     assert.equal((await db.doc("players/season-owner").get()).data().gear.commonGearBoxes, 2 + award.commonGearBoxes);
     assert.equal((await db.doc("players/season-owner").get()).data().gear.uncommonGearBoxes, 3 + award.uncommonGearBoxes);
     assert(event.data instanceof DocumentSnapshot);
-    console.log("Local game: all 151 exports registered; Firebase default preserved; local auth/release gates, current realm, real PvP trigger replay and concurrent season awards passed.");
+    console.log("Local game: all 152 exports registered; Firebase default preserved; local auth/release gates, current realm, real PvP trigger replay and concurrent season awards passed.");
   } finally { Date.now = originalNow; await db.pool.query(`DROP SCHEMA IF EXISTS ${db.schema} CASCADE`); await db.close(); }
 })().catch(error => { console.error("Local game integration failed:", error.message); process.exitCode = 1; });
