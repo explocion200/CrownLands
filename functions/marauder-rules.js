@@ -113,7 +113,7 @@
     [100, 40000000, 271977950, 43672116, 10000, 9000, 1000],
   ].map(Object.freeze));
   const REFILL_VERSION = 3;
-  const MAX_STAMINA = 100, HUNT_COST = 10, FULL_REFILL_PRICE = 30;
+  const MAX_STAMINA = 100, HUNT_COST = 10, BOSS_HUNT_COST = 20, FULL_REFILL_PRICE = 30;
   const ANCHORS = Object.freeze([
     [1, 100, 100, 20], [20, 10000, 5000, 500], [40, 100000, 50000, 2500],
     [60, 1000000, 500000, 10000], [79, 10000000, 5000000, 25000],
@@ -166,12 +166,12 @@
   function changeStamina(raw, delta, now) {
     const state = stamina(raw, now);
     if (delta > 0) fail("Stamina can only be restored by a 30-Crown refill.");
-    if (!Number.isInteger(delta) || state.value + delta < 0) fail("Not enough stamina. A hunt costs 10 stamina.");
+    if (!Number.isInteger(delta) || state.value + delta < 0) fail(`Not enough stamina. This hunt costs ${Math.abs(delta)} stamina.`);
     return { ...state, value: Math.min(MAX_STAMINA, state.value + delta), revision: state.revision + 1 };
   }
   function view(raw, now) {
     const state = stamina(raw, now);
-    return { ...state, max: MAX_STAMINA, hunts: Math.floor(state.value / HUNT_COST), serverNowMs: now,
+    return { ...state, max: MAX_STAMINA, hunts: Math.floor(state.value / HUNT_COST), bossHunts: Math.floor(state.value / BOSS_HUNT_COST), serverNowMs: now,
       nextPointAtMs: null, fullAtMs: state.value === MAX_STAMINA ? now : null,
       paidRefillsToday: state.paidDay === day(now) ? 1 : 0,
       resetsAtMs: Date.parse(day(now)) + 86400000 };
@@ -263,6 +263,6 @@
     }
     return { balanceVersion: VERSION, damage, gold, xp, item, recipientUid, rolls: [...rolls] };
   }
-  return Object.freeze({ VERSION, BALANCE_VERSION, BOSS_REWARD_VERSION, BALANCE_V2, REFILL_VERSION, MAX_STAMINA, HUNT_COST, FULL_REFILL_PRICE, ANCHORS, ITEMS,
+  return Object.freeze({ VERSION, BALANCE_VERSION, BOSS_REWARD_VERSION, BALANCE_V2, REFILL_VERSION, MAX_STAMINA, HUNT_COST, BOSS_HUNT_COST, FULL_REFILL_PRICE, ANCHORS, ITEMS,
     day, refillPrice, balance, slots, stamina, changeStamina, view, allocate, bossEligibility, rewards });
 });

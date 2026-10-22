@@ -1,57 +1,56 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "4cfe2ae1902b4214e491e4a24f79fcbf4c574a2d",
+  "baseCommit": "ddc602d9ae279d535c5cf0bab08aeddc19a1c4b4",
   "coverage": [
     {
       "paths": [
         "functions/index.js",
-        "functions/marauder-population.js",
         "functions/marauder-rules.js",
-        "functions/test/emulator-crown-live-payments.js",
         "functions/test/emulator-marauder-combat.js",
-        "functions/test/emulator-stamina-refills.js",
-        "functions/test/stamina-refill-cases.js",
         "tools/test-local-postgres-stamina.js",
         "tools/validate-marauder-rules.js"
       ],
       "tests": [
         "tools/validate-marauder-rules.js",
         "tools/test-local-postgres-stamina.js",
-        "functions/test/emulator-stamina-refills.js",
         "functions/test/emulator-marauder-combat.js",
+        "functions/test/emulator-stamina-refills.js",
         "functions/test/emulator-crown-live-payments.js"
       ],
-      "reason": "Shared stamina reducer, offer pricing and actual solo/rally settlement change. Verify no elapsed-time recovery or positive hunt adjustments; exact 30-Crown costs, persisted balances and daily allowance, old and new receipts, rejected stale/forged quotes and concurrent wallet/spending. Shared transaction cases run on current PostgreSQL and emulator; PostgreSQL real callables cover dispatch/invalid settlement retries; combat emulator covers solo/boss missing/replaced/retired targets, unchanged no-loss returns and march-item refunds. Live-payment emulator covers authoritative Crown credits racing the new refill price."
+      "reason": "Boss launch/readiness and shared stamina view change. Exercise real PostgreSQL and emulator 19/20 boundaries for all members, atomic debit/retry, solo 10, old/new encounter settlement and preserved rewards. Re-run current refill and payment concurrency cases to prove reconciliation does not restore old recovery, proportional pricing, migration or refunds."
     },
     {
       "paths": [
+        "game.js",
+        "marauders-ui.js",
+        "scout-report-ui.js",
         "stamina-ui.js",
-        "tools/test-stamina-display-recovery.js",
+        "troop-orders-ui.js",
         "tools/validate-marauders-browser.js"
       ],
       "tests": [
+        "tools/validate-marauders-browser.js",
         "tools/test-stamina-display-recovery.js",
-        "tools/validate-marauders-browser.js"
+        "tools/validate-window-close-browser.js"
       ],
-      "reason": "Real HUD transport reconnection must restore saved values without passive projection. Source/production desktop and 844x390/568x320 browser cases cover flat price, absent recovery countdowns, full/poor wallets, purchase confirmation, native hunt/rally draft preservation and Shop return; opening or Crown credits never submit a refill."
+      "reason": "Actual desktop/landscape source and production NPC Info, scout report, troop draft and launch confirmation use shared 10/20 cost labels and live HUD ticks; verify 19 blocks launch, 20 accepts, retained 30-Crown pricing and draft restoration. Shared window-close test checks stacked refill/rally/report dismissal."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CROWN_REFILL_ONLY_STAMINA.md"
-      ],
-      "tests": [],
-      "reason": "Document the owner-confirmed override of passive recovery, proportional price and stamina refunds, preserve initialization/allowance, and record backend-first compatibility/approval requirements without claiming deployment."
-    },
-    {
-      "paths": [
-        "terms.html",
         "how-to-play.html"
       ],
       "tests": [
         "tools/validate-public-site-content.js"
       ],
-      "reason": "Published purchase and beginner instructions must describe flat 30-Crown refills, no automatic recovery or hunt refunds, and the retained daily allowance. Public-content validation checks page structure and links; review the changed stamina text with the shared rule tests and production-artifact validation."
+      "reason": "Update the published solo/boss cost explanation while retaining current refill-only rules; verify public page structure and navigation."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/STAMINA_RECOVERY_STOP_ROLLOUT.md"
+      ],
+      "tests": [],
+      "reason": "Record approved 20-point boss cost and explicitly supersede obsolete uninstalled migration/refund proposal; document current PostgreSQL compatibility and verified-release boundaries."
     }
   ]
 }
