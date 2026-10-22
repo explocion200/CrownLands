@@ -49,7 +49,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
         const v = nativeContinuousWorld.view, f = v.snapshot().feed;
         return f.ids.includes(region) && !f.pending && !f.failed && !!v.getObject(key);
       }, { key: `${city.regionId}:${city.id}`, region: city.regionId });
-      await p.evaluate(key => nativeContinuousWorld.view.select(key), `${city.regionId}:${city.id}`);
+      // A previous selection/resize can leave the camera at maximum zoom.
+      // Center the actual object before selecting: region-center navigation
+      // alone can place it offscreen, where native deselection is intentional.
+      await p.evaluate(key => {const v=nativeContinuousWorld.view;v.focus(v.getObject(key));v.select(key);}, `${city.regionId}:${city.id}`);
       await p.waitForFunction(() => !nativeContinuousWorld.bridge.running);
       await p.evaluate(()=>new Promise(requestAnimationFrame));
     };

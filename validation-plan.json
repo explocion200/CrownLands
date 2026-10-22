@@ -12,7 +12,9 @@
         "world/sprite-layer.js",
         "tools/test-local-postgres-map-pan-performance.js",
         "tools/validate-world-render-cache.js",
-        "world/preview.css"
+        "world/preview.css",
+        "tools/test-local-postgres-native-auth-world.js",
+        "tools/check-continuous-map-ui.js"
       ],
       "tests": [
         "tools/validate-world-render-cache.js",
@@ -21,7 +23,7 @@
         "tools/test-local-postgres-production-world.js",
         "tools/validate-continuous-map-labels.js"
       ],
-      "reason": "Exercise actual packaged authenticated world with disposable PostgreSQL accounts. Cover camera/culling parity, spatial ordering, bounded retained nodes and images, stale/failed asset requests, drawing resolution, name refresh and font invalidation; desktop and landscape phone render checks preserve selected flag/level attachment, protection colors, shields, hidden garrisons, native actions, recorded routes and pickups. Identical warmed crowded pan routes measure frame/work times and resource bounds. No backend or authority changes; emulator suites are not required. Remove only unused prototype patrol-canvas/draft paths and invisible header/tag/section-caption styles, keeping the existing lazy module byte budget and native troop controls."
+      "reason": "Exercise actual packaged authenticated world with disposable PostgreSQL accounts. Cover camera/culling parity, spatial ordering, bounded retained nodes and images, stale/failed asset requests, drawing resolution, name refresh and font invalidation; desktop and landscape phone render checks preserve selected flag/level attachment, protection colors, shields, hidden garrisons, native actions, recorded routes and pickups. Identical warmed crowded pan routes measure frame/work times and resource bounds. No backend or authority changes; emulator suites are not required. Remove only unused prototype patrol-canvas/draft paths and invisible header/tag/section-caption styles, keeping the existing lazy module byte budget and native troop controls. The existing authenticated test helper centers the actual target before selecting at retained maximum zoom, preserving the intentional offscreen deselection behavior. Touch input targets exposed map surface rather than the native action-button overlay."
     },
     {
       "paths": [
