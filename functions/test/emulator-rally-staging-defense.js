@@ -214,6 +214,7 @@ async function main() {
   assert((await read(towerStage.ref)).participants.find(p => p.uid === leader.uid).troops < 10000);
   assert((await read(towerRef.collection("garrison").doc(leader.uid))).troops <= 1000);
   await require("./rally-recall-rejoin-cases")({ db, actor, call });
+  await require("./member-rally-cases")({ db, actor, call });
   console.log("Core rally staging: live city/Tower defense, casualty accounting, early launch, duplicates, arrival races and defeated assembly returns passed.");
 }
 main().catch(error => { console.error(error.stack || error); process.exitCode = 1; });

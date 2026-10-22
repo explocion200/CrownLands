@@ -81,7 +81,7 @@
       category: "Clans",
       phase: "playable",
       shortDescription: "Build a clan, coordinate allies, and fight together for strategic objectives.",
-      longDescription: "Create or join clans, manage roles, send gifts, complete weekly clan goals, launch rallies, and reinforce allies. Clan leaders and officers can organize objective attacks while every member can contribute to the wider campaign.",
+      longDescription: "Create or join clans, manage roles, send gifts, complete weekly clan goals, launch rallies, and reinforce allies. Any active clan member can organize rally attacks or contribute troops to the wider campaign.",
       icon: "&#9873;",
       sortOrder: 106,
     },

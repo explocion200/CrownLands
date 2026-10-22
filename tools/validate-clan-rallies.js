@@ -34,9 +34,9 @@ function extractFunction(source, name, nextName) {
 ].forEach(name => requires(server, new RegExp(`exports\\.${name}\\s*=\\s*timedCallable`), `Missing ${name} callable.`));
 
 requires(server, /RALLY_MIN_PARTICIPANTS\s*=\s*2[\s\S]*?RALLY_MAX_PARTICIPANTS\s*=\s*20[\s\S]*?CLAN_ACTIVE_RALLY_LIMIT\s*=\s*5/, "Confirmed Rally participant or clan active limits changed.");
-requires(server, /CLAN_RALLY_CREATOR_ROLES\s*=\s*Object\.freeze\(\["leader",\s*"officer"\]\)/, "Rally creation roles must remain restricted to clan leaders and officers.");
-requires(server, /exports\.createClanRally[\s\S]*?assertClanRole\(memberSnap\.data\(\),\s*CLAN_RALLY_CREATOR_ROLES\)/, "The authoritative rally callable does not enforce the leader-or-officer role.");
-requires(client, /function canCurrentPlayerCreateClanRally\(\)[\s\S]*?CLAN_RALLY_CREATOR_ROLES\.includes[\s\S]*?function beginCreateClanRally[\s\S]*?Only clan leaders and officers can form rallies\./, "The rally UI does not follow the authoritative leader-or-officer role policy.");
+requires(server, /CLAN_RALLY_CREATOR_ROLES\s*=\s*Object\.freeze\(\["leader",\s*"officer",\s*"member"\]\)/, "All three active clan roles must be able to create rallies.");
+requires(server, /exports\.createClanRally[\s\S]*?assertClanRole\(memberSnap\.data\(\),\s*CLAN_RALLY_CREATOR_ROLES\)/, "The authoritative rally callable does not validate current clan roles.");
+requires(client, /function canCurrentPlayerCreateClanRally\(\)[\s\S]*?CLAN_RALLY_CREATOR_ROLES\.includes[\s\S]*?function beginCreateClanRally[\s\S]*?Active clan membership is required to form rallies\./, "The rally UI does not follow the authoritative active-member role policy.");
 requires(server, /ARMY_TRAVEL_KIND_MULTIPLIERS\s*=\s*\{[^}]*rally_join:\s*0\.95/, "The server rally assembly travel multiplier is missing.");
 requires(client, /ARMY_TRAVEL_KIND_MULTIPLIERS\s*=\s*\{[^}]*rally_join:\s*0\.95/, "The client rally assembly travel multiplier drifted from the server.");
 requires(server, /function isRallyObjectiveTarget[\s\S]*?targetType === "city" && isStronghold\(target\)/, "Rallies are not restricted to Strongholds and the Crown Citadel.");
@@ -75,7 +75,7 @@ requires(server, /reconcileClanRalliesBeforeDisband[\s\S]*?RALLY_STATUS_FORMING,
 const automaticCreatorRecallSource = extractFunction(server, "recallLaunchedRallyForCreatorDeparture", "reconcileClanRalliesBeforeDeparture");
 assert.doesNotMatch(automaticCreatorRecallSource, /RECALL_HORN_ITEM_ID|shopItems/, "Automatic creator-departure recall consumes a Recall Horn.");
 requires(server, /previousClanId[\s\S]*?previousClanId !== currentClanId[\s\S]*?reconcileClanRalliesBeforeDeparture\(uid,\s*previousClanId\)/, "Membership changes do not retry rally departure reconciliation.");
-requires(server, /nextRole === "member"[\s\S]*?cancelFormingRalliesCreatedBy\(targetUid,\s*clanId\)/, "Demoting an officer does not cancel Rallies they are no longer authorized to create.");
+assert.doesNotMatch(server.slice(server.indexOf("async function changeClanRole("), server.indexOf("exports.promoteClanMember =")), /cancelFormingRalliesCreatedBy/, "Demotion must not cancel rallies now that all members can create them.");
 requires(server, /cancelInvalidAssemblyRalliesAfterOwnershipChange[\s\S]*?cancelFormingRalliesCreatedBy[\s\S]*?processOwnershipChange[\s\S]*?cancelledAssemblyRallies/, "Losing an assembly city does not automatically cancel its forming Rallies.");
 requires(server, /function createRallySourceRecaptureMovement[\s\S]*?rallyReturnAttack:\s*true[\s\S]*?returnAttackMovement:\s*leaderReturnAttack/, "A Rally creator returning to an enemy-held assembly city does not attack it.");
 const resolveArmySource = server.slice(server.indexOf("async function resolveArmyOrderById"), server.indexOf("exports.resolveArmyOrder"));

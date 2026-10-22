@@ -1367,7 +1367,7 @@ const CLAN_GIFT_RECENT_DONATION_LIMIT = 10;
 const CLAN_NAME_CHANGE_GOLD_COST = 500_000;
 const CLAN_NAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const CLAN_JOIN_COOLDOWN_MS = 60 * 60 * 1000;
-const CLAN_RALLY_CREATOR_ROLES = Object.freeze(["leader", "officer"]);
+const CLAN_RALLY_CREATOR_ROLES = Object.freeze(["leader", "officer", "member"]);
 const CLAN_RALLY_MIN_PARTICIPANTS = 2;
 const CLAN_RALLY_MAX_PARTICIPANTS = 20;
 const CLAN_ACTIVE_RALLY_LIMIT = 5;
@@ -27325,7 +27325,7 @@ function renderClanRallyPanel() {
   const selected = onlineClanRallies.find(rally => rally.id === selectedClanRallyId) || onlineClanRallies[0];
   return `<section id="clanWarroomPanel" class="clan-section-panel clan-social-card clan-war-room-panel clan-rallies-panel ${isClanSectionActive("warroom") ? "active" : ""}" role="tabpanel" aria-labelledby="clanSectionTabWarroom">
     <div class="clan-social-heading"><span><small>Clan campaign coordination</small><strong>War Room</strong></span><b>${formatNumber(onlineClanRallies.length)} / ${CLAN_ACTIVE_RALLY_LIMIT}</b></div>
-    <p class="clan-rally-note">Leaders and Officers may create up to ${CLAN_ACTIVE_RALLY_LIMIT} active clan Rallies from a map objective. Launch with at least 2 Ready rulers (3 for Towers), including the creator. Incoming contributions turn back when you launch.</p>
+    <p class="clan-rally-note">Any active clan member may create a Rally from a map objective. The clan can have up to ${CLAN_ACTIVE_RALLY_LIMIT} active Rallies. Launch with at least 2 Ready rulers (3 for Towers), including the creator. Incoming contributions turn back when you launch.</p>
     ${selected ? `<div class="war-layout"><nav class="rally-picker scroll-region" aria-label="Active rallies">${onlineClanRallies.map(rally => `<button type="button" data-clan-action="select-rally" data-clan-rally="${escapeHtml(rally.id)}" aria-pressed="${rally.id === selected.id}"><img src="assets/icons/skills/atlas-v1/marchOrders.webp" alt=""><span><strong>${escapeHtml(rally.targetName || rally.targetId || "Objective")}</strong><small>${escapeHtml(getRegionLabel(rally.targetRegionId))} · ${rally.status === "recalling" ? "Returning" : rally.status === "launched" ? "Launched" : "Forming"}</small></span></button>`).join("")}</nav>${renderClanRallyCard(selected)}</div>` : '<div class="clan-empty"><img src="assets/icons/skills/atlas-v1/marchOrders.webp" alt=""><h3>No active rallies</h3><p>Choose an eligible objective on the map to begin a clan Rally.</p></div>'}
   </section>`;
 }
@@ -29682,7 +29682,7 @@ function renderSelectedForeignWheel(city) {
       <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon("scout")}</span>
       <span class="wheel-action-name">${friendlyBlockReason ? "Clan Ally" : veilBlockReason ? "Veiled" : scoutBlockReason ? "Main City" : scoutPreparing ? "Sending" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</span>
     </button>
-    <button class="city-wheel-action cl-action-button ${clanAlly ? "cl-action-reinforce wheel-reinforce" : "cl-action-attack"} wheel-attack" type="button" aria-label="${clanAlly ? `Reinforce ${escapeHtml(city.name)}` : boss ? `Prepare clan rally to attack ${escapeHtml(city.name)}` : mainCityBlockReason ? escapeHtml(mainCityBlockReason) : `Attack ${escapeHtml(city.name)}`}" ${boss ? 'title="Clan leaders and officers: form a rally with at least two members"' : ""} ${canAttack ? "" : "disabled"}>
+    <button class="city-wheel-action cl-action-button ${clanAlly ? "cl-action-reinforce wheel-reinforce" : "cl-action-attack"} wheel-attack" type="button" aria-label="${clanAlly ? `Reinforce ${escapeHtml(city.name)}` : boss ? `Prepare clan rally to attack ${escapeHtml(city.name)}` : mainCityBlockReason ? escapeHtml(mainCityBlockReason) : `Attack ${escapeHtml(city.name)}`}" ${boss ? 'title="Clan members: form a rally with at least two members"' : ""} ${canAttack ? "" : "disabled"}>
       <span class="wheel-icon" aria-hidden="true">${renderCrownlandsIcon(clanAlly ? "reinforcement" : "attack")}</span>
       <span class="wheel-action-name">${attackBlockLabel}</span>
     </button>
@@ -31026,7 +31026,7 @@ function beginCreateClanRally(targetOrId) {
     return;
   }
   if (!canCurrentPlayerCreateClanRally()) {
-    rejectGameAction("Only clan leaders and officers can form rallies.");
+    rejectGameAction("Active clan membership is required to form rallies.");
     return;
   }
   if (!eligibleObjective || target.owner === "player" || isClanAllyCity(target)) {
