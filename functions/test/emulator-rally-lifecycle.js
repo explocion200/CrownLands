@@ -798,7 +798,10 @@ async function main() {
   }));
   await callFunction("demoteClanOfficer", clanLeader.token, { targetUid: rallyCreator.uid });
   const demotedRally = (await db.doc(`clans/${clanId}/rallies/${demotionRallyId}`).get()).data() || {};
-  assert(demotedRally.status === "cancelled", "Demoting a Rally creator did not automatically cancel the forming Rally.");
+  assert(demotedRally.status === "forming", "Demoting an Officer to Member must preserve their forming Rally.");
+  assert((await db.doc(`clans/${clanId}/members/${rallyCreator.uid}`).get()).data()?.role === "member", "The Rally creator was not demoted.");
+  await callFunction("cancelClanRally", rallyCreator.token, { clanId, rallyId: demotionRallyId });
+  assert((await db.doc(`clans/${clanId}/rallies/${demotionRallyId}`).get()).data()?.status === "cancelled", "A Member creator could not explicitly cancel their Rally.");
 
   const scaleExtras = [];
   for (let offset = 0; offset < 17; offset += 4) {

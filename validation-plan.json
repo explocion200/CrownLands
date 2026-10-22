@@ -1,56 +1,30 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "ddc602d9ae279d535c5cf0bab08aeddc19a1c4b4",
+  "baseCommit": "07555469341a75adfb167b7790c757e8616f5fb4",
   "coverage": [
     {
       "paths": [
         "functions/index.js",
-        "functions/marauder-rules.js",
-        "functions/test/emulator-marauder-combat.js",
-        "tools/test-local-postgres-stamina.js",
-        "tools/validate-marauder-rules.js"
+        "tools/test-local-postgres-chat-locations.js"
       ],
       "tests": [
-        "tools/validate-marauder-rules.js",
-        "tools/test-local-postgres-stamina.js",
-        "functions/test/emulator-marauder-combat.js",
-        "functions/test/emulator-stamina-refills.js",
-        "functions/test/emulator-crown-live-payments.js"
+        "tools/validate-transaction-retries.js",
+        "tools/test-local-postgres-transaction-retries.js",
+        "tools/test-local-postgres-chat-locations.js",
+        "functions/test/emulator-chat-locations.js"
       ],
-      "reason": "Boss launch/readiness and shared stamina view change. Exercise real PostgreSQL and emulator 19/20 boundaries for all members, atomic debit/retry, solo 10, old/new encounter settlement and preserved rewards. Re-run current refill and payment concurrency cases to prove reconciliation does not restore old recovery, proportional pricing, migration or refunds."
+      "reason": "Fix nightly-discovered shared-location lookup bypass of the existing bounded retry/timing wrapper. Test actual PostgreSQL callable transient retry and business-error refusal, SQL conflicts/deadlocks, and both backend chat scenarios for current-realm, clan/privacy, expiry and canonical location handling. Read-only lookup never sends troops or edits game data."
     },
     {
       "paths": [
-        "game.js",
-        "marauders-ui.js",
-        "scout-report-ui.js",
-        "stamina-ui.js",
-        "troop-orders-ui.js",
-        "tools/validate-marauders-browser.js"
+        "functions/test/emulator-rally-lifecycle.js"
       ],
       "tests": [
-        "tools/validate-marauders-browser.js",
-        "tools/test-stamina-display-recovery.js",
-        "tools/validate-window-close-browser.js"
+        "functions/test/emulator-rally-lifecycle.js",
+        "functions/test/emulator-rally-staging-defense.js",
+        "tools/test-local-postgres-member-rallies.js"
       ],
-      "reason": "Actual desktop/landscape source and production NPC Info, scout report, troop draft and launch confirmation use shared 10/20 cost labels and live HUD ticks; verify 19 blocks launch, 20 accepts, retained 30-Crown pricing and draft restoration. Shared window-close test checks stacked refill/rally/report dismissal."
-    },
-    {
-      "paths": [
-        "how-to-play.html"
-      ],
-      "tests": [
-        "tools/validate-public-site-content.js"
-      ],
-      "reason": "Update the published solo/boss cost explanation while retaining current refill-only rules; verify public page structure and navigation."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/STAMINA_RECOVERY_STOP_ROLLOUT.md"
-      ],
-      "tests": [],
-      "reason": "Record approved 20-point boss cost and explicitly supersede obsolete uninstalled migration/refund proposal; document current PostgreSQL compatibility and verified-release boundaries."
+      "reason": "Correct nightly expectation superseded by the confirmed all-members Rally permission amendment. Demotion preserves the forming rally; explicit creator cancellation still works. Run full affected lifecycle and member-permission/staging cases to retain departure/removal safeguards and troop conservation on emulator and PostgreSQL."
     }
   ]
 }
