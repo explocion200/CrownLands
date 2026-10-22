@@ -38,7 +38,7 @@ async function main() {
     assert(url.startsWith("/api/local-game/v1/")); gameRequests++;
     if (root.CROWNLANDS_WORLD_SESSION) {
       const input = JSON.parse(options.body).data;
-      if (url.endsWith("/call/social")) {
+      if (!require("../local-backend/world/service").MOVEMENT.has(url.split("/").at(-1))) {
         assert(!Object.hasOwn(input, "clientWorldProtocol")); assert(!Object.hasOwn(input, "clientWorldRevision"));
       } else {
         assert.equal(input.clientWorldProtocol, root.CROWNLANDS_WORLD_SESSION.protocol);
@@ -55,6 +55,7 @@ async function main() {
   for (const action of ["status", "list", "history", "send", "friend", "presence", "unread"]) {
     await client.functions.httpsCallable({}, "social")({ action });
   }
+  for (const name of ["clanIntelligence", "getHoldingTowerState", "getRealmInfo"]) await client.functions.httpsCallable({}, name)({ action: "list" });
   for (const name of require("../local-backend/world/service").MOVEMENT) await client.functions.httpsCallable({}, name)({});
   client.dispose();
   const invalid = browser(); run("local-client.js", invalid); assert.throws(() => invalid.CrownlandsLocalBackend.create());

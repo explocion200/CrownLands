@@ -33,12 +33,23 @@ const { COOKIE, CSRF } = require("../local-backend/auth-http");
     await socialAs(owner.localId, { action: "friend", peerUid: "social-peer", choice: "request" });
     await socialAs("social-peer", { action: "friend", peerUid: owner.localId, choice: "accept" });
     const privateMessage = await socialAs("social-peer", { action: "send", peerUid: owner.localId, text: "Synthetic private message" });
+    const T = require("../functions/holding-towers"), Support = require("../functions/clan-tower-support");
+    class HttpsError extends Error { constructor(code, message) { super(message); this.code = code; } }
+    const support = Support.createService({ db: store, HttpsError, realm: () => scope, assertWorld() {},
+      validateProfile(p) { assert(Support.current(p, scope)); }, towerRef: id => store.doc(`holdingTowers/${id}`),
+      normalizeTower: (snap, id, at) => T.materializeTowerState({ id, ...snap.data() }, at), transact: task => store.runTransaction(task) });
+    const clanId = "fixture-clan", towerId = T.TOWERS[0].id;
+    await store.doc(`players/${owner.localId}`).update({ clanId });
+    await store.doc(`clans/${clanId}`).set({ ...scope, status: "active" });
+    await store.doc(`clans/${clanId}/members/${owner.localId}`).set({ ...scope, clanId, uid: owner.localId, role: "member", status: "active", joinedAtMs: Date.now() - 7200000 });
+    await store.doc(`holdingTowers/${towerId}`).set({ ...T.createNeutralTowerState(towerId), ...scope, ownerKind: "clan", clanId, ownershipRevision: 1, buildings: { scout_lodge: 1 } });
     server = createGameServer({ store, auth, worldData: { schema, async read(identity, operation) {
       worldReads++; assert.equal(identity.uid, owner.localId);
       if (operation === "areas") throw Object.assign(Error("Realm changed"), { code: "failed-precondition", status: 409 });
       return { ready: true };
     } }, routes: [{ name: "fixtureEcho", kind: "callable", handler: async req => ({ value: req.data.value, uid: req.auth.uid }) },
-      { name: "social", kind: "callable", handler: social.handler }], ownerUid: owner.localId, expiresAt: new Date(Date.now() + 600000).toISOString() });
+      { name: "social", kind: "callable", handler: social.handler },
+      { name: "clanIntelligence", kind: "callable", handler: req => support.intelligence(req.auth.uid, req.data) }], ownerUid: owner.localId, expiresAt: new Date(Date.now() + 600000).toISOString() });
     await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
     const root = {
       location: { origin: auth.origin, pathname: "/api/local-game/rehearsal/" }, document: { hidden: false },
@@ -95,6 +106,10 @@ const { COOKIE, CSRF } = require("../local-backend/auth-http");
     assert.equal(history[0].text, "Synthetic private message");
     assert.equal((await socialCall({ action: "unread" })).data.count, 1);
     await assert.rejects(socialCall({ action: "list", kind: "friends", forged: true }), { code: "functions/invalid-argument" });
+    const intelligenceCall = client.functions.httpsCallable({}, "clanIntelligence");
+    const intelligence = (await intelligenceCall({ action: "list" })).data;
+    assert.equal(intelligence.capacity, 5); assert.deepEqual(intelligence.entries, []);
+    await assert.rejects(intelligenceCall({ action: "list", forged: true }), { code: "functions/invalid-argument" });
     delete root.CROWNLANDS_WORLD_SESSION;
     peakRequests = 0;
     const burst = await Promise.all(Array.from({ length: 30 }, (_, value) => client.functions.httpsCallable({}, "fixtureEcho")({ value })));
