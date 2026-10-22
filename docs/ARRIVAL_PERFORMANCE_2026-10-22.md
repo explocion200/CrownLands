@@ -45,6 +45,29 @@ sanitized concurrent diagnostics. Actual continuous-world command tests cover
 attacks, scouts, reinforcements, recalls, accepted old/new routes, process restart,
 duplicate arrivals, rally rejoin/cancellation and captured-origin return cases.
 
-Timing and query-count comparisons, required GitHub checks and exact deployment
-identity are reported separately at delivery. Microbenchmarks and controlled
-client loads must not be presented as demonstrated production capacity.
+The actual command scenarios were also measured with deterministic fictional
+player IDs and starting-city/flag rolls, keeping route lengths comparable while
+retaining random isolated schema names. A test-only observer counted actual
+PostgreSQL document SELECT statements; it did not change transaction isolation or
+outcomes. All three versions passed the same 216-call scenario assertions.
+
+| Operation | Calls | Original queries | Batched-reader queries | Arrival-update queries |
+|---|---:|---:|---:|---:|
+| Resolve army | 108 | 2,453 | 2,373 | 1,655 |
+| Send army | 20 | 325 | 315 | 313 |
+| Join rally | 22 | 572 | 550 | 485 |
+| Launch rally | 2 | 96 | 87 | 81 |
+
+The 108 arrival calls used 244 transaction attempts in every version, including
+normal multi-transaction work and deliberate duplicate arrivals. Arrival document
+SELECTs fell 30.3% versus the batched-reader update, or 32.5% versus the original
+code. This measures fixture database work, not a guaranteed latency improvement.
+An initial comparison with random starting cities was discarded because its route
+lengths differed. Sanitized measurements and the test-only observer are retained
+under `release-artifacts/arrival-performance/`.
+
+Integration checks additionally cover concurrent batch/direct reads, a 1,000-ref
+batch exceeding the 128-entry retained cache, input order/duplicates/missing
+documents, invalid batches without partial SQL and fresh READ COMMITTED batches.
+Required GitHub checks and exact deployment identity are reported separately at
+delivery. Controlled client loads do not establish production capacity.
