@@ -20951,12 +20951,12 @@ exports.sendChatMessage = timedCallable("sendChatMessage", {
     if (!["global", "clan"].includes(payload.channel) || !/^[a-f0-9]{40}$/.test(payload.messageId || "")) {
       throw new HttpsError("invalid-argument", "Choose a shared chat location.");
     }
-    return db.runTransaction(async transaction => {
+    return runTransactionWithInfrastructureRetry(async transaction => {
       const access = await authorizeChatTranslation(transaction, request, payload);
       const message = (await transaction.get(db.doc(`${access.messageCollection}/${payload.messageId}`))).data();
       if (!message || !access.isVisible(message, Date.now())) throw new HttpsError("permission-denied", "That chat message is no longer available.");
       return chatLocations.resolve(transaction, message.location);
-    });
+    }, "resolveChatLocation", 3, { readOnly: true });
   }
   if (request.data?.action !== undefined) throw new HttpsError("invalid-argument", "Choose a valid chat action.");
   assertChatPayloadDoesNotSpoofIdentity(request.data || {});
