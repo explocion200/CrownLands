@@ -18,6 +18,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     }
     harness = await createAuthenticatedNativeHarness(pilot,{productionWorld:world});
     browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || "/usr/bin/google-chrome", headless: true, args: ["--no-sandbox"] });
+    console.log("Authenticated world browser:",browser.version());
     for (let i = 0; i < 2; i++) {
       const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, serviceWorkers: "block" });
       if(production)await context.addInitScript(()=>Object.defineProperty(window,"nativeContinuousWorld",{get:()=>window.CrownlandsContinuousWorld}));
@@ -53,6 +54,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       await p.evaluate(()=>new Promise(requestAnimationFrame));
     };
     await select(page, source);
+    if(production)await require("./check-continuous-city-stages")(page,pilot,source,output);
     if(production){
       // Native Location/Home commands can target an area that has been evicted.
       // Wait for its authoritative display position without overriding a later

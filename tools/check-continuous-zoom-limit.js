@@ -31,21 +31,36 @@ module.exports = async function checkZoomLimit(page, source, select, output) {
       }).length;
       return {zoom:s.camera.zoom,range:SeamlessModel.forWorld(v.scene).limits(s.size),size:s.size,cities,areas:s.feed.ids.length,overview:root.querySelector("#world").classList.contains("overview"),assets:s.assets};
     });
-    assert(Math.abs(sample.zoom-sample.range.min)<1e-8,"Zoom input bypassed the floor: "+input);
+    assert(Math.abs(sample.zoom-sample.range.min)<1e-8,`Zoom input bypassed the floor: ${input}; actual ${sample.zoom}, expected ${sample.range.min}`);
     assert(sample.zoom>sample.range.detail && !sample.overview && sample.cities>0 && sample.areas>0,"Zoom hides cities or stops their feed: "+input);
     assert(sample.assets.full<=4 && sample.assets.peakRequests<=2);
     results.push({input,...sample});
   }
   try {
+    // The harness owns two separate player tabs. Deliver native input to the
+    // tab under test, including on the stable Chrome used by GitHub runners.
+    console.log("Zoom input tab",await page.evaluate(()=>({focused:document.hasFocus(),visibility:document.visibilityState})));
+    await page.bringToFront();
     await page.evaluate(()=>{modal.close();clearSelection(false);nativeContinuousWorld.view.clear();});
     for (const [width,height] of sizes) {
       await page.setViewportSize({width,height}); await frames(page);
       await select(page,source);
-      await page.evaluate(()=>{const v=nativeContinuousWorld.view,o=v.getObject(v.selectedKey);v.clear();v.view(o.x,o.y,SeamlessModel.forWorld(v.scene).limits(v.snapshot().size).home);});
+      await page.evaluate(()=>{const v=nativeContinuousWorld.view,o=v.getObject(v.selectedKey);clearSelection(false);v.clear();v.view(o.x,o.y,SeamlessModel.forWorld(v.scene).limits(v.snapshot().size).home);});
+      await frames(page);
       const viewport=page.locator("#continuous-game-surface #viewport"), box=await viewport.boundingBox();
       const center={x:box.x+box.width/2,y:box.y+box.height/2};
       await page.mouse.move(center.x,center.y);
-      for(let i=0;i<8;i++){await page.mouse.wheel(0,600);await frames(page);}
+      const hit=await page.evaluate(p=>{const host=document.elementFromPoint(p.x,p.y),n=host?.shadowRoot?.elementFromPoint(p.x,p.y)||host;return {inViewport:n?.getRootNode()===nativeContinuousWorld.root&&!!n?.closest('#viewport'),tag:n?.tagName,id:n?.id,classes:n?.className,focused:document.hasFocus(),visibility:document.visibilityState};},center);
+      assert(hit.inViewport,`Wheel target intercepted at ${width}x${height}: ${JSON.stringify(hit)}`);
+      for(let i=0;i<8;i++){
+        const previous=await page.evaluate(()=>nativeContinuousWorld.view.snapshot().camera.zoom);
+        await page.mouse.wheel(0,600);
+        // Playwright dispatch completes before Chrome consumes wheel input.
+        // Observe the camera instead of assuming two frames drain the queue.
+        try{await page.waitForFunction(previous=>{const v=nativeContinuousWorld.view,s=v.snapshot();return s.camera.zoom<previous||Math.abs(s.camera.zoom-SeamlessModel.forWorld(v.scene).limits(s.size).min)<1e-8;},previous);}
+        catch(error){console.error("Wheel delivery",{width,height,center,previous,hit,current:await page.evaluate(()=>nativeContinuousWorld.view.snapshot().camera)});throw error;}
+        await frames(page);
+      }
       await check("wheel");
       await page.screenshot({path:path.join(output,`zoom-limit-${width}.png`)});
       // Native controls use the same floor even though their prototype toolbar
