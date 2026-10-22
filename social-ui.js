@@ -4,7 +4,7 @@
   let api, flagRenderer, pendingNotificationId = "", uid = "", generation = 0, ready = false, stopSignals, section = "", kind = "friends";
   let panel, list, thread, status, friendsTab, messagesTab, badge, listPage, listCursor = null, cursorStack = [];
   let current = null, history = [], older = null, before = null, viewVersion = 0, listVersion = 0;
-  let conversationSession = 0;
+  let conversationSession = 0, startup = null, startupTimer, startupAttempt = 0;
   let presenceTimer, expiryTimer, refreshTimer, senderBusy = false, pendingDraft, lastSignals = {}, offset = 0, privateAlerts = false, privateReady = false;
   const dialog = () => doc.getElementById("chatDialog");
   const now = () => Date.now() + offset;
@@ -23,7 +23,10 @@
     if (control) control.disabled = true;
     const scope = generation;
     try { setStatus(""); return await task(); }
-    catch (error) { if (scope === generation && !error.stale) setStatus(error.message || "Please try again."); }
+    catch (error) { if (scope === generation && !error.stale) {
+      setStatus(error.message || "Please try again.");
+      if (visible()) status.append(" ", button("Reload", () => run(refreshVisible)));
+    } }
     finally { if (scope === generation && control?.isConnected) control.disabled = false; }
   }
   function actionButton(label, payload, afterward) {
@@ -64,8 +67,8 @@
     workspace.append(list, thread); status = element("p", "", "social-status"); status.setAttribute("role", "status");
     panel.append(toolbar, workspace, status); dialog().querySelector(".chat-card").append(panel);
     badge = element("span", "", "social-tab-unread notification-badge"); badge.hidden = true; messagesTab.append(badge);
-    new MutationObserver(() => { if (!dialog().open) { clearTimeout(presenceTimer); clearTimeout(expiryTimer); } else if (visible()) { void run(refreshList); if (current) void run(() => loadHistory()); } }).observe(dialog(), { attributes: true, attributeFilter: ["open"] });
-    doc.addEventListener("visibilitychange", () => { if (visible()) { void run(refreshBadge); void run(refreshList); if (current) void run(() => loadHistory()); } });
+    new MutationObserver(() => { if (!dialog().open) { clearTimeout(presenceTimer); clearTimeout(expiryTimer); } else { recoverStart(); if (visible()) void run(refreshVisible); } }).observe(dialog(), { attributes: true, attributeFilter: ["open"] });
+    doc.addEventListener("visibilitychange", () => { recoverStart(); if (visible()) void run(refreshVisible); });
 
   }
   function leave() {
@@ -278,13 +281,22 @@
       controls.replaceChildren(element("p", "Report submitted for review."));
     }, send)); controls.append(element("small", "The operator can review this message and up to five preceding messages. Evidence is kept for 90 days."), reason, send, button("Cancel", () => controls.remove())); row.append(controls);
   }
+  async function refreshVisible() {
+    await refreshList(); if (current && !senderBusy) await loadHistory(); await refreshBadge();
+  }
+  function recoverStart() { if (uid && !ready && !doc.hidden) void connect(); }
   async function start(context) {
     if (!context?.uid || !context.api?.social) return;
-    if (uid === context.uid && ready) return;
-    stop(); init(); api = context.api; flagRenderer = context.flagRenderer; uid = context.uid; const scope = generation;
+    if (uid !== context.uid) { stop(); init(); api = context.api; flagRenderer = context.flagRenderer; uid = context.uid; }
+    return connect();
+  }
+  function connect() {
+    if (!uid || ready || startup) return startup;
+    clearTimeout(startupTimer); const scope = generation;
+    startup = (async () => {
     try {
       const result = await call({ action: "status" }); if (scope !== generation || !result.enabled) return;
-      ready = true; privateAlerts = result.privateAlerts; friendsTab.hidden = false; messagesTab.hidden = false;
+      ready = true; startupAttempt = 0; privateAlerts = result.privateAlerts; friendsTab.hidden = false; messagesTab.hidden = false;
       void restorePrivateRegistration();
       stopSignals = api.subscribeSocialSignals(signals => {
         const changed = JSON.stringify(signals) !== JSON.stringify(lastSignals), preferencesChanged = signals.preferences !== lastSignals.preferences; lastSignals = signals;
@@ -297,10 +309,16 @@
       await refreshBadge();
       const url = new URL(root.location.href), target = pendingNotificationId || url.searchParams.get("privateConversation"); pendingNotificationId = "";
       if (/^[a-f0-9]{40}$/.test(target || "")) { url.searchParams.delete("privateConversation"); root.history.replaceState(null, "", url); await openConversation({ id: target }); }
-    } catch (error) { if (scope === generation && !error.stale && visible()) setStatus("Friends and Messages are reconnecting. Reopen chat to retry."); }
+    } catch (error) {
+      if (scope !== generation || error.stale) return;
+      if (visible()) setStatus("Friends and Messages are reconnecting. Reopen chat to retry.");
+      if (!ready) startupTimer = setTimeout(recoverStart, Math.min(30000, 2000 * 2 ** Math.min(startupAttempt++, 4)));
+    } finally { if (scope === generation) startup = null; }
+    })();
+    return startup;
   }
   function stop() {
-    generation++; conversationSession++; stopSignals?.(); stopSignals = null; clearTimeout(refreshTimer); clearTimeout(presenceTimer); clearTimeout(expiryTimer);
+    generation++; conversationSession++; clearTimeout(startupTimer); startup = null; startupAttempt = 0; stopSignals?.(); stopSignals = null; clearTimeout(refreshTimer); clearTimeout(presenceTimer); clearTimeout(expiryTimer);
     ready = false; uid = ""; current = null; history = []; listPage = null; pendingDraft = null; senderBusy = false; lastSignals = {}; offset = 0; privateReady = false; leave();
     if (friendsTab) friendsTab.hidden = true; if (messagesTab) { messagesTab.hidden = true; messagesTab.setAttribute("aria-label", "Messages"); }
     if (list) list.replaceChildren(); if (thread) thread.replaceChildren(); if (badge) badge.hidden = true;
@@ -329,6 +347,7 @@
     else pendingNotificationId = message.notification.conversationId;
   });
   root.addEventListener("crownlands:auth", () => { if (uid && root.CrownlandsOnline?.getUser?.()?.uid !== uid) stop(); });
+  root.addEventListener("online", () => { recoverStart(); if (visible()) void run(refreshVisible); });
   root.addEventListener("crownlands:session-replaced", stop);
   root.CrownlandsSocial = Object.freeze({ start, stop, open, profileActions, diagnostics: () => ({ ready, uid, section, conversationId: current?.id || "" }) });
 })(window);

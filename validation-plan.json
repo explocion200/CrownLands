@@ -1,115 +1,19 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "cda910c636504bbe2eca09dfb30713db5e552c71",
+  "baseCommit": "7af7d53708da364f3914fbdb4e0245d5811e1d02",
   "coverage": [
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CLAN_SUPPORT_BUILDINGS_ROLLOUT.md"
-      ],
-      "tests": [],
-      "reason": "Record the explicitly confirmed six-building rules, private snapshot lifecycle and additive speed eligibility; document the additive local PostgreSQL rollout and pending backend installation without claiming deployment."
-    },
-    {
-      "paths": [
-        "docs/art-prompts/clan-buildings/prompts.json",
-        "assets/clan-buildings/scout_lodge-1.png",
-        "assets/clan-buildings/scout_lodge-1.webp",
-        "assets/clan-buildings/scout_lodge-2.png",
-        "assets/clan-buildings/scout_lodge-2.webp",
-        "assets/clan-buildings/scout_lodge-3.png",
-        "assets/clan-buildings/scout_lodge-3.webp",
-        "assets/clan-buildings/scout_lodge-4.png",
-        "assets/clan-buildings/scout_lodge-4.webp",
-        "assets/clan-buildings/stables-1.png",
-        "assets/clan-buildings/stables-1.webp",
-        "assets/clan-buildings/stables-2.png",
-        "assets/clan-buildings/stables-2.webp",
-        "assets/clan-buildings/stables-3.png",
-        "assets/clan-buildings/stables-3.webp",
-        "assets/clan-buildings/stables-4.png",
-        "assets/clan-buildings/stables-4.webp",
-        "docs/art-prompts/clan-buildings/support-theme-reference.jpg"
+        "social-ui.js",
+        "tools/validate-social-browser.js"
       ],
       "tests": [
-        "tools/validate-clan-tower-buildings.js",
-        "tools/validate-clan-tower-buildings-browser.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "reason": "Eight generated building stages match the attached reference and existing transparent 512px anchored sprite convention. Verify stage files, six-building courtyard mouse/touch selection and controls, optimized WebP production inclusion and bounded payload; source art/provenance remain outside the package."
-    },
-    {
-      "paths": [
-        "clan-tower-buildings.js",
-        "functions/clan-tower-buildings.js",
-        "functions/index.js",
-        "local-backend/access.js",
-        "functions/clan-tower-support.js",
-        "functions/test/clan-tower-support-cases.js",
-        "functions/test/emulator-clan-support.js",
-        "tools/test-local-postgres-clan-support-commands.js",
-        "tools/test-local-postgres-clan-support.js"
-      ],
-      "tests": [
-        "tools/validate-clan-tower-buildings.js",
-        "tools/test-local-postgres-clan-support.js",
-        "tools/test-local-postgres-clan-support-commands.js",
-        "tools/validate-gear-bonus-gameplay.js",
-        "tools/validate-peace-shield-returns.js",
-        "tools/validate-layer1-travel.js",
-        "tools/validate-clan-rallies.js",
-        "tools/validate-holding-towers.js",
-        "functions/test/emulator-clan-support.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "functions/test/emulator-holding-tower-donation-concurrency.js",
-        "functions/test/emulator-scout-report-lifecycle.js"
-      ],
-      "reason": "Additive building normalization uses unchanged project, Treasury, wall and capture lifecycle. Exercise all levels, paused retired buildings, concurrent charges/receipts, authoritative commands and completion. Stables eligibility/caps/preview-dispatch/immutable launch and no-bonus returns depend on shared gear, routing, rallies and return logic. Private intelligence tests cover bounded transactional capacity, server-owned reports, expiry, forged/foreign records, NPC identity, removal, capture/reacquisition/reset/disband and direct/watch permission revocation on disposable PostgreSQL plus the emulator; existing Tower and scout lifecycle suites protect shared dependency behavior."
-    },
-    {
-      "paths": [
-        "firebaseClient.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-clan-support.js",
-        "tools/validate-clan-building-layout-browser.js",
-        "functions/test/emulator-clan-support.js",
-        "functions/test/emulator-scout-report-lifecycle.js"
-      ],
-      "reason": "The actual local callable and scoped subscription adapters carry private requests and only an opaque clan signal. Verify local watch reauthorization and current-realm report ownership; UI clears access/errors without browser persistence. Existing public report and personal-scout contracts stay unchanged."
-    },
-    {
-      "paths": [
-        "clan-tower-buildings-ui.css",
-        "clan-tower-buildings-ui.js",
-        "game.js",
-        "index.html",
-        "scout-report-ui.js",
-        "tools/build-production-client.js",
-        "tools/validate-clan-building-layout-browser.js",
-        "tools/validate-clan-tower-buildings-browser.js",
-        "tools/validate-clan-tower-buildings.js",
-        "tools/validate-gear-bonus-gameplay.js",
-        "tools/validate-holding-tower-client-lifecycle.js",
-        "tools/validate-production-artifact.js",
-        "tools/validate-troop-selection-browser.js",
-        "troop-orders-ui.js",
-        "clan-intelligence-ui.js",
-        "clan-support-buildings-ui.js",
-        "tools/asset-performance-budgets.js",
+        "tools/validate-social-browser.js",
+        "tools/validate-chat.js",
+        "tools/test-private-notifications.js",
         "tools/validate-asset-performance-budgets.js"
       ],
-      "tests": [
-        "tools/validate-clan-building-layout-browser.js",
-        "tools/validate-clan-tower-buildings-browser.js",
-        "tools/validate-troop-selection-browser.js",
-        "tools/validate-holding-tower-client-lifecycle.js",
-        "tools/validate-gear-bonus-gameplay.js",
-        "tools/validate-scout-report-ui.js",
-        "tools/validate-production-artifact.js",
-        "tools/validate-asset-performance-budgets.js"
-      ],
-      "reason": "Actual game fixtures exercise six-building frame/navigation, fixed actions, level-table scrolling and Intelligence list/detail/access clearing at desktop and landscape widths down to 568x320. Tower and personal movement previews retain current selection/power/route controls, show additive nominal/effective support and invalidate cached clan ownership/level state. Shared scout presentation renders only snapshot fields. Production artifact checks ensure scripts/assets are shipped, sources remain excluded and the bounded lazy-art budget preserves entry/precache behavior. Shared shell limit gains 10 KiB for measured 9,484-byte overage; the two support interfaces remain lazy and no new precache entries or images are added."
+      "reason": "Recover failed Friends/Messages startup using one account-scoped request, bounded backoff, chat reopen/visibility/online events and cancellable logout cleanup. Real browser cases reproduce missing tabs after initial failure; verify retry, backend disabled capability, concurrent starts, stale-account completion, failed-list reload and unchanged shared chat layouts across desktop/landscape/mobile. Existing chat and private notification tests protect shared tab lifecycle, unread and alert behavior; asset budgets keep the recovery code bounded. No backend, schema, social permissions or gameplay changes; no emulator suite is affected."
     }
   ]
 }

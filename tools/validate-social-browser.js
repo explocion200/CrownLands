@@ -35,7 +35,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       socialQa.api = { social: async input => {
         socialQa.calls.push(input);
         const base = { serverNowMs: Date.now() };
-        if (input.action === "status") return { ...base, enabled: true, privateAlerts: Boolean(socialQa.privateAlerts) };
+        if (input.action === "status") { if (socialQa.failStatus-- > 0) throw Object.assign(Error("Synthetic startup disconnect"), { code: "functions/unavailable" }); return { ...base, enabled: socialQa.enabled !== false, privateAlerts: Boolean(socialQa.privateAlerts) }; }
         if (input.action === "preference") { socialQa.privateAlerts = input.enabled; return { privateAlerts: input.enabled }; }
         if (input.action === "unread") return { count: socialQa.unread };
         if (input.action === "list") return { ...base, rows: input.kind === "blocked" ? [] : [{ id: "a".repeat(40), peerUid: "bob", player, friend: "friends", status: "accepted", unread: socialQa.unread, lastMessageAtMs: Date.now() }], next: null };
@@ -52,8 +52,14 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         subscribeChatMessages(options, handlers) { queueMicrotask(() => handlers.onMessages([{ id: "global-density", senderUid: "bob", senderDisplayName: "Bob", text: "Meet at the castle.", createdAtMs: Date.now(), status: "visible", channel: options.channel }], { initial: true, hasMore: false })); return () => {}; },
         loadOlderChatMessages: async () => []
       } }); globalChat.setMode("full");
-      await CrownlandsSocial.start({ api: socialQa.api, uid: "alice", flagRenderer: FlagRenderer }); CrownlandsSocial.open("friends");
+      socialQa.failStatus = 1; await CrownlandsSocial.start({ api: socialQa.api, uid: "alice", flagRenderer: FlagRenderer });
     });
+    assert.equal(await ev("CrownlandsSocial.diagnostics().ready"), false);
+    await ev('CrownlandsChat.init().setMode("closed")'); await delay(30);
+    await ev('CrownlandsChat.init().setMode("full")'); await delay(150);
+    assert.equal(await ev("CrownlandsSocial.diagnostics().ready"), true, "Reopening chat must recover a failed social startup and restore both tabs");
+    assert(await ev('!document.getElementById("socialFriendsTab").hidden && !document.getElementById("socialMessagesTab").hidden'));
+    await ev('CrownlandsSocial.open("friends")');
     await delay(150);
     assert((await ev('document.querySelector(".social-list").innerText')).includes("Online"));
     assert(await ev('Boolean(document.querySelector(".social-flag svg"))'), "Player flags use the shared renderer");
@@ -249,6 +255,49 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       CrownlandsSocial.stop(); socialQa.finishPermission({ enabled: true });
     }); await delay(100);
     assert(await ev('socialQa.calls.filter(c=>c.action==="preference").length === socialQa.preferencesBeforeSwitch'), "A late permission response cannot change the next account's preference");
+    // Startup is a single account-scoped request, with retryable reads and no stale-account reveal.
+    await ev(() => {
+      socialQa.originalSocial = socialQa.api.social;
+      socialQa.api.social = input => input.action === "status" ? new Promise(resolve => { socialQa.pendingStarts = (socialQa.pendingStarts || 0) + 1; socialQa.finishStartup = resolve; }) : socialQa.originalSocial(input);
+      socialQa.firstStart = CrownlandsSocial.start({ api: socialQa.api, uid: "alice", flagRenderer: FlagRenderer });
+      socialQa.secondStart = CrownlandsSocial.start({ api: socialQa.api, uid: "alice", flagRenderer: FlagRenderer });
+      dispatchEvent(new Event("online"));
+    });
+    assert.equal(await ev("socialQa.pendingStarts"), 1, "Concurrent startup/reconnect must share one status request");
+    await ev(async () => {
+      CrownlandsSocial.stop(); socialQa.api.social = socialQa.originalSocial;
+      await CrownlandsSocial.start({ api: socialQa.api, uid: "next-account", flagRenderer: FlagRenderer });
+      socialQa.finishStartup({ enabled: true, privateAlerts: true }); await Promise.all([socialQa.firstStart, socialQa.secondStart]);
+    });
+    assert(await ev('CrownlandsSocial.diagnostics().uid === "next-account" && CrownlandsSocial.diagnostics().ready'), "An old startup must not replace or clear the current account");
+    await ev(async () => {
+      CrownlandsSocial.stop(); socialQa.enabled = false;
+      await CrownlandsSocial.start({ api: socialQa.api, uid: "alice", flagRenderer: FlagRenderer });
+    });
+    assert(await ev('!CrownlandsSocial.diagnostics().ready && document.getElementById("socialFriendsTab").hidden && document.getElementById("socialMessagesTab").hidden'), "Disabled backend capability must keep private tabs hidden");
+    await ev(() => { socialQa.enabled = true; dispatchEvent(new Event("online")); }); await delay(100);
+    assert(await ev('CrownlandsSocial.diagnostics().ready'), "Reconnect must retry startup for the same account");
+    await ev(async () => {
+      CrownlandsSocial.stop(); socialQa.failStatus = 1;
+      await CrownlandsSocial.start({ api: socialQa.api, uid: "alice", flagRenderer: FlagRenderer });
+    });
+    for (let i = 0; i < 45 && !await ev("CrownlandsSocial.diagnostics().ready"); i++) await delay(100);
+    assert(await ev('CrownlandsSocial.diagnostics().ready'), "Transient startup must recover automatically without a reload");
+    await ev(() => {
+      socialQa.failList = true;
+      socialQa.api.social = input => input.action === "list" && socialQa.failList ? Promise.reject(Error("Synthetic list disconnect")) : socialQa.originalSocial(input);
+      CrownlandsSocial.open("friends");
+    }); await delay(100);
+    assert(await ev('document.querySelector(".social-status button")?.textContent === "Reload"'), "A failed list needs a reachable recovery control");
+    await ev('socialQa.failList=false;document.querySelector(".social-status button").click()'); await delay(100);
+    assert(await ev('document.querySelector(".social-friend") && !document.querySelector(".social-status").textContent'), "Reload must restore friends without mutating a relationship");
+    await ev(async () => {
+      CrownlandsSocial.stop(); socialQa.api.social = socialQa.originalSocial; socialQa.failStatus = 10;
+      await CrownlandsSocial.start({ api: socialQa.api, uid: "alice", flagRenderer: FlagRenderer });
+      CrownlandsSocial.stop(); socialQa.stoppedStatusCalls = socialQa.calls.filter(c => c.action === "status").length;
+      dispatchEvent(new Event("online"));
+    }); await delay(2200);
+    assert(await ev('socialQa.calls.filter(c => c.action === "status").length === socialQa.stoppedStatusCalls && document.getElementById("socialMessagesTab").hidden'), "Signing out must cancel pending retries and prevent reconnect access");
     assert.deepEqual(errors, []);
     fs.writeFileSync(path.join(artifacts, "results.json"), JSON.stringify({ passed: true, layouts }, null, 2));
     console.log("Social browser interaction, text safety, account cleanup and responsive layout checks passed.");
