@@ -4167,6 +4167,10 @@ function isHoldingTowerModalSessionCurrent(session) {
 function renderHoldingTowerModal(tower) {
   if (!tower || !HOLDING_TOWER_UI || selectedHoldingTowerId !== tower.id
       || !isHoldingTowerModalSessionCurrent(holdingTowerModalSession)) return;
+  // Old selections may survive a client update; retired buildings are no longer
+  // displayed. Their saved progress and previously paid project remain intact.
+  const availableBuildings = window.CrownlandsClanTowerBuildingsUi?.available(tower);
+  if (availableBuildings && !availableBuildings.some(b => b.id === holdingTowerBuildingSelection)) holdingTowerBuildingSelection = "shop";
   const clanIdentity = getHoldingTowerClanIdentity(tower);
   const treasuryBalance = tower.ownerMember && tower.clanId === state.clanId
     && clanTreasuryClanId === state.clanId ? clanTreasuryStatus?.treasury?.balance : undefined;

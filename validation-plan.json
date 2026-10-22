@@ -1,28 +1,34 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "ac382ffba96dcb316f33d8e0d586c1d77c48755f",
+  "baseCommit": "66bed72d8c3778ee9cdf3ab2af30420d77933029",
   "coverage": [
     {
       "paths": [
-        "functions/index.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "tools/test-local-postgres-clan-shop.js",
-        "tools/validate-clan-shop-browser.js"
+        "world/appearance.js",
+        "clan-tower-buildings-ui.js",
+        "game.js",
+        "tools/test-local-postgres-clan-courtyard.js",
+        "tools/validate-clan-building-layout-browser.js",
+        "tools/validate-clan-pending-mechanics-browser.js",
+        "tools/validate-clan-tower-buildings-browser.js"
       ],
       "tests": [
-        "tools/test-local-postgres-clan-shop.js",
-        "tools/validate-clan-shop-browser.js",
+        "tools/test-local-postgres-clan-courtyard.js",
+        "tools/validate-clan-building-layout-browser.js",
+        "tools/validate-clan-pending-mechanics-browser.js",
+        "tools/validate-clan-tower-buildings-browser.js",
         "tools/validate-clan-tower-buildings.js",
-        "functions/test/emulator-holding-tower-lifecycle.js"
+        "tools/validate-continuous-city-stages.js",
+        "tools/validate-continuous-pickup-placement.js"
       ],
-      "reason": "Fix the authoritative Clan Shop recursive-merge rollover bug and recover already contaminated personal counts from bounded current-realm purchase receipts. Exercise all roles/all seven items, member purchases without garrisons, actual PostgreSQL transactions, concurrency/retries, UTC and seasonal resets, receipt reconstruction and Shield deadlines, existing ownership/probation/prices/level gates and independent main-Shop usage. The affected shared Tower lifecycle emulator validates the same server code; the actual game browser covers desktop and two landscape sizes with ordinary-member permissions."
+      "reason": "Client-only removal of retired building artwork/navigation and the separate courtyard ground layer. Actual PostgreSQL/subscription browser fixture checks all four active Core Towers, four stages, exact four sites, no retired/dirt asset requests, hit areas/labels/actions, mouse/touch, zoom, capture and neutralization. Shared building-window tests cover five desktop/landscape sizes, fallback from retired selections, supported/unsupported backend navigation, retained saved levels/paid projects, Shop and Workshop controls and unchanged construction restrictions. Shared geometry and pickup-placement checks protect neighboring cities and the whole reserved Tower clearance. No authoritative server changes or emulator changes required."
     },
     {
       "paths": [
-        "docs/CLAN_SHOP_ALLOWANCE_REPAIR.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Document the reproduced cause, unchanged rules, bounded lazy recovery, selected checks and separately authorized local backend rollout. No runtime behavior in this documentation."
+      "reason": "Record the owner-confirmed four visible buildings and natural-ground presentation, explicitly superseding prior six-site/dirt layout while preserving retired persistence and construction rules; distinguish implementation from deployment."
     }
   ]
 }

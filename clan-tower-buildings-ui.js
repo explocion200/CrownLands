@@ -1,13 +1,16 @@
 (function (global) {
   "use strict";
   const B = global.CrownlandsClanTowerBuildings;
+  const available = tower => B.DEFINITIONS.filter(d => !B.mechanicsPending(d.id)
+    && (!["stables", "scout_lodge"].includes(d.id) || tower.clanTowerSupportVersion === 1));
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
   const num = value => Math.max(0, Math.floor(Number(value) || 0)).toLocaleString();
   const duration = ms => { const m = Math.max(1, Math.ceil(ms / 60000)); return m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ""}` : `${m}m`; };
   const timer = (at, now) => `<span data-clan-tower-countdown="${at}">${duration(Math.max(0, at - now))}</span>`;
   function render(tower, { selected = "shop", treasuryBalance = null, personalGold = 0, actionBusy = false, itemArt = {}, nowMs = Date.now() } = {}) {
     if (!B) return "";
-    const levels = B.normalizeLevels(tower.buildings), def = B.definition(selected) || B.DEFINITIONS[0];
+    const choices = available(tower);
+    const levels = B.normalizeLevels(tower.buildings), def = choices.find(d => d.id === selected) || choices[0];
     const current = levels[def.id], next = Math.min(10, current + 1), project = tower.buildingProject;
     const own = Boolean(tower.ownerMember), manager = own && tower.permissions?.manage;
     const active = project?.buildingId === def.id;
@@ -22,7 +25,7 @@
       : tower.wallIntegrityBps < 10000 || tower.repairActive ? "Fully repair the walls before construction."
       : treasuryBalance === null || !Number.isFinite(Number(treasuryBalance)) ? "Clan Treasury balance is unavailable."
       : Number(treasuryBalance) < B.cost(next) ? "The Clan Treasury needs more Gold." : "";
-    const cards = B.DEFINITIONS.filter(d => !["stables", "scout_lodge"].includes(d.id) || tower.clanTowerSupportVersion === 1).map(d => `<button class="ctb-building-choice ${d.id === def.id ? "selected" : ""}" data-clan-building-select="${d.id}" aria-pressed="${d.id === def.id}"><img src="${B.art(d.id, levels[d.id])}" alt="" loading="lazy"><span><strong>${esc(d.name)}</strong><small>${levels[d.id] ? `Level ${levels[d.id]}` : "Unbuilt"}${project?.buildingId === d.id ? " · Building" : ""}</small></span></button>`).join("");
+    const cards = choices.map(d => `<button class="ctb-building-choice ${d.id === def.id ? "selected" : ""}" data-clan-building-select="${d.id}" aria-pressed="${d.id === def.id}"><img src="${B.art(d.id, levels[d.id])}" alt="" loading="lazy"><span><strong>${esc(d.name)}</strong><small>${levels[d.id] ? `Level ${levels[d.id]}` : "Unbuilt"}${project?.buildingId === d.id ? " · Building" : ""}</small></span></button>`).join("");
     const info = `<div class="ctb-building-hero"><img src="${B.art(def.id, current)}" alt="${esc(def.name)}"><div><p class="eyebrow">${current ? `LEVEL ${current} / 10` : "UNBUILT"}</p><h2>${esc(def.name)}</h2><p>${esc(def.description)}</p></div></div><div class="ctb-benefits"><p><small>Current benefit</small><strong>${esc(B.benefit(def.id, current))}</strong></p>${current < 10 ? `<p><small>Level ${next}</small><strong>${esc(B.benefit(def.id, next))}</strong></p>` : ""}</div>`;
     const construction = own ? `<section class="ctb-construction"><div><small>Clan Treasury</small><strong>${treasuryBalance === null ? "Unavailable" : `${num(treasuryBalance)} Gold`}</strong></div>${current < 10 ? `<div><small>${active ? "Gold paid" : `Level ${next} cost`}</small><strong>${num(B.cost(next))} Gold</strong></div><div><small>${active ? paused ? "Remaining work" : "Time remaining" : "Construction time"}</small><strong>${active ? end ? timer(end, nowMs) : duration(project.remainingMs) : duration(B.duration(next))}</strong></div>` : ""}${manager && current < 10 && !active ? `<button type="button" class="primary-button" data-clan-building-start="${def.id}" ${reason || actionBusy ? "disabled" : ""}>${current ? `Upgrade to Level ${next}` : "Build Level 1"}</button>` : ""}${reason ? `<p class="ctb-note" role="status">${esc(reason)}</p>` : '<p class="ctb-note">Paid upfront from Clan Treasury. Projects cannot be canceled.</p>'}</section>` : `<p class="ctb-note">${esc(reason)}</p>`;
     let shop = "";
@@ -47,7 +50,7 @@
     return `<div class="${id}-shell clan-building-shell">
       <header class="window-header"><img class="header-emblem" src="${esc(icon)}" alt=""><div class="heading"><p>${esc(tower.name)} · Clan Tower</p><h1 id="${id}Title">${esc(def.name)}</h1></div><div class="treasury"><span>Clan Treasury</span><strong><img src="assets/optimized/gold-coin-192x192-f2620b39eb0d.webp" alt="Gold"><span id="balance"></span></strong></div><button id="${closeId}" type="button" class="close" aria-label="Close ${esc(def.name)}">×</button></header>
       <div class="${id}-body clan-building-body">
-        <aside class="building-panel" tabindex="0" aria-label="${esc(def.name)} building and level"><p class="overline">${esc(tower.clanName || "Your clan")}</p><div class="building-art"><img id="buildingArt" src="${B.art(id, level)}" alt="${esc(def.name)} building"></div><h2 id="buildingLevel"></h2><div id="levelTrack" class="level-track"></div><p id="buildingCaption" class="building-caption"></p><label class="building-navigation"><span class="sr-only">Tower building</span><select data-${id}-building aria-label="Tower building">${B.DEFINITIONS.filter(d => !["stables", "scout_lodge"].includes(d.id) || tower.clanTowerSupportVersion === 1).map(d => `<option value="${d.id}" ${d.id === id ? "selected" : ""}>${esc(d.name)}</option>`).join("")}</select></label><div class="building-seal" aria-hidden="true">◆</div><p class="building-note">Completed benefits stay active while this building upgrades.</p></aside>
+        <aside class="building-panel" tabindex="0" aria-label="${esc(def.name)} building and level"><p class="overline">${esc(tower.clanName || "Your clan")}</p><div class="building-art"><img id="buildingArt" src="${B.art(id, level)}" alt="${esc(def.name)} building"></div><h2 id="buildingLevel"></h2><div id="levelTrack" class="level-track"></div><p id="buildingCaption" class="building-caption"></p><label class="building-navigation"><span class="sr-only">Tower building</span><select data-${id}-building aria-label="Tower building">${available(tower).map(d => `<option value="${d.id}" ${d.id === id ? "selected" : ""}>${esc(d.name)}</option>`).join("")}</select></label><div class="building-seal" aria-hidden="true">◆</div><p class="building-note">Completed benefits stay active while this building upgrades.</p></aside>
         <section class="detail-panel" aria-label="${esc(def.name)} improvements">
           <nav class="${id}-tabs clan-building-tabs" aria-label="${esc(def.name)} sections"><div role="tablist"><button id="tab-overview" type="button" role="tab" aria-controls="overviewPanel" aria-selected="true" data-section="overview">Overview</button><button id="tab-levels" type="button" role="tab" aria-controls="levelsPanel" aria-selected="false" data-section="levels">All levels</button>${intelligence ? '<button id="tab-intelligence" type="button" role="tab" aria-controls="intelligencePanel" aria-selected="false" data-section="intelligence">Intelligence</button>' : ""}${items ? '<button id="tab-wares" type="button" role="tab" aria-controls="waresPanel" aria-selected="false" data-section="wares">Items</button>' : ""}</div><button type="button" class="tower-back" data-${id}-back>← Tower Info</button></nav>
           <div id="overviewPanel" class="detail-scroll" tabindex="0" role="tabpanel" aria-labelledby="tab-overview"></div>
@@ -115,5 +118,5 @@
     host._clanTowerClockCleanup = cleanup; dialog?.addEventListener("close", cleanup, {once: true});
     host.dataset[`${id}Ready`] = "true";
   }
-  global.CrownlandsClanTowerBuildingsUi = Object.freeze({ render, frame, mountPendingMechanics });
+  global.CrownlandsClanTowerBuildingsUi = Object.freeze({ render, frame, available, mountPendingMechanics });
 })(window);

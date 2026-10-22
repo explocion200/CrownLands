@@ -8,6 +8,7 @@ const Buildings=require("../clan-tower-buildings"),Towers=require("../functions/
 const {fixture,imageToGame}=require("../local-backend/world/catalog");
 const overlap=(a,b)=>a.left<b.left+b.width-.01&&a.left+a.width>b.left+.01&&a.top<b.top+b.height-.01&&a.top+a.height>b.top+.01;
 const output=path.resolve("release-artifacts/clan-courtyard");fs.mkdirSync(output,{recursive:true});
+const visibleBuildings=Buildings.DEFINITIONS.filter(b=>!Buildings.mechanicsPending(b.id));
 const levels=n=>Object.fromEntries(Buildings.DEFINITIONS.map(b=>[b.id,n]));
 const context={window:{CrownlandsClanTowerBuildings:Buildings},document:{}};
 vm.createContext(context);vm.runInContext(fs.readFileSync("world/appearance.js","utf8"),context);
@@ -16,7 +17,10 @@ for(const raw of fixture.objects.filter(o=>o.kind==="tower")){
   const tower=geometry({...raw,ownerClanId:"sample"});
   assert.equal(tower.width,raw.width*.5);assert.equal(tower.x,raw.x);assert.equal(tower.y,raw.y);
   const children=courtyard(tower,{ownerKind:"clan",clanId:"sample",buildings:levels(10)}),parts=[tower,...children.filter(o=>o.kind!=="courtyard")];
-  assert.equal(parts.length,7);
+  assert.equal(parts.length,5);
+  assert.deepEqual(Array.from(children,o=>o.id),visibleBuildings.map(b=>b.id));
+  assert(children.every(o=>o.kind==="tower-building"));
+  assert.equal(courtyard(tower,{ownerKind:"clan",clanId:"sample",buildings:{infirmary:10,training:10},buildingProject:{buildingId:"training"}}).length,0);
   for(const part of children){assert(part.left>=raw.left&&part.top>=raw.top&&part.left+part.width<=raw.left+raw.width&&part.top+part.height<=raw.top+raw.height,"Compound exceeds old Tower clearance");}
   for(let i=0;i<parts.length;i++)for(let j=i+1;j<parts.length;j++)assert(!overlap(parts[i],parts[j]),"Tower/building hit areas overlap");
   for(const p of parts)for(const o of fixture.objects.filter(o=>o.sectionId===raw.sectionId&&o.kind!=="scenery"&&o.key!==raw.key))assert(!overlap(p,o),"Compound collides with catalog structure");
@@ -28,7 +32,7 @@ for(const raw of fixture.objects.filter(o=>o.kind==="tower")){
 }
 (async()=>{
  const pilot=await createGameplayPilot({productionRouting:true});let world,harness,browser,page;
- const errors=[],external=[],results=[];
+ const errors=[],external=[],results=[],removedAssets=[];
  try{
   const refs=[];
   for(const [i,t]of Towers.TOWERS.entries()){
@@ -44,7 +48,7 @@ for(const raw of fixture.objects.filter(o=>o.kind==="tower")){
   const ctx=await browser.newContext({viewport:{width:1440,height:900},hasTouch:true,serviceWorkers:"block"});
   await ctx.addCookies(harness.cookies(0));
   await ctx.route("**/*",async route=>{
-   const r=route.request();if(!r.url().startsWith("https://playcrownlands.com/"))external.push(r.url());
+   const r=route.request();if(/assets\/clan-buildings\/(courtyard|infirmary-|training-)/.test(r.url()))removedAssets.push(r.url());if(!r.url().startsWith("https://playcrownlands.com/"))external.push(r.url());
    try{await route.fulfill(await harness.request(r.url(),r.method(),await r.allHeaders(),r.postDataBuffer()));}catch(e){errors.push(e.message);await route.abort();}
   });
   page=await ctx.newPage();page.on("pageerror",e=>errors.push(e.stack||e.message));
@@ -57,7 +61,7 @@ for(const raw of fixture.objects.filter(o=>o.kind==="tower")){
    await page.waitForFunction(id=>CrownlandsContinuousWorld.view.scene.objects.some(o=>o.id===id),t.id);
    await page.evaluate(id=>{const v=CrownlandsContinuousWorld.view,o=v.scene.objects.find(o=>o.id===id);const c=v.snapshot();v.view(o.x,o.y+10,c.camera.zoom);},t.id);
    await page.evaluate(()=>new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done))));
-   await page.waitForFunction(id=>{const root=CrownlandsContinuousWorld.root,n=[...root.querySelectorAll('.object.tower-building')].filter(n=>CrownlandsContinuousWorld.view.getObject(n.dataset.key)?.towerId===id);return n.length===6&&n.every(n=>n.firstChild.naturalWidth>0&&!n.firstChild.hidden);},t.id,{timeout:30000});
+   await page.waitForFunction(id=>{const root=CrownlandsContinuousWorld.root,n=[...root.querySelectorAll('.object.tower-building')].filter(n=>CrownlandsContinuousWorld.view.getObject(n.dataset.key)?.towerId===id);return n.length===4&&n.every(n=>n.firstChild.naturalWidth>0&&!n.firstChild.hidden);},t.id,{timeout:30000});
   };
   for(const [width,height]of [[1440,900],[844,390],[568,320]]){
    await page.setViewportSize({width,height});await page.waitForTimeout(100);
@@ -71,7 +75,7 @@ for(const raw of fixture.objects.filter(o=>o.kind==="tower")){
      const banner=root.querySelector(`[data-key='${t.key}'] .city-label`).getBoundingClientRect();
      return {boxes,collisions,banner:{left:banner.left,top:banner.top,width:banner.width,height:banner.height},hidden:getComputedStyle(root.querySelector(`[data-key='${t.key}'] .map-banner`)).visibility==="hidden"};
     },t.id);
-    assert.equal(check.boxes.length,7);assert.deepEqual(check.collisions,[]);assert(!check.hidden);
+    assert.equal(check.boxes.length,5);assert.deepEqual(check.collisions,[]);assert(!check.hidden);
     for(const box of check.boxes)assert(!overlap(box,check.banner),"Tower label overlaps courtyard");
     results.push({width,height,tower:t.id,...check});
    }
@@ -79,11 +83,11 @@ for(const raw of fixture.objects.filter(o=>o.kind==="tower")){
    // Test every visible sprite stage through the actual Tower subscription.
    for(const level of [1,4,7,10]){
     await refs[0].update({buildings:levels(level)});
-    await page.waitForFunction(({id,level})=>{const v=CrownlandsContinuousWorld.view,items=v.scene.objects.filter(o=>o.towerId===id);return items.length===6&&items.every(o=>o.level===level);},{id:t.id,level},{timeout:30000});
+    await page.waitForFunction(({id,level})=>{const v=CrownlandsContinuousWorld.view,items=v.scene.objects.filter(o=>o.towerId===id);return items.length===4&&items.every(o=>o.level===level);},{id:t.id,level},{timeout:30000});
     await page.waitForFunction(()=>[...CrownlandsContinuousWorld.root.querySelectorAll('.tower-building>img')].every(n=>n.naturalWidth>0&&!n.hidden));
    }
    // Actual mouse / touch selects a building and opens its original building UI.
-   for(const building of Buildings.DEFINITIONS){
+   for(const building of visibleBuildings){
     await frame(t);
     const point=await page.evaluate(({id,building})=>{
      const v=CrownlandsContinuousWorld.view,o=v.scene.objects.find(o=>o.towerId===id&&o.buildingId===building),c=v.snapshot();
@@ -95,6 +99,8 @@ for(const raw of fixture.objects.filter(o=>o.kind==="tower")){
     const node=page.locator(`[data-key='${point}']`);
     if(width<1000)await node.tap();else await node.click();
     await page.waitForFunction(id=>modal.open&&holdingTowerDetailsTab==="buildings"&&holdingTowerBuildingSelection===id,building.id);
+    await page.waitForFunction(()=>modalBody.querySelector(".building-navigation select"));
+    assert.deepEqual(await page.locator(".building-navigation option").evaluateAll(nodes=>nodes.map(n=>n.value)),visibleBuildings.map(b=>b.id));
     await page.evaluate(()=>modal.close());
    }
    await frame(t);await page.screenshot({path:path.join(output,`courtyard-${width}.png`)});
@@ -127,17 +133,18 @@ for(const raw of fixture.objects.filter(o=>o.kind==="tower")){
   await page.mouse.move(drag.x+drag.width/2+50,drag.y+drag.height/2+15,{steps:5});await page.mouse.up();
   assert(!await page.evaluate(()=>modal.open),"Dragging from a building opened its panel");
   await refs[0].update({clanId:"courtyard-clan-1",clanName:"New Sample Owner",ownershipRevision:2,buildings:levels(9)});
-  await page.waitForFunction(()=>{const v=CrownlandsContinuousWorld.view,t=v.scene.objects.find(o=>o.id==="core-v2-holding-tower-1"),a=v.scene.objects.filter(o=>o.towerId===t.id);return t.ownerClanId==="courtyard-clan-1"&&a.length===6&&a.every(o=>o.level===9);});
+  await page.waitForFunction(()=>{const v=CrownlandsContinuousWorld.view,t=v.scene.objects.find(o=>o.id==="core-v2-holding-tower-1"),a=v.scene.objects.filter(o=>o.towerId===t.id);return t.ownerClanId==="courtyard-clan-1"&&a.length===4&&a.every(o=>o.level===9);});
   await refs[0].update({clanId:"pilot-clan",ownershipRevision:3,buildings:levels(0),buildingProject:{id:"sample-project",buildingId:"stables",targetLevel:1,remainingMs:1800000,progressStartedAtMs:Date.now()}});
   await page.waitForFunction(()=>{const a=CrownlandsContinuousWorld.view.scene.objects.filter(o=>o.towerId==="core-v2-holding-tower-1");return a.length===1&&a[0].constructing&&a[0].level===0;});
   await refs[0].update({ownerKind:"neutral",clanId:"",ownershipRevision:4,buildingProject:null,buildings:levels(0)});
   await page.waitForFunction(()=>!CrownlandsContinuousWorld.view.scene.objects.some(o=>o.towerId==="core-v2-holding-tower-1"));
   const stable=await page.evaluate(async()=>{const v=CrownlandsContinuousWorld.view,a=v.scene.objects;for(let i=0;i<3;i++){renderCities();await new Promise(requestAnimationFrame);}return a===v.scene.objects;});
   assert(stable,"Unchanged game renders rebuild the scene");
-  assert.deepEqual(external,[]);assert.deepEqual(errors,[]);
+  assert.deepEqual(external,[]);assert.deepEqual(errors,[]);assert.deepEqual(removedAssets,[],"Removed artwork was requested");
+  assert.equal(await page.locator(".object.courtyard").count(),0);
   const stats=await page.evaluate(()=>CrownlandsContinuousWorld.view.snapshot());assert(stats.assets.peakRequests<=2&&stats.assets.full<=4);
-  fs.writeFileSync(path.join(output,"report.json"),JSON.stringify({results,errors,external,assets:stats.assets},null,2));
-  console.log("Clan courtyard passed: four Towers, six buildings, four stages, three viewports, mouse/touch, live completion/neutralization, existing subscriptions and bounded assets.");
+  fs.writeFileSync(path.join(output,"report.json"),JSON.stringify({results,errors,external,removedAssets,assets:stats.assets},null,2));
+  console.log("Clan courtyard passed: four Towers, four active buildings, no retired sprites or dirt layer, four stages, three viewports, mouse/touch, live completion/neutralization, existing subscriptions and bounded assets.");
  }catch(e){if(page){await page.screenshot({path:path.join(output,"failure.png")}).catch(()=>{});console.error(await page.evaluate(()=>({text:document.body.innerText.slice(-1000),towers:[...holdingTowerSnapshots.values()].map(t=>({id:t.id,ownerKind:t.ownerKind,clanId:t.clanId,buildings:t.buildings})),scene:window.CrownlandsContinuousWorld?.view.scene.objects.filter(o=>o.kind==="tower"||o.kind==="tower-building").map(o=>({id:o.id,ownerClanId:o.ownerClanId,kind:o.kind}))})).catch(()=>null));}console.error(errors,harness?.errors.slice(-4));throw e;
  }finally{await browser?.close();await harness?.close();await world?.close();await pilot.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
