@@ -4,6 +4,7 @@
 const fs = require("node:fs"), path = require("node:path");
 const fixture = require("../local-backend/world/templates.json");
 const roads = require("../local-backend/world/source/roads.json");
+const npcSites = require("../local-backend/world/npc-sites.json");
 const destination = path.resolve(__dirname, "../local-backend/world/placements.json");
 const overlap = (a,b,gap=0) => a.left < b.right+gap && a.right+gap > b.left && a.top < b.bottom+gap && a.bottom+gap > b.top;
 const rect = (x,y,width=112,above=126,below=36) => ({left:x-width/2,right:x+width/2,top:y-above,bottom:y+below});
@@ -65,7 +66,10 @@ function prepareSection(section) {
     remaining.sort((a,b)=>distance(a,city.previewLocal)-distance(b,city.previewLocal));
     positions[city.id]=remaining.shift();
   }
-  const reserved=[...landmarks,...slots.map(p=>rect(p.x,p.y)),...pickupZones.map(z=>rect(z.x,z.y,164,82,82))],decorationBounds=[];
+  // Keep the approved NPC alternatives clear of decorations, including the
+  // attached name/countdown above each marker. Cities/objectives do not move.
+  const npcClearings=(npcSites.sections.find(s=>s.id===section.id)?.points||[]).map(p=>rect(p.x,p.y,96,54,32));
+  const reserved=[...landmarks,...slots.map(p=>rect(p.x,p.y)),...pickupZones.map(z=>rect(z.x,z.y,164,82,82)),...npcClearings],decorationBounds=[];
   for(const item of items.filter(o=>o.kind==="scenery").sort((a,b)=>b.width*b.height-a.width*a.height||a.id.localeCompare(b.id))) {
     const original={x:item.left+item.width/2-section.x,y:item.top+item.height/2-section.y};let best,score=Infinity;
     for(let y=item.height/2+6;y<section.height-item.height/2-6;y+=12) for(let x=item.width/2+6;x<section.width-item.width/2-6;x+=12) {

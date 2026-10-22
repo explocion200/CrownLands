@@ -1,25 +1,21 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "db128e760642231552a713639825ac84010444ef",
+  "baseCommit": "921af6f8cc599f53ccd665d1401f9e26f7597e5f",
   "coverage": [
     {
-      "paths": [
-        "world/native.js",
-        "tools/test-local-postgres-castle-selection-browser.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-castle-selection-browser.js",
-        "tools/validate-castle-action-layout.js",
-        "tools/validate-production-artifact.js"
-      ],
-      "reason": "Regular-castle selection now centers and zooms before presenting the unchanged readable controls. Exercise production area data with two isolated authenticated viewers, mouse/touch/keyboard, own/foreign cities, all three supported viewports, native City List entry, unchanged wheel/pinch/navigation/resize zoom limits, drag suppression, cancellation, first-frame sizing and troop destination camera preservation. Existing castle layout validation covers all skins/stages, native action handlers and cached geometry; artifact validation preserves package and byte budgets. No server authority or gameplay rules change."
+      "paths": ["functions/index.js", "functions/marauder-population.js", "functions/test/marauder-respawn-cases.js", "local-backend/world/routing.js", "local-backend/world/npc-sites.json", "local-backend/world/placements.json", "tools/prepare-npc-sites.js", "tools/prepare-world-placements.js", "tools/validate-npc-road-sites.js"],
+      "tests": ["tools/validate-npc-road-sites.js", "tools/validate-world-spacing.js", "tools/validate-marauder-terrain.js", "tools/validate-marauder-rules.js", "tools/test-local-postgres-continuous-npcs.js", "tools/test-local-postgres-marauder-respawn.js", "functions/test/emulator-marauder-population.js"],
+      "reason": "Bounded reserved-road alternatives are scoped to the installed continuous Core/active New Lands routing provider. Verify all 81 templates and 65 generated sections, road identity, unchanged ground/inset/active separation, current visible decorations and fixed structures, independent pickup areas, reachable routes, generated-template mapping and solo partner availability. Existing packing validation preserves city/fixed objective positions and overall spacing. Shared PostgreSQL/emulator cases exercise two-solo/one-boss caps, four alternatives, active encounter preservation, cooldowns, dynamic city obstruction, no fallback, exact-once concurrent respawn and blocked retries. Existing rule checks preserve all rewards/balance. Legacy geometry behavior is unchanged when the continuous hook is absent."
     },
     {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
+      "paths": ["world/appearance.js", "world/flags.css", "world/model.js", "world/preview.js", "tools/test-local-postgres-npc-labels-browser.js"],
+      "tests": ["tools/test-local-postgres-npc-labels-browser.js", "tools/validate-npc-road-sites.js", "tools/validate-continuous-map-labels.js", "tools/validate-world-spacing.js", "tools/validate-production-artifact.js"],
+      "reason": "Pin active/defeated NPC name and countdown immediately above its marker in world coordinates, with bounded two-line text and collision-aware city labels. Preserve existing encounter coordinates while suppressing decoration overlaps. Actual production browser harness uses disposable accounts, current PostgreSQL population and real artwork at 1440x900, 844x390 and 568x320 across zooms and crowded Core/New Lands; checks visible exact anchors and label collisions with all network intercepted. Shared solver validation covers all catalog city banners, selected priority, edge/corner overlaps, deterministic feed order and zoom; package validator protects build budgets."
+    },
+    {
+      "paths": ["docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"],
       "tests": [],
-      "reason": "Record the owner-confirmed zoom-before-castle-controls behavior and preserve existing button sizing, camera limits, objectives, dismissal and troop-destination behavior."
+      "reason": "Record the owner-confirmed request for up to four road alternatives without extra active NPCs, preserving crowded-map limits, existing encounters and cooldowns. Describe attached labels and current-layout clearance; deployment must be verified separately."
     }
   ]
 }

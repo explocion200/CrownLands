@@ -242,6 +242,9 @@ window.createContinuousWorldView = async function (options = {}) {
       }
       window.SeamlessAppearance?.layout(interactive.map(item => ({item,node:nodes.get(item.key)})),pickupClearings);
       const exclusions=[...(window.SeamlessAppearance?.labelBounds?.values()||[])];
+      // Preserve existing encounter positions until natural respawn. A moved
+      // decoration must never paint over one of those active/defeated markers.
+      for(const item of interactive.filter(o=>o.kind==="npc"))exclusions.push({left:item.left,top:item.top,right:item.left+item.width,bottom:item.top+item.height});
       const selectedObject=objects.get(selected);
       // Scenery is already packed around normal banners. Temporarily omit a
       // decoration if expanded details/controls occupy its otherwise clear spot.

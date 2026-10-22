@@ -4,6 +4,7 @@ const { createHash } = require("node:crypto");
 const { buildCatalog, fixture, gameToImage, imageToGame } = require("./catalog");
 const { createDisplayLayout } = require("./layout");
 const { createRouteService } = require("./route-service");
+const npcSites = require("./npc-sites.json");
 const hash = value => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const error = (code, message) => Object.assign(new Error(message), { code });
 
@@ -25,7 +26,7 @@ function createCommandRouting({ enabled: initiallyEnabled = false } = {}) {
         topologyVersion: "core-expansion-v1", activeRegionIds });
       const display = createDisplayLayout(manifest, fixture);
       const geometryId = hash(display.geometry);
-      worlds.set(key, { display, geometryId, service: createRouteService(display.geometry) });
+      worlds.set(key, { display, geometryId, npcPlacements: new Map(), service: createRouteService(display.geometry) });
     }
     return worlds.get(key);
   }
@@ -39,6 +40,26 @@ function createCommandRouting({ enabled: initiallyEnabled = false } = {}) {
   return {
     get enabled() { return enabled && !closed; },
     setEnabled(value) { enabled = value === true; },
+    npcPlacement(regionId, context) {
+      const { display, npcPlacements } = world(context), section = display.sections.get(regionId);
+      if (!section) throw error("failed-precondition", "NPC section is outside the active world.");
+      if (npcPlacements.has(regionId)) return npcPlacements.get(regionId);
+      const base = fixture.sections.find(s => s.id === section.templateId);
+      const sites = npcSites.sections.find(s => s.id === section.templateId);
+      if (npcSites.version !== 1 || npcSites.topology !== "core-expansion-v1" || !sites) {
+        throw error("failed-precondition", "NPC road sites are unavailable.");
+      }
+      // Use the decorations actually displayed by this release, not their
+      // superseded positions in the original illustrated template.
+      const rectangles = fixture.objects.filter(o => o.sectionId === base.id && o.kind === "scenery").map(o => {
+        const a = imageToGame(section, { x: o.left - base.x, y: o.top - base.y });
+        const b = imageToGame(section, { x: o.left - base.x + o.width, y: o.top - base.y + o.height });
+        return { left: a.x, top: a.y, right: b.x, bottom: b.y };
+      });
+      const prepared = { roadPoints: sites.points.map(p => imageToGame(section, p)), rectangles, fixedRoadSites: true };
+      npcPlacements.set(regionId, prepared);
+      return prepared;
+    },
     projectStructure(endpoint, context) {
       // NPC clearance must use the same spread-out castle positions players
       // see. Return compatibility coordinates without changing saved cities.

@@ -69,7 +69,7 @@
     const clan=item.ownerClanTag?`<strong class="map-city-clan-tag">[${esc(item.ownerClanTag)}]</strong>`:"";
     const ruler=`<span class="city-ruler-row"><strong class="${own(item)?"city-ruler-name":"foreign-ruler-name"}">${esc(item.owner)}</strong></span>`;
     if(item.kind==="npc"){
-      label.innerHTML=`<span class="city-label native-npc-label">${item.classification==="boss"?"Boss":"Marauder"} · ${esc(item.level??"")}${countdown?' · <small data-npc-respawn>'+esc(countdown)+'</small>':""}</span>`;
+      label.innerHTML=`<span class="city-label native-npc-label">${item.classification==="boss"?"Boss":"Marauder"} · ${esc(item.level??"")}${countdown?'<small data-npc-respawn>'+esc(countdown)+'</small>':""}</span>`;
     }else if(item.kind==="tower"){
       label.innerHTML=`<span class="city-label native-tower-label"><span class="holding-tower-clan-banner">${item.owner!=="Neutral"?ruler:""}</span><span class="holding-tower-map-label">${esc(item.name)}</span></span>`;
     }else if(item.kind==="camp"){
@@ -103,7 +103,7 @@
     if(signature===lastLayout)return;
     lastLayout=signature;
     const byKey=new Map(entries.map(e=>[e.item.key,e]));
-    const labels=entries.map(e=>({key:e.item.key,x:e.item.x,y:e.item.top-4,priority:e.node.classList.contains("selected")?1:0,...measurements.get(e.label)}));
+    const labels=entries.map(e=>({key:e.item.key,x:e.item.x,y:e.item.top-4,anchored:e.item.kind==="npc",priority:e.node.classList.contains("selected")?1:0,...measurements.get(e.label)}));
     const labelBounds=new Map();
     const obstacles=[...clearings,...rows.map(({item:o})=>({left:o.left,top:o.top,right:o.left+o.width,bottom:o.top+o.height}))];
     for(const result of SeamlessModel.placeLabels(labels,new Set(),0,obstacles)){

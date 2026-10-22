@@ -78,13 +78,13 @@
     const blocked=rect=>buckets(rect).some(key=>(grid.get(key)||[]).some(other=>rect.left<other.right+gap&&rect.right+gap>other.left&&rect.top<other.bottom+gap&&rect.bottom+gap>other.top));
     obstacles.forEach(add);
     const placed=[];
-    for(const label of [...labels].sort((a,b)=>(b.priority||0)-(a.priority||0)||a.y-b.y||a.key.localeCompare(b.key))){
+    for(const label of [...labels].sort((a,b)=>Number(Boolean(b.anchored))-Number(Boolean(a.anchored))||(b.priority||0)-(a.priority||0)||a.y-b.y||a.key.localeCompare(b.key))){
       let result;
       // Keep full details near their castle. In a crowded row, retain the name
       // and heraldry and stagger the compact banner before moving it farther.
-      const variants=[...(compactKeys.has(label.key)?[]:[{...label,compact:false,limit:24}]),...(label.compact?[{...label.compact,compact:true,limit:288}]:[{...label,compact:false,limit:288}])];
+      const variants=label.anchored?[{...label,compact:false,limit:0}]:[...(compactKeys.has(label.key)?[]:[{...label,compact:false,limit:24}]),...(label.compact?[{...label.compact,compact:true,limit:288}]:[{...label,compact:false,limit:288}])];
       for(const variant of variants){
-        for(let up=0;up<=variant.limit&&!result;up+=12)for(const dx of [0,-24,24,-48,48]){
+        for(let up=0;up<=variant.limit&&!result;up+=12)for(const dx of label.anchored?[0]:[0,-24,24,-48,48]){
           const rect={left:label.x+dx-variant.width/2,right:label.x+dx+variant.width/2,top:label.y-up-variant.height,bottom:label.y-up};
           if(!blocked(rect)){result={key:label.key,dx,dy:-up,compact:variant.compact,rect};break;}
         }
