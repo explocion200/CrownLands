@@ -1,51 +1,46 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "12540859d998ed867ffb05c30560890dd24579b7",
+  "baseCommit": "cdc22393d72cbbcc5a72f83b219fbde00060a44d",
   "coverage": [
     {
       "paths": [
-        "world/appearance.js",
-        "world/assets.js",
-        "world/flags.css",
-        "world/model.js",
-        "world/preview.js",
-        "world/sprite-layer.js",
-        "tools/test-local-postgres-map-pan-performance.js",
-        "tools/validate-world-render-cache.js",
-        "world/preview.css",
-        "tools/test-local-postgres-native-auth-world.js",
-        "tools/check-continuous-map-ui.js"
+        "local-backend/store.js",
+        "tools/test-local-postgres-store.js",
+        "tools/test-local-postgres-game.js"
       ],
       "tests": [
-        "tools/validate-world-render-cache.js",
-        "tools/test-local-postgres-map-pan-performance.js",
-        "tools/test-local-postgres-selected-city-banner.js",
-        "tools/test-local-postgres-production-world.js",
-        "tools/validate-continuous-map-labels.js"
+        "tools/test-local-postgres-store.js",
+        "tools/test-local-postgres-access.js",
+        "tools/test-local-postgres-game.js",
+        "tools/test-local-postgres-transaction-retries.js",
+        "tools/test-local-postgres-jobs.js",
+        "tools/test-local-postgres-contention.js",
+        "functions/test/emulator-bulk-army-orders.js",
+        "functions/test/emulator-clan-support.js"
       ],
-      "reason": "Exercise actual packaged authenticated world with disposable PostgreSQL accounts. Cover camera/culling parity, spatial ordering, bounded retained nodes and images, stale/failed asset requests, drawing resolution, name refresh and font invalidation; desktop and landscape phone render checks preserve selected flag/level attachment, protection colors, shields, hidden garrisons, native actions, recorded routes and pickups. Identical warmed crowded pan routes measure frame/work times and resource bounds. No backend or authority changes; emulator suites are not required. Remove only unused prototype patrol-canvas/draft paths and invisible header/tag/section-caption styles, keeping the existing lazy module byte budget and native troop controls. The existing authenticated test helper centers the actual target before selecting at retained maximum zoom, preserving the intentional offscreen deselection behavior. Touch input targets exposed map surface rather than the native action-button overlay."
+      "reason": "Real PostgreSQL validates one-statement getAll semantics, ordering/duplicates/missing refs, validation and read-before-write, rollback/concurrent receipts, serializable conflicts/retries and worker fencing. Shared command emulator coverage checks army/clan support semantics; game/access integration exercises current adapter authorization and real gameplay. Update the stale integration inventory expectation to the current 123 callables (152 total exports), already present on the branch base; no runtime export is added."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CONTINUOUS_WORLD_PERFORMANCE_2026-10-22.md"
+        "local-backend/world/reader.js",
+        "local-backend/world/service.js",
+        "tools/test-local-postgres-world-read-performance.js",
+        "tools/test-local-postgres-world-service.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-world-read-performance.js",
+        "tools/test-local-postgres-world-service.js",
+        "tools/test-local-postgres-production-world.js",
+        "tools/test-local-postgres-game-http.js"
+      ],
+      "reason": "Compare actual production reader responses with base and verify bounded SQL projections/cache reuse, fresh ownership/scope/privacy, shields/cosmetics/respawns and cancellation isolation. Mixed authenticated area/command/chat load, HTTP fencing and packaged native desktop/landscape interactions cover service integration. Test cleanup waits for all actors and records exhausted retries without relaxing limits."
+    },
+    {
+      "paths": [
+        "docs/SERVER_READ_PERFORMANCE_2026-10-22.md"
       ],
       "tests": [],
-      "reason": "Record the approved performance constraints, implementation, reproducible measurements and separate backend rollout boundary. Documentation does not establish deployment or physical-phone results."
-    },
-    {
-      "paths": [
-        "game.js",
-        "tools/validate-build-stamp.js"
-      ],
-      "tests": [
-        "tools/validate-build-stamp.js",
-        "tools/validate-lag-recovery.js",
-        "tools/validate-pwa-entry-routing.js",
-        "tools/test-local-postgres-map-pan-performance.js",
-        "tools/test-local-postgres-production-world.js"
-      ],
-      "reason": "The soak exposed repeated complete detached-document allocation in the periodic build checker. Read the generated build stamp without DOM allocation, retain the existing parser for legacy formats, and verify fallback metadata/script semantics, no script execution, update recovery/routing and actual authenticated game operation."
+      "reason": "Document technical performance changes, controlled evidence and separately authorized compatible rollout; no player-facing design rule changes."
     }
   ]
 }

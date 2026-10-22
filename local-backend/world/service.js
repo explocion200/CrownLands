@@ -101,12 +101,14 @@ function createWorldService({store,readPool,deployment,directory,enabled=false,t
         return state.manifest.sections.length<480;
       }catch{return false;}
     },
-    async read(auth,operation,input){
+    async read(auth,operation,input,signal){
+      if(signal?.aborted)throw fail("aborted","Map request cancelled.",499);
       if(!enabled){if(operation==="catalog")return {enabled:false,protocol:PROTOCOL};throw fail("failed-precondition","Refresh to use the current map.",409);}
       const entry=await prepare(auth.uid);
+      if(signal?.aborted)throw fail("aborted","Map request cancelled.",499);
       if(operation==="catalog"){await entry.reader.initialize(auth.uid);return entry.manifest;}
       if(input.protocol!==PROTOCOL||input.revision!==entry.revision||input.realm!==entry.manifest.realmId)throw fail("failed-precondition","World changed; refresh the map.",409);
-      if(operation==="areas")return entry.reader.read(auth.uid,input.ids,input.cursor);
+      if(operation==="areas")return entry.reader.read(auth.uid,input.ids,input.cursor,signal);
       if(operation==="options")return options(auth.uid,input.key,entry);
       throw fail("not-found","Unknown world operation.");
     },

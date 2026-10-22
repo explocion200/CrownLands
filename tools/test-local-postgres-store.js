@@ -15,6 +15,33 @@ const { Store, FieldValue, FieldPath, Filter, Timestamp } = require("../local-ba
     await db.doc("players/d").set({ worldId: "fixture", gold: null });
     await db.doc("players/e").set({ worldId: "other" });
     assert.equal((await db.doc("players/a").get()).data().gold, 100);
+    // getAll is a real one-statement read, with Firestore-style order, duplicates,
+    // missing snapshots, timestamps and independent decoded objects preserved.
+    const refs=[db.doc("players/c"),db.doc("players/missing"),db.doc("players/a"),db.doc("players/a")];
+    const foreign=new Store({schema,pool:db.pool});
+    const verifyBatch=async(read,connection)=>{
+      const original=connection.query;let statements=0;
+      connection.query=function(...args){statements++;return original.apply(this,args);};
+      try{
+        const snaps=await read(...refs);assert.equal(statements,1);
+        assert.deepEqual(snaps.map(s=>s.id),["c","missing","a","a"]);
+        assert.equal(snaps[1].exists,false);assert.equal(snaps[1].data(),undefined);
+        assert.equal(snaps[0].data().gold,2.5);assert(snaps[2].updateTime.isEqual(snaps[3].updateTime));
+        snaps[2].data().settings.x=99;assert.equal(snaps[3].data().settings.x,1);
+        assert.deepEqual(await read(),[]);assert.equal(statements,1);
+        await assert.rejects(async()=>read(...Array(1001).fill(refs[0])),/Too many/);
+        for(const bad of [foreign.doc("players/a"),db.collection("players"),null,{}])await assert.rejects(async()=>read(refs[0],bad),/Foreign/);
+        assert.equal(statements,1,"Invalid batches must not partially read");
+      }finally{connection.query=original;}
+    };
+    await verifyBatch((...refs)=>db.getAll(...refs),db.pool);
+    await db.runTransaction(async tx=>{
+      await verifyBatch((...refs)=>tx.getAll(...refs),tx.client);
+      tx.set(db.doc("batch/test"),{ok:true});
+      assert.throws(()=>tx.getAll(refs[0]),/precede writes/);
+      assert.deepEqual(await tx.getAll(),[]);
+    });
+
     assert.deepEqual((await db.collection("players").where(FieldPath.documentId(), "==", "a").select("settings.x").get()).docs[0].data(), { settings: { x: 1 } });
     assert.equal((await db.doc("players/missing").get()).exists, false);
     assert.deepEqual((await db.collection("players").where("worldId", "==", "fixture").where("gold", ">", 0).orderBy("gold").get()).docs.map(d => d.id), ["c", "b", "a"]);

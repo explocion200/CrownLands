@@ -25,16 +25,22 @@ function shieldExpiry(data,kind,now){
 }
 const current=(data,realm)=>data?.worldId===realm.worldId && data.resetGeneration===realm.resetGeneration && data.realmShardId===realm.sharedRealmId;
 const CONTEXT_FIELDS=["worldId","resetGeneration","sharedRealmId","resetReadinessStatus","realmShardId","clanId","topologyVersion","activeRegionIds"];
-const CONTEXT_SQL=CONTEXT_FIELDS.map(key=>`'${key}',body->'fields'->'${key}'`).join(",");
+// Select encoded fields in SQL without decoding inventories, combat snapshots
+// or unrelated history. Preserve explicit nullValue nodes inside selected maps.
+const PUBLIC_FIELDS=["worldId","resetGeneration","realmShardId","name","x","y","regionId","ownerUid","ownerName","ownerFlag","holderUid","holderName","holderFlag","clanId","clanName","clanTag","ownerClanId","ownerClanTag","level","isMainCity","kind","strongholdType","campType","classification","status","spawnId","respawnAtMs","payoutAtMs","payoutPending","state","artSrc","ownerShieldExpiresAtMs","fortificationState","launchedAtMs","arrivesAtMs","pathSegments","path","sourceRegionId","returning","recalledAtMs","returnStartProgress","swiftMarchUsedAtMs","swiftMarchProgressAtUse","troopVisibility","troopEstimateLabel","troops"];
+const OWNED_FIELDS=["worldId","resetGeneration","realmShardId","ownerUid","holderUid","status","troops","currentGarrison","participantUids","rallyAttack","targetOwnerUid"];
+const projected=parameter=>`jsonb_build_object('fields',COALESCE((SELECT jsonb_object_agg(field,body->'fields'->field) FROM unnest(${parameter}::text[]) AS field WHERE body->'fields' ? field),'{}'::jsonb))`;
+const checkAbort=signal=>{if(signal?.aborted)throw Object.assign(fail(499,"Map request cancelled"),{code:"aborted"});};
 class LiveReader {
   constructor({pool,schema="migration_game_live",clock=Date.now,openWorld=false}) {
     if(schema!=="migration_game_live"&&!/^migration_(?:reader_test|game_worldtest)_[a-f0-9]{12}$/.test(schema))throw Error("Reviewed game or isolated test schema required");
     this.pool=pool;this.store=new Store({schema,pool});this.schema=schema;this.clock=clock;this.openWorld=openWorld;
     this.instance=crypto.randomUUID();this.views=new Map();this.publicAreas=new Map();this.publicSections=new Map();this.sectionLoads=new Map();this.pending=new Set();this.active=0;
-    this.stats={reads:0,rejected:0,peak:0,peakDatabase:0,maxRows:0,sharedHits:0,omittedObjects:0,omittedMarches:0,sectionLoads:0,sectionHits:0,unchangedPolls:0};
+    this.stats={reads:0,rejected:0,peak:0,peakDatabase:0,maxRows:0,sharedHits:0,omittedObjects:0,omittedMarches:0,sectionLoads:0,sectionHits:0,unchangedPolls:0,dtoHits:0,dtoBuilds:0};
     this.artObjects=new Map(fixture.objects.filter(o=>o.kind!=="scenery").map(o=>[o.sectionId+":"+o.id,o]));
   }
-  async transaction(uid,callback,lane="areas") {
+  async transaction(uid,callback,lane="areas",signal) {
+    checkAbort(signal);
     if(typeof uid!=="string"||!uid||uid.includes("/"))throw fail(403,"Invalid private viewer");
     if(!["areas","options"].includes(lane))throw Error("Unknown world read lane");
     // Foreground Nearby/Regroup reads must not make the normal area poll fail
@@ -43,17 +49,19 @@ class LiveReader {
     const pendingKey=JSON.stringify([uid,lane]);
     if(this.pending.has(pendingKey)||this.pending.size>=32){this.stats.rejected++;throw fail(429,"Reader busy; retry shortly");}
     this.pending.add(pendingKey);this.stats.peak=Math.max(this.stats.peak,this.pending.size);
-    let client;
+    let client,counted=false,began=false;
     try {
       try{client=await this.pool.connect();}catch(error){if(error.message==="timeout exceeded when trying to connect"){this.stats.rejected++;throw fail(429,"Reader busy; retry shortly");}throw error;}
-      this.active++;this.stats.peakDatabase=Math.max(this.stats.peakDatabase,this.active);
-      await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      checkAbort(signal);
+      this.active++;counted=true;this.stats.peakDatabase=Math.max(this.stats.peakDatabase,this.active);
+      began=true;await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
       await client.query("SET LOCAL statement_timeout='1500ms'");
       // Batch the fresh permission dependencies and project only fields used
       // by Access. Never decode entire player inventories for every map poll.
       const paths=["realmConfig/current","players/"+uid];
       if(this.expansionPath)paths.push(this.expansionPath);
-      const contexts=await client.query(`SELECT path,jsonb_build_object('fields',jsonb_strip_nulls(jsonb_build_object(${CONTEXT_SQL}))) AS body FROM ${this.schema}.documents WHERE path=ANY($1::text[])`,[paths]);
+      const contexts=await client.query(`SELECT path,${projected("$2")} AS body FROM ${this.schema}.documents WHERE path=ANY($1::text[])`,[paths,CONTEXT_FIELDS]);
+      checkAbort(signal);
       const context=new Map(contexts.rows.map(row=>[row.path,this.decode(row.body)]));
       const access=await new Access({store:this.store,transaction:{get:ref=>paths.includes(ref.path)?Promise.resolve({data:()=>context.get(ref.path)}):this.store.get(ref,client)},auth:{uid},now:this.clock()}).initialize();
       const realm=access.realm;
@@ -63,10 +71,12 @@ class LiveReader {
       if(this.catalogSignature && signature!==this.catalogSignature)throw fail(409,"World changed; refresh the map");
       if(!this.catalogSignature){const built=buildCatalog(realm,expansion);this.manifest=built.manifest;this.scenery=built.scenery;this.catalogSignature=signature;this.expansionPath=`realmGenerations/${realm.resetGeneration}/expansion/current`;this.sections=new Map(this.manifest.sections.map(s=>[s.id,s]));
         if(this.openWorld){this.display=createDisplayLayout(this.manifest,fixture);this.manifest={...this.manifest,openWorldDraft:true};}}
+      checkAbort(signal);
       const result=await callback({client,access,realm,now:access.now});
+      checkAbort(signal);
       await client.query("COMMIT");this.stats.reads++;return result;
-    }catch(error){if(client)await client.query("ROLLBACK").catch(()=>{});throw error;}
-    finally{if(client){this.active--;client.release();}this.pending.delete(pendingKey);}
+    }catch(error){if(began)await client.query("ROLLBACK").catch(()=>{});throw error;}
+    finally{if(client){if(counted)this.active--;client.release();}this.pending.delete(pendingKey);}
   }
   initialize(uid){return this.transaction(uid,async()=>this.manifest);}
   async routeEndpoints(uid,from,to) {
@@ -90,17 +100,21 @@ class LiveReader {
       return fresh;
     });
   }
-  async read(uid,ids,cursor) {
+  async read(uid,ids,cursor,signal) {
+    checkAbort(signal);
     if(!Array.isArray(ids)||!ids.length||ids.length>16||new Set(ids).size!==ids.length||ids.some(id=>!this.sections?.has(id)))throw fail(400,"Choose 1–16 active sections");
     ids=[...ids].sort();
     return this.transaction(uid,async({client,access,realm,now})=>{
       const area=await this.publicArea(ids,{client,access,realm,now});
+      // Shared public loads finish for other viewers. Cancel only this viewer's
+      // remaining private reads/cursor publication, never their shared query.
+      checkAbort(signal);
       const routes=area.routes,overrides=new Map(),removed=new Map();
       // Public DTOs may lag by <750 ms. Exact own counts are never taken from
       // that shared cache: ownership and values are reread in this transaction.
       const owned=area.owned.get(uid)||[];
       if(owned.length){
-        const fresh=await client.query(`SELECT path,body FROM ${this.schema}.documents WHERE path=ANY($1::text[])`,[[...new Set(owned.map(o=>o.path))]]);
+        const fresh=await client.query(`SELECT path,${projected("$2")} AS body FROM ${this.schema}.documents WHERE path=ANY($1::text[])`,[[...new Set(owned.map(o=>o.path))],OWNED_FIELDS]);
         const documents=new Map(fresh.rows.map(row=>[row.path,this.decode(row.body)]));
         for(const candidate of owned){const data=documents.get(candidate.path),items=candidate.kind==="objects"?area.objects:area.marches;
           if(!data || (candidate.kind==="marches" && data.status!=="active")){removed.set(candidate.key,candidate.kind);continue;}
@@ -135,10 +149,11 @@ class LiveReader {
       const used=new Set(packet.marches.upsert.map(m=>m.routeId));packet.routes=[...used].map(id=>routes.get(id));
       if(delta&&Buffer.byteLength(JSON.stringify(packet))>65536){packet.kind="snapshot";packet.fromRevision=null;packet.objects={upsert:[...objects.values()],remove:[]};packet.marches={upsert:[...marches.values()],remove:[]};packet.routes=[...routes.values()];}
       if(Buffer.byteLength(JSON.stringify(packet))>4*1024*1024)throw fail(413,"Snapshot exceeds private reader budget");
+      checkAbort(signal);
       this.views.delete(uid);this.views.set(uid,{epoch,areaKey,revision:packet.revision,objects,marches,hashes,signature,at:now});
       for(const [key,view] of this.views)if(this.views.size>128||now-view.at>120000)this.views.delete(key);
       return packet;
-    });
+    },"areas",signal);
   }
   async publicArea(ids,context) {
     const {now}=context,key=ids.join(","),cached=this.publicAreas.get(key);
@@ -175,17 +190,19 @@ class LiveReader {
     return value;
   }
   async buildPublicSections(ids,{client,access,realm,now}) {
-    const sections=new Map(ids.map(id=>[id,{objects:new Map(this.scenery.get(id).map(o=>[o.key,o])),marches:new Map(),routes:new Map(),owned:new Map(),rows:0,at:now}]));
+    const sections=new Map(ids.map(id=>[id,{objects:new Map(this.scenery.get(id).map(o=>[o.key,o])),marches:new Map(),routes:new Map(),owned:new Map(),rendered:new Map(),rows:0,at:now}]));
     const parents=ids.map(id=>`islands/${realm.worldId}--${realm.sharedRealmId}--${id}`),parentSections=new Map(parents.map((p,i)=>[p,ids[i]]));
-    const result=await client.query(`SELECT path,body FROM ${this.schema}.documents
+    const result=await client.query(`SELECT path,source_sha256,${projected("$3")} AS body FROM ${this.schema}.documents
       WHERE parent_path=ANY($1::text[]) AND collection_id=ANY($2::text[])
       AND (collection_id<>'armies' OR body#>>'{fields,status,stringValue}'='active')
-      AND (collection_id<>'marauders' OR body#>>'{fields,status,stringValue}' IN ('active','defeated')) ORDER BY path LIMIT 2401`,[parents,["cities","camps","marauders","armies"]]);
+      AND (collection_id<>'marauders' OR body#>>'{fields,status,stringValue}' IN ('active','defeated')) ORDER BY path LIMIT 2401`,[parents,["cities","camps","marauders","armies"],PUBLIC_FIELDS]);
     if(result.rows.length>2400)throw fail(413,"Area exceeds private reader budget; zoom in");
     this.stats.maxRows=Math.max(this.stats.maxRows,result.rows.length);this.stats.sectionLoads+=ids.length;
-    const towers=await this.store.get(this.store.collection("holdingTowers").where("worldId","==",realm.worldId).where("resetGeneration","==",realm.resetGeneration).where("realmShardId","==",realm.sharedRealmId).limit(32),client);
-    const rows=result.rows.map(row=>({path:row.path,data:this.decode(row.body)}));
-    for(const tower of towers.docs){const data=tower.data();if(ids.includes(data.regionId))rows.push({path:tower.ref.path,data});}
+    const towers=await client.query(`SELECT path,source_sha256,${projected("$4")} AS body FROM ${this.schema}.documents
+      WHERE collection_id='holdingTowers' AND parent_path='' AND body#>>'{fields,worldId,stringValue}'=$1
+      AND body#>>'{fields,resetGeneration,stringValue}'=$2 AND body#>>'{fields,realmShardId,stringValue}'=$3 ORDER BY path LIMIT 32`,[realm.worldId,realm.resetGeneration,realm.sharedRealmId,PUBLIC_FIELDS]);
+    const rows=[...result.rows,...towers.rows].map(row=>({path:row.path,version:row.source_sha256||hash(row.body),data:this.decode(row.body)}))
+      .filter(row=>!row.path.startsWith("holdingTowers/")||ids.includes(row.data.regionId));
     // The normal game materializes an unclaimed tower from its definition even
     // before a tower document exists. Match that public default without writes.
     for(const tower of Towers.TOWERS){
@@ -205,23 +222,34 @@ class LiveReader {
       if(!current(data,realm)||!await access.canRead(row.path,data))continue;
       const own=(uid,path,key,kind)=>{if(uid){if(!entry.owned.has(uid))entry.owned.set(uid,[]);entry.owned.get(uid).push({path,key,kind});}};
       if(p.at(-2)==="armies"){
-        const march=this.march(id,data,ids,now);
+        const stamp=hash([row.version||data,ids]);
+        const prior=this.publicSections.get(sourceId)?.rendered.get(row.path);
+        const march=prior?.stamp===stamp?prior.value:this.march(id,data,ids,now);
+        this.stats[prior?.stamp===stamp?"dtoHits":"dtoBuilds"]++;
+        entry.rendered.set(row.path,{stamp,value:march});
         if(march){entry.marches.set(march.body.key,march.body);entry.routes.set(march.route.id,march.route);own(data.ownerUid,"armies/"+id,march.body.key,"marches");}
         else this.stats.omittedMarches++;
         continue;
       }
       const section=this.sections.get(data.regionId||sourceId);
       if(!section||section.id!==sourceId)continue;
-      const object=this.object(id,p.at(-2),data,section,null,skins.get(data.ownerUid));
+      // Fresh scope/permission checks above precede every cache hit. Include
+      // cosmetics and clock-driven shield changes in otherwise unchanged rows.
+      const stamp=hash([row.version||data,skins.get(data.ownerUid)||null,shieldExpiry(data,"castle",now)]);
+      const prior=this.publicSections.get(sourceId)?.rendered.get(row.path);
+      const object=prior?.stamp===stamp?prior.value:this.object(id,p.at(-2),data,section,null,skins.get(data.ownerUid));
+      this.stats[prior?.stamp===stamp?"dtoHits":"dtoBuilds"]++;
+      entry.rendered.set(row.path,{stamp,value:object});
       if(object){entry.objects.set(object.key,object);own(data.ownerUid||data.holderUid,row.path,object.key,"objects");}
       else this.stats.omittedObjects++;
     }
     for(const [id,entry]of sections){
-      entry.hashes=new Map([...entry.objects,...entry.marches].map(([key,item])=>[key,hash(item)]));
+      const previous=this.publicSections.get(id);
+      entry.hashes=new Map([...entry.objects,...entry.marches].map(([key,item])=>[key,
+        (previous?.objects.get(key)===item||previous?.marches.get(key)===item)?previous.hashes.get(key):hash(item)]));
       // Include ownership dependencies: an identical public label can still
       // belong to a different player after capture.
       entry.signature=hash([[...entry.hashes],[...entry.owned]]);
-      const previous=this.publicSections.get(id);
       if(!previous||previous.at<=now){this.publicSections.delete(id);this.publicSections.set(id,entry);}
     }
     while(this.publicSections.size>128)this.publicSections.delete(this.publicSections.keys().next().value);
