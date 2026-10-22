@@ -111,7 +111,10 @@ class CollectionReference extends Query {
 class Transaction {
   constructor(store, client) { this.store = store; this.client = client; this.writes = []; }
   get(target) { if (this.writes.length) throw Error("All transaction reads must precede writes"); return this.store.get(target, this.client); }
-  getAll(...refs) { if (refs.length > 1000) throw Error("Too many document reads"); return Promise.all(refs.map(ref => this.get(ref))); }
+  getAll(...refs) {
+    if (refs.length && this.writes.length) throw Error("All transaction reads must precede writes");
+    return this.store.readDocuments(refs, this.client);
+  }
   _write(kind, ref, data, options = {}) {
     if (!(ref instanceof DocumentReference) || ref.firestore !== this.store) throw Error("Foreign document reference");
     if (this.writes.length >= 500) throw Error("Transaction write limit exceeded");
@@ -193,7 +196,17 @@ class Store {
     if (result.rows.length > 1000) throw Error("Subcollection enumeration exceeds migration bound");
     return result.rows.map(row => ref.collection(row.id));
   }
-  async getAll(...refs) { if (refs.length > 1000) throw Error("Too many document reads"); return Promise.all(refs.map(ref => this.get(ref))); }
+  getAll(...refs) { return this.readDocuments(refs); }
+  async readDocuments(refs, connection = this.pool) {
+    if (refs.length > 1000) throw Error("Too many document reads");
+    if (refs.some(ref => !(ref instanceof DocumentReference) || ref.firestore !== this)) throw Error("Foreign document reference");
+    if (!refs.length) return [];
+    // One statement and snapshot, including transaction reads on their existing
+    // connection. Reconstruct caller order, duplicates and missing snapshots.
+    const result = await connection.query(`SELECT path,body FROM ${this.schema}.documents WHERE path=ANY($1::text[])`, [[...new Set(refs.map(ref => ref.path))]]);
+    const bodies = new Map(result.rows.map(row => [row.path, row.body]));
+    return refs.map(ref => new DocumentSnapshot(this, ref.path, bodies.get(ref.path)));
+  }
   async get(target, connection = this.pool) {
     if (target.firestore !== this) throw Error("Foreign query reference");
     if (target instanceof DocumentReference) {
