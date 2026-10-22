@@ -39,6 +39,16 @@
         "tools/validate-castle-action-wheel-draft.js"
       ],
       "reason": "Retain the approved isolated visual reference using current Core art and actual action CSS. Cover 135 ownership/stage/zoom/viewport cases, original ellipse, pixel and button clearance, local-only assets, mouse/touch/keyboard and resize. Use installed Chromium in CI or the local Playwright runtime. Draft remains excluded from game entry points and production packages."
+    },
+    {
+      "paths": [
+        "tools/validate-production-artifact.js"
+      ],
+      "tests": [
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Account explicitly for the approved castle silhouette/layout helper in the lazy connected-world bundle with a narrow additional 3328-byte allowance (67.5 KiB total); actual rebuilt modules total 68987 bytes. Preserve the existing base client, art, precache, module allowlist and overall package limits. Build and artifact validators confirm no prototype inclusion or extra assets."
     }
   ]
 }

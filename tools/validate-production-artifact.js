@@ -429,7 +429,10 @@ const worldBytes=worldFiles.reduce((n,f)=>n+fs.statSync(f).size,0);
 // Proportional action controls and the restored tower row add 182 bytes after
 // removing the unreachable rehearsal branch. Keep a narrow 256-byte allowance;
 // these modules remain lazy and do not expand the installation shell.
-assert(worldBytes<=64*1024+256,"Lazy continuous-world modules exceed 64 KiB + 256 bytes");
+// The approved castle arc adds bounded silhouette/layout caches and preserves
+// native action handlers. Allow only 3.25 KiB more; no art or precache additions.
+const castleActionLayoutBudget=3328;
+assert(worldBytes<=64*1024+256+castleActionLayoutBudget,"Lazy continuous-world modules exceed 67.5 KiB");
 assert(!worker.includes('world/'),"Continuous world must not expand installation precaching");
 for(const f of worldFiles)assert(!fs.readFileSync(f,"utf8").includes('/__benchmark__/'),"No private preview endpoints in the game");
 if (baseClientBytes - worldBytes > baseClientBudget + campFlagArtBudget) {
