@@ -1,34 +1,26 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "66bed72d8c3778ee9cdf3ab2af30420d77933029",
+  "baseCommit": "c7d8eda37397bf65b88372e0a620ed8252599da6",
   "coverage": [
     {
       "paths": [
         "world/appearance.js",
-        "clan-tower-buildings-ui.js",
-        "game.js",
-        "tools/test-local-postgres-clan-courtyard.js",
-        "tools/validate-clan-building-layout-browser.js",
-        "tools/validate-clan-pending-mechanics-browser.js",
-        "tools/validate-clan-tower-buildings-browser.js"
+        "tools/test-local-postgres-npc-labels-browser.js"
       ],
       "tests": [
-        "tools/test-local-postgres-clan-courtyard.js",
-        "tools/validate-clan-building-layout-browser.js",
-        "tools/validate-clan-pending-mechanics-browser.js",
-        "tools/validate-clan-tower-buildings-browser.js",
-        "tools/validate-clan-tower-buildings.js",
-        "tools/validate-continuous-city-stages.js",
-        "tools/validate-continuous-pickup-placement.js"
+        "tools/validate-continuous-map-labels.js",
+        "tools/test-local-postgres-npc-labels-browser.js",
+        "tools/validate-continuous-pickup-placement.js",
+        "tools/test-local-postgres-clan-courtyard.js"
       ],
-      "reason": "Client-only removal of retired building artwork/navigation and the separate courtyard ground layer. Actual PostgreSQL/subscription browser fixture checks all four active Core Towers, four stages, exact four sites, no retired/dirt asset requests, hit areas/labels/actions, mouse/touch, zoom, capture and neutralization. Shared building-window tests cover five desktop/landscape sizes, fallback from retired selections, supported/unsupported backend navigation, retained saved levels/paid projects, Shop and Workshop controls and unchanged construction restrictions. Shared geometry and pickup-placement checks protect neighboring cities and the whole reserved Tower clearance. No authoritative server changes or emulator changes required."
+      "reason": "Reduce only regular-castle banner paint and full/compact collision measurement by ten percent, preserving map zoom and all other markers. Existing label-placement tests cover crowded sites, ordering and selected priority; actual production renderer/PostgreSQL browser checks cover long friendly/rival names beside NPCs, four current Tower compounds, desktop/844x390/568x320, attached labels and zoom. Pickup clearance consumes the same measured label bounds. No backend behavior changes; no emulator suite needed. Check the ten-percent scale in both camera zooms and selected own/rival castle banners, including visible levels and exact rendered dimensions."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the owner-confirmed four visible buildings and natural-ground presentation, explicitly superseding prior six-site/dirt layout while preserving retired persistence and construction rules; distinguish implementation from deployment."
+      "reason": "Record the confirmed slight castle-overhead reduction and unchanged action buttons, artwork, objective labels and visibility; deployment must be verified separately."
     }
   ]
 }
