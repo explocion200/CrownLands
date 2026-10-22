@@ -8,6 +8,7 @@
   const ally=item=>Boolean(!own(item)&&isClanAllyCity({...item,owner:"enemy"}));
   const relation=item=>own(item)?"player":ally(item)?"clan-ally":item.ownerUid?"enemy":"neutral";
   const powerCity=item=>({...item,owner:relation(item)});
+  const bannerScale=item=>item.kind==="castle"?.72:.8;
   function geometry(item){
     if(item.kind==="tower"){
       // Fit the four active buildings inside the old Tower footprint.
@@ -100,6 +101,7 @@
     }
     node.querySelector(".tag")?.remove();node.querySelector(".map-banner")?.remove();
     const label=document.createElement("span");label.className="map-banner";
+    label.style.transform=`translateY(-4px) scale(${bannerScale(item)})`;
     const name=`<strong class="city-name">${esc(item.name)}</strong>`,level=`<span class="city-label-level">${esc(item.level??"")}</span>`;
     const clan=item.ownerClanTag?`<strong class="map-city-clan-tag">[${esc(item.ownerClanTag)}]</strong>`:"";
     const ruler=`<span class="city-ruler-row"><strong class="${own(item)?"city-ruler-name":"foreign-ruler-name"}">${esc(item.owner)}</strong></span>`;
@@ -131,9 +133,9 @@
     const fresh=entries.filter(e=>!measurements.has(e.label));
     // Batch reads/writes only for changed banners, never on each camera frame.
     fresh.forEach(e=>e.banner.classList.remove("compact"));
-    const sizes=fresh.map(e=>({width:e.label.offsetWidth*.8,height:e.label.offsetHeight*.8}));
+    const sizes=fresh.map(e=>({width:e.label.offsetWidth*bannerScale(e.item),height:e.label.offsetHeight*bannerScale(e.item)}));
     fresh.forEach(e=>{if(!e.node.classList.contains("selected"))e.banner.classList.add("compact");});
-    fresh.forEach((e,i)=>measurements.set(e.label,{...sizes[i],compact:e.node.classList.contains("selected")?null:{width:e.label.offsetWidth*.8,height:e.label.offsetHeight*.8},version:++measured}));
+    fresh.forEach((e,i)=>measurements.set(e.label,{...sizes[i],compact:e.node.classList.contains("selected")?null:{width:e.label.offsetWidth*bannerScale(e.item),height:e.label.offsetHeight*bannerScale(e.item)},version:++measured}));
     const signature=entries.map(e=>`${e.item.key}:${measurements.get(e.label).version}:${e.item.x}:${e.item.top}`).join("|")
       +";"+rows.filter(({item})=>item.kind==="tower-building").map(({item:o})=>`${o.key}:${o.left}:${o.top}:${o.width}:${o.height}`).join("|")+JSON.stringify(controls);
     if(signature===lastLayout)return;
@@ -150,7 +152,7 @@
       const {banner,item}=byKey.get(result.key);
       banner.classList.toggle("compact",Boolean(result.compact));
       banner.style.visibility=result.hidden||covered?"hidden":"";
-      banner.style.transform=`translate(${result.dx||0}px,${(result.dy||0)-4+(item.labelTop??item.top)-item.top}px) scale(.8)`;
+      banner.style.transform=`translate(${result.dx||0}px,${(result.dy||0)-4+(item.labelTop??item.top)-item.top}px) scale(${bannerScale(item)})`;
     }
     window.SeamlessAppearance.labelBounds=labelBounds;
   }

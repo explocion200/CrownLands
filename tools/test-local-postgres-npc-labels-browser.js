@@ -40,10 +40,26 @@ const {createMarauderPopulation}=require("../functions/marauder-population");
      const measure=await page.evaluate(key=>{const node=[...nativeContinuousWorld.root.querySelectorAll('.object')].find(n=>n.dataset.key===key),label=node.querySelector('.native-npc-label'),a=node.getBoundingClientRect(),b=label.getBoundingClientRect();
       const zoom=nativeContinuousWorld.view.snapshot().camera.zoom;
       const others=[...nativeContinuousWorld.root.querySelectorAll('.city-label')].filter(n=>n!==label&&getComputedStyle(n).visibility!=='hidden').map(n=>n.getBoundingClientRect());
-      return {visible:getComputedStyle(label).visibility!=='hidden',dx:(b.left+b.right-a.left-a.right)/2,gap:a.top-b.bottom,zoom,labelWidth:b.width/zoom,labelHeight:b.height/zoom,overlaps:others.filter(r=>b.left<r.right-.5&&b.right>r.left+.5&&b.top<r.bottom-.5&&b.bottom>r.top+.5).length};},target.key);
+      const castleScales=[...new Set([...nativeContinuousWorld.root.querySelectorAll('.castle>.map-banner')].map(n=>new DOMMatrix(getComputedStyle(n).transform).a))];
+      return {castleScales,visible:getComputedStyle(label).visibility!=='hidden',dx:(b.left+b.right-a.left-a.right)/2,gap:a.top-b.bottom,zoom,labelWidth:b.width/zoom,labelHeight:b.height/zoom,overlaps:others.filter(r=>b.left<r.right-.5&&b.right>r.left+.5&&b.top<r.bottom-.5&&b.bottom>r.top+.5).length};},target.key);
+     assert.deepEqual(measure.castleScales,[.72],"Castle overhead must remain 10% smaller at both zooms");
      assert(measure.visible);assert(Math.abs(measure.dx)<.5,"Detached label");assert(Math.abs(measure.gap-4*measure.zoom)<.5);assert.equal(measure.overlaps,0);assert(measure.labelWidth<=88.1&&measure.labelHeight<=27.3,"Label exceeds reserved footprint");results.push({width,height,target:target.key,fraction,...measure});
      if(fraction===1&&target===targets.at(-1))await page.screenshot({path:path.join(out,`labels-${width}.png`)});
     }
+   }
+   for(const uid of p.players.slice(0,2).map(player=>player.uid)){
+    const key=await page.evaluate(uid=>{const v=nativeContinuousWorld.view,c=v.snapshot().camera,city=[...nativeContinuousWorld.root.querySelectorAll(".object.castle")].map(n=>v.getObject(n.dataset.key)).filter(o=>o.ownerUid===uid).sort((a,b)=>Math.hypot(a.x-c.x,a.y-c.y)-Math.hypot(b.x-c.x,b.y-c.y))[0];v.view(city.x,city.y);return city.key;},uid);
+    await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+    // Recentring may request a different area window; two paint frames do not
+    // guarantee its authoritative response has arrived on a slower CI runner.
+    await page.waitForFunction(key=>{const v=nativeContinuousWorld.view,s=v.snapshot();return !s.feed.pending&&!s.feed.failed&&!!v.getObject(key);},key);
+    await page.evaluate(key=>nativeContinuousWorld.view.select(key),key);
+    await page.waitForFunction(key=>!nativeContinuousWorld.bridge.running&&nativeContinuousWorld.root.querySelector(`[data-key="${key}"].selected .city-label`),key);
+    const selected=await page.evaluate(key=>{const node=nativeContinuousWorld.root.querySelector(`[data-key="${key}"]`),banner=node.querySelector('.map-banner'),label=node.querySelector('.city-label'),zoom=nativeContinuousWorld.view.snapshot().camera.zoom;
+     return {scale:new DOMMatrix(getComputedStyle(banner).transform).a,visible:getComputedStyle(label).visibility!=="hidden",width:label.getBoundingClientRect().width,expected:label.offsetWidth*.72*zoom,hasLevel:!!node.querySelector('.city-label-level,.foreign-selected-level')};},key);
+    assert.equal(selected.scale,.72);assert(selected.visible&&selected.hasLevel);assert(Math.abs(selected.width-selected.expected)<1,"Selected-city banner paint and measurement disagree");
+    if(uid===p.players[0].uid)await page.screenshot({path:path.join(out,`castle-overhead-${width}.png`)});
+    await page.evaluate(()=>{nativeContinuousWorld.view.clear();clearSelection(false);});
    }
   }
   assert.deepEqual(errors,[]);assert.deepEqual(outside,[]);fs.writeFileSync(path.join(out,"browser.json"),JSON.stringify({passed:true,results,errors,outside},null,2));console.log("NPC labels passed: actual population, three crowded Core maps, two-solo map, active/defeated, desktop and two landscape viewports, zoom, attached collision-free labels; isolated sample data only.");
