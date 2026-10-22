@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Castle actions — approval draft</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#211d18;color:#f5e8cc;font:15px system-ui,sans-serif}main{max-width:1500px;margin:auto;padding:22px}h1{font:28px Georgia,serif;margin:0 0 8px}p{color:#d5c5a8;margin:0 0 18px;line-height:1.5}.controls{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:18px}label{display:flex;align-items:center;gap:6px}button,select{font:inherit;padding:9px;border:1px solid #ad8753;border-radius:4px;background:#eee0bf;color:#35271c;cursor:pointer}button[aria-pressed=true]{background:#75383c;color:#fff4d9}#frame-wrap{width:100%;overflow:auto;border:1px solid #917448}iframe{display:block;border:0;max-width:none}small{display:block;color:#d5c5a8;margin:14px 0}a{color:#f4db9d}
+  </style>
+</head>
+<body><main>
+  <h1>Castle actions · original shape</h1>
+  <p>Original rounded gold arc and action arrangement, with a small clear gap around the castle. Sample artwork only; nothing here changes the game.</p>
+  <div class="controls">
+    <button data-size="1440,900" aria-pressed="true">PC · 1440 × 900</button>
+    <button data-size="844,390" aria-pressed="false">Phone · 844 × 390</button>
+    <button data-size="568,320" aria-pressed="false">Small phone · 568 × 320</button>
+    <label>City <select id="kind"><option value="own">Yours · five actions</option><option value="enemy">Enemy · four actions</option><option value="ally">Clan ally</option></select></label>
+    <label>Level <select id="stage"><option>1</option><option>25</option><option>50</option><option>75</option><option selected>100</option></select></label>
+    <label>Zoom <select id="zoom"><option value="1">Close</option><option value="0.6">Middle</option><option value="0.2">Widest</option></select></label>
+  </div>
+  <div id="frame-wrap"><iframe title="Sample castle action menu" src="scene.html" width="1440" height="900"></iframe></div>
+  <small>PC: 56 px buttons. Phone: 44 px buttons. The arc clears the castle artwork and leaves room between buttons. Approved reference: selected castle buttons remain readable at lower zoom. This page is an isolated sample, not the live game.</small>
+  <a href="scene.html" target="_blank" rel="noopener">Open at this window’s actual size</a>
+  <script>
+    const frame=document.querySelector('iframe');
+    function refresh(){const query=new URLSearchParams();for(const id of ['kind','stage','zoom'])query.set(id,document.getElementById(id).value);frame.src='scene.html?'+query;}
+    for(const button of document.querySelectorAll('[data-size]'))button.onclick=()=>{const [w,h]=button.dataset.size.split(',');frame.width=w;frame.height=h;for(const other of document.querySelectorAll('[data-size]'))other.setAttribute('aria-pressed',String(other===button));};
+    for(const select of document.querySelectorAll('select'))select.onchange=refresh;
+  </script>
+</main></body></html>

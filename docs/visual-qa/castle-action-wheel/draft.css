@@ -1,0 +1,36 @@
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden}
+body{font-family:Georgia,serif;color:#fff3d6;background:#b4b44d}
+#scene{position:relative;width:100%;height:100%;overflow:hidden}
+#backdrop{position:absolute;inset:0;background:url('/assets/worlds/core-expansion-v1/maps/core-v2-north-west-holding-tower-m1-m1.webp') center/cover;filter:saturate(.9)}
+#scene::after{content:'';position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 55px #292d2530}
+.draft-label{position:absolute;top:22px;left:24px;z-index:2;padding:12px 18px;border:1px solid #bea274;background:#5e292ddf;box-shadow:0 3px 10px #271a1833}
+.draft-label b{display:block;font-size:23px;font-weight:normal}.draft-label span{display:block;margin-top:5px;font:12px system-ui,sans-serif;color:#eee0bd}
+#selection{position:absolute;left:50%;top:43%;width:0;height:0;z-index:3}
+#castle{position:absolute;left:0;top:0;transform:translate(-50%,-50%);padding:0;border:0;background:none;cursor:pointer;z-index:1}
+#castle img{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 3px 2px #37281155)}
+#banner{position:absolute;left:0;transform:translate(-50%,-100%);text-align:center;white-space:nowrap;pointer-events:none;text-shadow:0 2px 2px #241609,1px 0 2px #241609,-1px 0 2px #241609}
+#banner span{display:block;font-size:11px}#banner strong{display:block;font-size:17px;margin:2px 0 5px}#banner b{display:inline-grid;place-items:center;font-size:16px;width:32px;height:32px;background:#6b3035;clip-path:polygon(0 0,100% 0,100% 78%,50% 100%,0 78%);padding-bottom:5px;text-shadow:none}
+#arc{position:absolute;overflow:visible;pointer-events:none;width:1px;height:1px}
+#arc path{fill:none;stroke-linecap:round}.arc-shadow{display:none}.arc-line{stroke:rgba(211,161,63,.78);stroke-width:var(--arc-stroke);filter:drop-shadow(0 3px 2px rgba(0,0,0,.45))}
+#actions{position:absolute;inset:0}
+#actions .cl-action-button{transform:translate(-50%,-50%);--cl-action-size:56px;padding:4px 3px!important;gap:1px}
+#actions .cl-action-button .wheel-icon{font-size:20px!important;min-height:20px}
+#actions .cl-icon{width:20px;height:20px;display:block}
+#actions .cl-action-button .wheel-action-name{font-size:10px!important;line-height:1.05;white-space:nowrap;overflow-wrap:normal}
+#actions .cl-action-button .wheel-cost{font:8px/1.1 system-ui,sans-serif;padding:1px 3px}
+#actions .cl-action-button:focus-visible,#castle:focus-visible{outline:3px solid #fff9e3;outline-offset:4px;filter:brightness(1.18)}
+#legend{position:absolute;left:24px;bottom:18px;font:12px system-ui,sans-serif;background:#34301dcf;padding:8px 12px;border-radius:3px;z-index:4}
+#feedback{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);font:14px system-ui,sans-serif;background:#f5e7c3;color:#3e2e1f;padding:9px 15px;box-shadow:0 2px 10px #31211655;z-index:5;white-space:nowrap}
+#feedback:empty{display:none}
+.neighbor{position:absolute;text-align:center;transform:translate(-50%,-50%);opacity:.85}.neighbor img{display:block;margin:auto;max-width:100%}.neighbor span{display:block;font-size:12px;color:#fff7dc;text-shadow:0 1px 3px #21180b}
+[hidden]{display:none!important}
+@media(max-height:500px){
+  .draft-label{top:12px;left:14px;padding:8px 12px}.draft-label b{font-size:17px}.draft-label span{font-size:10px;margin-top:3px}
+  #selection{top:43%}#actions .cl-action-button{--cl-action-size:44px;padding:3px 2px!important;gap:1px}
+  #actions .cl-action-button .wheel-icon{font-size:16px!important;min-height:16px}#actions .cl-icon{width:16px;height:16px}
+  #actions .cl-action-button .wheel-action-name{font-size:8px!important}#actions .cl-action-button .wheel-cost{font-size:7px;padding:0 2px}
+  #banner span{font-size:9px}#banner strong{font-size:13px;margin:1px 0 3px}#banner b{font-size:12px;width:24px;height:25px}
+  #legend{bottom:12px;left:14px;font-size:10px;padding:6px 8px}.neighbor span{font-size:9px}
+  #feedback{bottom:12px;font-size:11px;max-width:70%;white-space:normal;text-align:center}
+}

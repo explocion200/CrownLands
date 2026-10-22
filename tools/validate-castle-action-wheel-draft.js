@@ -1,0 +1,98 @@
+"use strict";
+const assert = require("node:assert/strict");
+const fs = require("node:fs"), path = require("node:path");
+const { chromium } = require("playwright");
+const { createMapBenchmarkServer } = require("./map-benchmark/server");
+
+(async () => {
+  const server = createMapBenchmarkServer(), address = await server.listen();
+  const artifacts = path.resolve(__dirname,"../release-artifacts/castle-action-wheel-original");
+  fs.mkdirSync(artifacts,{recursive:true});
+  const browser = await chromium.launch({headless:true, executablePath:process.env.CHROME_PATH || (fs.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : chromium.executablePath())});
+  const errors = [], requests = [], records = [];
+  try {
+    const context = await browser.newContext({hasTouch:true});
+    await context.route("**/*", route => {
+      const request = route.request();
+      if (!request.url().startsWith(address.url+"/") || request.method() !== "GET") {requests.push({url:request.url(),method:request.method()});return route.abort();}
+      return route.continue();
+    });
+    const page = await context.newPage();
+    page.on("pageerror", error => errors.push(error.message));
+    page.on("response", response => {if(response.status() >= 400) errors.push(`${response.status()} ${response.url()}`);});
+    for (const [width,height,name] of [[1440,900,"desktop"],[844,390,"phone"],[568,320,"small-phone"]]) {
+      await page.setViewportSize({width,height});
+      for (const kind of ["own","enemy","ally"]) for (const stage of [1,25,50,75,100]) for (const zoom of [1,0.6,0.2]) {
+        await page.goto(`${address.url}/docs/visual-qa/castle-action-wheel/scene.html?kind=${kind}&stage=${stage}&zoom=${zoom}`);
+        await page.waitForFunction(() => document.documentElement.dataset.ready === "true");
+        await page.evaluate(() => Promise.all([...document.images].map(image => image.decode())));
+        const metrics = await page.evaluate(() => {
+          const rect = node => {const r=node.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
+          const distance = (a,b) => Math.hypot(Math.max(a.x-b.right,b.x-a.right,0),Math.max(a.y-b.bottom,b.y-a.bottom,0));
+          const buttons=[...document.querySelectorAll("#actions button")], city=rect(document.getElementById("castle"));
+          const arc=document.querySelector("#arc .arc-line"), origin=rect(document.getElementById("arc"));
+          const image=document.querySelector("#castle img"), canvas=document.createElement("canvas");
+          canvas.width=canvas.height=256;
+          const context=canvas.getContext("2d",{willReadFrequently:true});context.drawImage(image,0,0,256,256);
+          const pixels=context.getImageData(0,0,256,256).data, edge=[];
+          for(let y=0;y<256;y++)for(let x=0;x<256;x++){
+            if(pixels[(y*256+x)*4+3]<=32)continue;
+            if(x===0||y===0||x===255||y===255||[[-1,0],[1,0],[0,-1],[0,1]].some(([dx,dy])=>pixels[((y+dy)*256+x+dx)*4+3]<=32))edge.push({x:city.x+(x+.5)*city.width/256,y:city.y+(y+.5)*city.height/256});
+          }
+          const stroke=Number.parseFloat(getComputedStyle(arc).strokeWidth), length=arc.getTotalLength();
+          const arcGap=Math.min(...Array.from({length:721},(_,i)=>{
+            const p=arc.getPointAtLength(length*i/720),x=origin.x+p.x,y=origin.y+p.y;
+            const px=Math.floor((x-city.x)/city.width*256),py=Math.floor((y-city.y)/city.height*256);
+            if(px>=0&&px<256&&py>=0&&py<256&&pixels[(py*256+px)*4+3]>32)return -1;
+            let nearest=Infinity;for(const e of edge)nearest=Math.min(nearest,Math.hypot(x-e.x,y-e.y));return nearest-stroke/2;
+          }));
+          const bounds=arc.getBBox(),ratio=bounds.height/(1+Math.SQRT1_2)/(bounds.width/2);
+          return {city, arcGap, originalEllipse:arc.getAttribute("d").includes(" A ")&&!/[QC]/.test(arc.getAttribute("d"))&&Math.abs(ratio-118/142)<.002, buttons:buttons.map(button => {
+            const r=rect(button), label=rect(button.querySelector(".wheel-action-name"));
+            return {...r,clearance:distance(r,city),labelFits:label.x>=r.x && label.right<=r.right && label.y>=r.y && label.bottom<=r.bottom,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.closest("button")===button};
+          }), separation:Math.min(...buttons.flatMap((button,i)=>buttons.slice(i+1).map(other=>distance(rect(button),rect(other)))))};
+        });
+        for (const button of metrics.buttons) {
+          assert(button.width >= 44 && button.height >= 44,"Minimum touch target");
+          assert(button.x>=0 && button.y>=0 && button.right<=width && button.bottom<=height,"Buttons must fit the viewport");
+          assert(button.clearance >= (height<=500 ? 3.9 : 5.9),"Button must clear castle artwork");
+          assert(button.labelFits && button.hit,"Readable label and unobstructed hit target");
+        }
+        const wheelWidth = Math.max(...metrics.buttons.map(b=>b.right))-Math.min(...metrics.buttons.map(b=>b.x));
+        assert(wheelWidth <= (height<=500 ? 215 : 330),"Keep the original arrangement within a compact footprint");
+        assert(metrics.separation>=1.9,"Buttons must have separate hit regions");
+        assert(metrics.arcGap>= (height<=500 ? 3.7 : 5.7),"The painted arc must clear opaque castle artwork");
+        assert(metrics.originalEllipse,"Retain the original open elliptical shape and aspect ratio");
+        if(kind==="own"){
+          const [regroup,level,info,send,nearby]=metrics.buttons;
+          assert(regroup.y<level.y && nearby.y<send.y && info.y>level.y && info.y>send.y && level.x<info.x && send.x>info.x,"Preserve original upper-side, side, and bottom action positions");
+        }
+        records.push({width,height,kind,stage,zoom,minimumCastleGap:Math.min(...metrics.buttons.map(b=>b.clearance)),minimumButtonGap:metrics.separation});
+        if (stage===100 && zoom===1) {
+          await page.screenshot({path:path.join(artifacts,`${name}${kind==="own" ? "" : "-"+kind}.png`)});
+          if (name === "desktop" && kind === "own") await page.screenshot({path:path.join(artifacts,"desktop-detail.png"),clip:{x:320,y:175,width:800,height:500}});
+          const action = page.locator("#actions button:not(:disabled)").first();
+          if(height<=500) await action.tap(); else await action.click();
+          assert.match(await page.locator("#feedback").textContent(),/preview only/);
+          await page.keyboard.press("Escape");
+          assert.equal(await page.locator("#actions button").first().isVisible(),false);
+          await page.locator("#castle").click();
+          assert.equal(await page.locator("#actions button").first().isVisible(),true);
+          await page.mouse.click(width-5,height-5);
+          assert.equal(await page.locator("#actions button").first().isVisible(),false);
+        }
+      }
+    }
+    await page.goto(`${address.url}/docs/visual-qa/castle-action-wheel/index.html`);
+    await page.getByRole("button",{name:"Phone · 844 × 390",exact:true}).click();
+    assert.equal(await page.locator("iframe").getAttribute("width"),"844");
+    await page.locator("#kind").selectOption("enemy");
+    await page.frameLocator("iframe").getByRole("button",{name:"Attack (sample)"}).waitFor();
+    await page.getByRole("button",{name:"Small phone · 568 × 320",exact:true}).click();
+    assert.equal(await page.frameLocator("iframe").locator("#actions button").first().evaluate(node => node.getBoundingClientRect().width),44);
+    assert.deepEqual(errors,[]);assert.deepEqual(requests,[],"No external services or game writes");
+    for (const source of ["index.html","game.js","world/native.js","service-worker.js"]) assert(!fs.readFileSync(path.resolve(__dirname,"..",source),"utf8").includes("visual-qa/castle-action-wheel"),"Draft must stay outside production entry points");
+    fs.writeFileSync(path.join(artifacts,"checks.json"),JSON.stringify({passed:true,cases:records.length,errors,requests,records},null,2));
+    console.log(JSON.stringify({passed:true,cases:records.length,viewports:3,mouseTouchKeyboard:true,noExternalRequestsOrWrites:true,artifacts}));
+  } finally {await browser.close();await server.close();}
+})().catch(error => {console.error(error);process.exitCode=1;});

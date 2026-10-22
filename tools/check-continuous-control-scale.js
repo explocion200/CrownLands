@@ -16,7 +16,7 @@ module.exports=async function checkControlScale(page,targets,select,output){
     controlScaleQA.observer=new MutationObserver(records=>{for(const record of records)for(const node of record.addedNodes){
       if(!node.matches?.(".city-action-wheel,.gold-camp-action-wheel"))continue;
       const {camera,size}=nativeContinuousWorld.view.snapshot();
-      controlScaleQA.attached.push({transform:node.style.transform,expected:(size.height<500?.74:.9)*Math.min(1,camera.zoom/SeamlessModel.forWorld(nativeContinuousWorld.view.scene).limits(size).max)});
+      controlScaleQA.attached.push({transform:node.style.transform,expected:node.classList.contains("continuous-castle-wheel")?1:(size.height<500?.74:.9)*Math.min(1,camera.zoom/SeamlessModel.forWorld(nativeContinuousWorld.view.scene).limits(size).max)});
     }});
     controlScaleQA.observer.observe(document.querySelector("#continuous-game-actions"),{childList:true});
   });
@@ -37,14 +37,17 @@ module.exports=async function checkControlScale(page,targets,select,output){
             v.view(o.x,o.y,SeamlessModel.forWorld(v.scene).limits(size).max*fraction);
           },{key,fraction});
           await frames();await page.waitForFunction(()=>!nativeContinuousWorld.view.snapshot().feed.pending&&!nativeContinuousWorld.bridge.running&&document.querySelector("#continuous-game-actions button"));await frames();
-          const sample=await measure(),expected=(height<500?.74:.9)*fraction;
+          const sample=await measure(),expected=sample.kind==="castle"?1:(height<500?.74:.9)*fraction;
           assert(Math.abs(sample.scale-expected)<1e-5,"Action controls did not scale with map zoom");
           assert(Math.hypot(sample.left-sample.point.x,sample.top-sample.point.y)<.1,"Action controls detached from the selected target");
           assert(sample.buttons.length>0);assert(sample.buttons.every(b=>b.width>0&&b.height>0));
           for(let i=0;i<sample.buttons.length;i++)for(let j=i+1;j<sample.buttons.length;j++){
             const a=sample.buttons[i],b=sample.buttons[j];const overlap=Math.max(0,Math.min(a.right,b.right)-Math.max(a.left,b.left))*Math.max(0,Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top));assert(overlap<Math.min(a.width*a.height,b.width*b.height)*.15,"Overlapping control faces: "+JSON.stringify({target,fraction,sample}));
           }
-          if(samples.length){
+          if(sample.kind==="castle"){
+            assert(sample.buttons.every(b=>Math.abs(b.width-(height<=500?44:56))<.1),"Approved castle controls must remain readable");
+            if(samples.length)assert(sample.width<=samples[0].width+.1,"Castle menu must not grow while zooming out");
+          }else if(samples.length){
             const ratio=fraction/samples[0].fraction;
             assert(Math.abs(sample.width/samples[0].width-ratio)<.002,"Wheel footprint grows relative to the target: "+JSON.stringify({width,height,target,fraction,sample,first:samples[0]}));
             sample.buttons.forEach((b,i)=>assert(Math.abs(b.width/samples[0].buttons[i].width-ratio)<.002,"A button ignores its wheel scale"));
@@ -69,10 +72,10 @@ module.exports=async function checkControlScale(page,targets,select,output){
     // Resize an already selected wheel without rebuilding or changing target.
     await page.setViewportSize({width:1440,height:900});await select(page,targets[0]);
     await page.setViewportSize({width:844,height:390});await frames();
-    const resized=await measure();assert(Math.abs(resized.scale-.74*resized.zoom/resized.max)<1e-5);
+    const resized=await measure();assert(Math.abs(resized.scale-(resized.kind==="castle"?1:.74*resized.zoom/resized.max))<1e-5);
     const attached=await page.evaluate(()=>controlScaleQA.attached);
     assert(attached.length>=targets.length);
-    for(const row of attached){const scale=Number(/scale\(([^)]+)\)/.exec(row.transform)?.[1]);assert(Math.abs(scale-row.expected)<1e-5,"New control flashed at an unscaled size");}
+    for(const row of attached){const scale=row.transform==="none"?1:Number(/scale\(([^)]+)\)/.exec(row.transform)?.[1]);assert(Math.abs(scale-row.expected)<1e-5,"New control flashed at an unscaled size");}
     fs.writeFileSync(path.join(output,"control-scale-checks.json"),JSON.stringify({results,resized,attachments:attached.length},null,2));
   }finally{
     await page.evaluate(()=>{controlScaleQA.observer.disconnect();delete window.controlScaleQA;modal.close();clearSelection(false);window.nativeContinuousWorld?.view.clear();});

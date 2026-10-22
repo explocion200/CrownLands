@@ -1,21 +1,55 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "bbe6355c225f0caace3e0b820957d4d800ebe961",
+  "baseCommit": "27d8fe93769f2e83ccad86ab330c6d194c26522c",
   "coverage": [
     {
       "paths": [
         "world/native.js",
-        "tools/validate-continuous-pickup-animation.js"
+        "action-buttons.css",
+        "tools/check-continuous-control-scale.js",
+        "tools/validate-castle-action-layout.js"
       ],
       "tests": [
-        "tools/validate-continuous-pickup-animation.js",
-        "tools/validate-continuous-pickup-placement.js",
+        "tools/validate-castle-action-layout.js",
         "tools/test-local-postgres-production-world.js",
-        "tools/validate-production-artifact.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-continuous-city-stages.js"
+        "tools/validate-continuous-pickup-animation.js"
       ],
-      "reason": "The connected-map pickup container must keep its camera-owned transform while idle animation runs. Use the existing brightness-only pulse and retain its ring and motion preferences. The browser regression executes the real native pickup render/frame code and current stylesheet stack with sample-only data: all three types, full/reduced/off motion, three zoom fractions, three animation phases and desktop/landscape viewports (243 cases), centered anchors, retained glow, collection clicks and no external requests. It fails before the fix because the theme idle transform replaces the camera scale. Existing placement and isolated authenticated production-game checks cover the shared native renderer, safe spawn/repair, all three collection commands, action controls and marches; package and unchanged asset budgets guard static publication. No server, gameplay rule, stored data or emulator change. Reconciled with the merged city-stage geometry update; rerun city-artwork sizing and authenticated stage-change integration with pickup animation and clearance to protect the shared map presentation."
+      "reason": "Implement the approved original gold arc only for regular castles in the live Core connected renderer. Cover all 30 default/equipped paintings, five stages, three zooms and desktop/two landscape sizes; check pixel clearance, native button labels/handlers/disabled states, cached frame work and failed/obsolete image loads. The real production browser with two disposable PostgreSQL accounts covers camera/selection/dismissal/resize/touch, native menus and action commands, permissions and accepted movements. Update its sizing assertions only for the explicitly approved readable castle exception, retaining proportional objective sizing. Shared action CSS stays scoped; the existing pickup animation check guards adjacent native-frame logic. No server implementation, data model, gameplay or Firebase changes: no Firebase emulator suite required."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/visual-qa/castle-action-wheel/README.md"
+      ],
+      "tests": [
+        "tools/validate-castle-action-layout.js",
+        "tools/test-local-postgres-production-world.js"
+      ],
+      "reason": "Record the owner-approved castle-only exception to proportional menu sizing, preserve the original arrangement and current gameplay, and document the production implementation and checks. The runtime tests validate the confirmed rule; no separate documentation runtime or emulator suite applies."
+    },
+    {
+      "paths": [
+        "docs/visual-qa/castle-action-wheel/draft.css",
+        "docs/visual-qa/castle-action-wheel/draft.js",
+        "docs/visual-qa/castle-action-wheel/index.html",
+        "docs/visual-qa/castle-action-wheel/scene.html",
+        "tools/validate-castle-action-wheel-draft.js"
+      ],
+      "tests": [
+        "tools/validate-castle-action-wheel-draft.js"
+      ],
+      "reason": "Retain the approved isolated visual reference using current Core art and actual action CSS. Cover 135 ownership/stage/zoom/viewport cases, original ellipse, pixel and button clearance, local-only assets, mouse/touch/keyboard and resize. Use installed Chromium in CI or the local Playwright runtime. Draft remains excluded from game entry points and production packages."
+    },
+    {
+      "paths": [
+        "tools/validate-production-artifact.js",
+        "tools/asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-production-artifact.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "reason": "Account for the approved castle helper with 3328 more bytes of lazy-world headroom (67.5 KiB total; rebuilt modules 68987 bytes). The scoped CSS adds 1818 shell bytes; cap its 1324-byte overage with 1536 bytes (measured shell 4631340 bytes). Keep all image, precache-entry, module allowlist and overall package limits. Build/artifact/asset validators confirm no prototype, new art or new startup requests."
     }
   ]
 }
