@@ -1,19 +1,20 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "7af7d53708da364f3914fbdb4e0245d5811e1d02",
+  "baseCommit": "870bb78a290d17d677d14f3d6b88136b7ea49740",
   "coverage": [
     {
       "paths": [
-        "social-ui.js",
-        "tools/validate-social-browser.js"
+        "local-client.js",
+        "tools/test-local-browser-client.js",
+        "tools/test-local-production-client.js"
       ],
       "tests": [
+        "tools/test-local-browser-client.js",
+        "tools/test-local-production-client.js",
         "tools/validate-social-browser.js",
-        "tools/validate-chat.js",
-        "tools/test-private-notifications.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/test-local-chat-client.js"
       ],
-      "reason": "Recover failed Friends/Messages startup using one account-scoped request, bounded backoff, chat reopen/visibility/online events and cancellable logout cleanup. Real browser cases reproduce missing tabs after initial failure; verify retry, backend disabled capability, concurrent starts, stale-account completion, failed-list reload and unchanged shared chat layouts across desktop/landscape/mobile. Existing chat and private notification tests protect shared tab lifecycle, unread and alert behavior; asset budgets keep the recovery code bounded. No backend, schema, social permissions or gameplay changes; no emulator suite is affected."
+      "reason": "Continuous-world transport was attaching command revision fields to strict account-scoped social payloads after tabs initialized, rejecting friends/conversation reads. Exclude only call/social from map-field injection; preserve queue/session guards and every movement command. Reproduce with the real local cookie HTTP adapter, disposable PostgreSQL social service and synthetic friendship/private history; verify strict unknown-field rejection and exact minified production transport, all authoritative movement fields, reconnect/list recovery and shared chat scheduling. Backend authorization, storage, rules and APIs are unchanged; no emulator suite is needed."
     }
   ]
 }

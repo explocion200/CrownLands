@@ -68,7 +68,9 @@
         signal?.throwIfAborted();
         if (path.startsWith("call/") && requestedWorld !== root.CROWNLANDS_WORLD_SESSION)
           throw makeError("functions/failed-precondition", "The world changed while this request waited. Please try again.");
-        if (requestedWorld) input = { ...input, data: { ...input.data,
+        // Social data is account-scoped and its strict API accepts no map-command
+        // fields. Keep movement validation and queued-world checks unchanged.
+        if (requestedWorld && path !== "call/social") input = { ...input, data: { ...input.data,
           clientWorldProtocol: requestedWorld.protocol, clientWorldRevision: requestedWorld.revision } };
         return await performPost(path, input, false, signal);
       } finally {
