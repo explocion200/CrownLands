@@ -60,6 +60,9 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
       node.className=`harvest-bonus-node harvest-bonus-${type}`;
       // Override legacy detail-far hit sizing on this screen-space layer.
       node.style.setProperty("--map-hit-size","44px");
+      // The camera owns transform. The legacy idle bob overrides its scale;
+      // use the existing brightness pulse while retaining the animated ring.
+      node.style.animationName="harvestPulse";
       const pending=pendingHarvestBonusIds.has(bonus.id);node.disabled=!areasReady||pending||remaining<=0;
       node.setAttribute("aria-busy",String(pending));node.setAttribute("aria-label",`${pending?"Collecting":"Harvest"} ${type} pickup`);
       node.title=remaining>0?`Harvest ${type} · ${remaining} left today`:`Daily ${type} limit reached`;
