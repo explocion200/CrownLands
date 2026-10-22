@@ -50,6 +50,9 @@ const {createMarauderPopulation}=require("../functions/marauder-population");
    for(const uid of p.players.slice(0,2).map(player=>player.uid)){
     const key=await page.evaluate(uid=>{const v=nativeContinuousWorld.view,c=v.snapshot().camera,city=[...nativeContinuousWorld.root.querySelectorAll(".object.castle")].map(n=>v.getObject(n.dataset.key)).filter(o=>o.ownerUid===uid).sort((a,b)=>Math.hypot(a.x-c.x,a.y-c.y)-Math.hypot(b.x-c.x,b.y-c.y))[0];v.view(city.x,city.y);return city.key;},uid);
     await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
+    // Recentring may request a different area window; two paint frames do not
+    // guarantee its authoritative response has arrived on a slower CI runner.
+    await page.waitForFunction(key=>{const v=nativeContinuousWorld.view,s=v.snapshot();return !s.feed.pending&&!s.feed.failed&&!!v.getObject(key);},key);
     await page.evaluate(key=>nativeContinuousWorld.view.select(key),key);
     await page.waitForFunction(key=>!nativeContinuousWorld.bridge.running&&nativeContinuousWorld.root.querySelector(`[data-key="${key}"].selected .city-label`),key);
     const selected=await page.evaluate(key=>{const node=nativeContinuousWorld.root.querySelector(`[data-key="${key}"]`),banner=node.querySelector('.map-banner'),label=node.querySelector('.city-label'),zoom=nativeContinuousWorld.view.snapshot().camera.zoom;
