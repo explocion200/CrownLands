@@ -70,10 +70,14 @@ function createContinuousCastleActions(invalidate) {
       // block commands or put the arc through an as-yet unreadable sprite.
       radius=Math.max(radius,Math.hypot(width/2+padding,(height/2+cy+padding)*142/118));
     }
-    const ry=radius*118/142,tip=Math.SQRT1_2;
+    const ry=radius*118/142;
     const sideX=Math.max(radius,width/2+gap+button/2),sideY=cy-1.44*button/64;
     const infoY=Math.max(cy+ry,height/2+gap+button/2,sideY+button+2);
-    return {button,stroke,path:`M ${radius*tip} ${cy-ry*tip} A ${radius} ${ry} 0 1 1 ${-radius*tip} ${cy-ry*tip}`,
+    // Keep the approved button slots fixed. Draw the open U through their
+    // centers, with smooth shoulders joining its lower half-ellipse.
+    const upperX=sideX+button*.55,upperY=sideY-button-2,shoulder=(button+2)/3;
+    const path=`M ${upperX} ${upperY} C ${sideX} ${upperY+shoulder} ${sideX} ${sideY-shoulder} ${sideX} ${sideY} A ${sideX} ${infoY-sideY} 0 0 1 ${-sideX} ${sideY} C ${-sideX} ${sideY-shoulder} ${-sideX} ${upperY+shoulder} ${-upperX} ${upperY}`;
+    return {button,stroke,path,
       slots:{"wheel-level":[-sideX,sideY],"wheel-scout":[-sideX,sideY],"wheel-send":[sideX,sideY],"wheel-attack":[sideX,sideY],
         "wheel-info":[0,infoY],"wheel-regroup":[-sideX-button*.55,sideY-button-2],"wheel-scout-nearby":[sideX+button*.55,sideY-button-2],"wheel-report":[sideX+button*.55,sideY-button-2]}};
   }

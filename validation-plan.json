@@ -1,53 +1,26 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "72cb6504d388cee4cf19ebac435e0ec4cf64eb64",
+  "baseCommit": "37e108d79f36d8f0b49f93d5ce650c5755348513",
   "coverage": [
     {
       "paths": [
-        "functions/index.js",
-        "functions/test/member-rally-cases.js",
-        "functions/test/emulator-rally-staging-defense.js",
-        "tools/test-local-postgres-member-rallies.js"
+        "world/native.js",
+        "tools/validate-castle-action-layout.js"
       ],
       "tests": [
-        "tools/validate-clan-rallies.js",
-        "tools/test-local-postgres-member-rallies.js",
-        "tools/test-local-postgres-rally-rejoin.js",
-        "functions/test/emulator-rally-staging-defense.js"
+        "tools/validate-castle-action-layout.js",
+        "tools/validate-production-artifact.js"
       ],
-      "reason": "Allow the existing Member role at creation and both launch validation passes; preserve rallies on demotion. Cover all four live Core target types with real commands and production continuous routing in an isolated PostgreSQL schema, plus the current Core emulator. Check authoritative missing/removed/stale membership, forged client role, inactive clan, Tower probation, creator/Clan Leader control, Ready quorum, five-active cap and replay safety. Include current shard in internal cancellation to preserve invalid-creator/departure cleanup; shared staging/recall tests cover cancellation, launch races and troop settlement. No archived topology or production player data changes."
+      "reason": "Widen only the regular-castle SVG arc through existing fixed button centers in the live Core connected renderer. Exercise actual production layout and native click/touch handlers across 30 skin/stage paintings, three zooms and desktop 1440x900 plus landscape 844x390/568x320. Verify centerline proximity, silhouette and button clearance, labels, hit targets, cached frames, and failed/obsolete assets. Compare unchanged button rectangles against the pre-change 270-case local capture. No CSS, camera, server authority, gameplay or data changes, so no multiplayer emulator suite is affected. Build/artifact validation guards shipped module scope and payload budgets."
     },
     {
       "paths": [
-        "game.js",
-        "rallies-activity-ui.js",
-        "tools/validate-clan-rallies.js",
-        "tools/validate-rally-assembly.js",
-        "tools/validate-rally-assembly-browser.js"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [
-        "tools/validate-clan-rallies.js",
-        "tools/validate-rally-assembly.js",
-        "tools/validate-rally-assembly-browser.js"
+        "tools/validate-castle-action-layout.js"
       ],
-      "reason": "Client role allowlist, boss tooltip and War Room/Kingdom Activity copy must match server permission. Exercise ordinary-member map objective creation at desktop 1440x900 and landscape 844x390/568x320, remembered source, failed permissions, creator versus other-member management, contribution confirmations and input layout. Read actual production role constant in VM checks rather than duplicate a stale test allowlist."
-    },
-    {
-      "paths": [
-        "README.md",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "clans-rallies-guide.html",
-        "guides.html",
-        "home.html",
-        "how-to-play.html",
-        "roadmap-data.js",
-        "game-rules.html"
-      ],
-      "tests": [
-        "tools/validate-public-site-content.js",
-        "tools/validate-clan-rallies.js"
-      ],
-      "reason": "Record the explicitly confirmed any-member creation rule and unchanged creator/Clan Leader management. Remove obsolete officer-only rally instructions from current public guides and roadmap. Existing public content/navigation validator and rally rule checks cover affected shared presentation; no separate documentation runtime tests apply."
+      "reason": "Record the user-confirmed arc-only adjustment to the preceding exact-ellipse design while preserving all existing button slots and gameplay. The geometry/browser checks exercise that presentation rule; no separate documentation runtime test applies."
     }
   ]
 }
