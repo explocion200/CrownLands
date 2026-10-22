@@ -4178,28 +4178,21 @@ function renderHoldingTowerModal(tower) {
     && tower.ownerMember && tower.worldActive !== false;
   const workshopOpen = holdingTowerDetailsTab === "buildings" && holdingTowerBuildingSelection === "workshop"
     && tower.ownerMember && tower.worldActive !== false;
-  const infirmaryOpen = holdingTowerDetailsTab === "buildings" && holdingTowerBuildingSelection === "infirmary"
-    && tower.ownerMember && tower.worldActive !== false;
   const supportOpen = holdingTowerDetailsTab === "buildings" && ["stables", "scout_lodge"].includes(holdingTowerBuildingSelection)
-    && tower.ownerMember && tower.worldActive !== false;
-  const trainingOpen = holdingTowerDetailsTab === "buildings" && holdingTowerBuildingSelection === "training"
     && tower.ownerMember && tower.worldActive !== false;
   modal.classList.toggle("clan-shop-modal", Boolean(shopOpen));
   modal.classList.toggle("engineers-workshop-modal", Boolean(workshopOpen));
-  modal.classList.toggle("infirmary-modal", Boolean(infirmaryOpen));
-  modal.classList.toggle("training-grounds-modal", Boolean(trainingOpen));
-  modal.classList.toggle("clan-building-modal", Boolean(shopOpen || workshopOpen || infirmaryOpen || trainingOpen || supportOpen));
+  modal.classList.remove("infirmary-modal", "training-grounds-modal");
+  modal.classList.toggle("clan-building-modal", Boolean(shopOpen || workshopOpen || supportOpen));
   const frameSession = holdingTowerModalSession;
-  if ((shopOpen || workshopOpen || infirmaryOpen || trainingOpen || supportOpen) && !ensureModalUiStyle("workshop", () => {
+  if ((shopOpen || workshopOpen || supportOpen) && !ensureModalUiStyle("workshop", () => {
     if (isHoldingTowerModalSessionCurrent(frameSession)) renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
   })) return;
   if (!workshopOpen) delete modalBody.dataset.workshopReady;
-  if (!infirmaryOpen) delete modalBody.dataset.infirmaryReady;
-  if (!trainingOpen) delete modalBody.dataset.trainingReady;
-  if (workshopOpen || infirmaryOpen || trainingOpen || supportOpen) {
+  if (workshopOpen || supportOpen) {
     delete modalBody.dataset.clanShopReady;
     const session = holdingTowerModalSession;
-    const buildingId = supportOpen ? holdingTowerBuildingSelection : trainingOpen ? "training" : infirmaryOpen ? "infirmary" : "workshop";
+    const buildingId = supportOpen ? holdingTowerBuildingSelection : "workshop";
     if (!supportOpen && !ensureModalUiStyle(buildingId, () => {
       if (isHoldingTowerModalSessionCurrent(session)) renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
     })) return;
@@ -4229,9 +4222,8 @@ function renderHoldingTowerModal(tower) {
         if (isHoldingTowerModalSessionCurrent(session)) renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
       }
     };
-    modalTitle.textContent = supportOpen ? window.CrownlandsClanTowerBuildings.definition(buildingId).name : trainingOpen ? "Training Grounds" : infirmaryOpen ? "Infirmary" : "Engineers’ Workshop";
-    const buildingUi = supportOpen ? window.CrownlandsClanSupportBuildingsUi : trainingOpen ? window.CrownlandsTrainingGroundsUi
-      : infirmaryOpen ? window.CrownlandsInfirmaryUi : window.CrownlandsEngineersWorkshopUi;
+    modalTitle.textContent = supportOpen ? window.CrownlandsClanTowerBuildings.definition(buildingId).name : "Engineers’ Workshop";
+    const buildingUi = supportOpen ? window.CrownlandsClanSupportBuildingsUi : window.CrownlandsEngineersWorkshopUi;
     buildingUi.mount(modalBody, { ...tower, clanName: clanIdentity?.name || tower.clanName }, {
       buildingId, intelligence: { api: getOnlineApi(), identity: () => `${getOnlineRequestScope()}:${state?.clanId || ""}`, renderSnapshot: entry => window.CrownlandsScoutReportUI.renderSharedSnapshot(entry), onLocate: entry => void locateClanIntelligence(entry) },
       view: buildingView, treasuryBalance, actionBusy: holdingTowerActionsInFlight.has(tower.id),
@@ -4308,7 +4300,7 @@ function renderHoldingTowerModal(tower) {
     onCountdownComplete: () => { if (selectedHoldingTowerId === tower.id && isHoldingTowerModalSessionCurrent(holdingTowerModalSession)) void refreshHoldingTower(tower.id).catch(error => console.warn("Tower timer refresh failed", error)); },
     onSelect: key => {
       holdingTowerDetailsTab = key;
-      if (key === "buildings" && ["shop", "workshop", "infirmary", "training", "stables", "scout_lodge"].includes(holdingTowerBuildingSelection) && tower.ownerMember && tower.worldActive !== false) renderHoldingTowerModal(tower);
+      if (key === "buildings" && ["shop", "workshop", "stables", "scout_lodge"].includes(holdingTowerBuildingSelection) && tower.ownerMember && tower.worldActive !== false) renderHoldingTowerModal(tower);
     },
     onClose: () => modal.close(),
     garrison: tower.ownerMember ? tower.garrison || [] : [],
