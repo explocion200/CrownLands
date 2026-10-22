@@ -17010,7 +17010,15 @@ function getUpdateCheckUrl() {
 
 function getBuildIdFromHtml(html) {
   try {
-    const doc = new DOMParser().parseFromString(String(html || ""), "text/html");
+    const source = String(html || "");
+    // Published pages have this generated stamp before any inline scripts. Avoid
+    // allocating the entire game's detached DOM on each background check.
+    // Older/custom page formats retain the existing metadata/script fallback.
+    const prefix = source.replace(/<script\b[^>]*\bsrc="[^"]*"[^>]*>\s*<\/script\s*>/gi, "")
+      .split(/<script\b|<style\b|<!--|<body\b/i, 1)[0];
+    const stamp = prefix.match(/<meta\s+name="crownlands-build"\s+content="([A-Za-z0-9._-]+)"\s*\/?>/);
+    if (stamp) return stamp[1];
+    const doc = new DOMParser().parseFromString(source, "text/html");
     return getBuildIdFromDocument(doc);
   } catch (_) {
     return "";

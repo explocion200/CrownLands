@@ -36,6 +36,13 @@ drawing. Unused prototype patrol-canvas/draft paths and hidden preview-only styl
 Camera raster hints are removed before changing zoom, preserving sharp
 close-up artwork instead of permanently caching the first displayed scale.
 
+The resource soak also reproduced temporary DOM growth from the existing periodic
+update checker: twenty full-page parses retained approximately 37,000 DOM nodes
+in this Chrome build, even though the attached game DOM stayed constant. The
+checker now reads the generated build stamp directly; older/custom HTML formats
+retain the existing metadata/script parser. No update interval or release behavior
+changes. This removes whole-page allocation from ordinary background checks.
+
 ## Reproducible checks
 
 `tools/test-local-postgres-map-pan-performance.js` runs the actual authenticated

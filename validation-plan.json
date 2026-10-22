@@ -32,6 +32,20 @@
       ],
       "tests": [],
       "reason": "Record the approved performance constraints, implementation, reproducible measurements and separate backend rollout boundary. Documentation does not establish deployment or physical-phone results."
+    },
+    {
+      "paths": [
+        "game.js",
+        "tools/validate-build-stamp.js"
+      ],
+      "tests": [
+        "tools/validate-build-stamp.js",
+        "tools/validate-lag-recovery.js",
+        "tools/validate-pwa-entry-routing.js",
+        "tools/test-local-postgres-map-pan-performance.js",
+        "tools/test-local-postgres-production-world.js"
+      ],
+      "reason": "The soak exposed repeated complete detached-document allocation in the periodic build checker. Read the generated build stamp without DOM allocation, retain the existing parser for legacy formats, and verify fallback metadata/script semantics, no script execution, update recovery/routing and actual authenticated game operation."
     }
   ]
 }
