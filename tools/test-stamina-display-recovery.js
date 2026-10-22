@@ -59,7 +59,7 @@ async function check(source) {
     state = { ...state, value: 9, revision: 2 }; await tick();
     assert.equal(value.textContent, "9/100"); assert.equal(fill.style.width, "9%"); assert(classes.has("stamina-low"));
     state = { ...state, recoveredAtMs: Date.now() - 12 * 60 * 1000 }; await tick();
-    assert.equal(value.textContent, "10/100"); assert(!classes.has("stamina-low"));
+    assert.equal(value.textContent, "9/100"); assert(classes.has("stamina-low"), "Elapsed time must not replenish the HUD");
     failure = "permission-denied"; await tick(); assert.equal(value.textContent, "—/100");
     assert.equal(timers.size, 0, "Permission revocation still stops the listener");
     assert.equal(calls.filter(call => call.url.endsWith("/call/getStaminaState")).length, 1, "Recovery uses the existing subscription, not extra callable polling");
