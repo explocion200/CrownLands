@@ -40,7 +40,8 @@
         "guides.html",
         "home.html",
         "how-to-play.html",
-        "roadmap-data.js"
+        "roadmap-data.js",
+        "game-rules.html"
       ],
       "tests": [
         "tools/validate-public-site-content.js",
