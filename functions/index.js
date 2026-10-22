@@ -24520,7 +24520,7 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       throw new HttpsError("failed-precondition", bossContribution.reason || `${name}: ${member.reason}`);
     }
     const staminaChanges = rally.targetType === "marauder"
-      ? await staminaService.prepareChange(transaction, attackPackages.map(p => p.uid), -MARAUDERS.HUNT_COST, nowMs) : [];
+      ? await staminaService.prepareChange(transaction, attackPackages.map(p => p.uid), -MARAUDERS.BOSS_HUNT_COST, nowMs) : [];
     const movement = {
       id: launchOrder.id,
       worldId: ONLINE_WORLD_ID,
@@ -24543,6 +24543,7 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       targetSpawnId: rally.targetType === "marauder" ? target.spawnId : "",
       ...(rally.targetType === "marauder" ? { targetBalanceVersion: MARAUDERS.balance(target.level, target.balanceVersion).version } : {}),
       staminaCommitted: rally.targetType === "marauder",
+      ...(rally.targetType === "marauder" ? { staminaCost: MARAUDERS.BOSS_HUNT_COST } : {}),
       ...(rally.targetType === "marauder" ? { returning: false, marauderLevel: target.level } : {}),
       marauderOrigin: rally.targetType === "marauder" ? { x: target.x, y: target.y, regionId: rally.targetRegionId } : null,
       sourceType: rally.assemblyType,
@@ -24744,7 +24745,7 @@ exports.getBossRallyReadiness = onCall({ region: "us-central1", maxInstances: 20
       }
     }
     return { checkedAtMs: now, rallyUpdatedAtMs: timestampToMs(rally.updatedAtMs), combatForecast, ...(contribution ? { contribution } : {}),
-      participants: participants.map((p, index) => ({ uid: p.uid, ready: states[index].state.value >= MARAUDERS.HUNT_COST })) };
+      participants: participants.map((p, index) => ({ uid: p.uid, ready: states[index].state.value >= MARAUDERS.BOSS_HUNT_COST })) };
   }, "bossRallyReadiness", 3, { readOnly: true });
 });
 
@@ -27781,6 +27782,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
       targetSpawnId: order.targetType === "marauder" ? target.spawnId : "",
       ...(order.targetType === "marauder" ? { targetBalanceVersion: MARAUDERS.balance(target.level, target.balanceVersion).version } : {}),
       staminaCommitted: staminaChanges.length > 0,
+      ...(staminaChanges.length > 0 ? { staminaCost: MARAUDERS.HUNT_COST } : {}),
       ...(order.targetType === "marauder" ? { returning: false, marauderLevel: target.level } : {}),
       marauderOrigin: order.targetType === "marauder" ? { x: target.x, y: target.y, regionId: order.targetRegionId } : null,
       fromId: order.fromId,

@@ -22,7 +22,7 @@ async function main(built = false) {
         assert(fs.readFileSync(path.resolve(__dirname,'../dist',file)).equals(fs.readFileSync(path.resolve(__dirname,'..',file))),'Built defeated artwork is stale');
       }
       const delivered={};
-      for(const file of ['marauders-ui.js','marauders-ui.css','city-details-ui.js','city-details-ui.css','scout-report-ui.js','scout-report-ui.css','stamina-ui.js']){
+      for(const file of ['marauders-ui.js','marauders-ui.css','city-details-ui.js','city-details-ui.css','scout-report-ui.js','scout-report-ui.css','stamina-ui.js','troop-orders-ui.js']){
         delivered[file]=fs.readFileSync(path.resolve(__dirname,'../dist',file),'utf8');
         const source=fs.readFileSync(path.resolve(__dirname,'..',file),'utf8').replace(/\r\n/g,'\n');
         assert.equal(delivered[file].replace(/\r\n/g,'\n'),file==='marauders-ui.js'?require('./estate-delivery').minifyEstate(source):source,'Built NPC Info asset is stale: '+file);
@@ -47,6 +47,7 @@ async function main(built = false) {
       await ev('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
       await ev('Promise.all(modal.getAnimations({subtree:true}).filter(a=>a.effect.getTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>{})))');
       assert(await ev('modal.open'),'NPC Info must remain open after painting');
+      assert.equal(await ev("Number(modalBody.querySelector('[data-hunt-stamina]').dataset.huntStamina)"),classification === 'boss' ? 20 : 10);
       const info=await ev(`(()=>{
         const ledger=modalBody.querySelector('.cd-ledger'),actions=modalBody.querySelector('.cd-actions');ledger.scrollTop=0;
         const rect=node=>{const r=node.getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height}};
@@ -251,6 +252,8 @@ async function main(built = false) {
       assert.equal(await ev('huntQA.purchases.length'),0,'Opening never purchases');
       assert(!await ev("document.querySelector('.stamina-panel details').open"),'Hunt details start collapsed');
       assert(await ev("document.querySelector('.stamina-panel').textContent.includes('No automatic recovery or hunt refunds.') && !document.querySelector('[data-next],[data-full]')"));
+      assert.equal(await ev("document.querySelector('[data-hunts]').textContent"),'7');
+      assert.equal(await ev("document.querySelector('[data-boss-hunts]').textContent"),'3');
       assert.equal(await ev("document.querySelector('[data-refill-stamina]').textContent"),'70 → 100 · Restores 30');
       await ev("huntQA.callbacks.onError(new Error('Synthetic disconnect'))");
       assert.equal(await ev("document.querySelector('[data-stamina-value]').textContent"),'—/100');
@@ -390,6 +393,7 @@ async function main(built = false) {
           map:!!modalBody.querySelector('[data-report-jump]:not(:disabled)'),timers:!!b.closest('.scout-ledger-shell').querySelector('[data-scout-report-age]')&&!!modalBody.querySelector('[data-scout-report-expires]')};})()`);
         assert(scout.loaded&&scout.art.includes(classification==='boss'?'boss-v1':'solo-v1')&&scout.cards===2&&scout.table&&!scout.fakeCity&&!scout.overflow&&scout.fit&&scout.map&&scout.timers,JSON.stringify(scout));
         assert(scout.text.includes(troops.toLocaleString('en-US'))&&scout.text.includes('1.00 defense per defender')&&scout.text.includes('only to this spawn'));
+        assert.equal(await ev("Number(modalBody.querySelector('[data-hunt-stamina]').dataset.huntStamina)"),classification==='boss'?20:10);
         assert.deepEqual(scout.sections,['Overview','Defenses','Hunt']);
         await ev("modalBody.querySelector('[data-scout-jump=\"scoutDetail-defense\"]').focus()");
         await client.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,text:'\r'});
@@ -413,6 +417,19 @@ async function main(built = false) {
     assert(await ev("(()=>{CrownlandsScoutReportUI.updateTiming(modalBody,20);return document.querySelector('.expiry').classList.contains('urgent')})()"));
     await ev("document.querySelector('[data-scout-close]').click()");
     assert(!await ev('modal.open'));
+    // Actual launch confirmation must direct 19 stamina to refill, and accept 20.
+    for(const amount of [19,20]) {
+      await ev(`modal.close();huntQA.stamina={...huntQA.stamina,value:${amount}};huntQA.callbacks.onState(huntQA.stamina);
+        huntQA.confirmed=null;void confirmClanRallyAction({id:'cost-check',targetType:'marauder',targetRegionId:huntQA.target.regionId,participants:[]},'launch').then(value=>huntQA.confirmed=value)`);
+      assert.equal(await ev("Number(modalBody.querySelector('[data-hunt-stamina]').dataset.huntStamina)"),20);
+      await ev("modalBody.querySelector('[data-rally-confirm=accept]').click()");
+      if(amount===19) {
+        await wait("!!document.querySelector('.stamina-panel[open]')");
+        assert.equal(await ev('huntQA.confirmed'),null);
+        await ev("document.querySelector('[data-stamina-close]').click();modal.close()");
+      } else {await wait('huntQA.confirmed===true');}
+    }
+    await ev("huntQA.stamina={...huntQA.stamina,value:9};huntQA.callbacks.onState(huntQA.stamina)");
     await ev("bossReadiness.set('rally-fixture',{checkedAtMs:Date.now(),participants:[{uid:'ally',ready:false}],combatForecast:{status:'unavailable'}})");
     assert(await ev("renderBossReadiness({id:'rally-fixture',participants:[{uid:'ally',ownerName:'Ally'}]}).includes('Ally: Needs stamina')"));
     await ev("bossReadiness.set('balance-v2',{rallyUpdatedAtMs:10,participants:[],contribution:{eligible:false,maxSharePercent:40,members:[{uid:'ally',attackPower:100,minimumPower:4000000,sharePercent:1,eligible:false,reason:'Needs at least 10% of full defense.',gold:100,xp:20,estimatedLosses:10}]},combatForecast:{status:'scouted',attackPower:100,defensePower:40000000,estimatedAttackerLosses:10}})");

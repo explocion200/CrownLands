@@ -3,6 +3,8 @@ const assert = require("node:assert/strict");
 const M = require("../functions/marauder-rules");
 for (let value = 0; value <= 100; value++) assert.equal(M.refillPrice(value), value === 100 ? 0 : 30);
 assert.equal(M.REFILL_VERSION, 3);
+assert.equal(M.BOSS_HUNT_COST, 20);
+assert.equal(M.HUNT_COST, 10);
 for (const invalid of [-1, 101, 1.5, NaN, Infinity, null, '70']) assert.throws(() => M.refillPrice(invalid));
 for (const [level, defenders, gold, xp] of M.ANCHORS) assert.deepEqual(
   [M.balance(level).defenders, M.balance(level).gold, M.balance(level).xp], [defenders, gold, xp]);
@@ -72,6 +74,10 @@ assert.equal(M.view({ ...stamina, paidDay: M.day(now) }, now).paidRefillsToday, 
 assert.equal(M.view({ ...stamina, paidDay: M.day(now) }, now + 86400000).paidRefillsToday, 0);
 assert.equal(M.view({ ...stamina, paidDay: M.day(now) }, now + 86400000).value, 80);
 assert.equal(M.MAX_STAMINA / M.HUNT_COST, 10);
+assert.equal(M.MAX_STAMINA / M.BOSS_HUNT_COST, 5);
+assert.throws(() => M.changeStamina({ ...stamina, value: 19 }, -20, now), /20 stamina/);
+assert.equal(M.changeStamina({ ...stamina, value: 20 }, -20, now).value, 0);
+assert.equal(M.view({ ...stamina, value: 70 }, now).bossHunts, 3);
 
 // Exercise the existing server combat and departure-recovery implementations
 // with NPC defense, including exact-power losses and very large armies.

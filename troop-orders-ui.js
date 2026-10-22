@@ -143,7 +143,7 @@ function decorateTroopOrderView(source, target, orderKind, commandLabel, amountS
   const body = document.createElement("main"); body.className = "order-body"; body.tabIndex = 0; body.setAttribute("aria-label", "Order details");
   body.innerHTML = `<div class="order-route">${renderTroopOrderLocation(source, "From", "", attack)}<svg class="order-arrow" viewBox="0 0 44 24" aria-hidden="true"><path d="M2 12h37M29 3l11 9-11 9M3 8h13M3 16h13"/></svg>${renderTroopOrderLocation(target, "To", destinationNote, attack)}</div><div class="order-columns ${attack ? "selection-layout attack-layout" : transfer ? "selection-layout transfer-layout" : ""}"></div>`;
   if (target.targetType === "marauder" || activeRallyOrderContext?.rally?.targetType === "marauder") {
-    body.insertAdjacentHTML("afterbegin", renderHuntStamina(rally ? "Joining and formation are free. Each participant pays 10 at launch." : "Charged on departure. Victory returns your survivors."));
+    body.insertAdjacentHTML("afterbegin", renderHuntStamina(rally ? "Joining and formation are free. Each participant pays 20 at launch." : "Charged on departure. Victory returns your survivors.", rally));
     CrownlandsStaminaUI.tick();
   }
   const columns = body.querySelector(".order-columns");
