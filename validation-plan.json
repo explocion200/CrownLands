@@ -1,35 +1,20 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "2ef80addc945bd9979ccf506e393bdad18ddac49",
+  "baseCommit": "6a52b72cb555efe1df97d5ef4dc0c8afe8595a82",
   "coverage": [
     {
       "paths": [
         "world/native.js",
-        "world/appearance.js",
-        "tools/check-continuous-marches.js",
-        "tools/check-continuous-pickup-repair.js",
-        "tools/validate-continuous-pickup-placement.js",
-        "tools/test-local-postgres-native-auth-world.js",
-        "world/preview.css"
+        "tools/validate-continuous-pickup-animation.js"
       ],
       "tests": [
+        "tools/validate-continuous-pickup-animation.js",
         "tools/validate-continuous-pickup-placement.js",
-        "tools/validate-pickup-runtime.js",
         "tools/test-local-postgres-production-world.js",
-        "tools/test-local-postgres-native-auth-world.js",
-        "tools/validate-continuous-map-labels.js",
-        "tools/validate-continuous-game-ui.js",
         "tools/validate-production-artifact.js",
         "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Shrink connected-map Gold/troop/Crown markers by 20% and use current authenticated display geometry, measured label rectangles and troop positions for bounded pickup clearance. Unit checks cover all object types, mobile glow, relocated cities, availability loss, coordinate conversion, bounded retries and cache invalidation. Actual isolated PostgreSQL browser commands verify an obstructed reservation stays hidden and relocates without changing its ID, type, creation/expiry, allowance or deadline, then all three types collect normally at desktop and landscape sizes. Existing shared label, march/UI, production/private integration and asset/build gates protect geometry, privacy, restored global hooks, compatible publication and loading budgets. No backend/authority changes or emulator suites required. Keep the placement helper lazy with the live camera and remove only unreferenced prototype-control CSS from the production copy to remain within existing world and installation budgets."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
-      "tests": [],
-      "reason": "Record the owner-approved smaller pickup presentation and current-world clearance, preserving rewards, timers and server reservation authority; deployment verified separately."
+      "reason": "The connected-map pickup container must keep its camera-owned transform while idle animation runs. Use the existing brightness-only pulse and retain its ring and motion preferences. The browser regression executes the real native pickup render/frame code and current stylesheet stack with sample-only data: all three types, full/reduced/off motion, three zoom fractions, three animation phases and desktop/landscape viewports (243 cases), centered anchors, retained glow, collection clicks and no external requests. It fails before the fix because the theme idle transform replaces the camera scale. Existing placement and isolated authenticated production-game checks cover the shared native renderer, safe spawn/repair, all three collection commands, action controls and marches; package and unchanged asset budgets guard static publication. No server, gameplay rule, stored data or emulator change."
     }
   ]
 }
