@@ -79,8 +79,15 @@ module.exports=async function checkMapUI(page,source,select,output){
     await page.screenshot({path:require("node:path").join(output,`city-labels-${width}.png`)});
     // A touch pinch clears castle controls and cannot select on finger release.
     await selected();const cdp=await page.context().newCDPSession(page);
-    const bounds=await page.locator("#continuous-game-surface #viewport").boundingBox();
-    const x=bounds.x+bounds.width/2,y=bounds.y+bounds.height/2;
+    // The selected castle is centered; its native action buttons can intercept
+    // center-of-screen touches, especially in narrow landscape. Gesture input
+    // must actually land on the map rather than the separate action overlay.
+    const {x,y}=await page.evaluate(()=>{
+      const root=nativeContinuousWorld.root,r=root.querySelector("#viewport").getBoundingClientRect();
+      for(let y=r.top+35;y<r.bottom-25;y+=25)for(let x=r.left+105;x<r.right-105;x+=30){
+        if([-100,-60,60,100].every(dx=>document.elementFromPoint(x+dx,y)?.id==="continuous-game-surface"&&root.elementFromPoint(x+dx,y)?.closest("#viewport")))return {x,y};
+      }throw Error("No unobstructed map pinch target");
+    });
     await cdp.send("Input.dispatchTouchEvent",{type:"touchStart",touchPoints:[{x:x-100,y,id:1},{x:x+100,y,id:2}]});
     await cdp.send("Input.dispatchTouchEvent",{type:"touchMove",touchPoints:[{x:x-60,y,id:1},{x:x+60,y,id:2}]});
     await cdp.send("Input.dispatchTouchEvent",{type:"touchEnd",touchPoints:[]});await cdp.detach();await cleared();

@@ -24,6 +24,10 @@
       const thumbnails = requests.filter(r => r.kind === "thumbnail").sort((a, b) => a.priority - b.priority).slice(0, 16);
       this.wanted = new Map([...requests.filter(r => r.kind !== "full" && r.kind !== "thumbnail"), ...thumbnails, ...full].map(r => [r.path, r]));
       for (const [path, entry] of this.cache) if (entry.kind !== "sprite" && !this.wanted.has(path)) { this.release(entry.url); this.cache.delete(path); }
+      // Retain a small sprite working set for return pans, not every skin ever
+      // encountered. All currently requested art stays eligible for loading.
+      const unused=[...this.cache].filter(([path,e])=>e.kind==="sprite"&&!this.wanted.has(path));
+      for(const [path,entry]of unused.slice(0,Math.max(0,unused.length-64))){this.release(entry.url);this.cache.delete(path);}
       for (const [path, pending] of this.pending) if (!this.wanted.has(path)) pending.controller.abort();
       this.pump();
     }
@@ -49,10 +53,10 @@
         });
       }
     }
-    get(path) { return this.cache.get(path)?.url; }
+    get(path) { const entry=this.cache.get(path);if(entry?.kind==="sprite"){this.cache.delete(path);this.cache.set(path,entry);}return entry?.url; }
     retry() { this.failures.clear(); this.pump(); }
     dispose() { this.disposed = true; for (const p of this.pending.values()) p.controller.abort(); for (const e of this.cache.values()) this.release(e.url); this.cache.clear(); }
-    stats() { return { pending: this.pending.size, full: [...this.cache.values()].filter(e => e.kind === "full").length, thumbnails: [...this.cache.values()].filter(e => e.kind === "thumbnail").length, cached: this.cache.size, failed: this.failures.size, peakRequests: this.peakRequests, peakFull: this.peakFull, peakThumbnails: this.peakThumbnails }; }
+    stats() { return { pending: this.pending.size, full: [...this.cache.values()].filter(e => e.kind === "full").length, thumbnails: [...this.cache.values()].filter(e => e.kind === "thumbnail").length, sprites:[...this.cache.values()].filter(e=>e.kind==="sprite").length,requestedSprites:[...this.wanted.values()].filter(e=>e.kind==="sprite").length, cached: this.cache.size, failed: this.failures.size, peakRequests: this.peakRequests, peakFull: this.peakFull, peakThumbnails: this.peakThumbnails }; }
   }
   return { AssetLoader };
 });

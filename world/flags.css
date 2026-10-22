@@ -6,6 +6,7 @@
 #viewport{height:100%;min-height:0}
 #world .section-label{display:none}
 #world .object.city-node{transform:none;min-width:0;min-height:0;background:none;border:0;box-shadow:none;filter:none}
+#world .object{contain:layout style}
 #world .object>.map-banner{position:absolute;left:50%;bottom:100%;width:0;height:0;transform:translateY(-4px) scale(.8);transform-origin:50% 100%;pointer-events:none}
 #world .map-banner .city-label{bottom:0;pointer-events:none}
 #world .object.selected:after{display:none}
