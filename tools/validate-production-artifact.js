@@ -435,7 +435,10 @@ const castleActionLayoutBudget=3328;
 // Display clearings, dynamic UI/scenery exclusion and empty-delta reuse add
 // about 2 KiB of lazy code. Static placements remain server-side, not in boot.
 const worldClearanceBudget=2304;
-assert(worldBytes<=64*1024+256+castleActionLayoutBudget+worldClearanceBudget,"Lazy continuous-world modules exceed 69.75 KiB");
+// Restore the existing shield sprite and bounded deadline ticking. No new art,
+// startup downloads, precache entries or per-player subscriptions are added.
+const cityShieldBudget=1024;
+assert(worldBytes<=64*1024+256+castleActionLayoutBudget+worldClearanceBudget+cityShieldBudget,"Lazy continuous-world modules exceed 70.75 KiB");
 assert(!worker.includes('world/'),"Continuous world must not expand installation precaching");
 for(const f of worldFiles)assert(!fs.readFileSync(f,"utf8").includes('/__benchmark__/'),"No private preview endpoints in the game");
 if (baseClientBytes - worldBytes > baseClientBudget + campFlagArtBudget) {

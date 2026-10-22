@@ -236,7 +236,7 @@ window.createContinuousWorldView = async function (options = {}) {
           const box=`left:${item.left}px;top:${item.top}px;width:${item.width}px;height:${item.height}px`;
           if(node.worldBox!==box){node.style.cssText=box;node.worldBox=box;}
         }
-        window.SeamlessAppearance?.render(node,item,{selected:item.key===selected,zoom:camera.zoom});
+        window.SeamlessAppearance?.render(node,item,{selected:item.key===selected,zoom:camera.zoom,nowMs:sceneTime*1000});
         node.classList.toggle("selected", item.key === selected);
 
       }
@@ -278,6 +278,9 @@ window.createContinuousWorldView = async function (options = {}) {
       const zoomed = !plannedCamera || Math.abs(camera.zoom / plannedCamera.zoom - 1) > 0.03;
       if (dirty || moved || zoomed) { renderScene(); dirty = false; plannedCamera = { ...camera }; }
       if (now - patrolPlanAt >= 120) {
+        // Expire visible shields on the authoritative clock even if no area
+        // data changed. This does not rebuild banners or the scene.
+        for(const [key,node] of nodes){const item=objects.get(key);if(item?.kind==="castle")window.SeamlessAppearance?.tickShield(node,item,sceneTime*1000);}
         const visible = activeMarches.filter(m => M.intersects(view, m.position.x-18,m.position.y-18,36,36));
         const keys = new Set(visible.map(m=>m.key));
         for (const [key,node] of nodes) if(node.classList.contains("troop") && !keys.has(key)) { node.remove();nodes.delete(key); }

@@ -10,6 +10,7 @@
 #world .map-banner .city-label{bottom:0;pointer-events:none}
 #world .object.selected:after{display:none}
 #world .object.selected>img{filter:drop-shadow(0 0 4px #ffe394)}
+#world .object.castle>.city-shield-field{width:68%;height:68%;bottom:-12%;animation:none;filter:none;opacity:.96}
 #world .map-banner .camp-type-flag{width:42px;height:53px;object-fit:contain}
 #world .native-tower-label{display:flex;flex-direction:column;align-items:center}
 #world .native-tower-label .holding-tower-map-label,#world .native-tower-label .holding-tower-clan-banner{position:static;transform:none;white-space:nowrap}
