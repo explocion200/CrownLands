@@ -17,14 +17,15 @@
     },
     {
       "paths": [
-        "functions/test/emulator-rally-lifecycle.js"
+        "functions/test/emulator-rally-lifecycle.js",
+        "functions/test/emulator-rally-staging-defense.js"
       ],
       "tests": [
         "functions/test/emulator-rally-lifecycle.js",
         "functions/test/emulator-rally-staging-defense.js",
         "tools/test-local-postgres-member-rallies.js"
       ],
-      "reason": "Correct nightly expectation superseded by the confirmed all-members Rally permission amendment. Demotion preserves the forming rally; explicit creator cancellation still works. Run full affected lifecycle and member-permission/staging cases to retain departure/removal safeguards and troop conservation on emulator and PostgreSQL."
+      "reason": "Correct nightly expectation superseded by the confirmed all-members Rally permission amendment. Demotion preserves the forming rally; explicit creator cancellation still works. Run full affected lifecycle and member-permission/staging cases to retain departure/removal safeguards and troop conservation on emulator and PostgreSQL. Keep the synthetic 400-second inbound movement and its launch-time unboosted Stables return basis consistent; retain the exact proportional return assertion."
     }
   ]
 }

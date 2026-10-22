@@ -135,7 +135,10 @@ async function main() {
   assert((await read(cityRef(assembly))).alliedReinforcementTroops < 1000, "Reserved survivors cannot leak into reinforcement totals");
   const readyTroops = survivors.participants.filter(p => p.status === "assembled").reduce((sum, p) => sum + p.troops, 0);
   const journeyStart = Date.now() - 100000;
-  await db.doc(`armies/${late.id}`).update({ launchedAtMs: journeyStart, arrivesAtMs: journeyStart + 400000, total: 400 });
+  assert.equal(late.clanStables.effectivePercent, 0, "This fixture has no Stables speed benefit");
+  // Keep the launch-time return basis consistent when retiming this synthetic journey.
+  await db.doc(`armies/${late.id}`).update({ launchedAtMs: journeyStart, arrivesAtMs: journeyStart + 400000, total: 400,
+    clanStables: { ...late.clanStables, unboostedDurationMs: 400000 } });
   const launches = await Promise.all([1, 2].map(() => call("launchClanRally", leader, { clanId: clan, rallyId: first.id })));
   assert.equal(launches.filter(r => !r.duplicate).length, 1);
   assert.equal(launches[0].movement.troops, readyTroops);
