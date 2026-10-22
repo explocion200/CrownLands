@@ -378,6 +378,21 @@ async function main() {
   assert((await invoke("purchaseClanTowerShopItem",member,{...shield,operationId:`shield_again_${randomUUID()}`})).error);
   await memberProfile.update({"clanShopUsage.shieldReadyAtMs":Date.now()-1});
   await call("purchaseClanTowerShopItem",member,{...shield,operationId:`shield_ready_${randomUUID()}`});
+  // UTC reset replaces the full map, rather than merging yesterday's other counts.
+  await memberProfile.update({"clanShopUsage.utcDate":new Date(Date.now()-86400000).toISOString().slice(0,10)});
+  const rollover=await call("purchaseClanTowerShopItem",member,{towerId:tower.id,itemId:"recall_horn",operationId:`rollover_${randomUUID()}`});
+  const afterRollover=(await call("getClanTowerShop",member,{towerId:tower.id})).clanShop;
+  assert.deepEqual(afterRollover.items.map(i=>[i.id,i.remaining]),rollover.clanShop.items.map(i=>[i.id,i.remaining]));
+  assert.equal(afterRollover.items.find(i=>i.id==="swift_march_order").remaining,2);
+  assert.equal(afterRollover.items.find(i=>i.id==="shield_12h").remaining,0,"UTC rollover erased the rolling Shield cooldown");
+  // Existing corrupt records recover from private successful receipts once;
+  // today's genuine purchases and the original Shield deadline stay spent.
+  await memberProfile.update({"clanShopUsage.version":1,"clanShopUsage.counts.war_drums_30m":2});
+  const repaired=(await call("getClanTowerShop",member,{towerId:tower.id})).clanShop;
+  assert.equal(repaired.items.find(i=>i.id==="war_drums_30m").remaining,2);
+  assert.equal(repaired.items.find(i=>i.id==="common_gear_box").remaining,0);
+  assert.equal(repaired.items.find(i=>i.id==="shield_12h").resetAtMs,afterRollover.items.find(i=>i.id==="shield_12h").resetAtMs);
+  assert.equal((await memberProfile.get()).data().clanShopUsage.version,2);
   assert((await invoke("getClanTowerShop",outsider,{towerId:tower.id})).error);
   const forged = await fetch(`http://${process.env.FIRESTORE_EMULATOR_HOST}/v1/projects/${projectId}/databases/(default)/documents/players/${member.uid}?updateMask.fieldPaths=clanShopUsage`,{
     method:"PATCH",headers:{authorization:`Bearer ${member.token}`,"content-type":"application/json"},body:JSON.stringify({fields:{clanShopUsage:{mapValue:{fields:{}}}}})});
