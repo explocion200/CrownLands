@@ -91,8 +91,15 @@ No new physical-Android result has been collected for this change.
 
 The drawing used at most 28.6 MB at the measured sizes. Asset limits, node-pool
 bounds, font invalidation, live name refresh and returning-node identity checks
-passed. Selected banner checks passed desktop and both landscape sizes. The
-30-minute soak and remaining required gates are pending at this point.
+passed. Selected banner checks passed desktop and both landscape sizes.
+The 30-minute packaged-client soak completed on `7d0ea920`: 392–412 attached
+map nodes, 351–373 pooled nodes, 19 map listeners and 334 browser listeners.
+After collection, browser DOM nodes stayed between 21,680 and 21,838 across
+the periodic samples; heap usage was 14.4–15.8 MB. Four full terrain images,
+sixteen thumbnails and two concurrent requests remained the maximums.
+The final large-display direct-drawing fallback cleanup was added afterward
+and is covered separately by the renderer-cache validator. The required
+PR gates must pass for the final head before merge.
 A simulated browser result does not establish physical-phone FPS or full
 multiplayer capacity.
 
