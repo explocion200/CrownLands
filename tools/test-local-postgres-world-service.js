@@ -14,7 +14,7 @@ const playerCount=Number(process.env.CROWNLANDS_WORLD_LOAD_PLAYERS||24);
 assert([24,50,100].includes(playerCount),"Load steps are 24, 50 or 100 fictional players");
 // Wait for every actor to stop before tearing down its database/HTTP server,
 // including overload failures; Promise.all alone leaves rejected groups running.
-const settle=async jobs=>{const results=await Promise.allSettled(jobs),failed=results.find(r=>r.status==="rejected");if(failed)throw failed.reason;};
+const settle=async jobs=>{const results=await Promise.allSettled(jobs),failed=results.find(r=>r.status==="rejected");if(failed)throw failed.reason;return results.map(r=>r.value);};
 (async()=>{
   const pilot=await createGameplayPilot({productionRouting:true}),directory=fs.mkdtempSync(path.join(os.tmpdir(),"world-service-"));
   let world,harness,events,disabled;
@@ -106,9 +106,11 @@ const settle=async jobs=>{const results=await Promise.allSettled(jobs),failed=re
       let initial=await request(i,"watch-chat",{targets:[chatTarget]},"chat");assert.equal(initial.status,200);
       for(let round=0;round<3;round++){
         await wait(3100);
-        const watching=request(i,"watch-chat",{targets:[chatTarget],cursor:initial.result.cursor},"chat");
-        const send=await request(i,"call/sendChatMessage",{data:{...identity,channel:"global",text:"Synthetic world load "+round,requestId:crypto.randomUUID()}},"command");assert.equal(send.status,200,JSON.stringify(send));
-        initial=await watching;assert.equal(initial.status,200);
+        const [next,send]=await settle([
+          request(i,"watch-chat",{targets:[chatTarget],cursor:initial.result.cursor},"chat"),
+          request(i,"call/sendChatMessage",{data:{...identity,channel:"global",text:"Synthetic world load "+round,requestId:crypto.randomUUID()}},"command"),
+        ]);
+        assert.equal(send.status,200,JSON.stringify(send));initial=next;assert.equal(initial.status,200);
       }
     }));
     const commands=(async()=>{for(let n=0;n<6;n++){
