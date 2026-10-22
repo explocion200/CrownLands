@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "cdc22393d72cbbcc5a72f83b219fbde00060a44d",
+  "baseCommit": "6f368110fd78eaf0c34e816dee373d865ce4e779",
   "coverage": [
     {
       "paths": [
@@ -133,93 +133,6 @@
       ],
       "tests": [],
       "reason": "Record approved technical performance scope, controlled measurements and separately authorized backend rollout. No gameplay design rule changes."
-    },
-    {
-      "paths": [
-        "tools/test-local-postgres-store.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-store.js",
-        "tools/test-local-postgres-access.js",
-        "tools/test-local-postgres-game.js",
-        "tools/test-local-postgres-transaction-retries.js",
-        "tools/test-local-postgres-jobs.js",
-        "tools/test-local-postgres-contention.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-clan-support.js"
-      ],
-      "reason": "Real PostgreSQL validates one-statement getAll semantics, ordering/duplicates/missing refs, validation and read-before-write, rollback/concurrent receipts, serializable conflicts/retries and worker fencing. Shared command emulator coverage checks army/clan support semantics; game/access integration exercises current adapter authorization and real gameplay. Update the stale integration inventory expectation to the current 123 callables (152 total exports), already present on the branch base; no runtime export is added."
-    },
-    {
-      "paths": [
-        "tools/test-local-postgres-game.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-store.js",
-        "tools/test-local-postgres-access.js",
-        "tools/test-local-postgres-game.js",
-        "tools/test-local-postgres-transaction-retries.js",
-        "tools/test-local-postgres-jobs.js",
-        "tools/test-local-postgres-contention.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-clan-support.js"
-      ],
-      "reason": "Real PostgreSQL validates one-statement getAll semantics, ordering/duplicates/missing refs, validation and read-before-write, rollback/concurrent receipts, serializable conflicts/retries and worker fencing. Shared command emulator coverage checks army/clan support semantics; game/access integration exercises current adapter authorization and real gameplay. Update the stale integration inventory expectation to the current 123 callables (152 total exports), already present on the branch base; no runtime export is added."
-    },
-    {
-      "paths": [
-        "local-backend/world/reader.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-world-read-performance.js",
-        "tools/test-local-postgres-world-service.js",
-        "tools/test-local-postgres-production-world.js",
-        "tools/test-local-postgres-game-http.js"
-      ],
-      "reason": "Compare actual production reader responses with base and verify bounded SQL projections/cache reuse, fresh ownership/scope/privacy, shields/cosmetics/respawns and cancellation isolation. Mixed authenticated area/command/chat load, HTTP fencing and packaged native desktop/landscape interactions cover service integration. Test cleanup waits for all actors and records exhausted retries without relaxing limits."
-    },
-    {
-      "paths": [
-        "local-backend/world/service.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-world-read-performance.js",
-        "tools/test-local-postgres-world-service.js",
-        "tools/test-local-postgres-production-world.js",
-        "tools/test-local-postgres-game-http.js"
-      ],
-      "reason": "Compare actual production reader responses with base and verify bounded SQL projections/cache reuse, fresh ownership/scope/privacy, shields/cosmetics/respawns and cancellation isolation. Mixed authenticated area/command/chat load, HTTP fencing and packaged native desktop/landscape interactions cover service integration. Test cleanup waits for all actors and records exhausted retries without relaxing limits."
-    },
-    {
-      "paths": [
-        "tools/test-local-postgres-world-read-performance.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-world-read-performance.js",
-        "tools/test-local-postgres-world-service.js",
-        "tools/test-local-postgres-production-world.js",
-        "tools/test-local-postgres-game-http.js"
-      ],
-      "reason": "Compare actual production reader responses with base and verify bounded SQL projections/cache reuse, fresh ownership/scope/privacy, shields/cosmetics/respawns and cancellation isolation. Mixed authenticated area/command/chat load, HTTP fencing and packaged native desktop/landscape interactions cover service integration. Test cleanup waits for all actors and records exhausted retries without relaxing limits."
-    },
-    {
-      "paths": [
-        "tools/test-local-postgres-world-service.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-world-read-performance.js",
-        "tools/test-local-postgres-world-service.js",
-        "tools/test-local-postgres-production-world.js",
-        "tools/test-local-postgres-game-http.js"
-      ],
-      "reason": "Compare actual production reader responses with base and verify bounded SQL projections/cache reuse, fresh ownership/scope/privacy, shields/cosmetics/respawns and cancellation isolation. Mixed authenticated area/command/chat load, HTTP fencing and packaged native desktop/landscape interactions cover service integration. Test cleanup waits for all actors and records exhausted retries without relaxing limits."
-    },
-    {
-      "paths": [
-        "docs/SERVER_READ_PERFORMANCE_2026-10-22.md"
-      ],
-      "tests": [],
-      "reason": "Document technical performance changes, controlled evidence and separately authorized compatible rollout; no player-facing design rule changes."
     }
   ]
 }
