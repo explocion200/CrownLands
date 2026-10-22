@@ -45,7 +45,7 @@ const artifacts = path.resolve(__dirname, "../release-artifacts/troop-selection-
       getPeaceShieldAttackWarning=target=>q.fullInfo?'Royal Peace Shield active: attacking '+target.name+' will deactivate it and remove protection from all your cities with 23h 59m remaining.':'';
       getActivePeaceShieldExpiresAtMs=()=>q.fullInfo?Date.now()+86400000:0;
       supportsAuthoritativeArmyRoutes=()=>q.authority;
-      requestAuthoritativeOrderRoute=async (_s,_t,_k,n)=>{q.routeRequests.push(n);return {...q.baseRoute,previewStatus:'authoritative',authoritativeDurationSeconds:30,authoritativeRequestedTroops:n,authoritativeSpeedMultiplier:1};};
+      requestAuthoritativeOrderRoute=async (_s,_t,_k,n)=>{q.routeRequests.push(n);return {...q.baseRoute,previewStatus:'authoritative',authoritativeDurationSeconds:30,authoritativeRequestedTroops:n,authoritativeSpeedMultiplier:1.1,authoritativeClanScope:clanStablesPreviewScope(),authoritativeCheckedAtMs:Date.now(),clanStables:_k==="reinforce"?{buildingPercent:20,nominalPercent:20,effectivePercent:10}:null};};
       launchAttack=(...args)=>{q.sent.push(args);return false;};
       q.open=(kind,fullInfo=false)=>{
         cancelAuthoritativeRoutePreviewRefresh();clearSelection(false);
@@ -135,6 +135,14 @@ const artifacts = path.resolve(__dirname, "../release-artifacts/troop-selection-
       assert(await evaluate('selectedTroopAmount===1003&&document.getElementById("troopAmountSlider").value==="1003"'),"Existing Rally numeric input must still update its slider.");
     }
     assert.deepEqual(errors,[]);
+    await evaluate('selectionQa.open("reinforce");selectionQa.authority=true;selectionQa.refresh()');
+    await wait('modalBody.querySelector(".clan-stables-preview")?.textContent.includes("10 percentage points applied")');
+    assert.match(await evaluate('modalBody.querySelector(".clan-stables-preview").textContent'), /Limited by the .* speed cap/);
+    const callsBefore = await evaluate('selectionQa.routeRequests.length');
+    await evaluate('state.clanId="fixture-clan-change";selectionQa.refresh()');
+    await wait(`selectionQa.routeRequests.length>${callsBefore}`);
+    await evaluate('selectionQa.open("attack")');
+    assert.equal(await evaluate('modalBody.querySelector(".clan-stables-preview")'), null);
     console.log("Actual-game troop selection: Attack/Transfer/Reinforce, full desktop information, short-screen scrolling, desktop/mobile, exact input, presets, live limits, dispatch guards, route bands and Rally compatibility passed.");
   } finally {
     if(client){await client.send("Browser.close").catch(()=>{});client.close();}

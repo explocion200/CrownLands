@@ -96,6 +96,17 @@
     const npcRules = npc ? section("hunt", "Hunt preparation", icon("scout", "section-art"), renderHuntStamina((report.balanceVersion ?? city.balanceVersion) === 2 && city.classification === "boss" ? "A failed rally restores this boss to full strength. Use 2–5 meaningful contributors; check rally readiness before launch." : ""), "Scouting uses one troop and no stamina", "Hunt") : "";
     return shell(route, overview + defense(m) + (npc ? npcRules : camp ? campRules : walls(m) + skills(report)), timing);
   }
+  function renderSharedSnapshot(entry) {
+    const report = entry.snapshot || {};
+    const labels = { troops: "Observed troops", ownerTroops: "Owner troops", reinforcementTroops: "Reinforcement troops", totalDefense: "Total defense power", baseTotalDefense: "Base defense power", cityLevel: "City level", wallLevel: "Wall level", wallIntegrityBps: "Wall integrity (basis points)", fullWallPower: "Full wall power", currentWallPower: "Current wall power" };
+    const rows = Object.entries(labels).filter(([key]) => report[key] != null).map(([key, label]) => `<div><dt>${label}</dt><dd>${number(report[key])}</dd></div>`).join("");
+    const formatKey = key => key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, c => c.toUpperCase());
+    const breakdown = value => Array.isArray(value) ? value.map(item => `<div>${breakdown(item)}</div>`).join("")
+      : value && typeof value === "object" ? `<dl class="intel-breakdown">${Object.entries(value).filter(([key]) => !["ownerUid", "uid", "sourceId", "sourceRegionId", "targetId", "targetKey"].includes(key)).map(([key, item]) => `<div><dt>${esc(formatKey(key))}</dt><dd>${breakdown(item)}</dd></div>`).join("")}</dl>`
+      : typeof value === "number" ? number(value) : esc(value);
+    const extra = Object.fromEntries(Object.entries(report).filter(([key]) => !Object.hasOwn(labels, key) && !["targetType", "targetSpawnId", "cityId", "regionId", "ownerUid", "clanId", "towerId", "towerOwnershipKey", "scoutedAtMs", "expiresAtMs", "balanceVersion", "siegeCombatVersion", "defenseCombatVersion"].includes(key)));
+    return `<p class="snapshot-note">Snapshot taken ${esc(new Date(entry.scoutedAtMs).toLocaleString())}. These are recorded findings, not live defenders.</p><dl class="wall-breakdown">${rows}</dl>${Object.keys(extra).length ? `<details open><summary>Recorded breakdown</summary>${breakdown(extra)}</details>` : ""}`;
+  }
   function renderDisclosure(report, badge) {
     const disclosure = report.scoutDisclosure, camp = report.targetType === "camp";
     const metadata = [camp ? "Reward camp" : `City · Level ${formatNumber(report.cityLevel)}`, report.regionId ? getRegionLabel(report.regionId) : ""].filter(Boolean).join(" · ");
@@ -150,5 +161,5 @@
     label.textContent = remaining <= 30 ? "Expiring soon" : "Expires in";
     label.closest(".expiry").classList.toggle("urgent", remaining <= 30);
   }
-  root.CrownlandsScoutReportUI = Object.freeze({ renderIntel, renderDisclosure, renderAttempt, mount, updateTiming });
+  root.CrownlandsScoutReportUI = Object.freeze({ renderIntel, renderSharedSnapshot, renderDisclosure, renderAttempt, mount, updateTiming });
 })(window);

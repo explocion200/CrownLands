@@ -76,7 +76,7 @@ async function main() {
     await evaluate(`(() => {
       const api=getOnlineApi(); window.buildingCalls=[];
       window.buildingFixture=HOLDING_TOWER_UI.createQaSnapshot(getHoldingTowerVisual(HOLDING_TOWER_DEFINITIONS[0].id),'owner');
-      Object.assign(buildingFixture,{buildings:{shop:10,workshop:4,infirmary:7,training:1},buildingProject:null,wallIntegrityBps:10000,attackBlocked:false,repair:null});
+      Object.assign(buildingFixture,{clanTowerSupportVersion:1,buildings:{shop:10,workshop:4,infirmary:7,training:1,stables:4,scout_lodge:4},buildingProject:null,wallIntegrityBps:10000,attackBlocked:false,repair:null});
       state.gold=1e9;state.clanId=buildingFixture.clanId;clanTreasuryClanId=state.clanId;clanTreasuryStatus={treasury:{balance:1e10}};
       const status=()=>({level:10,localLevel:buildingFixture.buildings.shop,eligible:true,items:CrownlandsClanTowerBuildings.shopStatus(10,{},Date.now()).map(i=>({...i,price:1000}))});
       loadClanTreasuryStatus=async()=>clanTreasuryStatus;
@@ -91,7 +91,7 @@ async function main() {
       startClanTreasurySubscription(getOnlineApi(),state.clanId);
       ensureHoldingTowerMapSubscriptions();
     })()`);
-    const frameTower = () => evaluate(`zoom=innerWidth<600?.4:innerHeight<560?.5:.8;centerOnRegion(buildingFixture.regionId);if(innerHeight<560)camera.y+=(innerWidth<600?50:18)/zoom;if(innerWidth<600)camera.x-=56/zoom;updateCameraTransform()`);
+    const frameTower = () => evaluate(`zoom=innerWidth<600?.4:innerHeight<560?.5:.8;centerOnRegion(buildingFixture.regionId);if(innerHeight<560)camera.y-=(innerWidth<600?18:36)/zoom;if(innerWidth<600)camera.x-=56/zoom;updateCameraTransform()`);
     const screenshot = async name => {
       const directory = require('node:path').resolve(__dirname,'../tmp/clan-buildings/qa');
       fs.mkdirSync(directory,{recursive:true});
@@ -104,7 +104,7 @@ async function main() {
       await client.send('Emulation.setTouchEmulationEnabled',{enabled:touch,maxTouchPoints:5});
       await evaluate(`(async()=>{if(modal.open)modal.close();await ensureRegionDefinitionLoaded(buildingFixture.regionId);zoom=innerWidth<600?.5:.8;centerOnRegion(buildingFixture.regionId);holdingTowerSnapshots.set(buildingFixture.id,{...buildingFixture});cityRenderSignature='';renderAll();})()`);
       await frameTower();
-      await ready('cityLayer.querySelectorAll(".holding-tower-building-node").length===4');
+      await ready('cityLayer.querySelectorAll(".holding-tower-building-node").length===6');
       await ready('cityLayer.querySelector(".holding-tower-courtyard")?.naturalWidth > 0');
       assert(await evaluate(`(()=>{
         const ground=cityLayer.querySelector('.holding-tower-courtyard');
@@ -112,11 +112,13 @@ async function main() {
         return getComputedStyle(ground).pointerEvents==='none' && [...cityLayer.querySelectorAll('.holding-tower-building-node')].every(node=>{const r=node.getBoundingClientRect();return r.right<=label.left||r.left>=label.right||r.bottom<=label.top||r.top>=label.bottom;});
       })()`), 'Courtyard must allow map gestures and the Tower label must clear the buildings');
       for (const level of [1,4,7,10]) {
-        await evaluate(`buildingFixture.buildings={shop:${level},workshop:${level},infirmary:${level},training:${level}};holdingTowerSnapshots.set(buildingFixture.id,{...buildingFixture});cityRenderSignature='';renderAll()`);
+        await evaluate(`buildingFixture.buildings={shop:${level},workshop:${level},infirmary:${level},training:${level},stables:${level},scout_lodge:${level}};holdingTowerSnapshots.set(buildingFixture.id,{...buildingFixture});cityRenderSignature='';renderAll()`);
         const stage = level === 10 ? 4 : Math.ceil(level / 3);
-        await ready(`(()=>{const images=[...cityLayer.querySelectorAll('.holding-tower-building-node>img')];return images.length===4&&images.every(img=>img.complete&&img.naturalWidth>0&&img.src.endsWith('-${stage}.webp'));})()`);
+        await ready(`(()=>{const images=[...cityLayer.querySelectorAll('.holding-tower-building-node>img')];return images.length===6&&images.every(img=>img.complete&&img.naturalWidth>0&&img.src.endsWith('-${stage}.webp'));})()`);
         if (level === 1 || level === 10) {
-          for (const id of ['shop','workshop','infirmary','training']) {
+          for (const id of ['shop','workshop','infirmary','training','stables','scout_lodge']) {
+            // On narrow phones, pan each building clear of the unchanged HUD before tapping it.
+            if (viewport.width < 600) await evaluate(`(()=>{const n=cityLayer.querySelector('[data-clan-building-id="${id}"]'),r=n.getBoundingClientRect();camera.x+=(r.x+r.width/2-innerWidth*.65)/zoom;camera.y+=(r.y+r.height/2-innerHeight*.48)/zoom;updateCameraTransform()})()`);
             await click(await elementPoint(`[data-clan-building-id="${id}"]`));
             await ready(`modal.open&&holdingTowerDetailsTab==='buildings'&&holdingTowerBuildingSelection==='${id}'`);
             await evaluate('modal.close();clearSelection(false)');
@@ -127,14 +129,14 @@ async function main() {
           await screenshot(`approved-${viewport.width}-level-${level}.png`);
         }
       }
-      await evaluate('buildingFixture.buildings={shop:10,workshop:4,infirmary:7,training:1};holdingTowerSnapshots.set(buildingFixture.id,{...buildingFixture});cityRenderSignature="";renderAll()');
+      await evaluate('buildingFixture.buildings={shop:10,workshop:4,infirmary:7,training:1,stables:4,scout_lodge:4};holdingTowerSnapshots.set(buildingFixture.id,{...buildingFixture});cityRenderSignature="";renderAll()');
       const layouts=await evaluate(`(()=>{const result=[];selectedTowerMapId=buildingFixture.id;renderSelectedClanTowerWheel(buildingFixture.id);const prior=zoom;for(const z of [.4,.6,.8,1]){zoom=z;updateCameraTransform();result.push({buttons:[...mapFrame.querySelectorAll('[data-clan-tower-map-action]')].map(b=>b.getBoundingClientRect().toJSON()),buildings:[...cityLayer.querySelectorAll('.holding-tower-building-node')].map(b=>b.getBoundingClientRect().toJSON())});}zoom=prior;updateCameraTransform();clearSelection(false);return result;})()`);
       for(const layout of layouts)for(const button of layout.buttons){assert(Math.abs(button.width-56)<.2 && Math.abs(button.height-56)<.2,'Tower controls must keep their compact 56px size beside buildings');for(const building of layout.buildings)assert(button.right<=building.left || button.left>=building.right || button.bottom<=building.top || button.top>=building.bottom,'A fixed-size action overlaps a compound building');}
       await frameTower();
       await click(await elementPoint('[data-clan-building-id="shop"]'));
       await ready('modal.open && holdingTowerDetailsTab==="buildings" && modalBody.querySelector("#itemGrid")');
       await delay(100);
-      assert.equal(await evaluate('modalBody.querySelectorAll("[data-shop-building] option").length'),4);
+      assert.equal(await evaluate('modalBody.querySelectorAll("[data-shop-building] option").length'),6);
       assert.equal(await evaluate('modalBody.querySelectorAll("[data-item]").length'),7);
       assert(await evaluate('modalBody.textContent.includes("every 72 hours")'));
       const reachable = async selector => {

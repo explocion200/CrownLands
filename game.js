@@ -47,10 +47,12 @@ const HOLDING_TOWER_DEFINITIONS = Object.freeze([
 ]);
 const CLAN_TOWER_MAP_ART = "assets/clan-buildings/tower.webp";
 const CLAN_TOWER_BUILDING_PLACEMENT = Object.freeze({
-  shop: Object.freeze({ x: -.40, y: -.34 }),
-  workshop: Object.freeze({ x: .40, y: -.34 }),
-  infirmary: Object.freeze({ x: -.40, y: .26 }),
-  training: Object.freeze({ x: .40, y: .26 }),
+  shop: Object.freeze({ x: -.46, y: -.52 }),
+  workshop: Object.freeze({ x: .46, y: -.52 }),
+  infirmary: Object.freeze({ x: -.46, y: -.05 }),
+  training: Object.freeze({ x: .46, y: -.05 }),
+  stables: Object.freeze({ x: -.46, y: .42 }),
+  scout_lodge: Object.freeze({ x: .46, y: .42 }),
 });
 const WORLD_SCHEMA_VERSION = Math.max(Number(WORLD_CONFIG.version) || 23, Number(REGION_CATALOG.version) || Number(MAP_EDITOR_DATA.version) || 0);
 const APP_BUILD_ID = getCurrentDocumentBuildId();
@@ -4174,25 +4176,30 @@ function renderHoldingTowerModal(tower) {
     && tower.ownerMember && tower.worldActive !== false;
   const infirmaryOpen = holdingTowerDetailsTab === "buildings" && holdingTowerBuildingSelection === "infirmary"
     && tower.ownerMember && tower.worldActive !== false;
+  const supportOpen = holdingTowerDetailsTab === "buildings" && ["stables", "scout_lodge"].includes(holdingTowerBuildingSelection)
+    && tower.ownerMember && tower.worldActive !== false;
   const trainingOpen = holdingTowerDetailsTab === "buildings" && holdingTowerBuildingSelection === "training"
     && tower.ownerMember && tower.worldActive !== false;
   modal.classList.toggle("clan-shop-modal", Boolean(shopOpen));
   modal.classList.toggle("engineers-workshop-modal", Boolean(workshopOpen));
   modal.classList.toggle("infirmary-modal", Boolean(infirmaryOpen));
   modal.classList.toggle("training-grounds-modal", Boolean(trainingOpen));
-  modal.classList.toggle("clan-building-modal", Boolean(shopOpen || workshopOpen || infirmaryOpen || trainingOpen));
+  modal.classList.toggle("clan-building-modal", Boolean(shopOpen || workshopOpen || infirmaryOpen || trainingOpen || supportOpen));
   const frameSession = holdingTowerModalSession;
-  if ((shopOpen || workshopOpen || infirmaryOpen || trainingOpen) && !ensureModalUiStyle("workshop", () => {
+  if ((shopOpen || workshopOpen || infirmaryOpen || trainingOpen || supportOpen) && !ensureModalUiStyle("workshop", () => {
     if (isHoldingTowerModalSessionCurrent(frameSession)) renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
   })) return;
   if (!workshopOpen) delete modalBody.dataset.workshopReady;
   if (!infirmaryOpen) delete modalBody.dataset.infirmaryReady;
   if (!trainingOpen) delete modalBody.dataset.trainingReady;
-  if (workshopOpen || infirmaryOpen || trainingOpen) {
+  if (workshopOpen || infirmaryOpen || trainingOpen || supportOpen) {
     delete modalBody.dataset.clanShopReady;
     const session = holdingTowerModalSession;
-    const buildingId = trainingOpen ? "training" : infirmaryOpen ? "infirmary" : "workshop";
-    if (!ensureModalUiStyle(buildingId, () => {
+    const buildingId = supportOpen ? holdingTowerBuildingSelection : trainingOpen ? "training" : infirmaryOpen ? "infirmary" : "workshop";
+    if (!supportOpen && !ensureModalUiStyle(buildingId, () => {
+      if (isHoldingTowerModalSessionCurrent(session)) renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
+    })) return;
+    if (supportOpen && !ensureModalUiScripts("clan-support", () => {
       if (isHoldingTowerModalSessionCurrent(session)) renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
     })) return;
     const viewKey = `${buildingId}View`;
@@ -4218,10 +4225,11 @@ function renderHoldingTowerModal(tower) {
         if (isHoldingTowerModalSessionCurrent(session)) renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower);
       }
     };
-    modalTitle.textContent = trainingOpen ? "Training Grounds" : infirmaryOpen ? "Infirmary" : "Engineers’ Workshop";
-    const buildingUi = trainingOpen ? window.CrownlandsTrainingGroundsUi
+    modalTitle.textContent = supportOpen ? window.CrownlandsClanTowerBuildings.definition(buildingId).name : trainingOpen ? "Training Grounds" : infirmaryOpen ? "Infirmary" : "Engineers’ Workshop";
+    const buildingUi = supportOpen ? window.CrownlandsClanSupportBuildingsUi : trainingOpen ? window.CrownlandsTrainingGroundsUi
       : infirmaryOpen ? window.CrownlandsInfirmaryUi : window.CrownlandsEngineersWorkshopUi;
     buildingUi.mount(modalBody, { ...tower, clanName: clanIdentity?.name || tower.clanName }, {
+      buildingId, intelligence: { api: getOnlineApi(), identity: () => `${getOnlineRequestScope()}:${state?.clanId || ""}`, renderSnapshot: entry => window.CrownlandsScoutReportUI.renderSharedSnapshot(entry), onLocate: entry => void locateClanIntelligence(entry) },
       view: buildingView, treasuryBalance, actionBusy: holdingTowerActionsInFlight.has(tower.id),
       onClose: () => modal.close(),
       onBack: () => { holdingTowerDetailsTab = "overview"; renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower); },
@@ -4296,7 +4304,7 @@ function renderHoldingTowerModal(tower) {
     onCountdownComplete: () => { if (selectedHoldingTowerId === tower.id && isHoldingTowerModalSessionCurrent(holdingTowerModalSession)) void refreshHoldingTower(tower.id).catch(error => console.warn("Tower timer refresh failed", error)); },
     onSelect: key => {
       holdingTowerDetailsTab = key;
-      if (key === "buildings" && ["shop", "workshop", "infirmary", "training"].includes(holdingTowerBuildingSelection) && tower.ownerMember && tower.worldActive !== false) renderHoldingTowerModal(tower);
+      if (key === "buildings" && ["shop", "workshop", "infirmary", "training", "stables", "scout_lodge"].includes(holdingTowerBuildingSelection) && tower.ownerMember && tower.worldActive !== false) renderHoldingTowerModal(tower);
     },
     onClose: () => modal.close(),
     garrison: tower.ownerMember ? tower.garrison || [] : [],
@@ -4520,6 +4528,10 @@ function getHoldingTowerOrderPermission(tower, mode) {
 }
 
 function updateHoldingTowerOrderAvailability() {
+  if (troopSliderActive && activeTroopSliderRoute && ["reinforce", "rally_join"].includes(activeTroopOrderKind) && modal.open) {
+    const source = getArmyTargetById(activeTroopSliderRoute.sourceId), target = getArmyTargetById(activeTroopSliderRoute.targetId);
+    if (source && target) updateTroopSliderModal(source, target, activeTroopSliderRoute.route);
+  }
   const session = holdingTowerModalSession;
   if (session?.view !== "order" || !isHoldingTowerModalSessionCurrent(session)) return;
   const tower = holdingTowerSnapshots.get(session.towerId);
@@ -4975,7 +4987,7 @@ function renderClanTowerMapBuildings(visibleTowers, fragment) {
       const placement = CLAN_TOWER_BUILDING_PLACEMENT[building.id];
       node.style.left = `${point.x + (placement.x + .5 - visual.anchorX) * visual.width}px`;
       node.style.top = `${point.y + (1 - visual.anchorY + placement.y) * visual.width}px`;
-      node.style.width = `${visual.width * .44}px`;
+      node.style.width = `${visual.width * .38}px`;
       const content = `<img src="${definitions.art(building.id, level)}" alt="" draggable="false" loading="lazy"><span class="ctb-map-label">${escapeHtml(building.name)} · ${level ? `Lv ${level}` : "Building"}</span>`;
       if (node._renderContent !== content) {
         node.innerHTML = content;
@@ -4993,7 +5005,62 @@ async function openClanTowerBuilding(towerId, buildingId, { section } = {}) {
   if (selectedHoldingTowerId !== towerId || !isHoldingTowerModalSessionCurrent(holdingTowerModalSession)) return;
   holdingTowerDetailsTab = "buildings";
   if (buildingId === "shop" && section === "wares") holdingTowerModalSession.shopView = { section };
+  if (buildingId === "scout_lodge" && section === "intelligence") holdingTowerModalSession.scout_lodgeView = { section };
   renderHoldingTowerModal(holdingTowerSnapshots.get(towerId));
+}
+
+async function openClanIntelligence() {
+  try {
+    const scope = getOnlineRequestScope(), clanId = state?.clanId;
+    if (!clanId) throw Error("Join a clan to use its Scout Lodge.");
+    const result = await getOnlineApi().getHoldingTowerState({});
+    if (scope !== getOnlineRequestScope() || clanId !== state?.clanId) return;
+    const owned = (result.towers || []).filter(t => t.ownerMember && t.clanId === clanId);
+    if (owned.length !== 1) throw Error("Your clan must own a Tower to use its Scout Lodge.");
+    if (owned[0].clanTowerSupportVersion !== 1) throw Error("Scout Lodge awaits a compatible game server.");
+    await openClanTowerBuilding(owned[0].id, "scout_lodge", { section: "intelligence" });
+  } catch (error) { showToast(error.message || "Scout Lodge unavailable."); }
+}
+async function locateClanIntelligence(entry) {
+  // Recorded locations only: shared navigation clears armed orders and verifies NPC spawn identity.
+  if (entry.expiresAtMs <= Date.now()) return showToast("This intelligence has expired.");
+  const location = entry.location;
+  if (Number.isFinite(location.x) && Number.isFinite(location.y)) {
+    try { await focusSharedChatLocation({ ...location, id: location.targetId, kind: location.targetType,
+      name: entry.targetName, mapName: getRegionLabel(location.regionId) }); }
+    catch (error) { showToast(error.message || "That location is unavailable."); }
+    return;
+  }
+  // Older successful reports may have no recorded coordinates. Load their section before checking identity.
+  const scope = getOnlineRequestScope();
+  if (location.regionId !== getActiveMapRegionId() && !await switchOnlineIsland(location.regionId)) return showToast("That map is unavailable.");
+  if (scope !== getOnlineRequestScope()) return;
+  if (location.targetType === "marauder" && getArmyTargetById(location.targetId)?.spawnId !== location.spawnId) return showToast("That NPC spawn is no longer available.");
+  await focusBattleReportTarget(location.targetId, location.regionId);
+}
+function mountScoutClanShare(cityId, report) {
+  const api = getOnlineApi(), footer = modalBody.querySelector(".report-footer");
+  const original = (state.battleReports || []).find(row => row.type === "scout" && row.outcome === "scout" && row.cityId === cityId && row.scoutReport?.scoutedAtMs === report.scoutedAtMs);
+  if (!footer || !state.clanId || !api?.clanIntelligence || !original) return;
+  const scope = getOnlineRequestScope(), clanId = state.clanId, button = document.createElement("button");
+  button.type = "button"; button.textContent = "Share with clan"; button.disabled = true; footer.appendChild(button);
+  const current = () => button.isConnected && scope === getOnlineRequestScope() && clanId === state?.clanId;
+  const operationId = crypto.randomUUID();
+  // No enabled controls are exposed against the previous backend.
+  void api.getHoldingTowerState({}).then(result => {
+    if (!current()) return;
+    const tower = result.towers?.find(t => t.ownerMember && t.clanId === clanId && t.clanTowerSupportVersion === 1);
+    if (!tower) { button.title = "Your clan needs a Tower with a compatible Scout Lodge."; return; }
+    if (!tower.buildings?.scout_lodge) { button.title = "Build your Scout Lodge first."; return; }
+    if (!tower.eligibility?.eligible) { button.title = "Scout Lodge access unlocks after one hour in your clan."; return; }
+    button.disabled = false;
+  }).catch(() => { if (current()) button.title = "Unable to check Scout Lodge access."; });
+  button.addEventListener("click", async () => {
+    if (!current() || button.disabled) return;
+    button.disabled = true;
+    try { await api.clanIntelligence({ action: "share", reportId: original.id, scoutedAtMs: report.scoutedAtMs, operationId }); if (current()) { button.textContent = "Shared with clan"; showToast("Shared until the original scout report expires."); } }
+    catch (error) { if (current()) { button.disabled = false; showToast(error.message || "Report could not be shared."); } }
+  });
 }
 
 function bindHoldingTowerControls(tower) {
@@ -22509,6 +22576,9 @@ function cloneRoute(route) {
           points: (segment.points || []).map(point => ({ x: point.x, y: point.y })),
         }))
       : undefined,
+    clanStables: route.clanStables ? { ...route.clanStables } : null,
+    authoritativeCheckedAtMs: route.authoritativeCheckedAtMs || 0,
+    authoritativeClanScope: route.authoritativeClanScope || "",
     authoritativeDurationSeconds: Math.max(0, Number(route.authoritativeDurationSeconds) || 0),
     authoritativeSpeedMultiplier: Number(route.authoritativeSpeedMultiplier) || null,
     authoritativeArrivesAtMs: normalizeTimestampMs(route.authoritativeArrivesAtMs),
@@ -27325,6 +27395,7 @@ function renderClanRallyPanel() {
   const selected = onlineClanRallies.find(rally => rally.id === selectedClanRallyId) || onlineClanRallies[0];
   return `<section id="clanWarroomPanel" class="clan-section-panel clan-social-card clan-war-room-panel clan-rallies-panel ${isClanSectionActive("warroom") ? "active" : ""}" role="tabpanel" aria-labelledby="clanSectionTabWarroom">
     <div class="clan-social-heading"><span><small>Clan campaign coordination</small><strong>War Room</strong></span><b>${formatNumber(onlineClanRallies.length)} / ${CLAN_ACTIVE_RALLY_LIMIT}</b></div>
+    <button type="button" data-clan-action="intelligence">Scout Lodge · Intelligence</button>
     <p class="clan-rally-note">Any active clan member may create a Rally from a map objective. The clan can have up to ${CLAN_ACTIVE_RALLY_LIMIT} active Rallies. Launch with at least 2 Ready rulers (3 for Towers), including the creator. Incoming contributions turn back when you launch.</p>
     ${selected ? `<div class="war-layout"><nav class="rally-picker scroll-region" aria-label="Active rallies">${onlineClanRallies.map(rally => `<button type="button" data-clan-action="select-rally" data-clan-rally="${escapeHtml(rally.id)}" aria-pressed="${rally.id === selected.id}"><img src="assets/icons/skills/atlas-v1/marchOrders.webp" alt=""><span><strong>${escapeHtml(rally.targetName || rally.targetId || "Objective")}</strong><small>${escapeHtml(getRegionLabel(rally.targetRegionId))} · ${rally.status === "recalling" ? "Returning" : rally.status === "launched" ? "Launched" : "Forming"}</small></span></button>`).join("")}</nav>${renderClanRallyCard(selected)}</div>` : '<div class="clan-empty"><img src="assets/icons/skills/atlas-v1/marchOrders.webp" alt=""><h3>No active rallies</h3><p>Choose an eligible objective on the map to begin a clan Rally.</p></div>'}
   </section>`;
@@ -27825,6 +27896,7 @@ async function handleClanClick(event) {
   const button = event.target.closest("[data-clan-action]");
   if (!button || button.disabled) return;
   const action = button.dataset.clanAction;
+  if (action === "intelligence") { void openClanIntelligence(); return; }
   if (action === "donate-treasury") {
     event.preventDefault();
     void donateClanTreasuryFromPanel();
@@ -30852,6 +30924,7 @@ function showScoutReportModal(cityId) {
   FlagRenderer.render(modalBody.querySelector("#scoutReportDefenderFlag"), reportedOwnerFlag, { stableKey: reportedOwnerUid, context: "scout-report" });
   window.CrownlandsScoutReportUI?.mount(modal, modalBody, closeModalBtn);
   modalBody.querySelector("#battleReportBackBtn")?.addEventListener("click", showLogModal);
+  mountScoutClanShare(cityId, report);
   bindBattleReportJumpButtons();
   if (!modal.open) modal.showModal();
 }
@@ -32043,6 +32116,19 @@ async function loadAttackProtectionPreview(source, target) {
   };
 }
 
+function clanStablesPreviewHtml(orderKind, support) {
+  if (!["reinforce", "rally_join"].includes(orderKind) || !support) return "";
+  const reason = ({ probation: "One-hour clan probation", unbuilt: "Stables unbuilt", "no-tower": "Clan has no Tower", "speed-cap": "Total +200% speed cap reached", "ambiguous-tower": "Tower ownership unavailable", membership: "Membership unavailable" })[support.reason];
+  const note = support.reason ? reason || "Benefit unavailable" : Number(support.effectivePercent) < Number(support.nominalPercent) ? "Limited by the +200% speed cap" : "";
+  return `<p class="clan-stables-preview">Clan Stables +${Number(support.buildingPercent) || 0}% · ${Number(support.effectivePercent) || 0} percentage points applied${note ? ` · ${escapeHtml(note)}` : ""}</p>`;
+}
+
+function clanStablesPreviewScope() {
+  const towers = [...holdingTowerSnapshots.values()].filter(t => t.ownerKind === "clan" && t.clanId === state?.clanId)
+    .map(t => [t.id, t.ownershipRevision, t.buildings?.stables || 0]).sort((a, b) => a[0].localeCompare(b[0]));
+  return JSON.stringify([getOnlineRequestScope(), state?.clanId || "", towers]);
+}
+
 function normalizeAuthoritativeRoutePreview(result, sourceRegionId = "", requestedTroops = selectedTroopAmount) {
   const raw = result?.route && typeof result.route === "object" ? result.route : result;
   if (!raw || typeof raw !== "object") return null;
@@ -32062,6 +32148,9 @@ function normalizeAuthoritativeRoutePreview(result, sourceRegionId = "", request
       length: measuredLength,
     }],
     length: Math.max(0, Number(raw.length ?? raw.distance) || measuredLength),
+    clanStables: raw.clanStables || null,
+    authoritativeCheckedAtMs: Date.now(),
+    authoritativeClanScope: clanStablesPreviewScope(),
     authoritativeDurationSeconds: Math.max(0, Number(raw.durationMs) || 0) / 1000,
     authoritativeSpeedMultiplier: Number(raw.speedMultiplier) || null,
     authoritativeArrivesAtMs: normalizeTimestampMs(raw.arrivesAtMs),
@@ -32101,6 +32190,7 @@ async function requestAuthoritativeOrderRoute(source, target, orderKind = "attac
   const api = getOnlineApi();
   if (!supportsAuthoritativeArmyRoutes() || !api?.previewArmyRoute) return null;
   const safeRequestedTroops = Math.max(1, Math.floor(Number(requestedTroops) || 1));
+  const supportScope = clanStablesPreviewScope();
   try {
     const result = await api.previewArmyRoute({
       worldId: ONLINE_WORLD_ID,
@@ -32112,8 +32202,10 @@ async function requestAuthoritativeOrderRoute(source, target, orderKind = "attac
       targetType: getHoldingTowerTargetType(target),
       targetSpawnId: target.spawnId || "",
       kind: orderKind === "rally_create" ? "attack" : orderKind,
+      ...(orderKind === "rally_join" ? { rallyId: activeRallyOrderContext?.rallyId } : {}),
       requestedTroops: safeRequestedTroops,
     });
+    if (supportScope !== clanStablesPreviewScope()) return { authoritativeError: "Clan support changed. Refresh this route." };
     const route = normalizeAuthoritativeRoutePreview(result, getCityRegionId(source), safeRequestedTroops);
     if (route?.points?.length) return route;
     return { authoritativeError: "The route could not be verified. Please try again." };
@@ -32141,12 +32233,16 @@ function scheduleAuthoritativeRoutePreviewRefresh(source, target, route, orderKi
   const previewBand = route.authoritativeDurationSeconds > 0
     ? getTroopTravelBandIndex(route.authoritativeRequestedTroops)
     : -1;
-  if (selectedBand === previewBand) {
+  const supportOrder = ["reinforce", "rally_join"].includes(orderKind);
+  const supportFresh = !supportOrder || (Date.now() - route.authoritativeCheckedAtMs < 5000 && route.authoritativeClanScope === clanStablesPreviewScope());
+  if (selectedBand === previewBand && supportFresh) {
     cancelAuthoritativeRoutePreviewRefresh();
+    if (supportOrder) authoritativeRoutePreviewTimer = window.setTimeout(() => { if (troopSliderActive && modal.open && activeTroopSliderRoute?.sourceId === source.id && activeTroopSliderRoute?.targetId === target.id) updateTroopSliderModal(source, target, activeTroopSliderRoute.route); }, Math.max(100, 5050 - (Date.now() - route.authoritativeCheckedAtMs)));
     return;
   }
+  if (!supportFresh) { route.clanStables = null; route.authoritativeDurationSeconds = 0; route.authoritativeSpeedMultiplier = null; }
   const requestScope = getOnlineRequestScope();
-  const pendingKey = [requestScope, getCityRegionId(source), source.id, getCityRegionId(target), target.id, orderKind, selectedBand].join(":");
+  const pendingKey = [requestScope, supportOrder ? clanStablesPreviewScope() : "", getCityRegionId(source), source.id, getCityRegionId(target), target.id, orderKind, selectedBand].join(":");
   // Repainting the same slider must not invalidate a slow, still useful request.
   if (authoritativeRoutePreviewPendingKey === pendingKey) return;
   if (authoritativeRoutePreviewTimer) window.clearTimeout(authoritativeRoutePreviewTimer);
@@ -32599,7 +32695,7 @@ function updateTroopSliderModal(source, target, route) {
     ? route.authoritativeSpeedMultiplier
     : getTravelSpeedMultiplier("player", orderKind === "rally_create" ? "attack" : orderKind);
   const effectiveSpeedMultiplier = speedMultiplier * baseTravel / travel;
-  const travelSummary = `<div class="travel-time-summary"><span>Travel bonus</span><strong>${formatStackedBonusPercent(Math.max(0, (effectiveSpeedMultiplier - 1) * 100))}%</strong><span>Travel time</span><strong>${routeIsEstimated ? "Estimated " : ""}${formatDuration(travel)}</strong></div>`;
+  const travelSummary = `<div class="travel-time-summary"><span>Travel bonus</span><strong>${formatStackedBonusPercent(Math.max(0, (effectiveSpeedMultiplier - 1) * 100))}%</strong><span>Travel time</span><strong>${routeIsEstimated ? "Estimated " : ""}${formatDuration(travel)}</strong></div>${clanStablesPreviewHtml(orderKind, route.clanStables)}`;
   updateTroopOrderPower();
   const previewEl = modalBody.querySelector("#troopSliderPreview");
   if (!isOrderRouteReady(route)) {

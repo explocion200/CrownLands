@@ -65,5 +65,8 @@
 // Approved readable castle controls add 1,818 scoped CSS bytes (4,631,340 total).
 // Existing headroom covers 494; bound the 1,324-byte overage at 1.5 KiB.
 // No new precache entries or artwork; silhouette logic stays in lazy world code.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024 + 2 * 1024 + 4 * 1024 + 512 + 1024 + 8 * 1024 + 12 * 1024 + 3 * 1024 + 5 * 1024 + 2 * 1024 + 20 * 1024 + 1024 + 512 + 1536 + 1536;
+// Stables preview/share navigation and local private signal adapters add bounded shell
+// integration (4,641,036 measured bytes; 9,484 above the prior cap). Allow 10 KiB.
+// Both new building UI modules and all eight sprites load on demand.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024 + 2 * 1024 + 4 * 1024 + 512 + 1024 + 8 * 1024 + 12 * 1024 + 3 * 1024 + 5 * 1024 + 2 * 1024 + 20 * 1024 + 1024 + 512 + 1536 + 1536 + 10 * 1024;
 module.exports = { MAX_INSTALL_PRECACHE_BYTES };

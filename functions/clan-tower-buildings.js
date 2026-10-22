@@ -12,6 +12,8 @@
     { id: "workshop", name: "Engineers’ Workshop", description: "Shortens this Tower's wall construction and repairs.", x: 0.37, y: -0.03 },
     { id: "infirmary", name: "Infirmary", description: "New mechanics are being designed. Completed levels are preserved.", x: -0.23, y: 0.23 },
     { id: "training", name: "Training Grounds", description: "New mechanics are being designed. Completed levels are preserved.", x: 0.23, y: 0.23 },
+    { id: "stables", name: "Clan Stables", description: "Fresh horses and organised supply routes help your clan’s reinforcements and rally contributions reach their destination sooner.", x: -0.37, y: 0.49 },
+    { id: "scout_lodge", name: "Scout Lodge", description: "Gather your scouts’ findings in one place so your clan can plan attacks and choose targets together.", x: 0.37, y: 0.49 },
   ].map(Object.freeze));
   const DURATION_MINUTES = Object.freeze([0, 30, 60, 120, 240, 360, 480, 600, 720, 1080, 1440]);
   const SHOP_ITEMS = Object.freeze([
@@ -32,12 +34,15 @@
   }
   function duration(targetLevel) { cost(targetLevel); return DURATION_MINUTES[targetLevel] * MINUTE; }
   function mechanicsPending(id) { return id === "infirmary" || id === "training"; }
-  function bonus(id, value) { return id === "workshop" ? level(value) * 5 : 0; }
+  function bonus(id, value) { return id === "workshop" ? level(value) * 5 : id === "stables" ? level(value) * 2 : 0; }
+  function intelligenceCapacity(value) { return level(value) * 5; }
   function benefit(id, value) {
     const current = level(value);
     if (mechanicsPending(id)) return "Mechanics being redesigned · upgrades paused";
     if (!current) return "Not built";
     if (id === "shop") return `Shop Level ${current} catalogue`;
+    if (id === "stables") return `+${bonus(id, current)}% reinforcement and rally assembly speed`;
+    if (id === "scout_lodge") return `${intelligenceCapacity(current)} shared target reports`;
     const amount = bonus(id, current);
     return `${amount}% shorter wall construction and repairs`;
   }
@@ -72,5 +77,5 @@
     else usage.counts[itemId] = item.count + quantity;
     return usage;
   }
-  return Object.freeze({ MAX_LEVEL, SHIELD_COOLDOWN_MS, DEFINITIONS, DURATION_MINUTES, SHOP_ITEMS, level, normalizeLevels, definition, cost, duration, mechanicsPending, bonus, benefit, artStage, art, wallDuration, shopStatus, purchaseUsage });
+  return Object.freeze({ MAX_LEVEL, SHIELD_COOLDOWN_MS, DEFINITIONS, DURATION_MINUTES, SHOP_ITEMS, level, normalizeLevels, definition, cost, duration, mechanicsPending, bonus, intelligenceCapacity, benefit, artStage, art, wallDuration, shopStatus, purchaseUsage });
 });

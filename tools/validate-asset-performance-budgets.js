@@ -251,7 +251,8 @@ const entrypointBudgets = {
   // Location entry points and safe cross-map focusing add 2,858 source bytes.
   // Preserve new camp paintings across old server snapshots: at most 1 KiB.
   // Aggregate shell, artwork, request and installation limits stay unchanged.
-  "game.js": (1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25 + 2 + 3 + 0.25 + 2 + 1 + 0.5 + 5 + 3 + 1) * 1024,
+  // Clan support navigation, safe sharing and authoritative preview freshness: +8.25 KiB source, within the shared 10 KiB shell allowance.
+  "game.js": (8.25 + 1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25 + 2 + 3 + 0.25 + 2 + 1 + 0.5 + 5 + 3 + 1) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   // Medal crown selectors add under 0.5 KiB; retain all other payload limits.
@@ -318,7 +319,7 @@ const entrypointBudgets = {
   // NPC map subscription and readiness callable add 376 bytes over the prior cap.
   // Private Web Push selection adds 255 bytes; its implementation stays lazy.
   // Bound the entry at 164 KiB; the total installation-cache cap stays unchanged.
-  "firebaseClient.js": 168 * 1024, // +2 KiB: bounded current-realm NPC search over public reads.
+  "firebaseClient.js": 169 * 1024, // +1 KiB for the private clan-intelligence callable and scoped signal adapter.
   "animation-manager.js": 80 * 1024,
   "map-transition-bats.css": 5 * 1024,
   "audio-manager.js": 80 * 1024,

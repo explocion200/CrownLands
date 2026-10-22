@@ -47,6 +47,16 @@ class Access {
       && member?.uid === this.uid && member.status === "active" && this.current(member)
       && (!manager || ["leader", "officer"].includes(member.role)));
   }
+  async scoutLodge(clanId, signal) {
+    if (!await this.member(clanId) || !this.current(await this.read(`clans/${clanId}`))) return false;
+    const T = require("../functions/holding-towers");
+    const member = await this.read(`clans/${clanId}/members/${this.uid}`);
+    if (!T.getEligibility(member, this.now, clanId).eligible) return false;
+    const towers = (await Promise.all(T.TOWERS.map(t => this.read(`holdingTowers/${t.id}`))))
+      .filter(t => this.current(t) && t.ownerKind === "clan" && t.clanId === clanId);
+    if (towers.length !== 1 || !(T.materializeTowerState(towers[0], this.now).buildings.scout_lodge > 0)) return false;
+    return !signal || (this.current(signal) && signal.towerId === towers[0].id && signal.ownershipRevision === towers[0].ownershipRevision);
+  }
   async flag(flag) {
     if (!map(flag) || !allowed(Object.keys(flag), ["version", "primary", "secondary", "symbolColor", "pattern", "symbol"])
       || !["primary", "secondary", "pattern", "symbol"].every(key => own(flag, key))
@@ -87,6 +97,7 @@ class Access {
       if (collection === "members") return current;
       if (collection === "applications") return current && (has("__name__", this.uid) || await this.member(id, true));
       if (!await this.member(id)) return false;
+      if (collection === "scoutIntelSignals") return current && has("__name__", "current") && query.constraints.limit <= 1 && await this.scoutLodge(id);
       if (collection === "rallies") return current;
       if (collection === "messages") return current && has("status", "visible");
       if (collection === "worldBenefits") return current && has("__name__", this.realmStorage);
@@ -150,6 +161,7 @@ class Access {
       if (collection === "worldBenefits") return record === this.realmStorage && Boolean(this.current(data));
       if (collection === "memberRewards") return record === this.uid && Boolean(this.current(data));
       if (collection === "giftActivity") return method === "get" && record === this.realmStorage && (!data || Boolean(this.current(data)));
+      if (collection === "scoutIntelSignals") return record === "current" && await this.scoutLodge(id, data);
       if (collection === "rallies") return Boolean(this.current(data));
       if (collection === "treasury") return record === this.generation && (!data || Boolean(this.current(data)));
       if (collection === "treasuryUsage") return data?.uid === this.uid && Boolean(this.current(data));

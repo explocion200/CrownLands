@@ -219,7 +219,7 @@ function getCasualtyRecoveryPercent(profile = {}) {
   );
 }
 
-function addCommonGearMarchSpeed(profile = {}, kind = "attack", existingMultiplier = 1) {
+function addCommonGearMarchSpeed(profile = {}, kind = "attack", existingMultiplier = 1, clanStables = null) {
   const bonuses = getCommonGearBonuses(profile);
   const normalizedKind = safeString(kind, 32).toLowerCase();
   const bonusPercent = normalizedKind === "scout"
@@ -228,8 +228,14 @@ function addCommonGearMarchSpeed(profile = {}, kind = "attack", existingMultipli
       ? bonuses.enemyMarchSpeed
       : bonuses.ownedMarchSpeed;
   const cap = normalizedKind === "scout" ? COMMON_GEAR.BONUS_CAPS.scoutSpeed : COMMON_GEAR.BONUS_CAPS.marchSpeed;
-  return Math.min(1 + cap / 100,
-    Math.max(0.01, safeNumber(existingMultiplier, 1) + bonusPercent / 100));
+  const beforeCap = Math.max(0.01, safeNumber(existingMultiplier, 1) + bonusPercent / 100);
+  const applied = require("./clan-tower-support").applyStables(beforeCap, clanStables?.nominalPercent || 0, cap);
+  if (clanStables) {
+    clanStables.effectivePercent = applied.effectivePercent;
+    clanStables.speedWithoutStables = Math.min(1 + cap / 100, beforeCap);
+    if (!clanStables.reason && !applied.effectivePercent) clanStables.reason = "speed-cap";
+  }
+  return applied.speedMultiplier;
 }
 
 function economyNumber(path, fallback) {
@@ -5893,7 +5899,7 @@ function getTroopTravelMultiplier(troops) {
   return ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS[getTroopTravelBandIndex(troops)] || 1;
 }
 
-function calculateTravelTime({ pathLength = 0, troopCount = 1, kind = "attack", requestedTotal = 0, demoAttack = null, speedMultiplier = 1 }) {
+function calculateTravelTime({ pathLength = 0, troopCount = 1, kind = "attack", requestedTotal = 0, demoAttack = null, speedMultiplier = 1, clanStables = null }) {
   const distance = Math.max(1, safeNumber(pathLength, 1));
   const kindMultiplier = ARMY_TRAVEL_KIND_MULTIPLIERS[kind] || ARMY_TRAVEL_KIND_MULTIPLIERS.attack;
   const troopMultiplier = getTroopTravelMultiplier(troopCount);
@@ -5905,6 +5911,7 @@ function calculateTravelTime({ pathLength = 0, troopCount = 1, kind = "attack", 
     distance * ARMY_TRAVEL_SECONDS_PER_MAP_UNIT * kindMultiplier * troopMultiplier * demoMultiplier / speed
   );
   const requested = safeNumber(requestedTotal, computed);
+  if (clanStables) clanStables.unboostedDurationMs = Math.ceil(Math.max(minSeconds, distance * ARMY_TRAVEL_SECONDS_PER_MAP_UNIT * kindMultiplier * troopMultiplier * demoMultiplier / clanStables.speedWithoutStables) * 1000);
   return Math.max(computed, requested, minSeconds);
 }
 
@@ -7003,16 +7010,18 @@ function createRallyAssemblyMovement({
   profile = {},
   economy = null,
   validatedRoute = {},
+  clanStables = null,
   nowMs = Date.now(),
 } = {}) {
   const troops = Math.max(1, Math.floor(safeNumber(participant.troops, 1)));
   const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
   const speedMultiplier = addCommonGearMarchSpeed(profile, "rally_join", skillMultiplier(profile, "marchOrders")
-    + Math.max(0, safeNumber(economy?.bonuses?.marchSpeedBonusPercent, 0)) / 100);
+    + Math.max(0, safeNumber(economy?.bonuses?.marchSpeedBonusPercent, 0)) / 100, clanStables);
   const duration = calculateTravelTime({
     pathLength: validatedRoute.pathLength,
     troopCount: troops,
     kind: "rally_join",
+    clanStables,
     speedMultiplier,
   });
   return {
@@ -7028,6 +7037,7 @@ function createRallyAssemblyMovement({
     kind: "rally_join",
     launchKind: "rally_join",
     rallyJoin: true,
+    ...(clanStables ? { clanStables } : {}),
     rallyId: normalizeRallyId(rally.id),
     rallyClanId: safeString(rally.clanId, 128),
     targetType: rally.assemblyType === "tower" ? "tower" : "city",
@@ -7694,7 +7704,7 @@ function createMidRouteReturnMovement(army = {}, nowMs = Date.now(), returnReaso
   const returnStartProgress = clamp(getArmyRouteProgressAtMs(army, nowMs), 0.000001, 0.999999);
   const returnDurationMs = Math.max(
     RECALL_HORN_MINIMUM_RETURN_MS,
-    Math.ceil(originalTotalMs * returnStartProgress)
+    Math.ceil((army.clanStables?.unboostedDurationMs || originalTotalMs) * returnStartProgress)
   );
   return {
     ...army,
@@ -7768,7 +7778,7 @@ function createAlliedTargetReturnMovement(army = {}, nowMs = Date.now()) {
   );
   const returnDurationMs = Math.max(
     RECALL_HORN_MINIMUM_RETURN_MS,
-    originalArrivesAtMs - launchedAtMs
+    army.clanStables?.unboostedDurationMs || originalArrivesAtMs - launchedAtMs
   );
   const originalKind = ARMY_ORDER_KINDS.includes(army.kind) ? army.kind : "attack";
   return {
@@ -9304,6 +9314,7 @@ function makeReport({
     cityId: safeString(city?.id, 96),
     regionId: safeString(city?.regionId || city?.startPool || "", 80),
     cityName: safeString(city?.name || city?.id || "Unknown city", 40),
+    ...(type === "scout" && Number.isFinite(city?.x) && Number.isFinite(city?.y) ? { targetLocation: { x: city.x, y: city.y } } : {}),
     targetType,
     cityLevel: targetType === "camp" ? 0 : clampCityLevel(city?.level || 1),
     troopCount: Math.max(0, Math.floor(safeNumber(troopCount, city?.troops || 0))),
@@ -12597,6 +12608,7 @@ function getHoldingTowerPublicState(state = {}, nowMs = Date.now()) {
       ? current.upgradeQueue[0].progressStartedAtMs + current.upgradeQueue[0].remainingMs
       : 0,
     queuedUpgradeCount: current.upgradeQueue.length,
+    clanTowerSupportVersion: 1,
     buildings: current.buildings,
     buildingProject: current.buildingProject,
     nextWallUpgradeDurationMs: CLAN_BUILDINGS.wallDuration((current.upgradeQueue.at(-1)?.targetLevel || current.wallLevel) + 1, current.buildings.workshop),
@@ -13490,7 +13502,7 @@ async function beginOutboundReinforcementReturn({
     const returnStartProgress = clamp(getArmyRouteProgressAtMs(army, nowMs), 0.000001, 0.999999);
     const returnDurationMs = Math.max(
       RECALL_HORN_MINIMUM_RETURN_MS,
-      Math.ceil(originalTotalMs * returnStartProgress)
+      Math.ceil((army.clanStables?.unboostedDurationMs || originalTotalMs) * returnStartProgress)
     );
     const movementPatch = {
       returning: true,
@@ -22371,6 +22383,17 @@ exports.purchaseClanTowerShopItem = timedCallable("purchaseClanTowerShopItem", {
   }, "purchaseClanTowerShopItem");
 });
 
+const clanTowerSupport = require("./clan-tower-support").createService({ db, HttpsError,
+  realm: () => ({ worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, realmShardId: getCurrentRealmShardId() }),
+  assertWorld: assertHoldingTowerWorldActive, validateProfile: assertCurrentClanActorProfile,
+  towerRef: holdingTowerRef, normalizeTower: normalizeCurrentHoldingTower, transact: runTransactionWithInfrastructureRetry,
+});
+exports.clanIntelligence = timedCallable("clanIntelligence", { region: "us-central1", maxInstances: 20, invoker: "public" }, request => {
+  const uid = requireAuth(request);
+  const compatibility = new Set(["clientReleaseId", "clientResetGeneration", "clientWorldId", "clientRealmShardId"]);
+  return clanTowerSupport.intelligence(uid, Object.fromEntries(Object.entries(request.data || {}).filter(([key]) => !compatibility.has(key))));
+});
+
 exports.startClanTowerBuilding = timedCallable("startClanTowerBuilding", { region: "us-central1", maxInstances: 20, invoker: "public" }, request => (
   applyHoldingTowerTreasurySpend(request, "tower_building_started", ({ tower, treasury, uid, nowMs, operationId }) => (
     HOLDING_TOWERS.startBuilding(tower, safeString(request.data?.buildingId, 32), treasury.balance, { uid }, nowMs, operationId)
@@ -23755,7 +23778,9 @@ exports.joinClanRally = timedCallable("joinClanRally", { region: "us-central1", 
       ownerKingPower: stats?.kingPower,
       objectiveMarchSpeedBonusPercent: economy.bonuses?.marchSpeedBonusPercent,
     });
+    const clanStables = await clanTowerSupport.movement(transaction, { uid, profile: currentProfile, kind: "rally_join", target: assembly, targetType: rally.assemblyType === "tower" ? "tower" : "city", rally, nowMs });
     const movement = createRallyAssemblyMovement({
+      clanStables,
       order: joinOrder,
       rally,
       participant,
@@ -24888,6 +24913,7 @@ function normalizeAuthoritativeRouteRequest(data = {}) {
     toId,
     targetType,
     targetSpawnId: safeString(data.targetSpawnId, 96),
+    rallyId: normalizeRallyId(data.rallyId),
     kind: data.kind === "rally_join" ? "rally_join" : normalizeMarchKind(data.kind, "attack"),
     requestedTroops: Math.max(1, Math.floor(safeNumber(data.requestedTroops || data.troops, 1))),
   };
@@ -25295,9 +25321,14 @@ exports.previewArmyRoute = timedCallable(
           globalStats.personalStrongholdMarchSpeedBonusPercent
         )
       );
+      const rallySnap = kind === "rally_join" && order.rallyId && profile.clanId
+        ? await transaction.get(clanRallyRef(profile.clanId, order.rallyId)) : null;
+      const rally = rallySnap?.exists ? normalizeClanRally(rallySnap) : null;
+      const clanStables = await clanTowerSupport.movement(transaction, { uid, profile, kind, target, targetType: order.targetType, rally, nowMs });
       const speedMultiplier = addCommonGearMarchSpeed(profile, kind, skillMultiplier(profile, "marchOrders")
-        + marchSpeedBonusPercent / 100);
+        + marchSpeedBonusPercent / 100, clanStables);
       const durationSeconds = calculateTravelTime({
+        clanStables,
         pathLength: route.pathLength,
         troopCount: troops,
         kind,
@@ -25307,6 +25338,7 @@ exports.previewArmyRoute = timedCallable(
       return {
         ok: true,
         authoritativeRoutesVersion: AUTHORITATIVE_ROUTES_VERSION,
+        clanStables,
         kind,
         requestedTroops: troops,
         points: route.path,
@@ -27096,15 +27128,17 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
         { ...source, regionId: order.sourceRegionId },
         { ...target, regionId: order.targetRegionId }
       );
+      const clanStables = await clanTowerSupport.movement(transaction, { uid, profile: profileAfter, kind, target, targetType, nowMs });
       const speedKind = kind === "scout" ? "scout" : kind === "attack" ? "attack" : "transfer";
       const duration = calculateTravelTime({
+        clanStables,
         pathLength: validatedRoute.pathLength,
         troopCount: troops,
         kind: speedKind,
         speedMultiplier: addCommonGearMarchSpeed(
           profileAfter,
           speedKind,
-          skillMultiplier(profileAfter, "marchOrders") + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100
+          skillMultiplier(profileAfter, "marchOrders") + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100, clanStables
         ),
       });
       const arrivesAtMs = nowMs + Math.ceil(duration * 1000);
@@ -27136,6 +27170,7 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
         };
       }
       const movement = {
+        ...(clanStables ? { clanStables } : {}),
         id: order.id,
         worldId: ONLINE_WORLD_ID,
         resetGeneration: RESET_GENERATION,
@@ -27655,13 +27690,15 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
       attackerEconomy.shopItems[SWIFT_MARCH_ORDER_ITEM_ID] = ownedSwiftMarchOrders - 1;
     }
 
+    const clanStables = await clanTowerSupport.movement(transaction, { uid, profile: attackerProfile, kind: resolvedKind, target, targetType: order.targetType, nowMs });
     const originalDuration = calculateTravelTime({
+      clanStables,
       pathLength: validatedRoute.pathLength,
       troopCount: troops,
       kind: resolvedKind,
       targetType: order.targetType,
       speedMultiplier: addCommonGearMarchSpeed(attackerProfile, resolvedKind, skillMultiplier(attackerProfile, "marchOrders")
-        + Math.max(0, safeNumber(attackerEconomy.bonuses.marchSpeedBonusPercent, 0)) / 100),
+        + Math.max(0, safeNumber(attackerEconomy.bonuses.marchSpeedBonusPercent, 0)) / 100, clanStables),
     });
     const originalArrivesAtMs = nowMs + Math.ceil(originalDuration * 1000);
     const swiftMarchDurationMs = useSwiftMarchOrder
@@ -27699,6 +27736,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
       };
     }
     const movement = {
+      ...(clanStables ? { clanStables } : {}),
       id: order.id,
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
@@ -28301,7 +28339,7 @@ async function resolveHoldingTowerDirectMovementById({ armyId = "", callerUid = 
       nowMs,
       type: "scout",
       outcome: "scout",
-      city: { id: tower.id, name: tower.name, level: tower.wallLevel, regionId: tower.regionId },
+      city: { id: tower.id, name: tower.name, level: tower.wallLevel, regionId: tower.regionId, x: tower.x, y: tower.y },
       troopCount: veilBlocked ? 0 : totalTroops,
       totalDefense: 0,
       summary: veilBlocked
@@ -36195,6 +36233,7 @@ exports.maintainGameServer = onSchedule({
         armyVisibilityBackfill,
         reinforcementCapacity,
         reportHistoryCleanup,
+        clanIntelligenceCleanup,
         rewardCampPrivacyCleanup,
         expansionActivation,
         holdingTowers,
@@ -36202,6 +36241,7 @@ exports.maintainGameServer = onSchedule({
         backfillActiveArmyVisibilityViews(),
         reconcileReinforcementCapacity(nowMs),
         cleanupExpiredReportDocuments(nowMs),
+        clanTowerSupport.cleanup(nowMs),
         cleanupLegacyRewardCampPublicMetadata(),
         completePendingExpansionActivation(),
         maintainHoldingTowersForCurrentRealm(nowMs),
@@ -36211,6 +36251,7 @@ exports.maintainGameServer = onSchedule({
         armyVisibilityBackfill,
         reinforcementCapacity,
         reportHistoryCleanup,
+        clanIntelligenceCleanup,
         rewardCampPrivacyCleanup,
         expansionActivation,
         holdingTowers,

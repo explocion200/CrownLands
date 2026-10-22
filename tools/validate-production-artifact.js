@@ -38,6 +38,7 @@ const required = [
   "clan-treasury-ui.js", "clan-treasury-ui.css",
   "training-grounds-ui.js", "training-grounds-ui.css",
   "engineers-workshop-ui.js", "engineers-workshop-ui.css",
+  "clan-intelligence-ui.js", "clan-support-buildings-ui.js",
   "player-journey.js", "player-journey.css",
   "clan-tower-buildings.js", "clan-tower-buildings-ui.js", "clan-tower-buildings-ui.css",
   "city-details-ui.css", "city-details-ui.js", "city-list-ui.css", "inner-castle-ui.css", "inner-city-estate.css", "inner-city-estate.js",
@@ -266,11 +267,11 @@ if (translationBytes > 14 * 1024) throw new Error("Chat translation and Google a
 const combatTimerBytes = ["combat-timers-ui.js", "combat-timers-ui.css"]
   .reduce((sum, file) => sum + fs.statSync(path.join(dist, file)).size, 0);
 if (combatTimerBytes > 10 * 1024) throw new Error("Combat timer presentation exceeds its 10 KiB budget.");
-// Sixteen building sprites, the shared Tower and transparent paths. Source PNGs never ship.
+// Twenty-four building sprites, the shared Tower and transparent paths. Source PNGs never ship.
 const buildingArt = files.filter(file => path.relative(dist, file).replace(/\\/g, "/").startsWith("assets/clan-buildings/"));
-if (buildingArt.length !== 18 || !["courtyard.webp", "tower.webp"].every(name => buildingArt.some(file => path.basename(file) === name)) || buildingArt.some(file => !file.endsWith(".webp") || fs.statSync(file).size > 100 * 1024)) throw new Error("Clan building art must contain sixteen buildings, one Tower and one paths WebP, each under 100 KiB.");
-const buildingPayload = [...buildingArt, ...["clan-tower-buildings.js", "clan-tower-buildings-ui.js", "clan-tower-buildings-ui.css"].map(file => path.join(dist, file))].reduce((total, file) => total + fs.statSync(file).size, 0);
-if (buildingPayload > 1248 * 1024) throw new Error("Clan buildings exceed the dedicated 1248 KiB art/presentation budget.");
+if (buildingArt.length !== 26 || !["courtyard.webp", "tower.webp"].every(name => buildingArt.some(file => path.basename(file) === name)) || buildingArt.some(file => !file.endsWith(".webp") || fs.statSync(file).size > 100 * 1024)) throw new Error("Clan building art must contain twenty-four buildings, one Tower and one paths WebP, each under 100 KiB.");
+const buildingPayload = [...buildingArt, ...["clan-tower-buildings.js", "clan-tower-buildings-ui.js", "clan-tower-buildings-ui.css", "clan-support-buildings-ui.js", "clan-intelligence-ui.js"].map(file => path.join(dist, file))].reduce((total, file) => total + fs.statSync(file).size, 0);
+if (buildingPayload > 1680 * 1024) throw new Error("Clan buildings exceed the dedicated 1680 KiB art/presentation budget.");
 // Reserve a further 16 KiB for map, client API and report integration.
 // Seven approved HUD derivatives plus the 192px Inner Castle shortcut (16 KiB).
 // Bound the combined artwork/styling at 352 KiB, each prior image at 60 KiB;
@@ -421,7 +422,9 @@ const campFlagArtBudget = 24 * 1024;
 assert.deepEqual(campFlagFiles.map(file => path.relative(dist, file).replace(/\\/g, "/")).sort(), campFlagPaths, "Ship exactly four camp type banners");
 assert(campFlagFiles.every(file => fs.statSync(file).size <= 6 * 1024), "Each camp banner must remain within 6 KiB");
 assert(!worker.includes("assets/icons/camps/"), "Camp type banners must load on demand");
-const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget + halloweenMapTransitionBudget + animatedMapBatsBudget + troopsHelmetArtworkBudget + liveCrownPurchaseBudget + crownShopTabBudget + estateArtBudget + estateModuleBudget + guildFeatureBudget;
+// Eight transparent support-building stages (402,478 bytes) plus bounded private-board UI/integration.
+const clanSupportBudget = 464 * 1024;
+const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget + halloweenMapTransitionBudget + animatedMapBatsBudget + troopsHelmetArtworkBudget + liveCrownPurchaseBudget + crownShopTabBudget + estateArtBudget + estateModuleBudget + guildFeatureBudget + clanSupportBudget;
 const worldModules=["appearance.js","assets.js","bootstrap.js","delta-feed.js","feed.js","flags.css","game-bridge.js","model.js","native.js","preview.css","preview.js","sprite-layer.js","surface.html"].map(f=>"world/"+f).sort();
 const worldFiles=files.filter(f=>path.relative(dist,f).replace(/\\/g,"/").startsWith("world/"));
 assert.deepEqual(worldFiles.map(f=>path.relative(dist,f).replace(/\\/g,"/")).sort(),worldModules,"Ship only reviewed production world modules");

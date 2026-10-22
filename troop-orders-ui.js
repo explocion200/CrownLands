@@ -205,12 +205,11 @@ function mountHoldingTowerTroopOrderView(tower, mode, candidate, maxTroops, sess
   const attack = mode === "attack-from";
   decorateTroopOrderView(source, target, attack ? "attack" : "transfer", attack ? "Attack" : mode === "reinforce" ? "Send" : "Transfer", Math.max(1, Math.floor(maxTroops / 2)));
   mountTroopOrderSelection(() => Number(modalBody.querySelector("[data-tower-order-troops]")?.max) || 0, updateHoldingTowerOrderAvailability);
-  // Tower launch uses its own authoritative callable. Its city-only preview endpoints
-  // cannot verify a Tower origin; show clearly labelled local estimates instead.
+  // Tower-origin withdrawals/attacks retain their local estimate. Incoming reinforcements use the authoritative Tower preview.
   session.route = createInstantOrderRoute(source, target);
   void findRouteAsync(source, target).then(route => {
     if (!isHoldingTowerModalSessionCurrent(session) || session.onlineSession !== onlineSessionGeneration) return;
-    if (route?.points?.length) session.route = route;
+    if (route?.points?.length && !session.route?.authoritativeDurationSeconds) session.route = route;
     updateHoldingTowerOrderAvailability();
   }).catch(() => {
     // Keep the initial estimate; dispatch still validates the route on the server.
@@ -219,7 +218,7 @@ function mountHoldingTowerTroopOrderView(tower, mode, candidate, maxTroops, sess
 
 function updateHoldingTowerTroopOrderView(session, tower, candidate, amount, maximum) {
   const { source, target } = getHoldingTowerTroopOrderLocations(tower, session.mode, candidate);
-  const orderKind = session.mode === "attack-from" ? "attack" : "transfer";
+  const orderKind = session.mode === "attack-from" ? "attack" : session.mode === "reinforce" ? "reinforce" : "transfer";
   modalBody.querySelector("#troopSliderAmount").textContent = formatMarchesNumber(amount);
   modalBody.querySelector("#troopSliderRemaining").textContent = formatMarchesNumber(Math.max(0, maximum - amount));
   modalBody.querySelector("#troopSliderSourceTotal").textContent = formatMarchesNumber(maximum);
@@ -230,9 +229,30 @@ function updateHoldingTowerTroopOrderView(session, tower, candidate, amount, max
   const notice = modalBody.querySelector("#troopSliderActionNotice");
   notice.textContent = "";
   notice.hidden = true;
+  const supportKey = JSON.stringify([clanStablesPreviewScope(), source.id, target.id, getTroopTravelBandIndex(amount)]);
+  const fresh = session.supportKey === supportKey && Date.now() - (session.route?.authoritativeCheckedAtMs || 0) < 5000;
+  if (session.mode === "reinforce" && !fresh) {
+    if (session.route) { session.route.clanStables = null; session.route.authoritativeDurationSeconds = 0; }
+    if (session.supportPending !== supportKey && session.supportFailure !== supportKey) {
+      session.supportPending = supportKey;
+      void requestAuthoritativeOrderRoute(source, target, "reinforce", amount).then(route => {
+        if (!isHoldingTowerModalSessionCurrent(session) || session.supportPending !== supportKey) return;
+        session.supportPending = "";
+        if (route?.points?.length) { session.route = route; session.supportKey = supportKey; session.supportFailure = ""; }
+        else session.supportFailure = supportKey;
+        updateHoldingTowerOrderAvailability();
+      });
+    }
+  }
+  if (session.mode === "reinforce" && !session.supportTimer) {
+    const cleanup = () => { clearTimeout(session.supportTimer); session.supportTimer = 0; modal.removeEventListener("close", cleanup); };
+    session.supportTimer = setTimeout(() => { cleanup(); if (isHoldingTowerModalSessionCurrent(session)) { session.supportFailure = ""; updateHoldingTowerOrderAvailability(); } }, 5050);
+    modal.addEventListener("close", cleanup, { once: true });
+  }
   const route = session.route;
-  const duration = route?.points?.length ? travelTime(source, target, "player", route.length, amount, orderKind) : null;
-  const bonus = Math.max(0, (getTravelSpeedMultiplier("player", orderKind) - 1) * 100);
-  const travelSummary = `<div class="travel-time-summary"><span>Travel bonus</span><strong>${formatStackedBonusPercent(bonus)}%</strong><span>Travel time</span><strong>${duration === null ? "Confirmed at dispatch" : `Estimated ${formatDuration(duration)}`}</strong></div>`;
+  const authoritative = fresh && route?.authoritativeDurationSeconds > 0;
+  const duration = authoritative ? route.authoritativeDurationSeconds : route?.points?.length ? travelTime(source, target, "player", route.length, amount, orderKind) : null;
+  const bonus = Math.max(0, ((authoritative ? route.authoritativeSpeedMultiplier : getTravelSpeedMultiplier("player", orderKind)) - 1) * 100);
+  const travelSummary = `<div class="travel-time-summary"><span>Travel bonus</span><strong>${formatStackedBonusPercent(bonus)}%</strong><span>Travel time</span><strong>${duration === null ? "Confirmed at dispatch" : `${authoritative ? "" : "Estimated "}${formatDuration(duration)}`}</strong></div>${clanStablesPreviewHtml(orderKind, route?.clanStables)}`;
   updateTroopOrderPreview(source, target, route, { orderKind, amount, attackProtection, combatForecast: null, retaliationId, travelSummary });
 }
