@@ -29550,8 +29550,10 @@ function renderCitiesUncached(force = false) {
           ${crownBadge}
           ${rivalOwnerRow || `<span class="city-ruler-row"><strong class="foreign-ruler-name">${escapeHtml(ownerName)}</strong></span>`}
           <span class="foreign-selected-banner">
-            <span class="foreign-selected-level">${formatNumber(city.level)}</span>
-            <span class="foreign-selected-crest">${ownerFlag}</span>
+            <span class="foreign-city-shield">
+              ${ownerFlag}
+              <span class="city-label-level">${formatNumber(city.level)}</span>
+            </span>
             <span class="foreign-selected-data">
               <strong class="city-name">${escapeHtml(city.name)}</strong>
               <span class="foreign-garrison ${garrisonVisibilityClass}">${displayedTroops} troops</span>${assemblyLabel}

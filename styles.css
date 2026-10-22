@@ -2994,8 +2994,9 @@ input {
 }
 .foreign-selected-banner {
   display: grid;
-  grid-template-columns: 52px 46px max-content;
-  align-items: stretch;
+  /* Keep the same flag/level shield on selection; details use the second column. */
+  grid-template-columns: 46px max-content;
+  align-items: start;
   filter: drop-shadow(0 6px 4px rgba(0,0,0,.52));
 }
 .foreign-selected-level {
