@@ -24,7 +24,19 @@ const { createTravelFixture, canonicalCity } = require("./world-travel-test-fixt
   assert.equal(ordinary.privateWorldRouting, undefined, "No environment switch can enable draft routing");
   require.cache[file].exports = createPlatform({ store: db, privateWorldRouting: routing });
   const game = require("../functions"), fixture = createTravelFixture(87);
-  const measurements = [], scenarios = [];
+  const measurements = [], scenarios = [], diagnostics = [];
+  const originalLog = console.log;
+  console.log = (...args) => {
+    const [label, details] = args;
+    if (label === "crownlands_operation" && ["resolveArmyOrder", "sendArmyOrder", "joinClanRally", "launchClanRally"].includes(details?.operation)) {
+      const values = {};
+      for (const key of ["requestDurationMs", "dbReadQueries", "dbReadRows", "dbTransactionAttempts", "dbSerializationFailures", "dbDeadlocks", "dbRetries", "dbDocumentCacheHits"]) {
+        if (Number.isFinite(details[key])) values[key] = details[key];
+      }
+      diagnostics.push({ operation: details.operation, outcome: details.outcome, ...values });
+    }
+    originalLog(...args);
+  };
   let identity = {};
   const call = async (name, user, data = {}) => {
     const start = performance.now();
@@ -180,10 +192,13 @@ const { createTravelFixture, canonicalCity } = require("./world-travel-test-fixt
       settleReceipt: snapshot => game.settleRallyBattle({ data: snapshot, params: { receiptId: snapshot.id } }) });
     scenarios.push("three-player rally recall/rejoin/cancellation and captured-origin returns");
     const output = path.resolve("release-artifacts/continuous-command-rehearsal"); fs.mkdirSync(output, { recursive: true });
-    const report = { passed: true, sections: 112, scenarios, measurements, resources: routing.stats() };
+    const arrivals = diagnostics.filter(row => row.operation === "resolveArmyOrder" && row.outcome === "ok");
+    assert(arrivals.length > 0 && arrivals.every(row => row.dbReadQueries > 0), "Real arrivals must expose bounded read diagnostics");
+    const report = { passed: true, sections: 112, scenarios, measurements, diagnostics, resources: routing.stats() };
     fs.writeFileSync(path.join(output, "commands.json"), JSON.stringify(report, null, 2));
     console.log(JSON.stringify({ passed: true, scenarios, calls: measurements.length, resources: routing.stats() }));
   } finally {
+    console.log = originalLog;
     await routing.close();
     await db.pool.query(`DROP SCHEMA IF EXISTS ${db.schema} CASCADE`); await db.close();
   }

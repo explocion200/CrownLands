@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { Store, FieldValue } = require("../local-backend/store");
 const { JobQueue } = require("../local-backend/jobs");
+const timing = require("../functions/operation-timing");
 
 (async () => {
   const schema = "migration_game_retry_" + crypto.randomBytes(5).toString("hex");
@@ -41,7 +42,7 @@ const { JobQueue } = require("../local-backend/jobs");
 
     await queue.enqueueSchedules(); const job = await queue.claim(); assert(job);
     attempts = 0;
-    await db.withTransactionGuard(queue.guard(job), () => retry(async tx => {
+    const diagnostic=await timing.run(async()=>{await db.withTransactionGuard(queue.guard(job), () => retry(async tx => {
       attempts++;
       const [current, done] = await tx.getAll(account, receipt);
       if (done.exists) return;
@@ -50,7 +51,12 @@ const { JobQueue } = require("../local-backend/jobs");
       if (attempts <= 8) await account.update({ balance: FieldValue.increment(1) });
       tx.update(account, { balance: current.data().balance + 10 });
       tx.create(receipt, { applied: true });
-    }, "fixtureArmyResolution"));
+    }, "fixtureArmyResolution"));return timing.snapshot();});
+    assert.equal(diagnostic.dbSerializationFailures,8);
+    assert.equal(diagnostic.dbRetries,7,"Only actual in-adapter retries are counted, not every callback");
+    assert(diagnostic.dbTransactionAttempts>=9&&diagnostic.dbReadQueries>0&&diagnostic.dbReadRows>0);
+    for(const phase of ["dbRead","dbPoolWait","dbCommit","dbBackoff"])assert(Number.isFinite(diagnostic.phaseDurationMs[phase]));
+    assert(!JSON.stringify(diagnostic).includes(account.path)&&!JSON.stringify(diagnostic).includes(schema));
     await queue.finish(job);
     assert.equal(attempts, 9);
     assert.equal(warnings.length, 1); assert.equal(warnings[0].details.code, "aborted");
@@ -81,12 +87,15 @@ const { JobQueue } = require("../local-backend/jobs");
     // Force a real PostgreSQL deadlock between two isolated advisory locks.
     let arrived = 0, release;
     const barrier = new Promise(resolve => { release = resolve; });
-    const deadlocks = await Promise.allSettled([0, 1].map(first => db.runTransaction(async tx => {
+    const deadlockMetrics=[];
+    const deadlocks = await Promise.allSettled([0, 1].map(first => timing.run(async()=>{try{return await db.runTransaction(async tx => {
       await tx.client.query("SELECT pg_advisory_xact_lock(hashtext($1),$2)", [schema, 7000 + first]);
       if (++arrived === 2) release();
       await barrier;
       await tx.client.query("SELECT pg_advisory_xact_lock(hashtext($1),$2)", [schema, 7001 - first]);
-    }, { maxAttempts: 1 })));
+    }, { maxAttempts: 1 });}finally{deadlockMetrics.push(timing.snapshot());}})));
+    assert.equal(deadlockMetrics.reduce((sum,m)=>sum+(m.dbDeadlocks||0),0),1);
+    assert.equal(deadlockMetrics.reduce((sum,m)=>sum+(m.dbRetries||0),0),0);
     assert.equal(deadlocks.filter(result => result.status === "fulfilled").length, 1);
     assert.equal(deadlocks.find(result => result.status === "rejected").reason.code, "aborted");
     console.log("Local transaction retries: real serialization/deadlock failures, bounded existing-game recovery, atomic single receipt, lease guard and business-error refusal passed.");

@@ -2,6 +2,7 @@
 const crypto = require("node:crypto");
 const { Pool } = require("pg");
 const V = require("./values");
+const Timing = require("../functions/operation-timing");
 const { documentSize } = require("./document-size");
 const { isDeepStrictEqual } = require("node:util");
 const { AsyncLocalStorage } = require("node:async_hooks");
@@ -109,11 +110,35 @@ class CollectionReference extends Query {
 }
 
 class Transaction {
-  constructor(store, client) { this.store = store; this.client = client; this.writes = []; }
-  get(target) { if (this.writes.length) throw Error("All transaction reads must precede writes"); return this.store.get(target, this.client); }
+  constructor(store, client) { this.store = store; this.client = client; this.writes = []; this.documents = new Map(); }
+  get(target) {
+    if (this.writes.length) throw Error("All transaction reads must precede writes");
+    // A SERIALIZABLE attempt has one immutable database snapshot. Only direct
+    // document reads can be reused; queries and READ COMMITTED stay uncached.
+    if (this.isolation !== "SERIALIZABLE" || !(target instanceof DocumentReference) || target.firestore !== this.store) return this.store.get(target, this.client);
+    if (this.documents.has(target.path)) { Timing.count("dbDocumentCacheHits"); return this.documents.get(target.path); }
+    const read = this.store.get(target, this.client);this.documents.set(target.path, read);
+    while (this.documents.size > 128) this.documents.delete(this.documents.keys().next().value);
+    return read;
+  }
   getAll(...refs) {
     if (refs.length && this.writes.length) throw Error("All transaction reads must precede writes");
-    return this.store.readDocuments(refs, this.client);
+    // Let the shared batch reader reject every invalid reference before any SQL.
+    if (this.isolation !== "SERIALIZABLE" || refs.length > 1000 || refs.some(ref => !(ref instanceof DocumentReference) || ref.firestore !== this.store)) return this.store.readDocuments(refs, this.client);
+    const reads = new Map(), missing = [];
+    for (const ref of refs) {
+      if (reads.has(ref.path)) { Timing.count("dbDocumentCacheHits"); continue; }
+      if (this.documents.has(ref.path)) { Timing.count("dbDocumentCacheHits"); reads.set(ref.path, this.documents.get(ref.path)); }
+      else { missing.push(ref); reads.set(ref.path, null); }
+    }
+    if (missing.length) {
+      const batch = this.store.readDocuments(missing, this.client);
+      missing.forEach((ref, i) => { const read = batch.then(snapshots => snapshots[i]); reads.set(ref.path, read); this.documents.set(ref.path, read); });
+      while (this.documents.size > 128) this.documents.delete(this.documents.keys().next().value);
+    }
+    // The local map preserves all results/order even when a 1,000-ref batch
+    // exceeds the smaller retained cache. Every promise has a rejection handler.
+    return Promise.all(refs.map(ref => reads.get(ref.path)));
   }
   _write(kind, ref, data, options = {}) {
     if (!(ref instanceof DocumentReference) || ref.firestore !== this.store) throw Error("Foreign document reference");
@@ -203,18 +228,26 @@ class Store {
     if (!refs.length) return [];
     // One statement and snapshot, including transaction reads on their existing
     // connection. Reconstruct caller order, duplicates and missing snapshots.
-    const result = await connection.query(`SELECT path,body FROM ${this.schema}.documents WHERE path=ANY($1::text[])`, [[...new Set(refs.map(ref => ref.path))]]);
+    const result = await this.readQuery(connection, `SELECT path,body FROM ${this.schema}.documents WHERE path=ANY($1::text[])`, [[...new Set(refs.map(ref => ref.path))]]);
     const bodies = new Map(result.rows.map(row => [row.path, row.body]));
     return refs.map(ref => new DocumentSnapshot(this, ref.path, bodies.get(ref.path)));
+  }
+  async readQuery(connection, text, values) {
+    return Timing.measure("dbRead", async () => {
+      Timing.count("dbReadQueries");
+      const result = await connection.query(text, values);
+      Timing.count("dbReadRows", result.rows.length);
+      return result;
+    });
   }
   async get(target, connection = this.pool) {
     if (target.firestore !== this) throw Error("Foreign query reference");
     if (target instanceof DocumentReference) {
-      const result = await connection.query(`SELECT body FROM ${this.schema}.documents WHERE path=$1`, [target.path]);
+      const result = await this.readQuery(connection, `SELECT body FROM ${this.schema}.documents WHERE path=$1`, [target.path]);
       return new DocumentSnapshot(this, target.path, result.rows[0]?.body);
     }
     const { text, values } = this.compile(target);
-    const result = await connection.query(text, values);
+    const result = await this.readQuery(connection, text, values);
     if (!target.constraints.limit && result.rows.length > 10000) throw Error("Unbounded query exceeds migration limit");
     return new QuerySnapshot(result.rows.map(row => {
       if (target.constraints.select) {
@@ -312,9 +345,10 @@ class Store {
     if (!["SERIALIZABLE", "READ COMMITTED"].includes(isolation)) throw Error("Unsupported transaction isolation");
     if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 32) throw Error("Invalid transaction retry bound");
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const client = await this.pool.connect();
+      const client = await Timing.measure("dbPoolWait", () => this.pool.connect());
       try {
         await client.query("BEGIN ISOLATION LEVEL " + isolation);
+        Timing.count("dbTransactionAttempts");
         // A reclaimed or timed-out background job must not commit further game
         // writes, even if its old JavaScript handler finishes late.
         const guard = this.transactionGuard.getStore();
@@ -323,13 +357,14 @@ class Store {
         tx.isolation = isolation;
         const result = await callback(tx);
         if (guard) await guard(client);
-        await this.commit(tx);
+        await Timing.measure("dbCommit", () => this.commit(tx));
         if (guard) await guard(client);
-        await client.query("COMMIT");
+        await Timing.measure("dbCommit", () => client.query("COMMIT"));
         return result;
       } catch (error) {
         await client.query("ROLLBACK").catch(() => {});
         if (!["40001", "40P01"].includes(error.code)) throw error;
+        Timing.count(error.code === "40001" ? "dbSerializationFailures" : "dbDeadlocks");
         if (attempt === maxAttempts - 1) {
           // Preserve the game's existing bounded infrastructure retry contract.
           // Raw SQLSTATEs bypass it (and become HTTP 500s). Only conflicts that
@@ -343,7 +378,8 @@ class Store {
       // Keep the attempt bound and SERIALIZABLE isolation; jitter separates
       // contenders while the cap keeps interactive requests bounded.
       const delay = Math.min(500, 20 * 2 ** attempt);
-      await new Promise(resolve => setTimeout(resolve, delay + Math.floor(Math.random() * delay)));
+      Timing.count("dbRetries");
+      await Timing.measure("dbBackoff", () => new Promise(resolve => setTimeout(resolve, delay + Math.floor(Math.random() * delay))));
     }
   }
   async commit(tx) {
