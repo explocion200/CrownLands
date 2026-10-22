@@ -39,6 +39,16 @@
     return { left: a.x, top: a.y, right: b.x, bottom: b.y };
   }
   function intersects(box, x, y, width, height) { return x + width > box.left && y + height > box.top && x < box.right && y < box.bottom; }
+  // Static area geometry is indexed only when authoritative objects change.
+  // Queries retain source order so collision priorities and painting stay stable.
+  class SpatialIndex {
+    constructor(items, bounds = item => item, cell = 512) {
+      this.items=items;this.bounds=items.map(bounds);this.cell=cell;this.grid=new Map();
+      this.bounds.forEach((b,i)=>{for(const key of this.keys(b)){if(!this.grid.has(key))this.grid.set(key,[]);this.grid.get(key).push(i);}});
+    }
+    keys(b){const keys=[];for(let x=Math.floor(b.left/this.cell);x<=Math.floor((b.left+b.width)/this.cell);x++)for(let y=Math.floor(b.top/this.cell);y<=Math.floor((b.top+b.height)/this.cell);y++)keys.push(x+":"+y);return keys;}
+    query(view){const found=new Set();for(const key of this.keys({left:view.left,top:view.top,width:view.right-view.left,height:view.bottom-view.top}))for(const i of this.grid.get(key)||[]){const b=this.bounds[i];if(intersects(view,b.left,b.top,b.width,b.height))found.add(i);}return [...found].sort((a,b)=>a-b).map(i=>this.items[i]);}
+  }
   function interestSections(sections, camera, size, previous = []) {
     const visibleSections = margin => sections.filter(s => intersects(visible(camera,size,margin),s.x,s.y,s.width,s.height));
     let required = visibleSections(24);
@@ -119,6 +129,6 @@
     return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
   }
   function forWorld(world) { return { ...api, limits: size => limits(size, world), clamp: (camera, size) => clamp(camera, size, world), zoomAt: (camera, size, anchor, zoom, nextAnchor) => zoomAt(camera, size, anchor, zoom, nextAnchor, world) }; }
-  const api = { TILE, WORLD, identity, offset, localToWorld, worldToLocal, project, unproject, limits, clamp, zoomAt, visible, intersects, interestSections, placeLabels, clearScenery, preparePath, along, forWorld };
+  const api = { TILE, WORLD, identity, offset, localToWorld, worldToLocal, project, unproject, limits, clamp, zoomAt, visible, intersects, SpatialIndex, interestSections, placeLabels, clearScenery, preparePath, along, forWorld };
   return api;
 });

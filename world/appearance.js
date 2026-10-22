@@ -80,7 +80,7 @@
     const powerLabel=getEnemyCityPowerBandLabel(powerBand,city);
     const countdown=item.kind==="camp"?item.payoutPending?formatDuration(Math.max(0,Math.ceil((item.payoutAtMs-now)/1000))):"Securing":item.kind==="npc"&&!item.selectable?getMarauderRespawnLabel(item):"";
     const main=item.isMainCity===true||(own(item)&&item.id===state.mainCityId&&item.sectionId===getMainCityRegionId());
-    const signature=JSON.stringify([item.key,item.name,item.kind,item.owner,item.ownerUid,item.ownerFlag,item.ownerClanId,item.ownerClanTag,item.level,item.campType,item.classification,item.troopVisibility,item.troops,item.troopEstimateLabel,item.selectable,item.missionKind,item.returning,selected,owner,countdown,main,powerBand,powerLabel]);
+    const signature=JSON.stringify([item.key,item.name,item.kind,item.owner,item.ownerUid,item.ownerFlag,item.ownerClanId,item.ownerClanTag,item.level,item.campType,item.classification,item.troopVisibility,count(item),item.selectable,item.missionKind,item.returning,selected,owner,countdown,main,powerBand,powerLabel]);
     if(rendered.get(node)===signature)return;
     rendered.set(node,signature);
     node.classList.remove("player","enemy","neutral","clan-ally");node.classList.add(owner);
@@ -90,6 +90,7 @@
     node.classList.toggle("main-city-node",main);
     node.classList.toggle("selected",selected);
     if(item.kind==="troop"){
+      node.marchSecond=null;
       node.classList.add("army-token");
       node.classList.toggle("hidden-transfer",item.troopVisibility==="hidden");
       node.classList.toggle("clan-attack",owner==="clan-ally"&&!item.returning&&["attack","rally"].includes(item.missionKind));
@@ -124,27 +125,42 @@
     node.title=`${item.name} · ${item.sectionName} · ${item.owner}${item.level?" · Level "+item.level:""}${powerLabel?" · "+powerLabel:""}`;
     node.setAttribute("aria-label",node.title);
   }
-  let measurements=new WeakMap(),measured=0,lastLayout="",layoutSize="";
-  document.fonts?.addEventListener("loadingdone",()=>{measurements=new WeakMap();lastLayout="";});
+  let measurements=new WeakMap(),measured=0,lastLayout="",layoutSize="",cacheHits=0;
+  const measurementCache=new Map(),placements=new Map();
+  function resetLayout(){measurements=new WeakMap();measurementCache.clear();placements.clear();lastLayout="";}
+  document.fonts?.addEventListener("loadingdone",resetLayout);
   function layout(rows,clearings=[],controls=[]){
     const size=`${innerWidth}:${innerHeight}`;
-    if(size!==layoutSize){layoutSize=size;measurements=new WeakMap();lastLayout="";}
+    if(size!==layoutSize){layoutSize=size;resetLayout();}
     const entries=rows.map(({node,item})=>({node,item,banner:node.querySelector(".map-banner"),label:node.querySelector(".city-label")})).filter(e=>e.label);
+    // Culling must not turn returning banners into fresh synchronous layouts.
+    // Include all rendered content/state; font and viewport changes clear both
+    // caches. Never cache a private snapshot independently of its active node.
+    for(const e of entries)if(!measurements.has(e.label)){
+      const key=rendered.get(e.node),cached=measurementCache.get(key);
+      if(cached){measurementCache.delete(key);measurementCache.set(key,cached);measurements.set(e.label,cached);cacheHits++;}
+    }
     const fresh=entries.filter(e=>!measurements.has(e.label));
     // Batch reads/writes only for changed banners, never on each camera frame.
     fresh.forEach(e=>e.banner.classList.remove("compact"));
     const sizes=fresh.map(e=>({width:e.label.offsetWidth*bannerScale(e.item),height:e.label.offsetHeight*bannerScale(e.item)}));
     fresh.forEach(e=>{if(!e.node.classList.contains("selected"))e.banner.classList.add("compact");});
-    fresh.forEach((e,i)=>measurements.set(e.label,{...sizes[i],compact:e.node.classList.contains("selected")?null:{width:e.label.offsetWidth*bannerScale(e.item),height:e.label.offsetHeight*bannerScale(e.item)},version:++measured}));
+    fresh.forEach((e,i)=>{
+      const value={...sizes[i],compact:e.node.classList.contains("selected")?null:{width:e.label.offsetWidth*bannerScale(e.item),height:e.label.offsetHeight*bannerScale(e.item)},version:++measured};
+      measurements.set(e.label,value);measurementCache.set(rendered.get(e.node),value);
+      while(measurementCache.size>2048)measurementCache.delete(measurementCache.keys().next().value);
+    });
     const signature=entries.map(e=>`${e.item.key}:${measurements.get(e.label).version}:${e.item.x}:${e.item.top}`).join("|")
-      +";"+rows.filter(({item})=>item.kind==="tower-building").map(({item:o})=>`${o.key}:${o.left}:${o.top}:${o.width}:${o.height}`).join("|")+JSON.stringify(controls);
+      +";"+rows.map(({item:o})=>`${o.key}:${o.left}:${o.top}:${o.width}:${o.height}`).join("|")+JSON.stringify([clearings,controls]);
     if(signature===lastLayout)return;
     lastLayout=signature;
     const byKey=new Map(entries.map(e=>[e.item.key,e]));
     const labels=entries.map(e=>({key:e.item.key,x:e.item.x,y:(e.item.labelTop??e.item.top)-4,anchored:e.item.kind==="npc",priority:e.node.classList.contains("selected")?1:0,...measurements.get(e.label)}));
     const labelBounds=new Map();
     const obstacles=[...clearings,...rows.filter(({item})=>item.kind!=="courtyard").map(({item:o})=>({left:o.left,top:o.top,right:o.left+o.width,bottom:o.top+o.height}))];
-    for(const result of SeamlessModel.placeLabels(labels,new Set(),0,obstacles)){
+    let results=placements.get(signature);
+    if(!results){results=SeamlessModel.placeLabels(labels,new Set(),0,obstacles);placements.set(signature,results);if(placements.size>16)placements.delete(placements.keys().next().value);}
+    for(const result of results){
       // An open action row may cover a neighboring banner on narrow screens.
       // Temporarily suppress that banner instead of detaching it from its city.
       const covered=!result.hidden&&controls.some(c=>SeamlessModel.intersects(c,result.rect.left,result.rect.top,result.rect.right-result.rect.left,result.rect.bottom-result.rect.top));
@@ -156,7 +172,8 @@
     }
     window.SeamlessAppearance.labelBounds=labelBounds;
   }
-  window.SeamlessAppearance={render,layout,geometry,courtyard,loadIdentities,tickShield,routeClass(item){return own(item)?"player-route":ally(item)?!item.returning&&["attack","rally"].includes(item.missionKind)?"clan-hostile-route":"clan-support-route":"enemy-route";},tickMarch(node,item,now){
+  window.SeamlessAppearance={render,layout,geometry,courtyard,loadIdentities,tickShield,resetLayout,stats:()=>({measured,cacheHits,measurements:measurementCache.size,placements:placements.size}),routeClass(item){return own(item)?"player-route":ally(item)?!item.returning&&["attack","rally"].includes(item.missionKind)?"clan-hostile-route":"clan-support-route":"enemy-route";},tickMarch(node,item,now){
+    const second=Math.ceil(item.arriveAt-now);if(node.marchSecond===second)return;node.marchSecond=second;
     const timer=node.querySelector(".army-token-time"),value=formatDuration(Math.max(0,Math.ceil(item.arriveAt-now)));
     if(timer&&timer.textContent!==value)timer.textContent=value;
   }};

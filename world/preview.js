@@ -15,6 +15,7 @@ window.createContinuousWorldView = async function (options = {}) {
     world.classList.toggle("full-catalog", fullCatalog);
     viewport.setAttribute("aria-label", `${scene.sections.length}-section world. Drag to explore, scroll or pinch to zoom. Select to inspect.`);
     const objects = new Map(scene.objects.map(o => [o.key, o]));
+    let objectIndex=new M.SpatialIndex(scene.objects);
     function updateObjects(force=false){
       const towers=rawObjects.filter(o=>o.kind==="tower");
       const states=new Map(towers.map(o=>[o.id,options.getTowerState?.(o.id)]));
@@ -23,6 +24,7 @@ window.createContinuousWorldView = async function (options = {}) {
       courtyardSignature=signature;
       scene.objects=rawObjects.map(SeamlessAppearance.geometry).flatMap(o=>o.kind==="tower"?[o,...SeamlessAppearance.courtyard(o,states.get(o.id))]:[o]);
       objects.clear();scene.objects.forEach(o=>objects.set(o.key,o));
+      objectIndex=new M.SpatialIndex(scene.objects);
     }
     function prepareMarch(m, points) {
       const path = M.preparePath(points);
@@ -30,7 +32,13 @@ window.createContinuousWorldView = async function (options = {}) {
     }
     let marches = scene.marches.map(m => prepareMarch(m, m.points)), activeMarches = marches, feed = null, feedEpoch = null, feedViewer = null, selectedSnapshot = null, routeDraft = null, gameplay = null;
     const byMarch = new Map(marches.map(m => [m.key, m]));
-    const nodes = new Map(), terrain = new Map(), routeNodes = new Map();
+    const nodes = new Map(), pooledNodes=new Map(), terrain = new Map(), routeNodes = new Map();
+    let paintedSections=new Set();
+    function retireNode(key,node){
+      node.remove();nodes.delete(key);
+      if(objects.has(key)){pooledNodes.delete(key);pooledNodes.set(key,node);}
+      while(pooledNodes.size>512)pooledNodes.delete(pooledNodes.keys().next().value);
+    }
     function renderRoutes(items){
       const keys=new Set(items.map(m=>m.key));
       for(const [key,node] of routeNodes)if(!keys.has(key)){node.remove();routeNodes.delete(key);}
@@ -47,7 +55,7 @@ window.createContinuousWorldView = async function (options = {}) {
     let patrolPlanAt = 0, lastAreaData = null, lastAreaFailed = false;
     let disposed = false;
     let size, camera, selected = null, dirty = true, raf = 0, lastFrame = 0;
-    let serverTimeOffset = 0, sceneTime = 0, frozenTime = null, lastPlan = "", plannedCamera = null;
+    let serverTimeOffset = 0, sceneTime = 0, frozenTime = null, lastPlan = "", plannedCamera = null, drawnCamera=null, zoomAt=0;
     const frameTimes = [], workTimes = [], pointers = new Map();
     let gesture = null, dragged = false, clickKey = null, suppressClick = false, listenerCount = 0;
     const cleanups = [];
@@ -82,6 +90,8 @@ window.createContinuousWorldView = async function (options = {}) {
       if (url) { image.src = url; image.hidden = false; } else { image.removeAttribute("src"); image.hidden = true; }
     }
     function createObject(item) {
+      const reused=pooledNodes.get(item.key);
+      if(reused){pooledNodes.delete(item.key);objectsLayer.append(reused);nodes.set(item.key,reused);return reused;}
       const node = document.createElement(["scenery","courtyard","troop"].includes(item.kind) ? "div" : "button");
       node.className = item.kind === "troop" ? "troop army-token" : `object ${item.kind}`; node.dataset.key = item.key;
       if (!["scenery","courtyard"].includes(item.kind)) { node.type = "button"; node.setAttribute("aria-label", `${item.name} · ${item.sectionName || "Sample patrol"}`); }
@@ -182,7 +192,7 @@ window.createContinuousWorldView = async function (options = {}) {
         const epochChanged = stageThree && data.epoch && data.epoch !== feedEpoch;
         if (data.epoch) feedEpoch = data.epoch;
         if (principalChanged || epochChanged || data.authExpired) routeDraft?.clear();
-        if (principalChanged || (hadEpoch && epochChanged) || data.authExpired) gameplay?.clear();
+        if (principalChanged || (hadEpoch && epochChanged) || data.authExpired) {gameplay?.clear();pooledNodes.clear();SeamlessAppearance.resetLayout();}
         if (data.removed?.includes(routeDraft?.source?.key)) routeDraft.clear();
         const inspectedSections = selectedSnapshot?.kind === "troop" ? selectedSnapshot.sections : [selectedSnapshot?.sectionId];
         const inspectedAreaPresent = inspectedSections.some(id => data.sections.some(s => s.id === id));
@@ -195,6 +205,7 @@ window.createContinuousWorldView = async function (options = {}) {
             || permissionChanged
             ) { selected = null; selectedSnapshot = null; options.onClear?.(); }
         rawObjects=data.sections.flatMap(s=>s.objects);updateObjects(true);
+        for(const key of pooledNodes.keys())if(!objects.has(key))pooledNodes.delete(key);
         const routes = new Map(data.routes.map(r => [r.id, r.points]));
         marches = data.marches.map(m => {
           const old = byMarch.get(m.key); return old && !epochChanged && old.routeId === m.routeId ? { ...old, ...m } : prepareMarch(m, routes.get(m.routeId));
@@ -211,13 +222,13 @@ window.createContinuousWorldView = async function (options = {}) {
       updateObjects();
       const view = M.visible(camera, size, 75), exact = M.visible(camera, size);
       const overview = camera.zoom < M.limits(size).detail;
-      const ordered = [...scene.sections].sort((a, b) => Math.hypot(a.x + 724 - camera.x, a.y + 543 - camera.y) - Math.hypot(b.x + 724 - camera.x, b.y + 543 - camera.y));
+      const interest = M.interestSections(scene.sections,camera,size,feed?.ids || []);
+      const ordered = [...(interest.length?interest:scene.sections)].sort((a, b) => Math.hypot(a.x + 724 - camera.x, a.y + 543 - camera.y) - Math.hypot(b.x + 724 - camera.x, b.y + 543 - camera.y));
       const visibleSections = ordered.filter(s => M.intersects(exact, s.x, s.y, s.width, s.height));
       const fullSections = overview ? [] : [...visibleSections, ...ordered.filter(s => !visibleSections.includes(s))].slice(0, 4);
-      const interest = M.interestSections(scene.sections,camera,size,feed?.ids || []);
       const nearby = ordered.filter(s => interest.includes(s));
       feed?.set(overview ? [] : nearby.map(s => s.id));
-      const visibleObjects = scene.objects.filter(o => (!overview || (!fullCatalog && o.kind !== "scenery")) && M.intersects(view, o.left, o.top, o.width, o.height));
+      const visibleObjects = overview?[]:objectIndex.query(view);
       const visibleMarches = overview && fullCatalog ? [] : activeMarches.filter(m => M.intersects(view, m.position.x - 18, m.position.y - 18, 36, 36));
       const requests = (fullCatalog ? (overview ? [] : nearby) : ordered).map((s, i) => ({ path: s.thumbnail, kind: "thumbnail", priority: visibleSections.includes(s) ? i : 100 + i }));
       if (fullCatalog) requests.push({ path: scene.overviewAsset, kind: "overview", priority: 0 });
@@ -226,22 +237,19 @@ window.createContinuousWorldView = async function (options = {}) {
       const plan = JSON.stringify(requests);
       if (plan !== lastPlan) { assets.update(requests); lastPlan = plan; }
       if (fullCatalog) setImage($("catalog-overview"), scene.overviewAsset);
-      for (const section of scene.sections) {
+      const nextPainted=new Set([...nearby,...fullSections]);
+      for (const section of new Set([...paintedSections,...nextPainted])) {
         const tile = terrain.get(section.id); setImage(tile.thumb, section.thumbnail); setImage(tile.full, section.terrain);
-        // Scale labels without relaying out text on every zoom frame. Authored
-        // matching gutters cover fractional sampling without stretching terrain.
-        const labelScale = Math.max(1, 11 / (20 * camera.zoom));
-        tile.tile.lastChild.style.transform = `translateX(-50%) scale(${labelScale})`;
-        const tinyOverview = fullCatalog && overview && section.width * camera.zoom < 90;
-        tile.tile.lastChild.hidden = tinyOverview && section.id !== scene.homeSectionId;
-        tile.tile.lastChild.style.maxWidth = fullCatalog && overview && !tinyOverview ? `${section.width * .9 / labelScale}px` : "";
+        // Section captions are hidden in the native UI; do not invalidate their
+        // styles on every camera reconciliation.
       }
+      paintedSections=nextPainted;
       renderRoutes(overview?[]:marches.filter(m=>M.intersects(view,m.bounds.left,m.bounds.top,m.bounds.right-m.bounds.left,m.bounds.bottom-m.bounds.top)));
       scenery = visibleObjects.filter(o => o.kind === "scenery"); sceneryCamera = "";
       const interactive = visibleObjects.filter(o => o.kind !== "scenery");
       window.SeamlessAppearance?.loadIdentities?.(interactive);
       const visibleKeys = new Set([...interactive, ...visibleMarches].map(o => o.key));
-      for (const [key, node] of nodes) if (!visibleKeys.has(key)) { node.remove(); nodes.delete(key); }
+      for (const [key, node] of nodes) if (!visibleKeys.has(key)) retireNode(key,node);
       for (const item of [...interactive, ...visibleMarches]) {
         const node = nodes.get(item.key) || createObject(item); if (item.kind !== "troop") setImage(node.firstChild, item.asset);
         if (item.kind !== "troop") {
@@ -276,6 +284,10 @@ window.createContinuousWorldView = async function (options = {}) {
     function frame(now) {
       if (disposed) return;
       const start = performance.now();
+      // Reuse rasterized layers only at a settled scale. A permanent hint kept
+      // old low-resolution tiles while zooming; remove it before every zoom.
+      if(!drawnCamera||drawnCamera.zoom!==camera.zoom){zoomAt=now;world.style.willChange="";}
+      else if(now-zoomAt>150&&(drawnCamera.x!==camera.x||drawnCamera.y!==camera.y))world.style.willChange="transform";
       if (lastFrame && !document.hidden) { frameTimes.push(now - lastFrame); if (frameTimes.length > 900) frameTimes.shift(); }
       sceneTime = frozenTime ?? now / 1000 + serverTimeOffset;
       const view = M.visible(camera, size, 100);
@@ -309,7 +321,9 @@ window.createContinuousWorldView = async function (options = {}) {
       for(const march of activeMarches){const node=nodes.get(march.key);if(node)window.SeamlessAppearance?.tickMarch(node,march,sceneTime);}
       options.onFrame?.({ camera, size, project: p => M.project(camera, p, size) });
       if (disposed) return;
-      world.style.transform = `translate3d(${size.width / 2 - camera.x * camera.zoom}px,${size.height / 2 - camera.y * camera.zoom}px,0) scale(${camera.zoom})`;
+      const transform=`translate3d(${size.width / 2 - camera.x * camera.zoom}px,${size.height / 2 - camera.y * camera.zoom}px,0) scale(${camera.zoom})`;
+      if(world.style.transform!==transform)world.style.transform=transform;
+      drawnCamera={...camera};
       routeDraft?.draw(camera,size);
       for (const march of activeMarches) { const node = nodes.get(march.key); if (node) { const p = M.project(camera, march.position, size); node.style.transform = `translate3d(${p.x}px,${p.y}px,0) scale(${Math.min(1,camera.zoom/M.limits(size).max)}) translate(-50%,-50%)`; } }
       const selectedMarch = byMarch.get(selected);
@@ -319,7 +333,7 @@ window.createContinuousWorldView = async function (options = {}) {
     }
     on(document, "visibilitychange", () => { lastFrame = 0; if (stageThree && !document.hidden) feed?.refresh(); });
     raf = requestAnimationFrame(frame);
-    function dispose() { if (disposed) return; disposed = true; cancelAnimationFrame(raf); observer.disconnect(); sprites.dispose(); assets.dispose(); feed?.dispose(); cleanups.forEach(fn => fn()); nodes.clear(); listenerCount = 0; options.onClear?.(); }
+    function dispose() { if (disposed) return; disposed = true; cancelAnimationFrame(raf); observer.disconnect(); sprites.dispose(); assets.dispose(); feed?.dispose(); cleanups.forEach(fn => fn()); nodes.clear();pooledNodes.clear();SeamlessAppearance.resetLayout(); listenerCount = 0; options.onClear?.(); }
     on(window, "pagehide", dispose);
     // Camera operations are independent of server-authoritative game commands.
     const controller = {
@@ -331,7 +345,7 @@ window.createContinuousWorldView = async function (options = {}) {
       get selectedKey() { return selected; },
       scene, home, select, routeDraft, gameplay, refresh: () => feed?.refresh(),
       placementState: () => ({size,feed:feed && {ids:feed.ids,failed:feed.failed,authExpired:feed.authExpired}}),
-      snapshot: () => ({ camera: { ...camera }, size: { ...size }, selected, following: null, assets: assets.stats(), feed: feed?.stats(), nodes: nodes.size, listeners: listenerCount+(routeDraft?.cleanups.length||0)+(gameplay?.cleanups.length||0), frameTimes: [...frameTimes], workTimes: [...workTimes], marches: marches.map(m => ({ key: m.key, position: m.position })) }),
+      snapshot: () => ({ camera: { ...camera }, size: { ...size }, selected, following: null, assets: assets.stats(), feed: feed?.stats(), nodes: nodes.size,pooledNodes:pooledNodes.size,renderer:sprites.stats?.(), listeners: listenerCount+(routeDraft?.cleanups.length||0)+(gameplay?.cleanups.length||0), frameTimes: [...frameTimes], workTimes: [...workTimes], marches: marches.map(m => ({ key: m.key, position: m.position })) }),
       view: (x, y, zoom) => { cancelFollow(); camera = M.clamp({ x, y, zoom: zoom ?? camera.zoom }, size); },
       time: value => { frozenTime = value; dirty = true; },
       resetMetrics: () => { frameTimes.length = 0; workTimes.length = 0; }

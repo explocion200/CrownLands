@@ -1,30 +1,34 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "120e444002907a15c0cdfb1b0808789dfaf484eb",
+  "baseCommit": "12540859d998ed867ffb05c30560890dd24579b7",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "styles.css",
         "world/appearance.js",
-        "tools/test-local-postgres-selected-city-banner.js",
-        "tools/validate-king-power-colors-browser.js"
+        "world/assets.js",
+        "world/flags.css",
+        "world/model.js",
+        "world/preview.js",
+        "world/sprite-layer.js",
+        "tools/test-local-postgres-map-pan-performance.js",
+        "tools/validate-world-render-cache.js"
       ],
       "tests": [
+        "tools/validate-world-render-cache.js",
+        "tools/test-local-postgres-map-pan-performance.js",
         "tools/test-local-postgres-selected-city-banner.js",
-        "tools/validate-king-power-colors-browser.js",
-        "tools/validate-continuous-map-labels.js",
-        "tools/validate-clans.js",
-        "tools/validate-crownlands-palette.js"
+        "tools/test-local-postgres-production-world.js",
+        "tools/validate-continuous-map-labels.js"
       ],
-      "reason": "Reuse the compact foreign flag/level shield when selected in both shared map markup and the production continuous-world renderer. Verify actual mouse/touch selection, deselection, two zoom levels and desktop/landscape phone sizes in the packaged client with disposable PostgreSQL accounts; assert centered contained level, unchanged flag dimensions, shield indicators, relation/protection colors and hidden enemy troop counts. The shared-renderer browser check guards fallback markup and authoritative power refresh. Catalog collision and Clan/palette validators cover affected shared label geometry and styles. No backend, authorization or gameplay rules change; no emulator suites are needed."
+      "reason": "Exercise actual packaged authenticated world with disposable PostgreSQL accounts. Cover camera/culling parity, spatial ordering, bounded retained nodes and images, stale/failed asset requests, drawing resolution, name refresh and font invalidation; desktop and landscape phone render checks preserve selected flag/level attachment, protection colors, shields, hidden garrisons, native actions, recorded routes and pickups. Identical warmed crowded pan routes measure frame/work times and resource bounds. No backend or authority changes; emulator suites are not required."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/CONTINUOUS_WORLD_PERFORMANCE_2026-10-22.md"
       ],
       "tests": [],
-      "reason": "Record the explicitly requested selected-city flag attachment correction and preserve existing scaling, privacy and movement rules. Deployment remains unverified until the publisher build is checked."
+      "reason": "Record the approved performance constraints, implementation, reproducible measurements and separate backend rollout boundary. Documentation does not establish deployment or physical-phone results."
     }
   ]
 }
