@@ -1,5 +1,112 @@
 /* Production continuous camera connected to the existing game controls. */
 "use strict";
+// Only regular castles use the approved readable menu. Cache silhouettes and
+// layouts; camera frames only move its anchor, never reread pixels or rebuild it.
+function createContinuousCastleActions(invalidate) {
+  const masks=new Map(), layouts=new Map(), applied=new WeakMap();
+  const angles=Array.from({length:181},(_,i)=>{
+    const a=(-45+i*1.5)*Math.PI/180;return [Math.cos(a),118/142*Math.sin(a)];
+  });
+  let disposed=false;
+  const remember=(cache,key,value)=>{
+    if(cache.size>=64)cache.delete(cache.keys().next().value);
+    cache.set(key,value);return value;
+  };
+  function silhouette(asset) {
+    if(masks.has(asset))return masks.get(asset);
+    const entry=remember(masks,asset,{state:"pending",edges:null}),image=new Image();
+    entry.image=image;
+    image.onload=()=>{
+      if(disposed || masks.get(asset)!==entry)return;
+      try {
+        const canvas=document.createElement("canvas");canvas.width=canvas.height=256;
+        const context=canvas.getContext("2d",{willReadFrequently:true});
+        context.drawImage(image,0,0,256,256);
+        const alpha=context.getImageData(0,0,256,256).data,edges=[];
+        for(let y=0;y<256;y++)for(let x=0;x<256;x++){
+          if(alpha[(y*256+x)*4+3]<=32)continue;
+          if(x===0||y===0||x===255||y===255||alpha[(y*256+x-1)*4+3]<=32||alpha[(y*256+x+1)*4+3]<=32||alpha[((y-1)*256+x)*4+3]<=32||alpha[((y+1)*256+x)*4+3]<=32)
+            edges.push([(x+.5)/256-.5,(y+.5)/256-.5]);
+        }
+        if(!edges.length)throw Error("Empty castle silhouette");
+        entry.edges=edges;entry.state="ready";
+      } catch {entry.state="fallback";}
+      image.onload=image.onerror=null;delete entry.image;invalidate();
+    };
+    image.onerror=()=>{
+      image.onload=image.onerror=null;delete entry.image;
+      if(disposed || masks.get(asset)!==entry)return;
+      entry.state="fallback";invalidate();
+    };
+    image.src=asset;
+    return entry;
+  }
+  function layout(width,height,phone,mask) {
+    const button=phone?44:56,gap=phone?4:6,stroke=8*button/64,cy=height*.08;
+    const padding=gap+stroke/2;
+    let radius=Math.max(width/2+gap,button*.6);
+    if(mask.edges){
+      const edges=mask.edges.map(([x,y])=>[x*width,y*height]);
+      // All painted pixels must lie inside the ellipse. Measure clearance only
+      // along its original open arc, so transparent corners don't inflate it.
+      const clear=r=>{
+        for(const [x,y] of edges){
+          let a=Math.atan2((y-cy)*142/118,x);if(a< -Math.PI/4)a+=Math.PI*2;
+          if(a<=Math.PI*1.25 && x*x+(y-cy)**2*(142/118)**2>r*r)return false;
+        }
+        for(const [ux,uy] of angles){
+          const x=r*ux,y=cy+r*uy;
+          for(const [ex,ey] of edges)if((x-ex)**2+(y-ey)**2<padding*padding)return false;
+        }
+        return true;
+      };
+      if(!clear(radius)){
+        let low=radius,high=Math.hypot(width,height)+padding*2+button;
+        while(high-low>.25){const middle=(low+high)/2;if(clear(middle))high=middle;else low=middle;}
+        radius=Math.ceil(high*2)/2;
+      }
+    } else {
+      // Pending/failed artwork uses a conservative rectangle envelope. Never
+      // block commands or put the arc through an as-yet unreadable sprite.
+      radius=Math.max(radius,Math.hypot(width/2+padding,(height/2+cy+padding)*142/118));
+    }
+    const ry=radius*118/142,tip=Math.SQRT1_2;
+    const sideX=Math.max(radius,width/2+gap+button/2),sideY=cy-1.44*button/64;
+    const infoY=Math.max(cy+ry,height/2+gap+button/2,sideY+button+2);
+    return {button,stroke,path:`M ${radius*tip} ${cy-ry*tip} A ${radius} ${ry} 0 1 1 ${-radius*tip} ${cy-ry*tip}`,
+      slots:{"wheel-level":[-sideX,sideY],"wheel-scout":[-sideX,sideY],"wheel-send":[sideX,sideY],"wheel-attack":[sideX,sideY],
+        "wheel-info":[0,infoY],"wheel-regroup":[-sideX-button*.55,sideY-button-2],"wheel-scout-nearby":[sideX+button*.55,sideY-button-2],"wheel-report":[sideX+button*.55,sideY-button-2]}};
+  }
+  return {
+    position(node,point,zoom,size) {
+      if(disposed)return;
+      const phone=size.height<=500,width=point.width*zoom,height=point.height*zoom,mask=silhouette(point.asset);
+      const key=JSON.stringify([point.asset,width,height,phone,mask.state]);
+      if(applied.get(node)===key)return;
+      const data=layouts.get(key)||remember(layouts,key,layout(width,height,phone,mask));
+      if(!node.classList.contains("continuous-castle-wheel")){
+        node.classList.add("continuous-castle-wheel");
+        const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");
+        svg.classList.add("castle-action-arc");svg.setAttribute("aria-hidden","true");
+        svg.append(document.createElementNS(svg.namespaceURI,"path"));
+        node.querySelector(".city-wheel-ring")?.replaceWith(svg);
+        const info=node.querySelector(".wheel-info");
+        if(info&&!info.querySelector(".wheel-action-name")){
+          const label=document.createElement("span");label.className="wheel-action-name";label.textContent="Info";info.append(label);
+        }
+      }
+      node.classList.toggle("compact-castle-wheel",phone);
+      node.querySelector(".castle-action-arc path").setAttribute("d",data.path);
+      node.style.setProperty("--castle-arc-stroke",`${data.stroke}px`);
+      for(const [slot,[x,y]] of Object.entries(data.slots)){
+        const button=node.querySelector("."+slot);if(!button)continue;
+        button.style.left=`${x}px`;button.style.top=`${y}px`;
+      }
+      applied.set(node,key);
+    },
+    dispose(){disposed=true;for(const mask of masks.values())if(mask.image)mask.image.onload=mask.image.onerror=null;masks.clear();layouts.clear();},
+  };
+}
 window.mountContinuousWorld = async function (scene, {restoreSelection=null}={}) {
   const session = getOnlineSessionRequestScope();
   const readWorld = async (operation, input = {}, signal) => {
@@ -46,6 +153,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   for (const type of ["pointerdown","wheel","keydown","click"]) host.addEventListener(type,cancelPendingFocus,true);
   let areasReady = false, bulk = null, bulkGeneration = 0, pickupPlacement;
   const pickupNodes=new Map();
+  const castleActions=createContinuousCastleActions(()=>view?.invalidate());
   function renderPickups(){
     if(!view||disposed)return;
     const present=new Set(),daily=ensureDailyCaptureTracker();
@@ -74,12 +182,17 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   function clearWheel() { overlay.replaceChildren(); lastWheel = ""; wheelPoint = null; }
   function positionWheel(nodes,{camera,size}) {
     const p=SeamlessModel.project(camera,wheelPoint,size);
-    // Preserve the existing close-up control size. Below maximum zoom the
+    // Other objectives retain their existing close-up control size. Below maximum zoom the
     // entire wheel, including button spacing, shrinks with its map target.
     const maxZoom=SeamlessModel.forWorld(scene).limits(size).max;
     const closeScale=size.height<500?.74:.9;
     const scale=closeScale*Math.min(1,camera.zoom/maxZoom);
     for(const node of nodes){
+      if(wheelPoint.kind==="castle" && node.classList.contains("city-action-wheel")){
+        castleActions.position(node,wheelPoint,camera.zoom,size);
+        node.style.left=`${p.x}px`;node.style.top=`${p.y}px`;node.style.transform="none";
+        continue;
+      }
       if(node.dataset.towerId){
         const bottom=wheelPoint.top+wheelPoint.height-wheelPoint.y;
         node.style.setProperty("--tower-action-y",`${(bottom*maxZoom+36)/closeScale}px`);
@@ -260,7 +373,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   clearSelection(false);view.home();renderPickups();
   root.querySelector("#load-status").textContent="Connected";
   function dispose() {
-    if(disposed)return;disposed=true;window.removeEventListener("pagehide",dispose);bridge.dispose();view?.dispose();host.remove();overlay.remove();pickups.remove();pickupNodes.clear();mapWorld.hidden=false;setMainCityReturnHudMode(false);
+    if(disposed)return;disposed=true;castleActions.dispose();window.removeEventListener("pagehide",dispose);bridge.dispose();view?.dispose();host.remove();overlay.remove();pickups.remove();pickupNodes.clear();mapWorld.hidden=false;setMainCityReturnHudMode(false);
     ({renderCities,renderArmies,renderPaths,renderHarvestBonuses,centerOnMap,centerOnCity,centerOnWorldPoint,beginMapVisualTransition,updateMainCityReturnButton,
       renderWorldMap,renderIslandTeleporters,preloadIslandMap,preloadNearbyIslandMaps,getNearbyScoutCandidates,getNearbyRegroupCandidates,toggleScoutNearby,toggleRegroup,createHarvestBonusPoint,isHarvestBonusPlacementSafe}=original);
     delete window.CrownlandsContinuousControls;

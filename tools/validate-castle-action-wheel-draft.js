@@ -8,7 +8,7 @@ const { createMapBenchmarkServer } = require("./map-benchmark/server");
   const server = createMapBenchmarkServer(), address = await server.listen();
   const artifacts = path.resolve(__dirname,"../release-artifacts/castle-action-wheel-original");
   fs.mkdirSync(artifacts,{recursive:true});
-  const browser = await chromium.launch({headless:true, ...(process.env.CHROME_PATH ? {executablePath:process.env.CHROME_PATH} : {})});
+  const browser = await chromium.launch({headless:true, executablePath:process.env.CHROME_PATH || (fs.existsSync("/usr/bin/google-chrome") ? "/usr/bin/google-chrome" : chromium.executablePath())});
   const errors = [], requests = [], records = [];
   try {
     const context = await browser.newContext({hasTouch:true});

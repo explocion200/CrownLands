@@ -4,7 +4,31 @@
   "coverage": [
     {
       "paths": [
-        "docs/visual-qa/castle-action-wheel/README.md",
+        "world/native.js",
+        "action-buttons.css",
+        "tools/check-continuous-control-scale.js",
+        "tools/validate-castle-action-layout.js"
+      ],
+      "tests": [
+        "tools/validate-castle-action-layout.js",
+        "tools/test-local-postgres-production-world.js",
+        "tools/validate-continuous-pickup-animation.js"
+      ],
+      "reason": "Implement the approved original gold arc only for regular castles in the live Core connected renderer. Cover all 30 default/equipped paintings, five stages, three zooms and desktop/two landscape sizes; check pixel clearance, native button labels/handlers/disabled states, cached frame work and failed/obsolete image loads. The real production browser with two disposable PostgreSQL accounts covers camera/selection/dismissal/resize/touch, native menus and action commands, permissions and accepted movements. Update its sizing assertions only for the explicitly approved readable castle exception, retaining proportional objective sizing. Shared action CSS stays scoped; the existing pickup animation check guards adjacent native-frame logic. No server implementation, data model, gameplay or Firebase changes: no Firebase emulator suite required."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/visual-qa/castle-action-wheel/README.md"
+      ],
+      "tests": [
+        "tools/validate-castle-action-layout.js",
+        "tools/test-local-postgres-production-world.js"
+      ],
+      "reason": "Record the owner-approved castle-only exception to proportional menu sizing, preserve the original arrangement and current gameplay, and document the production implementation and checks. The runtime tests validate the confirmed rule; no separate documentation runtime or emulator suite applies."
+    },
+    {
+      "paths": [
         "docs/visual-qa/castle-action-wheel/draft.css",
         "docs/visual-qa/castle-action-wheel/draft.js",
         "docs/visual-qa/castle-action-wheel/index.html",
@@ -14,7 +38,7 @@
       "tests": [
         "tools/validate-castle-action-wheel-draft.js"
       ],
-      "reason": "Approval-only local castle-action layout sample. Reuse current Core terrain, five city stages, action-button styles and icons without changing or booting gameplay. The final draft restores the original open 142:118 ellipse, gold stroke and upper-side/side/bottom action arrangement, retains compact 56/44 px buttons, and adjusts clearance using the existing sprite alpha rather than transparent corners. The browser validator covers 135 ownership/stage/zoom/viewport cases; independently samples the painted arc against the sprite mask, checks original curve/aspect/slots, button separation and label bounds, captures desktop and landscape-phone screenshots, tests mouse/touch/keyboard and resize, and verifies local GET-only requests and no production entry references. No runtime, API, database, gameplay or emulator changes. Master Specification and production entry points are unchanged; hold merge/deployment until visual approval. Current package inputs are unchanged from the previously validated build. No unrelated game suites apply."
+      "reason": "Retain the approved isolated visual reference using current Core art and actual action CSS. Cover 135 ownership/stage/zoom/viewport cases, original ellipse, pixel and button clearance, local-only assets, mouse/touch/keyboard and resize. Use installed Chromium in CI or the local Playwright runtime. Draft remains excluded from game entry points and production packages."
     }
   ]
 }

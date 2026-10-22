@@ -1,5 +1,46 @@
 /* Crownlands shared map action-button system ----------------------------- */
 
+/* Approved castle layout, scoped to the live connected camera. Objectives and
+   the Inner Castle keep their existing control sizing and positioning. */
+#continuous-game-actions .continuous-castle-wheel {
+  width: 0;
+  height: 0;
+  pointer-events: none !important;
+}
+#continuous-game-actions .castle-action-arc {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: visible;
+  pointer-events: none;
+}
+#continuous-game-actions .castle-action-arc path {
+  fill: none;
+  stroke: rgba(211, 161, 63, .78);
+  stroke-width: var(--castle-arc-stroke);
+  stroke-linecap: round;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .45));
+}
+#continuous-game-actions .continuous-castle-wheel .cl-action-button {
+  --cl-action-size: 56px;
+  right: auto;
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  padding: 4px 3px !important;
+  gap: 1px;
+}
+#continuous-game-actions .continuous-castle-wheel .wheel-icon {font-size:20px !important;min-height:20px}
+#continuous-game-actions .continuous-castle-wheel .cl-icon {width:20px;height:20px;display:block}
+#continuous-game-actions .continuous-castle-wheel .wheel-action-name {font-size:10px !important;line-height:1.05;white-space:nowrap;overflow-wrap:normal}
+#continuous-game-actions .continuous-castle-wheel .wheel-cost {font:8px/1.1 system-ui,sans-serif;padding:1px 3px}
+#continuous-game-actions .compact-castle-wheel .cl-action-button {--cl-action-size:44px;padding:3px 2px !important}
+#continuous-game-actions .compact-castle-wheel .wheel-icon {font-size:16px !important;min-height:16px}
+#continuous-game-actions .compact-castle-wheel .cl-icon {width:16px;height:16px}
+#continuous-game-actions .compact-castle-wheel .wheel-action-name {font-size:8px !important}
+#continuous-game-actions .compact-castle-wheel .wheel-cost {font-size:7px;padding:0 2px}
+
 :root {
   --cl-action-size: 64px;
   --cl-action-border-width: 2px;
