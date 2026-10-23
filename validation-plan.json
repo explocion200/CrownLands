@@ -1,32 +1,31 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "c28ca465aaf34db22c4440162881760db1190fb8",
+  "baseCommit": "7e0c16ecb98380f36b330f8ad04f9b37fc30db35",
   "coverage": [
     {
       "paths": [
         "game.js",
-        "clan-ledger-ui.css",
         "tools/validate-war-cities-browser.js"
       ],
       "tests": [
         "tools/validate-war-cities-browser.js",
         "tools/validate-clans.js",
         "tools/validate-clan-ledger-ui.js",
-        "tools/validate-war-room-responsive-browser.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-clan-notifications-browser.js",
+        "tools/validate-clan-action-notifications-browser.js",
+        "functions/test/emulator-clan-war-cities.js"
       ],
-      "reason": "Rename the Clan tab and visible board copy to Lost Holdings, reuse the shared accessible 44px location artwork and keep Location/Return inline on desktop and narrow landscape. Source and built browser tests verify live Lost-to-Recovered refresh on the same row, current-owner-only action, icon geometry/art, navigation clearing armed commands without dispatch, confirmation, scrolling/focus, background polling and stale scope rejection. Shared Clan/War Room regressions protect the existing five-tab frame; retain existing asset budgets."
+      "reason": "Add persistent Lost Holdings availability using the existing shared circle and authenticated paged API. Source and delivered browser checks cover desktop and two landscape sizes, alert before visiting the board, lost/recovered/returned states, owner-only return notice, later filtered pages, fixed displayed-page identity, one request/timer, hidden/closed window suppression, failed reads and stale-clan responses. Existing Clan notification checks preserve role and gift/donation badges; the selected emulator suite protects membership/realm privacy and authoritative return eligibility of the reused read API. No backend changes."
     },
     {
       "paths": [
-        "tools/test-local-postgres-war-city-commands.js"
+        "tools/asset-performance-budgets.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
       "tests": [
-        "tools/test-local-postgres-war-city-commands.js",
-        "functions/test/emulator-clan-war-cities.js",
-        "functions/test/emulator-combat-authorization.js"
+        "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Regression coverage for the explicit no-bypass requirement: a stronger clanmate inspecting a recorded loss still previews/dispatches a protected raid, receives no borrowed retaliation entitlement and cannot capture; ordinary eligible recapture preserves row identity and exposes Return only to the recovering owner. Reuse actual PostgreSQL commands and current combat/claim emulator suites. No server implementation, data schema or release contract change."
+      "reason": "Measure 2789 added source bytes for the scoped notification poller. Existing headroom absorbs part; bound residual installation-cache growth at 2 KiB and game.js overage at 1 KiB. No new assets, dependencies or precache requests; all other payload/frame limits remain fixed."
     },
     {
       "paths": [
@@ -34,7 +33,7 @@
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the user-confirmed Lost Holdings name, shared location icon, same-row restoration and unchanged weak-player protection. Distinguish the already verified PR708 backend deployment from this pending client publication; retain internal API/storage identifiers and existing city-only scope."
+      "reason": "Record the confirmed persistent availability badge, current-member return eligibility, paginated/window-scoped reads, failure/scope clearing and separate release status. Preserve all combat, return and private API rules; document PR709 as previously verified and this notification as pending its own publication."
     }
   ]
 }

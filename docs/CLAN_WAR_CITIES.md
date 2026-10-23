@@ -3,7 +3,9 @@
 Confirmed October 23, 2026. Implemented on `codex/clan-war-cities`;
 the capture/return feature was verified live through PR #708 at build
 `c28ca465aaf34db22c4440162881760db1190fb8`. The Lost Holdings naming and
-location-icon refinement is confirmed on the same date and awaits its own publication.
+location-icon refinement was verified live through PR #709 at
+`7e0c16ecb98380f36b330f8ad04f9b37fc30db35`. The notification addition is confirmed
+on the same date and awaits its own validation/publication.
 
 ## Behavior
 
@@ -17,6 +19,12 @@ extra attack, retaliation or capture permission. The recovering owner gets the
 Return city action on the same row, to the right of the location icon, when the
 open board refreshes. Other members see who recovered it. This feature adds no
 ordinary-city rally exception.
+
+The Lost Holdings tab shows the shared burgundy circle with a white `!` when
+there is a lost city to recover or a recovered city this member can return.
+Reading the tab does not dismiss it. A recovery by another member is not this
+member's return action. The notice indicates availability, not an unread count;
+existing attack protection and final server return guards still apply.
 
 Only the current recovering owner can voluntarily return a city, and both rulers
 must remain current members of the same active clan. Officers cannot give away
@@ -54,8 +62,14 @@ and return. Raw records and receipts have no client read/write permission under
 the existing default-deny adapters. No private troop numbers, profile inventory
 or account fields enter public clan/city responses. Leaving, disbanding, realm
 rollover and membership changes revoke access. Archived records are neither
-modified nor surfaced in the current season. The open tab refreshes every five
-seconds; closing it stops polling. Identity changes discard pending responses and
+modified nor surfaced in the current season. The open Lost Holdings page refreshes
+on the existing five-second tick.
+Other Clan sections check availability every fifteen seconds. Both reuse one
+in-flight request and timer; the notice examines one bounded page per tick until
+it finds an eligible city or reaches the end, without moving the displayed page.
+It never scans players or reads raw records. Backgrounding pauses requests and
+closing the Clan window stops polling; unrelated map/HUD rendering adds no reads.
+Identity changes discard pending responses and
 clear its in-memory board; errors clear stale entries. No localStorage board cache.
 
 Tracking starts with captures after installation. Existing ownership events do
@@ -74,14 +88,17 @@ claims or player-data backfill are inferred.
 - Source and built UI: 1440×900 mouse and 844×390 / 568×320 simulated touch;
   five-tab layout, shared location icon, same-row live recovery, safe location-only
   navigation, scrolling/focus, confirmation/cancellation, failed requests and
-  old-session response rejection, and background/resume polling. Screenshots and measurements are generated in
+  old-session response rejection, background/resume polling, notice appearance before
+  opening the board, recovery/return clearing, paginated availability and failed-read
+  backoff. Screenshots and measurements are generated in
   ignored `release-artifacts/war-cities/`.
 - Selected existing combat, travel, relinquishment, Shield and Clan UI regressions
   are listed with exact-base dependency coverage in `validation-plan.json`.
 
-The lazy Clan stylesheet stays below 90 KiB. The offline-shell addition remains bounded
-at 8 KiB and introduces no artwork or dependencies. Board polling is confined to
-the open tab, never the map rendering loop.
+The lazy Clan stylesheet stays below 90 KiB. The original board allowance was
+8 KiB; the notification change adds 2 KiB of bounded shell headroom and no artwork
+or dependencies. Board/notice polling is confined to the open Clan window, never
+the map rendering loop.
 
 ## Rollout
 

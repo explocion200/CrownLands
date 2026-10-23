@@ -254,7 +254,9 @@ const entrypointBudgets = {
   // Clan support navigation, safe sharing and authoritative preview freshness: +8.25 KiB source, within the shared 10 KiB shell allowance.
   // War Room participant/table/Details navigation adds 2,614 source bytes.
   // War Cities navigation and its private board add under 8 KiB.
-  "game.js": (8 + 3 + 8.25 + 1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25 + 2 + 3 + 0.25 + 2 + 1 + 0.5 + 5 + 3 + 1) * 1024,
+  // Lost Holdings availability adds 2,789 source bytes; bound the remaining
+  // per-file overage at 1 KiB within its 2 KiB shared shell allowance.
+  "game.js": (1 + 8 + 3 + 8.25 + 1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25 + 2 + 3 + 0.25 + 2 + 1 + 0.5 + 5 + 3 + 1) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   // Medal crown selectors add under 0.5 KiB; retain all other payload limits.
