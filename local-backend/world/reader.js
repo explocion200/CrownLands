@@ -213,10 +213,25 @@ class LiveReader {
         realmShardId:realm.sharedRealmId,regionId:section.id,x:Math.round(point.x),y:Math.round(point.y)}});
     }
     const owners=[...new Set(rows.map(r=>r.data.ownerUid||r.data.holderUid).filter(uid=>typeof uid==="string"&&uid.length<=128&&!uid.includes("/")))];
-    const appearances=owners.length?await client.query(`SELECT path,body#>>'{fields,equipped,mapValue,fields,city,stringValue}' AS skin FROM ${this.schema}.documents WHERE path=ANY($1::text[])`,[owners.map(uid=>"playerCosmetics/"+uid)]):{rows:[]};
-    const skins=new Map(appearances.rows.map(r=>[r.path.slice("playerCosmetics/".length),r.skin]));
+    // One bounded owner batch, with only cosmetics and the shield deadline.
+    // Read the current owner's timer even when an older capture left the city
+    // copy at zero. Never decode inventories or expose the profile itself.
+    const appearances=owners.length?await client.query(`SELECT owner.uid,
+      cosmetic.body#>>'{fields,equipped,mapValue,fields,city,stringValue}' AS skin,
+      CASE WHEN player.body#>>'{fields,worldId,stringValue}'=$2
+        AND player.body#>>'{fields,resetGeneration,stringValue}'=$3
+        AND player.body#>>'{fields,realmShardId,stringValue}'=$4
+      THEN player.body#>'{fields,itemEffects,mapValue,fields,shieldExpiresAtMs}' END AS shield
+      FROM unnest($1::text[]) AS owner(uid)
+      LEFT JOIN ${this.schema}.documents cosmetic ON cosmetic.path='playerCosmetics/'||owner.uid
+      LEFT JOIN ${this.schema}.documents player ON player.path='players/'||owner.uid`,
+      [owners,realm.worldId,realm.resetGeneration,realm.sharedRealmId]):{rows:[]};
+    const skins=new Map(appearances.rows.map(r=>[r.uid,r.skin]));
+    const shields=new Map(appearances.rows.map(r=>[r.uid,r.shield?decode(r.shield):0]));
     for(const row of rows){
-      const p=row.path.split("/"),data=row.data,id=p.at(-1);
+      const p=row.path.split("/"),id=p.at(-1);
+      const data=p.at(-2)==="cities"&&row.data.ownerUid
+        ? {...row.data,ownerShieldExpiresAtMs:shields.get(row.data.ownerUid)||0}:row.data;
       const sourceId=parentSections.get(p.slice(0,2).join("/"))||data.regionId,entry=sections.get(sourceId);
       if(!entry)continue;entry.rows++;
       if(!current(data,realm)||!await access.canRead(row.path,data))continue;

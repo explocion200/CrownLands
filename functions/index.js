@@ -8079,17 +8079,20 @@ function getMainCityProtectionProfile(...sources) {
   };
 }
 
-function getShieldExpiresAtMs(city = {}) {
+function getShieldExpiresAtMs(city = {}, ownerProfile = null) {
   if (isStronghold(city)) return 0;
-  const value = city.ownerShieldExpiresAtMs;
+  // The current owner's profile is authoritative when available. Older neutral
+  // captures can have a missing city timer; cancelled shields can leave a stale
+  // copy. Neither may override the owner's remaining item duration.
+  const value = ownerProfile ? ownerProfile.itemEffects?.shieldExpiresAtMs : city.ownerShieldExpiresAtMs;
   if (typeof value?.toMillis === "function") return value.toMillis();
   return Math.max(0, Math.floor(safeNumber(value, 0)));
 }
 
-function isCityShielded(city = {}, attackerUid = "", nowMs = Date.now()) {
+function isCityShielded(city = {}, attackerUid = "", nowMs = Date.now(), ownerProfile = null) {
   const ownerUid = getOwnerUid(city);
   if (!ownerUid || ownerUid === attackerUid || isStronghold(city)) return false;
-  return getShieldExpiresAtMs(city) > nowMs
+  return getShieldExpiresAtMs(city, ownerProfile) > nowMs
     && getFortificationIntegrityBpsAt(normalizeFortificationState(city, nowMs), nowMs) === 10_000;
 }
 
@@ -11187,7 +11190,7 @@ async function findDailyMissionSafePvpTargets(transaction, {
         || isStronghold(target)
         || target.isMainCity
         || isProtectedMainCity(target, uid, defenderProfile)
-        || isCityShielded(target, uid, nowMs)
+        || isCityShielded(target, uid, nowMs, defenderProfile)
         || getAlliedReinforcementTroops(target) > 0) return;
       const safeTarget = createDailyMissionSafeBattleTarget({
         uid,
@@ -27127,7 +27130,7 @@ exports.sendHoldingTowerArmyOrder = timedCallable(
         if (targetType === "city" && isProtectedMainCity(target, uid, getMainCityProtectionProfile(defenderProfile))) {
           throw new HttpsError("failed-precondition", "Main cities cannot be attacked.");
         }
-        if (targetType === "city" && isCityShielded(target, uid, nowMs)) {
+        if (targetType === "city" && isCityShielded(target, uid, nowMs, defenderProfile)) {
           throw new HttpsError("failed-precondition", "That city is protected by a Royal Peace Shield.");
         }
       }
@@ -27663,7 +27666,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", {
       if (isProtectedMainCity(target, uid, defenderMainCityProfile)) {
         throw new HttpsError("failed-precondition", "Main cities cannot be attacked.");
       }
-      if (isCityShielded(target, uid, nowMs)) {
+      if (isCityShielded(target, uid, nowMs, defenderPowerData)) {
         throw new HttpsError("failed-precondition", "That city is protected by a Royal Peace Shield.");
       }
       if (order.acceptedAttackProtection && order.protectionHandling !== "auto_cap") {
@@ -31030,7 +31033,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           ownerClanTag: safeString(attackerProfile.clanTag, 5),
           ownerClanIdentityRevision: Math.max(0, Math.floor(safeNumber(attackerProfile.clanIdentityRevision, 0))),
           ownerClanIdentityRevisionVersion: CLAN_IDENTITY_REVISION_VERSION,
-          ownerShieldExpiresAtMs: 0,
+          ownerShieldExpiresAtMs: getShieldExpiresAtMs(target, attackerProfile),
           troops: leaderAllocation.survivors,
           troopFloat: leaderAllocation.survivors,
           level: dropCapturedCityLevel(target),
@@ -31965,7 +31968,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       return { ok: true, status: "resolved", kind: "attack", reports: reportsForCaller(), cityUpdates: withEconomyCityUpdates(cityUpdates) };
     }
 
-    if (isCityShielded(target, attackerUid, nowMs)) {
+    if (targetType === "city" && isCityShielded(target, attackerUid, nowMs, defenderProfile)) {
       if (isRallyReturn) {
         return continueRallyReturnToMainCity("shielded_original_city");
       }
@@ -32435,7 +32438,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         ownerClanTag: safeString(attackerProfile.clanTag, 5),
         ownerClanIdentityRevision: Math.max(0, Math.floor(safeNumber(attackerProfile.clanIdentityRevision, 0))),
         ownerClanIdentityRevisionVersion: CLAN_IDENTITY_REVISION_VERSION,
-        ownerShieldExpiresAtMs: 0,
+        ownerShieldExpiresAtMs: getShieldExpiresAtMs(target, attackerProfile),
         troops: result.survivors,
         troopFloat: result.survivors,
         level: nextLevel,

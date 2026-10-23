@@ -1,62 +1,74 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "e1656f0a99ebdb0805483bc48a5582827f146dd6",
+  "baseCommit": "0a73c19e0732245191423bddfcd4a5430fdd77ae",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "clan-ledger-ui.css",
-        "modal-ui.js",
-        "tools/validate-war-room-responsive-browser.js",
-        "docs/visual-qa/war-room-responsive/runtime-fixture.js"
+        "functions/index.js",
+        "functions/test/peace-shield-capture-cases.js",
+        "functions/test/emulator-peace-shield-returns.js",
+        "tools/test-local-postgres-shield-capture.js",
+        "tools/validate-city-wall-shields.js",
+        "tools/validate-peace-shield-returns.js",
+        "functions/test/emulator-combat-authorization.js",
+        "functions/test/retaliation-impact-cases.js",
+        "functions/test/emulator-daily-missions.js",
+        "functions/test/emulator-rally-lifecycle.js"
       ],
       "tests": [
-        "tools/validate-war-room-responsive-browser.js",
-        "tools/validate-clan-ledger-ui.js",
-        "tools/validate-clan-war-room.js",
-        "tools/validate-clan-rallies.js",
-        "tools/validate-rally-assembly-browser.js",
-        "tools/validate-rally-assembly.js",
-        "tools/validate-rally-staging-defense.js",
-        "tools/validate-ui-refresh-browser.js"
+        "tools/test-local-postgres-shield-capture.js",
+        "tools/validate-city-wall-shields.js",
+        "tools/validate-peace-shield-returns.js",
+        "tools/validate-authoritative-army-orders.js",
+        "tools/validate-siege-combat.js",
+        "tools/validate-daily-missions.js",
+        "tools/validate-holding-towers.js",
+        "tools/validate-player-camp-defense.js",
+        "functions/test/emulator-peace-shield-returns.js",
+        "functions/test/emulator-combat-authorization.js",
+        "functions/test/emulator-world-travel.js",
+        "functions/test/emulator-holding-tower-lifecycle.js",
+        "tools/test-local-postgres-retaliation-impact.js",
+        "functions/test/emulator-daily-missions.js",
+        "functions/test/emulator-rally-lifecycle.js"
       ],
-      "reason": "Real responsive War Room renderers replace presentation only. Source and delivered browser checks cover PC, standard/narrow landscape, mouse/touch, five/20-member rosters, five rallies, full troop values, Details/readiness, roles, three-button footer, request locks, confirmation cancel/accept and removed/empty rallies. Existing assembly tests prove creation, joins, source selection and navigation through both War Room and unchanged Kingdom Activity. Shared refresh checks cover other modal/Clan views because focus identity changed. No authoritative/backend/API change: existing server rules are retained; no new emulator suite is required."
+      "reason": "Actual neutral capture previously saved zero despite an active owner item. Shared real-adapter regression covers capture, retries, offline protection of previously affected cities, damaged dispatch/repaired arrival and cancellation. Profile-aware checks affect normal/Tower-origin dispatch, settlement and daily PvP suggestions. Preserve wall deadlines, stronghold/camp exclusions, retaliation, departure cancellation and mid-route reversal through affected combat/travel/Tower emulator suites and focused policy validators. Existing retaliation, daily-mission and rally-return fixtures now seed the authoritative owner item alongside its cached city deadline; verify both active rejection and cancellation without weakening expected protection."
     },
     {
       "paths": [
-        "tools/validate-clan-ledger-ui.js",
-        "tools/validate-clan-war-room.js",
-        "tools/validate-clan-rallies.js",
-        "tools/validate-rally-assembly.js",
-        "tools/validate-rally-assembly-browser.js"
+        "local-backend/world/reader.js",
+        "tools/test-local-postgres-shield-reader.js",
+        "tools/test-local-postgres-world-read-performance.js"
       ],
       "tests": [
-        "tools/validate-clan-ledger-ui.js",
-        "tools/validate-clan-war-room.js",
-        "tools/validate-clan-rallies.js",
-        "tools/validate-rally-assembly.js",
-        "tools/validate-rally-assembly-browser.js"
+        "tools/test-local-postgres-shield-reader.js",
+        "tools/test-local-postgres-world-read-performance.js",
+        "tools/test-local-postgres-live-reader.js",
+        "tools/validate-continuous-city-shields.js"
       ],
-      "reason": "Adapt existing guards to the actual table/Details presentation, Ready wording and required state. Assembly fixture now loads the current Stables preview-scope dependency so it still exercises real route request logic. Preserve all existing permission, source, quorum and navigation assertions."
+      "reason": "Bounded current-realm owner shield deadline joins extend existing cosmetics projection without reading inventories. Tests verify owner-only updates, missing/stale city timers, exact repair/expiry, capture, world/generation/shard isolation, response privacy, read-only behavior, cache invalidation/reuse and measured 16-section reads. Pin the original pre-optimization performance reference so subsequent validation-plan bases cannot invalidate the measurement; seed consistent account/city timers for unchanged-behavior parity."
     },
     {
       "paths": [
-        "tools/asset-performance-budgets.js",
-        "tools/validate-asset-performance-budgets.js"
+        "world/native.js",
+        "world/preview.js",
+        "tools/check-continuous-city-shields.js",
+        "tools/test-local-postgres-city-shields-browser.js"
       ],
       "tests": [
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-production-artifact.js"
+        "tools/test-local-postgres-city-shields-browser.js",
+        "tools/validate-continuous-city-shields.js",
+        "tools/test-local-postgres-native-auth-world.js"
       ],
-      "reason": "Measured shell growth is 2,890 bytes to 4,646,721; bound overage to 3 KiB and game.js addition to 3 KiB. Lazy Clan stylesheet remains below 88 KiB after removing obsolete War Room styles. Keep all other file/asset/cache budgets and production parity checks."
+      "reason": "Existing native action UI now reads the same owner-qualified public shield deadline and authoritative clock as the map indicator, and refreshes selected controls on eligibility changes. Actual authenticated browser checks cover two viewers, desktop 1440x900 and landscape 844x390/568x320, zoom, missing city timer, stationary repair, Shielded/Attack button changes, cancellation, capture, expiration with failed polls/clock skew, and cleanup; native-auth action suite covers selection/navigation/commands and permission loss affected by the shared bridge."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/visual-qa/war-room-responsive/README.md"
+        "docs/SHIELD_WALL_REPAIR_ACTIVATION.md"
       ],
       "tests": [],
-      "reason": "Record the explicitly approved matching PC/mobile layout, source/built visual evidence, unchanged gameplay and backend-first dependency on PR #705. Documentation distinguishes implementation from verified publication."
+      "reason": "Document the existing confirmed wall eligibility rule, reproduced capture defect, tested implementation, current local realm, no data rewrite, and explicit backend-first compatibility hold. Implementation and pending deployment remain clearly distinguished."
     }
   ]
 }

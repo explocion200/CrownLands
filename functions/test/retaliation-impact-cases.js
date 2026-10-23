@@ -76,10 +76,13 @@ module.exports = async function retaliationImpactCases({ db, actor, call, owners
   // Wall repairs after launch can block at arrival without spending the chance.
   grant = await setup(); expiry = (await read(grant)).expiresAtMs;
   launched = (await send(grant)).movement;
-  await city(target).update({ ownerShieldExpiresAtMs: Date.now() + 600_000, fortificationState: null });
+  const shieldDeadline = Date.now() + 600_000;
+  await profile(low).update({ "itemEffects.shieldExpiresAtMs": shieldDeadline });
+  await city(target).update({ ownerShieldExpiresAtMs: shieldDeadline, fortificationState: null });
   const blocked = await resolve(launched);
   assert(blocked.reports.some(row => /Peace Shield blocked/.test(row.summary)));
   await unspent(grant, expiry);
+  await profile(low).update({ "itemEffects.shieldExpiresAtMs": 0 });
   await city(target).update({ ownerShieldExpiresAtMs: 0 });
   const loss = (await send(grant, 1)).movement;
   assert.equal((await resolve(loss)).outcome, "defeat");

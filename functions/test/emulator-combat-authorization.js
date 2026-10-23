@@ -232,8 +232,11 @@ async function main() {
   await deny("sendArmyOrder", high, order(hSource, unrelated, 5000, { retaliationId: a.id }), /exact city/);
   await deny("sendArmyOrder", high, order(hSource, targets[0], 20_000_000, { retaliationId: a.id }), /Not enough troops/);
   assert.equal((await capture.ref.get()).data().status, "available");
-  await cityRef(targets[0]).set({ ownerShieldExpiresAtMs: Date.now() + 60_000, fortificationState: null }, { merge: true });
+  const shieldDeadline = Date.now() + 60_000;
+  await profileRef(low).update({ "itemEffects.shieldExpiresAtMs": shieldDeadline });
+  await cityRef(targets[0]).set({ ownerShieldExpiresAtMs: shieldDeadline, fortificationState: null }, { merge: true });
   await deny("sendArmyOrder", high, order(hSource, targets[0], 5000, { retaliationId: a.id }), /Peace Shield/);
+  await profileRef(low).update({ "itemEffects.shieldExpiresAtMs": 0 });
   await cityRef(targets[0]).set({ ownerShieldExpiresAtMs: 0, isMainCity: true }, { merge: true });
   const lowMain = await profile(low);
   await profileRef(low).update({ mainCityId: targets[0].id, mainRegionId: region, mainIslandId: islandId(region) });

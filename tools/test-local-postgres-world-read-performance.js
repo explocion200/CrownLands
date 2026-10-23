@@ -3,7 +3,8 @@
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path"),Module=require("node:module"),{execFileSync}=require("node:child_process");
 const {createFixture}=require("./map-benchmark/seamless/live-test-fixture");
 const {LiveReader}=require("../local-backend/world/reader");
-const baseline=JSON.parse(fs.readFileSync(path.join(__dirname,"../validation-plan.json"))).baseCommit;
+// Keep the measured pre-optimization implementation stable across later PRs.
+const baseline="cdc22393d72cbbcc5a72f83b219fbde00060a44d";
 const filename=path.join(__dirname,"../local-backend/world/reader.js"),old=new Module(filename,module);
 old.filename=filename;old.paths=Module._nodeModulePaths(path.dirname(filename));
 old._compile(execFileSync("git",["show",baseline+":local-backend/world/reader.js"],{encoding:"utf8"}),filename);
@@ -22,6 +23,11 @@ const comparable=packet=>{const {epoch,viewer,revision,fromRevision,serverTime,.
     const ids=manifest.sections.slice(0,16).map(s=>s.id),section=ids[0];
     const docs=await fixture.store.collection(fixture.island(section)+"/cities").get();
     const city=docs.docs.find(d=>d.data().ownerUid===uid),key=section+":"+city.id;
+    // Account timers and their city copies agree in this parity fixture. The
+    // dedicated shield-reader suite covers intentionally missing/stale copies.
+    await fixture.store.doc("players/"+uid).update({itemEffects:{shieldExpiresAtMs:now+6000}});
+    const owned=await fixture.store.collectionGroup("cities").where("ownerUid","==",uid).get();
+    for(let i=0;i<owned.docs.length;i+=200){const batch=fixture.store.batch();for(const doc of owned.docs.slice(i,i+200))batch.update(doc.ref,{ownerShieldExpiresAtMs:now+6000});await batch.commit();}
     await city.ref.update({privateSecret:"not-for-map-".repeat(20000),ownerShieldExpiresAtMs:now+6000,fortificationState:{version:1,integrityBps:5000,repairAtMs:now+2000},ownerFlag:null});
     const npc=fixture.store.doc(fixture.island(section)+"/marauders/performance-npc");
     await npc.set({...fixture.realm,regionId:section,x:city.data().x,y:city.data().y,name:"Sample boss",level:90,status:"active",classification:"boss",spawnId:"spawn-a",privateSecret:"hidden"});
