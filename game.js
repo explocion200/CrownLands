@@ -2321,6 +2321,8 @@ let clanShieldUnresolvedFields = [];
 let clanRenameEditorOpen = false;
 let activeClanRewardSection = "gifts";
 let selectedClanRallyId = "";
+let clanWarroomSheet = "";
+let clanWarroomScope = "";
 let clanLedgerConfirmationOpen = false;
 let clanRenameSaving = false;
 let selectedClanMemberUid = "";
@@ -26704,6 +26706,7 @@ function syncClanNavigationState() {
   activeClanBrowserSection = "discover";
   activeClanRewardSection = "gifts";
   selectedClanRallyId = "";
+  clanWarroomSheet = "";
 }
 
 function isClanSectionActive(section) {
@@ -27352,12 +27355,9 @@ function renderClanRallyCard(rally, activityLedger = false) {
   const canRecall = leader && launchArmy && isRecallHornEligible(launchArmy);
   if (activityLedger === true) return renderRalliesActivityCard(rally, { currentUid, participants, activeParticipants, assembledTroops, inboundTroops, returningTroops, ownParticipant, leader, canManageFormingRally, forming, launched, recalling, busy, canRecall });
   const participantRows = participants.map(participant => {
+    const uid = participant.uid || participant.ownerUid;
     const eta = getClanRallyParticipantStatusLabel(rally, participant);
-    return `
-      <li class="${escapeHtml(participant.status || "")}">
-        <span>${renderPlayerNameLink(participant.uid || participant.ownerUid, participant.ownerName || "Ruler")}<small>${participant.role === "leader" ? "Leader" : "Ally"} · ${escapeHtml(eta)}</small></span>
-        <b>${formatNumber(participant.troops || 0)}</b>
-      </li>`;
+    return `<tr class="${escapeHtml(participant.status || "")}"><td><span class="war-ruler">${renderPlayerNameLink(uid, participant.ownerName || "Ruler")}<small>${uid === rally.leaderUid ? "Creator" : "Ally"}${uid === currentUid ? " · You" : ""}</small></span></td><td>${Math.max(0, Math.floor(Number(participant.troops) || 0)).toLocaleString("en-US")}</td><td>${escapeHtml(eta)}</td></tr>`;
   }).join("");
   let controls = "";
   const minimumParticipants = getClanRallyMinimumParticipants(rally);
@@ -27377,31 +27377,39 @@ function renderClanRallyCard(rally, activityLedger = false) {
   } else if (launched && leader) {
     controls = `<button data-rally-action="recall" data-rally-id="${escapeHtml(rally.id)}" data-rally-army-id="${escapeHtml(rally.armyId || "")}" type="button" ${busy || !canRecall ? "disabled" : ""}>${canRecall ? "Recall · 1 Horn" : "Rally Marching"}</button>`;
   }
-  return `
-    <article class="clan-rally-card paper ${escapeHtml(rally.status || "")}">
-      <div class="rally-body scroll-region" tabindex="0" aria-label="Rally details"><header>
-        <span><small>${escapeHtml(getRegionLabel(rally.targetRegionId))}</small><strong>${escapeHtml(rally.targetName || rally.targetId || "Objective")}</strong></span>
-        <b>${activeParticipants.length || participants.length}/${getClanRallyMaximumParticipants(rally)}</b>
-      </header>
-      <div class="clan-rally-summary">
-        <span>Creator ${renderPlayerNameLink(rally.leaderUid, rally.leaderName || "Ruler")}</span><span>Assembly ${renderRallyAssemblyLink(rally)}</span>
-        <span><strong>${formatNumber(recalling ? returningTroops || assembledTroops : assembledTroops)}</strong> ${recalling ? "returning" : launched ? "marching" : "assembled"}</span>
-        <span><strong>${formatNumber(inboundTroops)}</strong> inbound</span>
-        <span class="clan-rally-status">${recalling ? "Returning" : launched ? "Launched" : "Forming"}</span>
+  const readyCount = activeParticipants.filter(participant => participant.status === "assembled").length;
+  const incomingCount = activeParticipants.length - readyCount;
+  const note = canJoin ? getClanRallyJoinHint() : forming
+    ? `${readyCount} Ready · ${incomingCount} incoming${incomingCount ? " will turn back at launch" : ""}`
+    : recalling ? "Contributions returning home" : "Combined army marching";
+  return `<article class="clan-rally-card war-roster-card ${escapeHtml(rally.status || "")}">
+    <div class="war-participants" ${clanWarroomSheet ? "hidden" : ""}>
+      <div class="war-summary"><span><b>${activeParticipants.length || participants.length} / ${getClanRallyMaximumParticipants(rally)}</b> participants${forming ? ` · <b>${readyCount}</b> ready · <b>${incomingCount}</b> incoming` : ""}</span><span><b>${formatNumber(recalling ? returningTroops || assembledTroops : assembledTroops)}</b> ${recalling ? "returning" : launched ? "marching" : "ready"} troops</span></div>
+      <div class="war-roster scroll-region" tabindex="0" aria-label="Rally participants"><table><thead><tr><th scope="col">Participant</th><th scope="col">Troops</th><th scope="col">Status / arrival</th></tr></thead><tbody>${participantRows}</tbody></table></div>
+      <footer class="war-actions"><p class="clan-rally-join-hint">${escapeHtml(note)}</p>${controls}</footer>
+    </div>
+    <section class="war-sheet" ${clanWarroomSheet === "details" ? "" : "hidden"} aria-label="Rally details">
+      <header><h3>Rally details</h3><button type="button" data-clan-action="war-sheet" data-war-sheet="">Back to participants</button></header>
+      <div class="scroll-region" tabindex="0" aria-label="Rally information"><p>Creator ${renderPlayerNameLink(rally.leaderUid, rally.leaderName || "Ruler")}</p><p>Assembly ${renderRallyAssemblyLink(rally)}</p>
+        <p>${formatNumber(assembledTroops)} ${launched ? "marching" : "ready"} troops · ${formatNumber(inboundTroops)} inbound · ${formatNumber(returningTroops)} returning</p>
+        <p>Any active clan member may create a Rally from a map objective. Up to ${CLAN_ACTIVE_RALLY_LIMIT} rallies may be active. Launch requires ${minimumParticipants} Ready rulers, including the creator. Incoming contributions turn back when you launch.</p>
+        ${rally.targetType === "marauder" ? renderBossReadiness(rally) : ""}
       </div>
-      ${rally.targetType === "marauder" ? renderBossReadiness(rally) : ""}
-      <ul>${participantRows}</ul></div>
-      ${controls ? `<footer>${controls}${canJoin ? `<p class="clan-rally-join-hint">${escapeHtml(getClanRallyJoinHint())}</p>` : ""}</footer>` : ""}
-    </article>`;
+    </section>
+  </article>`;
 }
 
 function renderClanRallyPanel() {
+  const scope = JSON.stringify([getCurrentOnlineUid(), state?.clanId]);
+  if (clanWarroomScope !== scope) { clanWarroomScope = scope; selectedClanRallyId = ""; clanWarroomSheet = ""; }
   const selected = onlineClanRallies.find(rally => rally.id === selectedClanRallyId) || onlineClanRallies[0];
+  if (selectedClanRallyId !== (selected?.id || "")) { selectedClanRallyId = selected?.id || ""; clanWarroomSheet = ""; }
+  const label = rally => rally.status === "recalling" ? "Returning" : rally.status === "launched" ? "Launched" : "Forming";
   return `<section id="clanWarroomPanel" class="clan-section-panel clan-social-card clan-war-room-panel clan-rallies-panel ${isClanSectionActive("warroom") ? "active" : ""}" role="tabpanel" aria-labelledby="clanSectionTabWarroom">
-    <div class="clan-social-heading"><span><small>Clan campaign coordination</small><strong>War Room</strong></span><b>${formatNumber(onlineClanRallies.length)} / ${CLAN_ACTIVE_RALLY_LIMIT}</b></div>
-    <button type="button" data-clan-action="intelligence">Scout Lodge · Intelligence</button>
-    <p class="clan-rally-note">Any active clan member may create a Rally from a map objective. The clan can have up to ${CLAN_ACTIVE_RALLY_LIMIT} active Rallies. Launch with at least 2 Ready rulers (3 for Towers), including the creator. Incoming contributions turn back when you launch.</p>
-    ${selected ? `<div class="war-layout"><nav class="rally-picker scroll-region" aria-label="Active rallies">${onlineClanRallies.map(rally => `<button type="button" data-clan-action="select-rally" data-clan-rally="${escapeHtml(rally.id)}" aria-pressed="${rally.id === selected.id}"><img src="assets/icons/skills/atlas-v1/marchOrders.webp" alt=""><span><strong>${escapeHtml(rally.targetName || rally.targetId || "Objective")}</strong><small>${escapeHtml(getRegionLabel(rally.targetRegionId))} · ${rally.status === "recalling" ? "Returning" : rally.status === "launched" ? "Launched" : "Forming"}</small></span></button>`).join("")}</nav>${renderClanRallyCard(selected)}</div>` : '<div class="clan-empty"><img src="assets/icons/skills/atlas-v1/marchOrders.webp" alt=""><h3>No active rallies</h3><p>Choose an eligible objective on the map to begin a clan Rally.</p></div>'}
+    <header class="war-heading"><button type="button" class="war-selector" data-clan-action="war-sheet" data-war-sheet="rallies" aria-label="Choose active rally" aria-expanded="${clanWarroomSheet === "rallies"}" ${selected ? "" : "disabled"}><img src="assets/icons/skills/atlas-v1/marchOrders.webp" alt=""><span><strong>${escapeHtml(selected?.targetName || selected?.targetId || "War Room")} <i aria-hidden="true">⌄</i></strong><small>${selected ? `${escapeHtml(getRegionLabel(selected.targetRegionId))} · ${label(selected)} · ` : ""}${onlineClanRallies.length} / ${CLAN_ACTIVE_RALLY_LIMIT} active rallies</small></span></button>
+      <div class="war-tools"><button type="button" data-clan-action="intelligence">Intelligence</button>${selected ? '<button type="button" data-clan-action="war-sheet" data-war-sheet="details">Details</button>' : ""}</div></header>
+    ${selected ? renderClanRallyCard(selected) : '<div class="clan-empty"><img src="assets/icons/skills/atlas-v1/marchOrders.webp" alt=""><h3>No active rallies</h3><p>Choose an eligible objective on the map to begin a clan Rally.</p></div>'}
+    <section class="war-sheet war-rallies" ${clanWarroomSheet === "rallies" ? "" : "hidden"} aria-label="Active rallies"><header><h3>Active rallies · ${onlineClanRallies.length} / ${CLAN_ACTIVE_RALLY_LIMIT}</h3><button type="button" data-clan-action="war-sheet" data-war-sheet="">Back to participants</button></header><nav class="rally-picker scroll-region" aria-label="Choose a rally">${onlineClanRallies.map(rally => `<button type="button" data-clan-action="select-rally" data-clan-rally="${escapeHtml(rally.id)}" aria-pressed="${rally.id === selected?.id}"><strong>${escapeHtml(rally.targetName || rally.targetId || "Objective")}</strong><small>${escapeHtml(getRegionLabel(rally.targetRegionId))} · ${label(rally)}</small></button>`).join("")}</nav></section>
   </section>`;
 }
 
@@ -27906,9 +27914,20 @@ async function handleClanClick(event) {
     void donateClanTreasuryFromPanel();
     return;
   }
+  if (action === "war-sheet") {
+    const next = button.dataset.warSheet || "";
+    if (!["", "rallies", "details"].includes(next)) return;
+    const previous = clanWarroomSheet;
+    clanWarroomSheet = next;
+    renderClanView();
+    clanContent.querySelector(next ? '.war-sheet:not([hidden]) [data-war-sheet=""]' : `[data-war-sheet="${previous || "rallies"}"]`)?.focus({ preventScroll: true });
+    return;
+  }
   if (action === "select-rally") {
     selectedClanRallyId = button.dataset.clanRally || "";
+    clanWarroomSheet = "";
     renderClanView();
+    clanContent.querySelector(".war-selector")?.focus({ preventScroll: true });
     return;
   }
   if (action === "reward-section") {

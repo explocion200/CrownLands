@@ -21,7 +21,7 @@ async function main() {
     state: { clanId: "clan", clanRole: "member" }, onlineClanRallies: [],
     lastSelectedOwnedCityId: city.id, selectedSourceId: "", selectedTargetId: "", scoutNearbySourceId: "", regroupSourceId: "",
     sendMode: false, activeTroopOrderKind: "", activeRallyOrderContext: null, selectedTroopAmount: 0,
-    holdingTowerActionsInFlight: new Set(),
+    holdingTowerActionsInFlight: new Set(), holdingTowerSnapshots: new Map(),
     cityById: id => id === city.id ? city : null,
     getArmyTargetById: id => id === target.id ? target : null,
     getCurrentOnlineUid: () => "me", getCityRegionId: city => city.regionId,
@@ -98,7 +98,7 @@ async function main() {
   context.getOnlineApi = () => ({ previewArmyRoute: async request => { previewRequest = request; return { points: [city, target] }; } });
   context.normalizeAuthoritativeRoutePreview = result => result;
   context.ONLINE_WORLD_ID = "world"; context.RESET_GENERATION = "one";
-  vm.runInContext("async " + extract("requestAuthoritativeOrderRoute", "cancelAuthoritativeRoutePreviewRefresh"), context);
+  vm.runInContext(extract("clanStablesPreviewScope", "normalizeAuthoritativeRoutePreview") + "async " + extract("requestAuthoritativeOrderRoute", "cancelAuthoritativeRoutePreviewRefresh"), context);
   await context.requestAuthoritativeOrderRoute(city, target, "rally_create", 600);
   assert.equal(previewRequest.targetType, "tower", "The shared slider must request the Tower route, not a city with that ID");
   assert.equal(previewRequest.fromId, city.id);

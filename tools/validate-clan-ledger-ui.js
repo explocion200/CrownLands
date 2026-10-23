@@ -15,7 +15,7 @@ const actions = [];
 const context = vm.createContext({
   state:{clanId:"house",clanRole:"leader"},clanMembers:[{uid:"self",role:"leader",displayName:"Aldric"},{uid:"ally",role:"member",displayName:"Rowan"}],
   clanApplications:[{uid:"applicant",displayName:"Bryn"}],clanApplicationsError:"",clanUiLoading:false,
-  activeClanRewardSection:"gifts",selectedClanRallyId:"",selectedClanMemberUid:"",clanLedgerConfirmationOpen:false,
+  activeClanRewardSection:"gifts",selectedClanRallyId:"",clanWarroomSheet:"",CLAN_ACTIVE_RALLY_LIMIT:5,selectedClanMemberUid:"",clanLedgerConfirmationOpen:false,
   getClanActionAvailability:()=>({gift:false,donate:false}),renderClanActionNotice:()=>"",
   renderClanGiftPanel:()=>"GIFT_CONTENT",renderClanQuestPanel:()=>"QUEST_CONTENT",renderClanTreasuryPanel:()=>"TREASURY_CONTENT",
   renderClanView:()=>{},clanContent:{querySelector:()=>null},focusClanNavigationButton:()=>{},setClanMobileSection:section=>actions.push(["section",section]),

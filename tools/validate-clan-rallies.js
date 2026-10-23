@@ -226,7 +226,7 @@ requires(client, /beginCreateClanRally[\s\S]*?beginJoinClanRallyContribution/, "
 requires(client, /Waiting for \$\{minimumParticipants\}\+ Ready[\s\S]*?Incoming contributions turn back when you launch/, "The War Room must explain early launch and the Ready minimum.");
 requires(client, /bindClanRallyControls[\s\S]*?data-rally-action/, "Role-appropriate rally controls are not bound.");
 requires(client, /function getClanRallyParticipantStatusLabel[\s\S]*?rallyStatus === "recalling"[\s\S]*?participantStatus === "assembled"\) return "Marching"/, "Launched and returning rally participants do not receive truthful client status labels.");
-requires(client, /renderClanRallyCard[\s\S]*?recalling \? "returning" : launched \? "marching" : "assembled"/, "Rally troop totals remain labeled assembled after launch or recall.");
+requires(client, /renderClanRallyCard[\s\S]*?recalling \? "returning" : launched \? "marching" : "ready"/, "Rally troop totals remain labeled assembled after launch or recall.");
 requires(client, /function renderSelectedStrongholdWheel[\s\S]*?camp-rally-action[\s\S]*?beginCreateClanRally/, "Stronghold action wheels do not expose Rally.");
 assert.doesNotMatch(client.slice(client.indexOf("function renderSelectedRewardCampWheel"), client.indexOf("function showRecallRewardCampConfirm")), /camp-rally-action|beginCreateClanRally/, "Reward Camps still expose Rally.");
 requires(client, /function renderRallyParticipantResults[\s\S]*?Committed[\s\S]*?Losses[\s\S]*?Survivors[\s\S]*?Attack power/, "Shared Rally reports do not show clearly labeled participant results.");

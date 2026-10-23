@@ -71,5 +71,8 @@
 // Free daily stamina/reset countdown adds 2,125 delivered shell bytes (4,643,831
 // total). Existing headroom covers 86 bytes; bound the 2,039-byte overage at 2 KiB.
 // No assets, libraries or normal-day polling are added.
-const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024 + 2 * 1024 + 4 * 1024 + 512 + 1024 + 8 * 1024 + 12 * 1024 + 3 * 1024 + 5 * 1024 + 2 * 1024 + 20 * 1024 + 1024 + 512 + 1536 + 1536 + 10 * 1024 + 2 * 1024;
+// Responsive War Room markup and refresh identity add 2,890 delivered bytes
+// (4,646,721 total). Bound the 2,881-byte overage at 3 KiB. Styles remain lazy;
+// no new assets, dependencies, requests or subscriptions.
+const MAX_INSTALL_PRECACHE_BYTES = (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024 + 2 * 1024 + 4 * 1024 + 512 + 1024 + 8 * 1024 + 12 * 1024 + 3 * 1024 + 5 * 1024 + 2 * 1024 + 20 * 1024 + 1024 + 512 + 1536 + 1536 + 10 * 1024 + 2 * 1024 + 3 * 1024;
 module.exports = { MAX_INSTALL_PRECACHE_BYTES };

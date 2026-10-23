@@ -141,7 +141,9 @@ async function main() {
         await click('clanContent.querySelector("#clanSectionTabOverview")');
         await ready('clanContent.querySelector("#clanSectionTabOverview")?.getAttribute("aria-selected") === "true"');
         await click('clanContent.querySelector("#clanSectionTabWarroom")');
-        await ready(`clanContent.querySelector("#clanSectionTabWarroom")?.getAttribute("aria-selected") === "true" && clanContent.querySelector("[data-rally-action=assembly]")?.getBoundingClientRect().height >= ${minimumMeasuredTargetHeight}`);
+        await ready('clanContent.querySelector("#clanSectionTabWarroom")?.getAttribute("aria-selected") === "true"');
+        await click('clanContent.querySelector("[data-war-sheet=details]")');
+        await ready(`clanContent.querySelector("[data-rally-action=assembly]")?.getBoundingClientRect().height >= ${minimumMeasuredTargetHeight}`);
         await evaluate('clanContent.querySelector("[data-rally-action=assembly]").scrollIntoView({block:"center"})');
         await screenshot(`war-room-${visit}-${width}`);
         await click('clanContent.querySelector("[data-rally-action=assembly]")');
@@ -254,7 +256,7 @@ async function main() {
         assert.equal(await evaluate('lastSelectedOwnedCityId'), fixture.cityId,
           "Refreshing the Clan profile must preserve the latest session selection, including selections made during the request");
         assert.equal(await evaluate('state.clanRole'), 'leader', "Clan membership must still refresh from the profile");
-        await evaluate(`${JSON.stringify(entry)}==='clan' ? setClanMobileSection('warroom') : (activeOperationsTab='rallies',showOutgoingAttacksModal())`);
+        await evaluate(`${JSON.stringify(entry)}==='clan' ? (clanWarroomSheet='',setClanMobileSection('warroom')) : (activeOperationsTab='rallies',showOutgoingAttacksModal())`);
         const root = entry === "clan" ? "clanContent" : "modalBody";
         await ready(`${root}.querySelector('[data-rally-action=join]')?.getBoundingClientRect().height >= ${minimumMeasuredTargetHeight}`);
         assert.match(await evaluate(`${root}.textContent`), /From Alderwatch. Choose how many troops to send/);

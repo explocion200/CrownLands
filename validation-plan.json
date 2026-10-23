@@ -1,46 +1,43 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "e2537d290b9931ab173b0f825ab9b04fda2994ec",
+  "baseCommit": "e1656f0a99ebdb0805483bc48a5582827f146dd6",
   "coverage": [
     {
       "paths": [
-        "functions/marauder-rules.js",
-        "functions/stamina-service.js",
-        "functions/test/stamina-refill-cases.js",
-        "tools/test-local-postgres-stamina.js",
-        "tools/validate-marauder-rules.js"
+        "game.js",
+        "clan-ledger-ui.css",
+        "modal-ui.js",
+        "tools/validate-war-room-responsive-browser.js",
+        "docs/visual-qa/war-room-responsive/runtime-fixture.js"
       ],
       "tests": [
-        "tools/validate-marauder-rules.js",
-        "tools/test-local-postgres-stamina.js",
-        "functions/test/emulator-stamina-refills.js",
-        "functions/test/emulator-marauder-combat.js",
-        "functions/test/emulator-crown-live-payments.js",
-        "tools/test-stamina-daily-reset-ui.js",
-        "tools/test-stamina-display-recovery.js"
+        "tools/validate-war-room-responsive-browser.js",
+        "tools/validate-clan-ledger-ui.js",
+        "tools/validate-clan-war-room.js",
+        "tools/validate-clan-rallies.js",
+        "tools/validate-rally-assembly-browser.js",
+        "tools/validate-rally-assembly.js",
+        "tools/validate-rally-staging-defense.js",
+        "tools/validate-ui-refresh-browser.js"
       ],
-      "reason": "Free UTC-day entitlement shares authoritative reads/departure transactions with paid refills, solo attacks and every boss participant. Real PostgreSQL and shared emulator cases cover concurrent reset/spend/refill, read-only readiness, wallet races, stale offers/receipts, legacy state adoption, archived-profile guards, offline catch-up and no refunds. Existing NPC balance/combat and live payment credit dependencies remain covered. Browser normalization does not grant locally."
+      "reason": "Real responsive War Room renderers replace presentation only. Source and delivered browser checks cover PC, standard/narrow landscape, mouse/touch, five/20-member rosters, five rallies, full troop values, Details/readiness, roles, three-button footer, request locks, confirmation cancel/accept and removed/empty rallies. Existing assembly tests prove creation, joins, source selection and navigation through both War Room and unchanged Kingdom Activity. Shared refresh checks cover other modal/Clan views because focus identity changed. No authoritative/backend/API change: existing server rules are retained; no new emulator suite is required."
     },
     {
       "paths": [
-        "stamina-ui.js",
-        "tools/test-stamina-daily-reset-ui.js",
-        "tools/validate-marauders-browser.js"
+        "tools/validate-clan-ledger-ui.js",
+        "tools/validate-clan-war-room.js",
+        "tools/validate-clan-rallies.js",
+        "tools/validate-rally-assembly.js",
+        "tools/validate-rally-assembly-browser.js"
       ],
       "tests": [
-        "tools/test-stamina-daily-reset-ui.js",
-        "tools/test-stamina-display-recovery.js",
-        "tools/validate-marauders-browser.js"
+        "tools/validate-clan-ledger-ui.js",
+        "tools/validate-clan-war-room.js",
+        "tools/validate-clan-rallies.js",
+        "tools/validate-rally-assembly.js",
+        "tools/validate-rally-assembly-browser.js"
       ],
-      "reason": "Server-clock boundary refresh and countdown need delayed/failed responses, no normal polling, backoff, hidden tabs, clock skew, stale snapshots, sign-out/account isolation and real local subscription recovery. Actual source and production browser checks at desktop/wide/narrow landscape prove scroll/footer, review, touch/focus and preserved hunt drafts."
-    },
-    {
-      "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/DAILY_STAMINA_RESET.md"
-      ],
-      "tests": [],
-      "reason": "Record the explicitly confirmed daily-reset rule, legacy adoption, focused evidence and separately authorized backend-first rollout; distinguish implementation from verified live deployment."
+      "reason": "Adapt existing guards to the actual table/Details presentation, Ready wording and required state. Assembly fixture now loads the current Stables preview-scope dependency so it still exercises real route request logic. Preserve all existing permission, source, quorum and navigation assertions."
     },
     {
       "paths": [
@@ -51,7 +48,15 @@
         "tools/validate-asset-performance-budgets.js",
         "tools/validate-production-artifact.js"
       ],
-      "reason": "Measured requested daily reset/countdown increases delivered shell by 2,125 bytes to 4,643,831 (2,039 beyond the cap) and the NPC source group to 66,616. Bound only these additions at 2 KiB delivered and 3 KiB source; actual build/source budgets, lazy artwork, entry points and every other limit remain checked."
+      "reason": "Measured shell growth is 2,890 bytes to 4,646,721; bound overage to 3 KiB and game.js addition to 3 KiB. Lazy Clan stylesheet remains below 88 KiB after removing obsolete War Room styles. Keep all other file/asset/cache budgets and production parity checks."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/visual-qa/war-room-responsive/README.md"
+      ],
+      "tests": [],
+      "reason": "Record the explicitly approved matching PC/mobile layout, source/built visual evidence, unchanged gameplay and backend-first dependency on PR #705. Documentation distinguishes implementation from verified publication."
     }
   ]
 }
