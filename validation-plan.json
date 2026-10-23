@@ -33,14 +33,17 @@
         "clan-intelligence-ui.js",
         "game.js",
         "tools/validate-clan-building-layout-browser.js",
-        "tools/validate-war-cities-browser.js"
+        "tools/validate-war-cities-browser.js",
+        "tools/asset-performance-budgets.js"
       ],
       "tests": [
         "tools/validate-war-cities-browser.js",
         "tools/validate-clan-building-layout-browser.js",
-        "tools/test-local-postgres-clan-support.js"
+        "tools/test-local-postgres-clan-support.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
       ],
-      "reason": "Keyed updates are confined to Lost Holdings and Intelligence; actual desktop/landscape fixtures cover unchanged node/focus/scroll retention, loading/errors, return actions, report detail, expiry and membership revocation while preserving surrounding clan UI."
+      "reason": "Keyed updates are confined to Lost Holdings and Intelligence; actual desktop/landscape fixtures cover unchanged node/focus/scroll retention, loading/errors, return actions, report detail, expiry and membership revocation while preserving surrounding clan UI. The existing offline shell grows by 2,308 source bytes for the keyed reconciler; both shared-budget validators bound the 1,983-byte overage within 2 KiB without adding assets or precache entries."
     },
     {
       "paths": [

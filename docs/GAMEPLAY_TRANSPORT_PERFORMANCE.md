@@ -60,3 +60,7 @@ static package, using the established runtime fingerprint/publisher hold. Do not
 bypass that hold. Installation, service restart and live verification require the
 applicable separate deployment approval. No production history cleanup is part
 of this update.
+
+The keyed panel reconciler adds 2,308 bytes to the existing raw offline shell
+(4,667,839 bytes total). Its 1,983-byte overage is bounded by a 2 KiB shared-budget
+allowance; no artwork, dependencies or new installation-cache entries are added.
