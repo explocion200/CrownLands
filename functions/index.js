@@ -22414,6 +22414,79 @@ const clanTowerSupport = require("./clan-tower-support").createService({ db, Htt
   assertWorld: assertHoldingTowerWorldActive, validateProfile: assertCurrentClanActorProfile,
   towerRef: holdingTowerRef, normalizeTower: normalizeCurrentHoldingTower, transact: runTransactionWithInfrastructureRetry,
 });
+const clanWarCities = require("./clan-war-cities").createService({ db, HttpsError,
+  realm: () => ({ worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, realmShardId: getCurrentRealmShardId() }),
+  assertWorld: assertHoldingTowerWorldActive, validateProfile: assertCurrentClanActorProfile,
+  cityRef: cityRefForRegion, regularCity: city => Boolean(city?.id && !isStronghold(city)),
+  transact: runTransactionWithInfrastructureRetry, transfer: returnClanWarCity,
+});
+exports.clanWarCities = timedCallable("clanWarCities", { region: "us-central1", maxInstances: 20, invoker: "public" }, request => {
+  const uid = requireAuth(request);
+  const compatibility = new Set(["clientReleaseId", "clientResetGeneration", "clientWorldId", "clientRealmShardId"]);
+  return clanWarCities.execute(uid, Object.fromEntries(Object.entries(request.data || {}).filter(([key]) => !compatibility.has(key))));
+});
+
+async function returnClanWarCity(transaction, { uid, clanId, loss, nowMs, operationId }) {
+  await requireActiveWorldRegionId(loss.regionId);
+  const ref = cityRefForRegion(loss.regionId, loss.cityId);
+  const donor = await prepareEconomyCollection(transaction, uid, nowMs);
+  const recipient = await prepareEconomyCollection(transaction, loss.originalOwnerUid, nowMs);
+  const entry = getEconomyCityByRef(donor, ref), city = entry?.city;
+  if (!city || getOwnerUid(city) !== uid) throw new HttpsError("permission-denied", "Only the clanmate who currently owns this recovered city can return it.");
+  if (isStronghold(city) || city.isMainCity || donor.profileAfter.mainCityId === city.id) throw new HttpsError("failed-precondition", "Main Cities and objectives cannot be returned through War Cities.");
+  assertCurrentClanActorProfile(recipient.profileAfter, clanId);
+  const lock = COMBAT_AUTHORIZATION.abandonLockExpiresAt(city, uid, nowMs);
+  if (lock) throw new HttpsError("failed-precondition", `This city's capture protection ends in ${formatCooldownMs(lock - nowMs)}. Return it after that period.`);
+  const targetKey = `${loss.regionId}:${loss.cityId}`;
+  const inbound = await transaction.get(scopeQueryToCurrentRealmShard(db.collection("armies")
+    .where("worldId", "==", ONLINE_WORLD_ID).where("resetGeneration", "==", RESET_GENERATION))
+    .where("status", "==", "active").where("targetKey", "==", targetKey).limit(1));
+  const staging = await readRallyStagingDefense(transaction, { ...city, regionId: loss.regionId }, "city");
+  if (!inbound.empty || staging.staged.length) throw new HttpsError("failed-precondition", "Wait for incoming marches and rally assembly troops to clear before returning this city.");
+  const destination = findNearestRelinquishDestination(donor, entry);
+  if (!destination?.city) throw new HttpsError("failed-precondition", "Keep another owned city for your returning troops.");
+  const troops = Math.max(0, Math.floor(safeNumber(city.troops, 0)));
+  const returnId = crypto.createHash("sha256").update(`${getRealmStorageId()}:${uid}:${operationId}`).digest("hex");
+  let movement = null;
+  if (troops) {
+    const route = await buildServerGeneratedArmyRoute(city, destination.city);
+    const destinationRegionId = normalizeRegionId(destination.city.regionId);
+    const duration = calculateTravelTime({ pathLength: route.pathLength, troopCount: troops, kind: "transfer",
+      speedMultiplier: addCommonGearMarchSpeed(donor.profileAfter, "transfer", skillMultiplier(donor.profileAfter, "marchOrders")
+        + Math.max(0, safeNumber(donor.bonuses.marchSpeedBonusPercent, 0)) / 100) });
+    const id = `war_return_${returnId.slice(0, 48)}`;
+    if ((await transaction.get(canonicalArmyRef(id))).exists) throw new HttpsError("already-exists", "That return march already exists.");
+    movement = { id, worldId: ONLINE_WORLD_ID, resetGeneration: RESET_GENERATION, realmShardId: getCurrentRealmShardId(),
+      ownerKind: "player", ownerUid: uid, ownerName: normalizePlayerName(donor.profileAfter.playerName), ownerFlag: donor.profileAfter.flag || null,
+      ownerKingPower: createPreparedEconomyStatsSnapshot(donor, {}, { nowMs }).kingPower, kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+      kind: "transfer", targetType: "city", fromId: city.id, fromName: city.name, sourceRegionId: loss.regionId,
+      toId: destination.city.id, toName: destination.city.name, targetRegionId: destinationRegionId,
+      targetKey: `${destinationRegionId}:${destination.city.id}`, targetOwnerAtLaunch: "player", targetOwnerUid: uid,
+      troops, requestedTroops: troops, total: duration, ...route, viewRegionIds: route.routeRegionIds,
+      launchedAtMs: nowMs, arrivesAtMs: nowMs + Math.ceil(duration * 1000), status: "active", createdByServer: true,
+      serverAuthorityVersion: 2, relinquishTransfer: true, returnReason: "war_city_return" };
+  }
+  const recoveredRecords = await COMBAT_AUTHORIZATION.readCityRecords(db, transaction, loss.originalOwnerUid, ref.path, combatAuthorizationRealm());
+  const p = recipient.profileAfter;
+  const patch = { ownerUid: loss.originalOwnerUid, ownerKind: "player", ownerName: normalizePlayerName(p.playerName), ownerFlag: p.flag || null,
+    ownerKingPower: p.kingPower || 0, ownerClanId: clanId, ownerClanName: safeString(p.clanName, 24), ownerClanTag: safeString(p.clanTag, 5),
+    ownerClanIdentityRevision: p.clanIdentityRevision || 0, ownerClanIdentityRevisionVersion: CLAN_IDENTITY_REVISION_VERSION,
+    ownerShieldExpiresAtMs: getShieldExpiresAtMs(city, p), troops: 0, troopFloat: 0, alliedReinforcementTroops: 0,
+    isMainCity: false, productionUpdatedAtMs: nowMs,
+    // Keep the original lineage timestamps; a friendly restoration is not a new neutral claim or battle.
+    neutralClaimCurrentOwnerUid: loss.originalOwnerUid, neutralClaimPreviousOwnerUid: uid, neutralClaimOwnershipChangedAtMs: nowMs };
+  const cityPatch = { ref, city, patch };
+  writePreparedEconomy(transaction, donor, {}, [cityPatch], { nowMs, addActiveArmies: movement ? [movement] : [] });
+  writePreparedEconomy(transaction, recipient, {}, [], { nowMs, statsCityPatches: [cityPatch] });
+  if (movement) writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
+  COMBAT_AUTHORIZATION.closeRecoveredCity(transaction, recoveredRecords, nowMs);
+  writeOwnershipChangeEvent(transaction, { eventId: `war_city_${returnId}`, targetType: "city", targetId: city.id,
+    regionId: loss.regionId, beforeOwnerUid: uid, afterOwnerUid: loss.originalOwnerUid, reason: "clan_city_restored", nowMs });
+  writeClanAudit(transaction, clanId, uid, "war_city_returned", { cityId: city.id, regionId: loss.regionId, originalOwnerUid: loss.originalOwnerUid, troopsReturned: troops }, nowMs);
+  // A compact receipt prevents replay from reapplying stale player balances on the client.
+  return { ok: true, version: 1, clanId, cityId: city.id, regionId: loss.regionId, returnedTroops: troops,
+    destinationName: destination.city.name, movementId: movement?.id || "" };
+}
 exports.clanIntelligence = timedCallable("clanIntelligence", { region: "us-central1", maxInstances: 20, invoker: "public" }, request => {
   const uid = requireAuth(request);
   const compatibility = new Set(["clientReleaseId", "clientResetGeneration", "clientWorldId", "clientRealmShardId"]);
@@ -29370,6 +29443,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       ? await transaction.get(db.doc(`clans/${safeString(attackerProfile.clanId, 128)}/members/${attackerUid}`))
       : null;
     const defenderProfile = defenderUid ? defenderEconomy?.profileAfter || defenderProfileEntry?.data || {} : null;
+    const warCityCapture = army.kind !== "scout" && targetType === "city"
+      ? await clanWarCities.prepareCapture(transaction, { target, regionId: targetRegionId, defenderUid, defenderProfile, attackerUid, attackerProfile })
+      : null;
     const reinforcementProfiles = new Map(targetReinforcements.map(entry => [
       entry.ownerUid,
       participantProfiles.get(entry.ownerUid)?.data || {},
@@ -32488,6 +32564,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         nowMs,
       });
       const targetCityUpdate = { id: target.id, regionId: targetRegionId, ...targetPatch };
+      clanWarCities.commitCapture(transaction, warCityCapture, nowMs, `army_${armyId}_city_${target.id}`);
       cityUpdates.push(targetCityUpdate);
 
       const attackerReport = makeReport({

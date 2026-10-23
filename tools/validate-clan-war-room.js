@@ -46,7 +46,7 @@ assert.match(server, /exports\.joinClanRally\s*=\s*timedCallable/, "Clan rally j
 assert.match(server, /exports\.launchClanRally\s*=\s*timedCallable/, "Clan rally launch callable is missing.");
 assert.match(server, /exports\.cancelClanRally\s*=\s*timedCallable/, "Clan rally cancellation callable is missing.");
 assert.match(firebase, /function subscribeClanRallies/, "Clan rally subscription is missing.");
-assert.match(client, /CLAN_MOBILE_SECTIONS\s*=\s*Object\.freeze\(\["overview", "warroom", "rewards", "members"\]\)/, "Clan navigation is not using the rally-only War Room tab.");
+assert.match(client, /CLAN_MOBILE_SECTIONS\s*=\s*Object\.freeze\(\["overview", "warroom", "warcities", "rewards", "members"\]\)/, "Clan navigation is not using the rally-only War Room tab.");
 assert.match(client, /function renderClanRallyPanel[\s\S]*?isClanSectionActive\("warroom"\)[\s\S]*?Choose active rally[\s\S]*?renderClanRallyCard\(selected\)[\s\S]*?rally-picker[\s\S]*?data-clan-action="select-rally"/, "War Room must retain current rally selection and controls.");
 assert.match(client, /function renderActiveOperations[\s\S]*?Rallies|data-active-operations-tab/, "Kingdom Activity rally access is missing.");
 assert.match(rules, /match \/operations\/\{operationId\}[\s\S]*?allow read, create, update, delete: if false;[\s\S]*?match \/\{legacyDocument=\*\*\}[\s\S]*?allow read, create, update, delete: if false;/, "Legacy operation documents are not explicitly denied.");

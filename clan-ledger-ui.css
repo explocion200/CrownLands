@@ -250,7 +250,7 @@
 #profileScreen #clanContent :is(.player-name-link,.clan-identity-link,.clan-member-select,.clan-hero-name){min-height:28px !important;width:auto !important;padding:2px 0 !important;text-align:left !important;font:16px/1.25 Georgia,serif !important;border:0 !important;background:transparent !important;box-shadow:none !important;color:#352f23 !important;overflow-wrap:anywhere !important;white-space:normal !important}
 #profileScreen #clanContent :is(.player-name-link,.clan-identity-link,.clan-member-select):hover{text-decoration:underline !important}
 #profileScreen #clanContent input:not([type=range]),#profileScreen #clanContent select,#profileScreen #clanContent textarea{min-height:44px !important;min-width:0 !important;padding:9px 11px !important;border:1px solid #ad9670 !important;background:#fff7df !important;color:#352f23 !important;font:14px 'Segoe UI',sans-serif !important;box-shadow:none !important}
-#profileScreen #clanContent :is(.clan-section-nav,.clan-browser-nav){display:grid !important;grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:5px !important;padding:6px 17px !important;height:57px !important;min-height:57px !important;flex:none !important;background:#d9c7994a !important;border:0 !important;border-bottom:1px solid #b8a684 !important;margin:0 !important;overflow:visible !important}
+#profileScreen #clanContent :is(.clan-section-nav,.clan-browser-nav){display:grid !important;grid-template-columns:repeat(5,minmax(0,1fr)) !important;gap:5px !important;padding:6px 17px !important;height:57px !important;min-height:57px !important;flex:none !important;background:#d9c7994a !important;border:0 !important;border-bottom:1px solid #b8a684 !important;margin:0 !important;overflow:visible !important}
 #profileScreen #clanContent .clan-browser-nav{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
 #profileScreen #clanContent :is(.clan-section-nav,.clan-browser-nav) button{display:flex !important;align-items:center !important;justify-content:center !important;gap:10px !important;padding:5px !important;min-height:44px !important;font:16px Georgia,serif !important;background:#e5d5b2 !important;border:1px solid #b19a70 !important}
 #profileScreen #clanContent :is(.clan-section-nav,.clan-browser-nav) button.active{background:#d7be78 !important;border-color:#8a7043 !important;box-shadow:inset 0 0 0 2px #f5dea0 !important}
@@ -674,4 +674,25 @@
 #profileScreen #clanContent #clanWarroomPanel td{height:23px!important;font-size:12px!important}
 #profileScreen #clanContent #clanWarroomPanel td small{font-size:9px!important}
 #profileScreen #clanContent #clanWarroomPanel td:last-child{font-size:11px!important}
+}
+#profileScreen #clanContent .clan-section-nav{grid-template-columns:repeat(5,minmax(0,1fr)) !important}
+#profileScreen #clanContent .clan-war-cities header{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:none}
+#profileScreen #clanContent .clan-war-cities h3{margin:0;font:24px Georgia,serif}
+#profileScreen #clanContent .clan-war-cities small{display:block}
+#profileScreen #clanContent .war-cities-list{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain}
+#profileScreen #clanContent .war-cities-list article{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px;border-bottom:1px solid #b8a684}
+#profileScreen #clanContent .war-city-copy{min-width:0;overflow-wrap:anywhere;display:grid;gap:3px}
+#profileScreen #clanContent .war-city-copy strong{font:20px Georgia,serif}
+#profileScreen #clanContent .war-city-actions{display:flex;align-items:center;gap:6px;flex:none}
+#profileScreen #clanContent .clan-war-cities button{min-height:44px !important;padding:5px 12px;font:15px Georgia,serif}
+#profileScreen #clanContent .clan-war-cities footer{display:flex;justify-content:space-between;align-items:center;gap:8px;flex:none}
+#profileScreen #clanContent .clan-war-cities footer div{display:flex;gap:6px;flex:none}
+@media(max-width:700px){
+  #profileScreen #clanContent .clan-war-cities h3{font-size:18px}
+  #profileScreen #clanContent .war-cities-list article{padding:6px;gap:6px}
+  #profileScreen #clanContent .war-city-copy strong{font-size:16px}
+  #profileScreen #clanContent .war-city-copy small,#profileScreen #clanContent .war-city-copy span{font-size:12px}
+  #profileScreen #clanContent .war-city-actions{flex-direction:column;align-items:stretch;max-width:108px}
+  #profileScreen #clanContent .clan-war-cities button{font-size:13px;padding:4px 8px}
+  #profileScreen #clanContent .clan-war-cities footer>small{font-size:11px}
 }
