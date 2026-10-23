@@ -112,7 +112,7 @@
     [99, 36050018, 245120249, 39701923, 9900, 8850, 950],
     [100, 40000000, 271977950, 43672116, 10000, 9000, 1000],
   ].map(Object.freeze));
-  const REFILL_VERSION = 3;
+  const REFILL_VERSION = 4;
   const MAX_STAMINA = 100, HUNT_COST = 10, BOSS_HUNT_COST = 20, FULL_REFILL_PRICE = 30;
   const ANCHORS = Object.freeze([
     [1, 100, 100, 20], [20, 10000, 5000, 500], [40, 100000, 50000, 2500],
@@ -126,6 +126,8 @@
   ].map(Object.freeze));
   function fail(message) { const error = new Error(message); error.code = "failed-precondition"; throw error; }
   const day = now => new Date(now).toISOString().slice(0, 10);
+  const validDay = value => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    && Number.isFinite(Date.parse(value)) && day(Date.parse(value)) === value;
   function refillPrice(value) {
     if (!Number.isInteger(value) || value < 0 || value > MAX_STAMINA) fail("Invalid stamina value.");
     return value === MAX_STAMINA ? 0 : FULL_REFILL_PRICE;
@@ -159,13 +161,23 @@
     if (raw.version !== VERSION || !Number.isInteger(raw.value) || raw.value < 0 || raw.value > MAX_STAMINA
       || !Number.isSafeInteger(raw.recoveredAtMs) || raw.recoveredAtMs < 0
       || !Number.isSafeInteger(raw.revision) || raw.revision < 0) fail("Stamina state is unavailable. Please retry later.");
-    // Retain the saved schema/timestamp, but elapsed time never grants stamina.
+    if (raw.dailyResetDay !== undefined && !validDay(raw.dailyResetDay)) fail("Stamina state is unavailable. Please retry later.");
+    // Presentation only normalizes stored values; the server applies daily resets.
     return { version: VERSION, value: raw.value, recoveredAtMs: raw.recoveredAtMs,
-      revision: raw.revision, paidDay: typeof raw.paidDay === "string" ? raw.paidDay : "" };
+      revision: raw.revision, paidDay: typeof raw.paidDay === "string" ? raw.paidDay : "",
+      ...(raw.dailyResetDay !== undefined ? { dailyResetDay: raw.dailyResetDay } : {}) };
+  }
+  function dailyStamina(raw, now) {
+    const state = stamina(raw, now), today = day(now);
+    // Legacy records use their last initialization/refill day. A paid refill
+    // already received today also counts as today's baseline during adoption.
+    const previous = state.dailyResetDay || [day(state.recoveredAtMs), validDay(state.paidDay) ? state.paidDay : ""].sort().at(-1);
+    if (previous >= today) return { ...state, dailyResetDay: previous };
+    return { ...state, value: MAX_STAMINA, recoveredAtMs: now, dailyResetDay: today, revision: state.revision + 1 };
   }
   function changeStamina(raw, delta, now) {
     const state = stamina(raw, now);
-    if (delta > 0) fail("Stamina can only be restored by a 30-Crown refill.");
+    if (delta > 0) fail("Stamina can only be restored by the daily reset or a 30-Crown refill.");
     if (!Number.isInteger(delta) || state.value + delta < 0) fail(`Not enough stamina. This hunt costs ${Math.abs(delta)} stamina.`);
     return { ...state, value: Math.min(MAX_STAMINA, state.value + delta), revision: state.revision + 1 };
   }
@@ -263,6 +275,6 @@
     }
     return { balanceVersion: VERSION, damage, gold, xp, item, recipientUid, rolls: [...rolls] };
   }
-  return Object.freeze({ VERSION, BALANCE_VERSION, BOSS_REWARD_VERSION, BALANCE_V2, REFILL_VERSION, MAX_STAMINA, HUNT_COST, BOSS_HUNT_COST, FULL_REFILL_PRICE, ANCHORS, ITEMS,
+  return Object.freeze({ VERSION, BALANCE_VERSION, BOSS_REWARD_VERSION, BALANCE_V2, REFILL_VERSION, MAX_STAMINA, HUNT_COST, BOSS_HUNT_COST, FULL_REFILL_PRICE, ANCHORS, ITEMS, dailyStamina,
     day, refillPrice, balance, slots, stamina, changeStamina, view, allocate, bossEligibility, rewards });
 });

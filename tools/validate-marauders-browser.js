@@ -110,7 +110,7 @@ async function main(built = false) {
       __CROWNLANDS_BENCHMARK__.closeModal();
       const now=Date.now(), qa=window.huntQA={uid:'hunt-fixture', purchases:[], sends:0, count:0};
       getCurrentOnlineUid=()=>qa.uid;
-      const api={getStaminaState:async()=>({state:{version:1,value:70,recoveredAtMs:now,revision:1,paidDay:'',serverNowMs:now},crowns:120,walletRevision:1,huntingEnabled:true,offer:{version:3,price:30,stamina:70,staminaRevision:1,walletRevision:1,utcDay:CrownlandsMarauders.day(now)}}),subscribeStamina:callbacks=>{qa.callbacks=callbacks;return()=>{};},refillStamina:request=>{qa.purchases.push(request);return new Promise(resolve=>qa.resolve=resolve);}};
+      const api={getStaminaState:async()=>({state:{version:1,value:70,recoveredAtMs:now,revision:1,paidDay:'',serverNowMs:now},crowns:120,walletRevision:1,huntingEnabled:true,offer:{version:CrownlandsMarauders.REFILL_VERSION,price:30,stamina:70,staminaRevision:1,walletRevision:1,utcDay:CrownlandsMarauders.day(now)}}),subscribeStamina:callbacks=>{qa.callbacks=callbacks;return()=>{};},refillStamina:request=>{qa.purchases.push(request);return new Promise(resolve=>qa.resolve=resolve);}};
       qa.api=api; getOnlineApi=()=>api;
       CrownlandsStaminaUI.sync({uid:qa.uid,api,onWallet:()=>{}});
       onlineCombatAuthorization={uid:qa.uid,shieldExpiresAtMs:now+900000,retaliation:[{id:'hunt-retake',cityId:'fixture-city',cityName:'Thornford',regionId:getActiveMapRegionId(),status:'available',expiresAtMs:now+600000}]};renderCombatTimers();
@@ -251,7 +251,8 @@ async function main(built = false) {
       await ev("document.getElementById('staminaButton').focus();document.getElementById('staminaButton').click()");await wait("!!document.querySelector('.stamina-panel[open]')");
       assert.equal(await ev('huntQA.purchases.length'),0,'Opening never purchases');
       assert(!await ev("document.querySelector('.stamina-panel details').open"),'Hunt details start collapsed');
-      assert(await ev("document.querySelector('.stamina-panel').textContent.includes('No automatic recovery or hunt refunds.') && !document.querySelector('[data-next],[data-full]')"));
+      assert(await ev("document.querySelector('[data-stamina-reset]').textContent.includes('Free reset to 100 at 00:00 UTC')"));
+      assert(await ev("document.querySelector('.stamina-panel').textContent.includes('No gradual recovery or hunt refunds.') && !document.querySelector('[data-next],[data-full]')"));
       assert.equal(await ev("document.querySelector('[data-hunts]').textContent"),'7');
       assert.equal(await ev("document.querySelector('[data-boss-hunts]').textContent"),'3');
       assert.equal(await ev("document.querySelector('[data-refill-stamina]').textContent"),'70 → 100 · Restores 30');
@@ -304,7 +305,7 @@ async function main(built = false) {
     // Insufficient Crowns opens the real Shop, then restores the exact draft nodes.
     await ev(`(()=>{const qa=huntQA;qa.crowns=0;qa.walletRevision=3;qa.shopEnabled=true;qa.shopMode='live';qa.catalogReads=0;qa.checkoutCalls=0;
       qa.stamina={version:1,value:9,recoveredAtMs:Date.now(),revision:3,paidDay:''};qa.callbacks.onState(qa.stamina);
-      qa.api.getStaminaState=async()=>({state:{...qa.stamina,serverNowMs:Date.now()},crowns:qa.crowns,walletRevision:qa.walletRevision,huntingEnabled:true,offer:{version:3,price:CrownlandsMarauders.refillPrice(qa.stamina.value),stamina:qa.stamina.value,staminaRevision:qa.stamina.revision,walletRevision:qa.walletRevision,utcDay:CrownlandsMarauders.day(Date.now())}});
+      qa.api.getStaminaState=async()=>({state:{...qa.stamina,serverNowMs:Date.now()},crowns:qa.crowns,walletRevision:qa.walletRevision,huntingEnabled:true,offer:{version:CrownlandsMarauders.REFILL_VERSION,price:CrownlandsMarauders.refillPrice(qa.stamina.value),stamina:qa.stamina.value,staminaRevision:qa.stamina.revision,walletRevision:qa.walletRevision,utcDay:CrownlandsMarauders.day(Date.now())}});
       qa.api.getLiveCrownPaymentCatalog=async()=>{qa.catalogReads++;if(qa.catalogFailure)throw Error('Unavailable');return{enabled:qa.shopEnabled,mode:qa.shopMode,packs:[{id:'fixture',crowns:1000,amountMinor:499,currency:'usd'}]};};
       qa.api.getCrownPaymentCatalog=async()=>({enabled:false,mode:'test',packs:[]});qa.api.createLiveCrownCheckout=async()=>{qa.checkoutCalls++;throw Error('No checkout should be created by navigation');};
       cosmeticUid=qa.uid;cosmeticState=COSMETIC_CATALOG.normalize({crowns:qa.crowns,revision:qa.walletRevision});CrownlandsCrownPaymentsUI.reset(null);

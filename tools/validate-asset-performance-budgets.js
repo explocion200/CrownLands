@@ -449,8 +449,10 @@ const marauderShellFiles = ['stamina-ui.js', 'stamina-ui.css', 'marauders-ui.js'
 // historical departures bring the group to 62,655 bytes, bounded at 62 KiB;
 // sprites and all other group caps remain unchanged. Continuous-world timer
 // handling brings this source group to 64,498 bytes; allow one bounded KiB.
-assert(marauderShellFiles.reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 63 * 1024,
-  'NPC/stamina shell files exceed their 63 KiB source budget.');
+// Daily UTC entitlement and reset UI bring this group to 66,616 bytes. Bound
+// the 2,104-byte overage at 3 KiB; artwork and all other group limits stay fixed.
+assert(marauderShellFiles.reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 66 * 1024,
+  'NPC/stamina shell files exceed their 66 KiB source budget.');
 let marauderArtBytes = 0;
 for (const file of ['assets/marauders/solo-v1.webp', 'assets/marauders/boss-v1.webp']) {
   const bytes = statBytes(file); marauderArtBytes += bytes;

@@ -1,148 +1,57 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "6f368110fd78eaf0c34e816dee373d865ce4e779",
+  "baseCommit": "e2537d290b9931ab173b0f825ab9b04fda2994ec",
   "coverage": [
     {
       "paths": [
-        "local-backend/store.js"
+        "functions/marauder-rules.js",
+        "functions/stamina-service.js",
+        "functions/test/stamina-refill-cases.js",
+        "tools/test-local-postgres-stamina.js",
+        "tools/validate-marauder-rules.js"
       ],
       "tests": [
-        "tools/test-local-postgres-store.js",
-        "tools/test-local-postgres-transaction-cache.js",
-        "tools/test-local-postgres-transaction-retries.js",
-        "tools/test-local-postgres-contention.js",
-        "tools/test-local-postgres-jobs.js",
-        "tools/test-local-postgres-access.js",
-        "tools/test-local-postgres-game.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-clan-support.js"
-      ],
-      "reason": "Actual PostgreSQL proves same-attempt direct-read reuse, missing/duplicate values, clone independence, read-before-write and query/READ COMMITTED exclusions, bounded memory, fresh retries, real SSI/deadlocks, atomic receipts and worker lease/timeout fencing. Isolation, pool/concurrency, backoff and retry limits remain unchanged. Real PostgreSQL validates one-statement getAll semantics, ordering/duplicates/missing refs, validation and read-before-write, rollback/concurrent receipts, serializable conflicts/retries and worker fencing. Shared command emulator coverage checks army/clan support semantics; game/access integration exercises current adapter authorization and real gameplay. Update the stale integration inventory expectation to the current 123 callables (152 total exports), already present on the branch base; no runtime export is added."
-    },
-    {
-      "paths": [
-        "tools/test-local-postgres-transaction-cache.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-store.js",
-        "tools/test-local-postgres-transaction-cache.js",
-        "tools/test-local-postgres-transaction-retries.js",
-        "tools/test-local-postgres-contention.js",
-        "tools/test-local-postgres-jobs.js",
-        "tools/test-local-postgres-access.js"
-      ],
-      "reason": "Actual PostgreSQL proves same-attempt direct-read reuse, missing/duplicate values, clone independence, read-before-write and query/READ COMMITTED exclusions, bounded memory, fresh retries, real SSI/deadlocks, atomic receipts and worker lease/timeout fencing. Isolation, pool/concurrency, backoff and retry limits remain unchanged."
-    },
-    {
-      "paths": [
-        "tools/test-local-postgres-transaction-retries.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-store.js",
-        "tools/test-local-postgres-transaction-cache.js",
-        "tools/test-local-postgres-transaction-retries.js",
-        "tools/test-local-postgres-contention.js",
-        "tools/test-local-postgres-jobs.js",
-        "tools/test-local-postgres-access.js"
-      ],
-      "reason": "Actual PostgreSQL proves same-attempt direct-read reuse, missing/duplicate values, clone independence, read-before-write and query/READ COMMITTED exclusions, bounded memory, fresh retries, real SSI/deadlocks, atomic receipts and worker lease/timeout fencing. Isolation, pool/concurrency, backoff and retry limits remain unchanged."
-    },
-    {
-      "paths": [
-        "functions/index.js"
-      ],
-      "tests": [
-        "tools/validate-operation-timing.js",
-        "tools/validate-scheduled-arrival-timing.js",
-        "tools/test-local-postgres-production-routes.js",
-        "tools/test-local-postgres-clan-support-commands.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-clan-support.js",
+        "tools/validate-marauder-rules.js",
+        "tools/test-local-postgres-stamina.js",
+        "functions/test/emulator-stamina-refills.js",
         "functions/test/emulator-marauder-combat.js",
-        "functions/test/emulator-world-travel.js"
+        "functions/test/emulator-crown-live-payments.js",
+        "tools/test-stamina-daily-reset-ui.js",
+        "tools/test-stamina-display-recovery.js"
       ],
-      "reason": "Shared arrival batching and profile/stat helpers affect actual city/camp/tower movements, scouts, reinforcement and rallies. Real local commands cover preview/dispatch agreement, accepted routes/timing, restart, duplicate arrivals, return/rejoin/cancellation and no troop duplication. Relevant emulator suites exercise shared authoritative combat/reward/movement semantics. Diagnostics tests preserve scheduler results/concurrency and use isolated bounded counters without private identities or SQL."
+      "reason": "Free UTC-day entitlement shares authoritative reads/departure transactions with paid refills, solo attacks and every boss participant. Real PostgreSQL and shared emulator cases cover concurrent reset/spend/refill, read-only readiness, wallet races, stale offers/receipts, legacy state adoption, archived-profile guards, offline catch-up and no refunds. Existing NPC balance/combat and live payment credit dependencies remain covered. Browser normalization does not grant locally."
     },
     {
       "paths": [
-        "functions/operation-timing.js"
+        "stamina-ui.js",
+        "tools/test-stamina-daily-reset-ui.js",
+        "tools/validate-marauders-browser.js"
       ],
       "tests": [
-        "tools/validate-operation-timing.js",
-        "tools/validate-scheduled-arrival-timing.js",
-        "tools/test-local-postgres-production-routes.js",
-        "tools/test-local-postgres-clan-support-commands.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-clan-support.js",
-        "functions/test/emulator-marauder-combat.js",
-        "functions/test/emulator-world-travel.js"
+        "tools/test-stamina-daily-reset-ui.js",
+        "tools/test-stamina-display-recovery.js",
+        "tools/validate-marauders-browser.js"
       ],
-      "reason": "Shared arrival batching and profile/stat helpers affect actual city/camp/tower movements, scouts, reinforcement and rallies. Real local commands cover preview/dispatch agreement, accepted routes/timing, restart, duplicate arrivals, return/rejoin/cancellation and no troop duplication. Relevant emulator suites exercise shared authoritative combat/reward/movement semantics. Diagnostics tests preserve scheduler results/concurrency and use isolated bounded counters without private identities or SQL."
+      "reason": "Server-clock boundary refresh and countdown need delayed/failed responses, no normal polling, backoff, hidden tabs, clock skew, stale snapshots, sign-out/account isolation and real local subscription recovery. Actual source and production browser checks at desktop/wide/narrow landscape prove scroll/footer, review, touch/focus and preserved hunt drafts."
     },
     {
       "paths": [
-        "tools/validate-operation-timing.js"
-      ],
-      "tests": [
-        "tools/validate-operation-timing.js",
-        "tools/validate-scheduled-arrival-timing.js",
-        "tools/test-local-postgres-production-routes.js",
-        "tools/test-local-postgres-clan-support-commands.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-clan-support.js",
-        "functions/test/emulator-marauder-combat.js",
-        "functions/test/emulator-world-travel.js"
-      ],
-      "reason": "Shared arrival batching and profile/stat helpers affect actual city/camp/tower movements, scouts, reinforcement and rallies. Real local commands cover preview/dispatch agreement, accepted routes/timing, restart, duplicate arrivals, return/rejoin/cancellation and no troop duplication. Relevant emulator suites exercise shared authoritative combat/reward/movement semantics. Diagnostics tests preserve scheduler results/concurrency and use isolated bounded counters without private identities or SQL."
-    },
-    {
-      "paths": [
-        "tools/validate-scheduled-arrival-timing.js"
-      ],
-      "tests": [
-        "tools/validate-operation-timing.js",
-        "tools/validate-scheduled-arrival-timing.js",
-        "tools/test-local-postgres-production-routes.js",
-        "tools/test-local-postgres-clan-support-commands.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-clan-support.js",
-        "functions/test/emulator-marauder-combat.js",
-        "functions/test/emulator-world-travel.js"
-      ],
-      "reason": "Shared arrival batching and profile/stat helpers affect actual city/camp/tower movements, scouts, reinforcement and rallies. Real local commands cover preview/dispatch agreement, accepted routes/timing, restart, duplicate arrivals, return/rejoin/cancellation and no troop duplication. Relevant emulator suites exercise shared authoritative combat/reward/movement semantics. Diagnostics tests preserve scheduler results/concurrency and use isolated bounded counters without private identities or SQL."
-    },
-    {
-      "paths": [
-        "tools/test-local-postgres-world-commands.js"
-      ],
-      "tests": [
-        "tools/validate-operation-timing.js",
-        "tools/validate-scheduled-arrival-timing.js",
-        "tools/test-local-postgres-production-routes.js",
-        "tools/test-local-postgres-clan-support-commands.js",
-        "functions/test/emulator-bulk-army-orders.js",
-        "functions/test/emulator-clan-support.js",
-        "functions/test/emulator-marauder-combat.js",
-        "functions/test/emulator-world-travel.js"
-      ],
-      "reason": "Shared arrival batching and profile/stat helpers affect actual city/camp/tower movements, scouts, reinforcement and rallies. Real local commands cover preview/dispatch agreement, accepted routes/timing, restart, duplicate arrivals, return/rejoin/cancellation and no troop duplication. Relevant emulator suites exercise shared authoritative combat/reward/movement semantics. Diagnostics tests preserve scheduler results/concurrency and use isolated bounded counters without private identities or SQL."
-    },
-    {
-      "paths": [
-        "docs/ARRIVAL_PERFORMANCE_2026-10-22.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/DAILY_STAMINA_RESET.md"
       ],
       "tests": [],
-      "reason": "Record approved technical performance scope, controlled measurements and separately authorized backend rollout. No gameplay design rule changes."
+      "reason": "Record the explicitly confirmed daily-reset rule, legacy adoption, focused evidence and separately authorized backend-first rollout; distinguish implementation from verified live deployment."
     },
     {
       "paths": [
-        "local-backend/worker-diagnostics.js"
+        "tools/asset-performance-budgets.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
       "tests": [
-        "tools/validate-scheduled-arrival-timing.js",
-        "tools/test-local-postgres-worker-loop.js"
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
       ],
-      "reason": "The permanent worker intercepts console output. Exercise actual capture with the scheduled resolver, bounded 32-sample retention, fixed numeric whitelists, rejected private fields/getters/nonfinite values, independent snapshots, and unchanged error/outcome monitoring and PostgreSQL worker leases/shutdown behavior."
+      "reason": "Measured requested daily reset/countdown increases delivered shell by 2,125 bytes to 4,643,831 (2,039 beyond the cap) and the NPC source group to 66,616. Bound only these additions at 2 KiB delivered and 3 KiB source; actual build/source budgets, lazy artwork, entry points and every other limit remain checked."
     }
   ]
 }

@@ -13,7 +13,7 @@ const profileRef = db.doc(`players/${uid}`), stateRef = stamina.stateRef(uid), w
 let sequence = 0;
 const request = offer => ({ requestId: `refill_test_${++sequence}`, offer });
 async function seed(value, crowns, paidDay = "") {
-  await Promise.all([stateRef.set({ version: 1, value, recoveredAtMs: now, revision: sequence, paidDay }),
+  await Promise.all([stateRef.set({ version: 1, value, recoveredAtMs: now, revision: sequence, paidDay, dailyResetDay: M.day(now) }),
     walletRef.set(C.normalize({ crowns, revision: sequence }))]);
 }
 async function snapshot() { return { state: (await stateRef.get()).data(), wallet: (await walletRef.get()).data() }; }
@@ -21,6 +21,7 @@ async function main() {
   await profileRef.set({ resetGeneration: "test-current", character: { level: 1 } });
   const initialized = await stamina.load(uid);
   assert.equal(initialized.state.value, 100);
+  assert.equal(initialized.state.dailyResetDay, M.day(now));
   for (const [value, price] of [[0, 30], [66, 30], [67, 30], [70, 30], [99, 30], [100, 0]]) for (const crowns of new Set([0, Math.max(0, price - 1), price, price + 1, 29, 30, 120])) {
     await seed(value, crowns);
     const offer = (await stamina.load(uid)).offer, purchase = request(offer), before = await snapshot();
@@ -46,7 +47,7 @@ async function main() {
   assert.equal(duplicates.filter(result => !result.replayed).length, 1);
   assert.equal((await snapshot()).wallet.crowns, 90);
   // Previously committed flat and proportional purchases replay without another refill.
-  for (const [version, price] of [[1,30],[2,9]]) {
+  for (const [version, price] of [[1,30],[2,9],[3,30]]) {
   await seed(90, 120-price, M.day(now));
   const legacyOffer = { version, price, stamina: 70, staminaRevision: 0, walletRevision: 0, utcDay: M.day(now) };
   const legacyRequest = request(legacyOffer);
@@ -59,22 +60,28 @@ async function main() {
   assert.deepEqual(await snapshot(), legacyBefore);
   }
   // Reject old proportional/flat-price quotes and forged prices without charging or consuming the day.
-  for (const patch of [{ version: 1, price: 30 }, { version: 2, price: 9 }, { price: 9 }, { price: 8 }, { price: 0 }, { price: -1 }, { price: 9.1 }]) {
+  for (const patch of [{ version: 1, price: 30 }, { version: 2, price: 9 }, { version: 3, price: 30 }, { price: 9 }, { price: 8 }, { price: 0 }, { price: -1 }, { price: 9.1 }]) {
     await seed(70, 120); const offer = { ...(await stamina.load(uid)).offer, ...patch };
     const before = await snapshot(), purchase = request(offer);
     await assert.rejects(stamina.purchase(uid, purchase), /offer changed/);
     assert.deepEqual(await snapshot(), before);
     assert.equal((await stamina.receiptRef(uid, purchase.requestId).get()).exists, false);
   }
-  // Time, including offline days, never restores stamina. Old timestamps remain readable.
+  // No gradual recovery. Each new UTC day grants a single full bar, even offline.
   await seed(66, 120); const initialState = await snapshot();
-  for (const elapsed of [12 * 60000, 86400000, 31 * 86400000]) {
+  now += 12 * 60000;
+  assert.equal((await stamina.load(uid)).state.value, 66); assert.deepEqual(await snapshot(), initialState);
+  for (const elapsed of [86400000, 31 * 86400000]) {
     now += elapsed;
     const loaded = await stamina.load(uid);
-    assert.equal(loaded.state.value, 66); assert.equal(loaded.offer.price, 30);
-    assert.equal(loaded.state.nextPointAtMs, null); assert.equal(loaded.state.fullAtMs, null);
-    assert.deepEqual(await snapshot(), initialState);
+    assert.equal(loaded.state.value, 100); assert.equal(loaded.offer.price, 0);
+    assert.equal(loaded.state.nextPointAtMs, null); assert.equal(loaded.state.dailyResetDay, M.day(now));
+    assert.equal(loaded.crowns, 120); assert.equal(loaded.state.paidRefillsToday, 0);
+    const committed = await snapshot(); await stamina.load(uid); assert.deepEqual(await snapshot(), committed);
+    await db.runTransaction(async tx => stamina.writeChanges(tx, await stamina.prepareChange(tx, [uid], -10, now)));
+    assert.equal((await stamina.load(uid)).state.value, 90);
   }
+  await seed(66, 120);
   const restored = await stamina.purchase(uid, request((await stamina.load(uid)).offer));
   assert.equal(restored.receipt.restored, 34); assert.equal(restored.crowns, 90);
   await seed(0, 120);
@@ -92,11 +99,48 @@ async function main() {
   await seed(0, 120, "2026-10-12");
   const oldDayOffer = (await stamina.load(uid)).offer;
   now++;
-  const beforeRollover = await snapshot();
-  assert.equal((await stamina.load(uid)).state.value, 0, "Midnight only renews purchase allowance");
+  const rollover = await stamina.load(uid), beforeRollover = await snapshot();
+  assert.equal(rollover.state.value, 100, "Midnight restores a free full bar");
+  assert.equal(rollover.state.paidRefillsToday, 0); assert.equal(rollover.crowns, 120);
   await assert.rejects(stamina.purchase(uid, request(oldDayOffer)), /offer changed/);
+  await assert.rejects(stamina.purchase(uid, request(rollover.offer)), /full/);
   assert.deepEqual(await snapshot(), beforeRollover);
+  await db.runTransaction(async tx => stamina.writeChanges(tx, await stamina.prepareChange(tx, [uid], -10, now)));
   assert.equal((await stamina.purchase(uid, request((await stamina.load(uid)).offer))).crowns, 90);
+  // Simultaneous devices and departures apply one reset and retain both costs.
+  now = Date.UTC(2026, 9, 14) - 1; await seed(0, 120, M.day(now)); now++;
+  await Promise.all([stamina.load(uid), stamina.load(uid), ...[1, 2].map(() => db.runTransaction(async tx =>
+    stamina.writeChanges(tx, await stamina.prepareChange(tx, [uid], -10, now))))]);
+  assert.equal((await stamina.load(uid)).state.value, 80); assert.equal((await snapshot()).wallet.crowns, 120);
+  // A successful old receipt never buys/restores another bar. Daily entitlement is independent.
+  await seed(70, 120); const priorRequest = request((await stamina.load(uid)).offer);
+  const priorReceipt = (await stamina.purchase(uid, priorRequest)).receipt; now += 86400000;
+  const replayNextDay = await stamina.purchase(uid, priorRequest);
+  assert.equal(replayNextDay.replayed, true); assert.deepEqual(replayNextDay.receipt, priorReceipt);
+  assert.equal(replayNextDay.crowns, 90); assert.equal(replayNextDay.state.paidRefillsToday, 0);
+  await db.runTransaction(async tx => stamina.writeChanges(tx, await stamina.prepareChange(tx, [uid], -20, now)));
+  assert.equal((await stamina.purchase(uid, priorRequest)).state.value, 80);
+  const todayPurchase = await stamina.purchase(uid, request((await stamina.load(uid)).offer));
+  assert.equal(todayPurchase.crowns, 60); assert.equal(todayPurchase.state.paidRefillsToday, 1);
+  // Legacy timestamps adopt the current entitlement once; today's paid use remains consumed.
+  for (const paidDay of ["", M.day(now)]) {
+    await stateRef.set({version:1,value:70,recoveredAtMs:now-40*86400000,revision:1,paidDay});
+    const legacy = await stamina.load(uid);
+    assert.equal(legacy.state.value, paidDay ? 70 : 100); assert.equal(legacy.state.dailyResetDay, M.day(now));
+    assert.equal(legacy.state.paidRefillsToday, paidDay ? 1 : 0);
+    const committed = await snapshot(); await stamina.load(uid); assert.deepEqual(await snapshot(), committed);
+  }
+  // Missing markers initialized today preserve already-spent stamina. Read-only previews never write.
+  await stateRef.set({version:1,value:30,recoveredAtMs:now,revision:1,paidDay:""});
+  assert.equal((await stamina.load(uid)).state.value,30);
+  now += 86400000;
+  const beforeRead = await snapshot();
+  const preview = await db.runTransaction(tx => stamina.read(tx,uid,now));
+  assert.equal(preview.state.value,100); assert.deepEqual(await snapshot(),beforeRead);
+  await profileRef.update({resetGeneration:"archived"});
+  await assert.rejects(stamina.load(uid),/Stale account/);
+  assert.deepEqual(await snapshot(),beforeRead,"An unauthorized profile cannot persist a reset");
+  await profileRef.update({resetGeneration:"test-current"});
   // Spending and wallet changes invalidate reviewed values.
   for (const mutate of [
     async () => db.runTransaction(async transaction => { const changes = await stamina.prepareChange(transaction, [uid], -10, now); stamina.writeChanges(transaction, changes); }),
@@ -143,7 +187,7 @@ async function main() {
   await seed(70, 120); const disabledRequest = request((await stamina.load(uid)).offer); enabled = false;
   const beforeDisabled = await snapshot(); await assert.rejects(stamina.purchase(uid, disabledRequest), /not available/);
   assert.deepEqual(await snapshot(), beforeDisabled);
-  console.log("Stamina refill transactions passed: values, wallets, UTC rollover, retries, resets, concurrency and rejected non-purchase restoration.");
+  console.log("Stamina refill transactions passed: free UTC daily reset, offline catch-up, one paid refill, rollover races, receipt retries, legacy adoption, wallets and no hunt refunds.");
 }
 await main();
 };
