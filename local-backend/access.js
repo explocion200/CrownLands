@@ -116,8 +116,10 @@ class Access {
     const p = path.split("/"), [root, id, collection, record] = p;
     if (p.length < 2 || p.length % 2 || !["get", "list"].includes(method)) return false;
     // Recursive collection-group permissions also apply to a direct document.
-    if (p.at(-2) === "cities" && this.current(data) && data.ownerUid === this.uid) return true;
-    if (p.at(-2) === "camps" && this.current(data) && data.holderUid === this.uid) return true;
+    if (p.length === 4 && root === "islands" && this.island(id)) {
+      if (collection === "cities" && this.current(data) && data.ownerUid === this.uid) return true;
+      if (collection === "camps" && this.current(data) && data.holderUid === this.uid) return true;
+    }
     if (p.length === 2) {
       if (root === "realmConfig") return id === "current";
       if (root === "playerCosmetics") return true;
@@ -139,12 +141,16 @@ class Access {
       if (id !== this.uid) return false;
       if (PRIVATE_PLAYER.includes(collection)) return true;
       if (collection === "saves") return record === "default-" + this.generation;
-      if (collection === "objectiveStats" && method === "get" && ["goldCamp", "warbandCamp", "relicCamp", "deedCamp"].includes(record)) return true;
+      // Fixed IDs survive rollover physically, but their seasonal contents do
+      // not. Missing rows and current pre-shard Camp records remain readable.
+      if (collection === "objectiveStats" && method === "get" && ["goldCamp", "warbandCamp", "relicCamp", "deedCamp"].includes(record)) {
+        return !data || Boolean(this.current({ ...data, realmShardId: data.realmShardId || this.shard }));
+      }
       return CURRENT_PLAYER.includes(collection) && Boolean(this.current(data));
     }
     if (root === "realmEvents" && collection === "activity") return id === this.realmStorage && Boolean(this.current(data));
     if (["leaderboards", "pvpLeaderboards", "crownCitadelReigns", "strongholdLegacies"].includes(root) && collection === "entries") return id === this.realmStorage && Boolean(this.current(data));
-    if (root === "clanLeaderboards" && collection === "entries") return id === this.realmStorage;
+    if (root === "clanLeaderboards" && collection === "entries") return id === this.realmStorage && Boolean(this.current(data));
     if (root === "globalChat" && collection === "messages") return Boolean(this.current(this.profile) && id === this.realmStorage && this.current(data) && data.status === "visible");
     if (root === "battleSnapshots" && collection === "entries") return Boolean(id === this.realmStorage && this.current(data) && Array.isArray(data.participantUids) && data.participantUids.includes(this.uid));
     if (root === "holdingTowers" && collection === "garrison" && this.current(data)) {
@@ -169,7 +175,8 @@ class Access {
       return false;
     }
     if (root === "islands" && this.island(id)) {
-      if (["cities", "camps", "marauders", "armies", "presence"].includes(collection)) return true;
+      if (collection === "presence") return !data || Boolean(this.current({ ...data, realmShardId: data.realmShardId || this.shard }));
+      if (["cities", "camps", "marauders", "armies"].includes(collection)) return !data || Boolean(this.current(data));
       if (collection === "reports") return !record.includes("_hold_");
     }
     return false;

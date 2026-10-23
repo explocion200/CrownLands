@@ -351,6 +351,14 @@ async function verifyWallShieldLifecycle(attacker, defender, source, targets, gr
   console.log("Wall shields passed: damaged-city dispatch and conquest, repair before arrival, full-wall denial, preserved failed grant, minute-20 retaliation and ownership isolation.");
 }
 async function verifySmoothProtectionRanges(attacker, defender, source, target) {
+  const absent = await user("Previous season ruler");
+  await profileRef(absent).set({ ...identity, resetGeneration: "realm-2025-01", worldId: "main-realm-2025-01" });
+  const misplaced = db.doc(`leaderboards/${identity.resetGeneration}--${identity.realmShardId}/entries/${absent.uid}`);
+  for (const scope of [{ ...identity, resetGeneration: "realm-2025-01" },
+    { ...identity, worldId: "fixture-test-world" }, { ...identity, realmShardId: "shard_0002" }, {}]) {
+    await misplaced.set({ ...scope, kingPower: 999999999, kingPowerVersion: 999, mainCityId: "old-season-city" });
+    await deny("getCombatPlayerIdentity", attacker, { uid: absent.uid }, /current season/);
+  }
   const cases = [
     [100_000, 40_000, "normal"], [160_000, 40_000, "assault"], [250_000, 40_000, "raid"],
     [5_000_000, 2_000_000, "normal"], [5_000_000, 1_700_000, "assault"], [5_000_000, 1_000_000, "raid"],

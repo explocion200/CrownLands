@@ -1,47 +1,65 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "3e1d33e8606d64079eb415cf183279f972158f4a",
+  "baseCommit": "a624354778aff53442282a28db59ef7082e4447c",
   "coverage": [
     {
       "paths": [
-        "chat-ui.js",
-        "chat.css",
-        "social-ui.js",
-        "social-ui.css",
-        "tools/validate-chat-clan-tags.js",
-        "tools/validate-chat.js",
-        "tools/validate-social-browser.js"
+        "local-backend/access.js",
+        "tools/test-local-postgres-access.js",
+        "tools/test-local-postgres-season-isolation.js"
       ],
       "tests": [
-        "tools/validate-chat-clan-tags.js",
-        "tools/validate-chat.js",
-        "tools/validate-social-browser.js",
-        "tools/validate-chat-reward-ledgers-browser.js",
-        "tools/validate-chat-locations-browser.js",
-        "tools/validate-chat-translation.js",
-        "tools/validate-map-chat-responsiveness-browser.js"
+        "tools/test-local-postgres-access.js",
+        "tools/test-local-postgres-season-isolation.js",
+        "tools/test-local-postgres-live-reader.js",
+        "tools/test-local-postgres-world-visibility.js",
+        "tools/test-local-postgres-permanent.js",
+        "tools/test-crown-payments.js"
       ],
-      "reason": "Display current public clan tags beside Global/Clan/mini-chat and private message names, using the existing authorized public identity reader. Preserve authoritative Friends/conversation identities and compact layouts. Exercise bounded/deduplicated lookups, current clan changes and departure, negative-cache/failure recovery, private contacts absent from the current leaderboard, hidden-window queue pausing, realm/account reset and late replies; existing message-supplied identity is ignored. Desktop and landscape/narrow/portrait browser checks cover labels, long names, clanless friends, profile and conversation tap behavior, injection safety, compose/translation/location actions and responsive geometry. Shared chat rendering also requires draft/scroll, reward shell and map/chat responsiveness checks. No server code, permissions, APIs or data formats change, so no emulator suite is required. The unrelated archived chat-button art draft validator was checked separately and fails the same unread-badge assertion on unchanged main (3e1d33e8). It is excluded from this tag change; active production unread/draft/scroll behavior is exercised by the ledger and responsiveness browser validators."
+      "reason": "Protect direct/list/watch responses from old or misplaced map, Camp and clan standings records, preserving missing-row/pre-shard compatibility and independent authorized watchers. Real PostgreSQL reset/retry proves seasonal data replacement and approved permanent stores; area reader tests cover current membership, privacy and revocation. Independent-cluster permanent service tests and sandbox payment tests verify test/live boundaries without production writes."
     },
     {
       "paths": [
-        "tools/asset-performance-budgets.js",
-        "tools/validate-asset-performance-budgets.js"
+        "functions/index.js",
+        "functions/test/emulator-combat-authorization.js"
       ],
       "tests": [
-        "tools/validate-asset-performance-budgets.js"
+        "tools/test-local-postgres-season-isolation.js",
+        "functions/test/emulator-combat-authorization.js",
+        "functions/test/emulator-reset-gate.js"
       ],
-      "reason": "Bound the measured 4860-byte shared chat growth at 5 KiB above the previous ledger allowance; the full delivered cache grows by 5845 bytes, bounded at 6 KiB. No new artwork or dependencies. The tag lookup uses existing public reads, batches at most ten identities, and caches only in the current session."
+      "reason": "Combat identity must reject foreign or incomplete standings even in the current board and rebuild only from a current profile. New actual-call tests cover each scope dimension; combat authorization protects weak-player decisions and the reset emulator validates transactional identity/clan/Gear carryover and seasonal progression reset."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+        "firebaseClient.js",
+        "tools/validate-shared-camp-rewards.js"
       ],
       "tests": [
-        "tools/validate-chat-clan-tags.js",
-        "tools/validate-social-browser.js"
+        "tools/validate-shared-camp-rewards.js",
+        "tools/validate-camp-power-rewards-browser.js",
+        "tools/validate-realm-refresh.js",
+        "tools/validate-login-realm-sequence.js",
+        "functions/test/emulator-reset-gate.js"
       ],
-      "reason": "Record the explicitly requested clan tags and their identity/privacy/display semantics. Feature implementation is distinguished from separately verified static publication; no gameplay rules or backend rollout changes."
+      "reason": "Old fixed-ID Camp records now deny reads; display empty current progress without hiding network errors, retaining current reward counts and request-scope isolation. Browser checks cover desktop and 844x390/568x320 landscape. Shared adapter bootstrap/realm tests and reset emulator protect season transitions; no new visual design or production commands are introduced."
+    },
+    {
+      "paths": [
+        "tools/validate-reset-release.js"
+      ],
+      "tests": [
+        "tools/validate-reset-release.js"
+      ],
+      "reason": "Repair the reset audit validator false positive for a worldId filter immediately before generation in the same query; continue requiring both filters and all reset/persistence gates. No production query is reordered or changed."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/CURRENT_SEASON_ISOLATION_AUDIT.md"
+      ],
+      "tests": [],
+      "reason": "Document the owner-confirmed existing carryover-only boundary, read-only live aggregates and isolated tests, known incomplete excluded standings, historical status notes, and backend-first compatible rollout. No new persistence rules or authorization for production mutations."
     }
   ]
 }

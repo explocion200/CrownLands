@@ -148,7 +148,10 @@ for (const [label, source] of [["server", server], ["client", client]]) {
   if (!generationQueries.length) throw new Error(`No ${label} generation-scoped queries were found.`);
   for (const match of generationQueries) {
     const queryTail = source.slice(match.index, match.index + 180);
-    if (!/(?:\.where|where)\("worldId",\s*"==",\s*(?:WORLD_ID|ONLINE_WORLD_ID)\)/.test(queryTail)) {
+    // Chained filters commute. The Treasury query puts world immediately
+    // before generation; do not mistake that scoped query for an unsafe one.
+    const worldImmediatelyBefore = /(?:\.where|where)\("worldId",\s*"==",\s*(?:WORLD_ID|ONLINE_WORLD_ID)\),?\s*$/.test(source.slice(Math.max(0, match.index - 180), match.index));
+    if (!worldImmediatelyBefore && !/(?:\.where|where)\("worldId",\s*"==",\s*(?:WORLD_ID|ONLINE_WORLD_ID)\)/.test(queryTail)) {
       throw new Error(`${label} generation query is missing its worldId constraint near offset ${match.index}.`);
     }
   }

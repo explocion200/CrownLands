@@ -140,6 +140,25 @@ async function main() {
   clientContext.client.modules.firestore.getDocs = async () => { throw new Error("offline"); };
   await assert.rejects(clientContext.loadRewardCampHistory({ locations: input }), /offline/,
     "Unavailable maps must not silently return incomplete award history.");
+  // Run the actual fixed-ID progress reader, including the new backend denial
+  // for records retained from a previous season. Errors must not leak values or
+  // turn a temporary network failure into a misleading zero-progress result.
+  Object.assign(clientContext, { RESET_GENERATION: "realm-current", ONLINE_WORLD_ID: "world-current",
+    REALM_SHARD_ID: "shard_0001", getFirebaseErrorCode: error => error.code });
+  clientContext.client.modules.firestore.doc = (_db, ...parts) => parts.join("/");
+  vm.runInContext(source(client, "loadRewardCampProgress"), clientContext);
+  for (const type of ["gold", "troops", "items", "deed"]) {
+    clientContext.client.modules.firestore.getDoc = async () => { throw Object.assign(Error("Old record"), { code: "permission-denied" }); };
+    assert.equal((await clientContext.loadRewardCampProgress(type)).count, 0);
+    clientContext.client.modules.firestore.getDoc = async () => ({ exists: () => true,
+      data: () => ({ resetGeneration: "realm-old", worldId: "world-old", count: 5 }) });
+    assert.equal((await clientContext.loadRewardCampProgress(type)).count, 0);
+    clientContext.client.modules.firestore.getDoc = async () => ({ exists: () => true,
+      data: () => ({ resetGeneration: "realm-current", worldId: "world-current", realmShardId: "shard_0001", count: 2 }) });
+    assert.equal((await clientContext.loadRewardCampProgress(type)).count, 2);
+  }
+  clientContext.client.modules.firestore.getDoc = async () => { throw new Error("offline"); };
+  await assert.rejects(clientContext.loadRewardCampProgress("gold"), /offline/);
   console.log("Validated shared Camp rewards: unvisited locations, private caches, UTC reset, stale requests, fresh progress, payout refresh, and latest-10 history.");
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
