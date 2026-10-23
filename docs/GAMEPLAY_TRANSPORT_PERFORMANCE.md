@@ -9,8 +9,9 @@ This is the second of the four owner-approved October 23 performance updates.
 The existing six game-request slots are retained. Background document/watch/map
 reads and list/status callables use at most four; commands and route previews
 can use the remaining slots and overtake queued background work. Pending requests
-remain bounded at 128. Aborted queued map requests never reach the server. The
-separate authorized held-chat channel and existing server admission limits remain.
+remain bounded at 128. Aborted queued map requests and unsubscribed queued watches never reach the
+server. The authorized held-chat channel uses one of the four background slots;
+its held-response behavior and existing server admission limits remain.
 
 Successful writes and mutating callables coalesce a subscription refresh; they
 never automatically repeat a command. Account and world guards still reject stale
