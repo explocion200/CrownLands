@@ -10,7 +10,12 @@ function createStaminaService({ db, HttpsError, runTransaction, assertCurrentPla
   }
   async function read(transaction, uid, now) {
     const ref = stateRef(uid), snap = await transaction.get(ref);
-    return { ref, exists: snap.exists, state: translate(() => M.stamina(snap.exists ? snap.data() : null, now)) };
+    const raw = snap.exists ? snap.data() : null, state = translate(() => M.dailyStamina(raw, now));
+    return { ref, exists: snap.exists, state, dirty: !raw || raw.dailyResetDay !== state.dailyResetDay || raw.revision !== state.revision };
+  }
+  function persist(transaction, account) {
+    if (!account.exists) transaction.create(account.ref, account.state);
+    else if (account.dirty) transaction.set(account.ref, account.state);
   }
   function response(account, wallet, now, receipt = null, replayed = false) {
     const state = M.view(account, now), utcDay = M.day(now), price = M.refillPrice(state.value);
@@ -26,7 +31,7 @@ function createStaminaService({ db, HttpsError, runTransaction, assertCurrentPla
       const [account, wallet, profile, enabled] = await Promise.all([read(transaction, uid, now), cosmeticService.read(transaction, uid), transaction.get(db.doc(`players/${uid}`)), readAvailability(transaction)]);
       if (!profile.exists) throw new HttpsError("failed-precondition", "Load your kingdom first.");
       assertCurrentPlayerProfile(profile.data());
-      if (!account.exists) transaction.create(account.ref, account.state);
+      persist(transaction, account);
       return { ...response(account.state, wallet.state, now), huntingEnabled: enabled };
     });
   }
@@ -42,6 +47,7 @@ function createStaminaService({ db, HttpsError, runTransaction, assertCurrentPla
       assertCurrentPlayerProfile(profile.data());
       if (saved.exists) {
         if (saved.data().signature !== signature) throw new HttpsError("invalid-argument", "This request ID already belongs to another refill.");
+        persist(transaction, account);
         return response(account.state, wallet.state, now, saved.data(), true);
       }
       if (!enabled) throw new HttpsError("failed-precondition", "Hunting is not available in this realm yet.");

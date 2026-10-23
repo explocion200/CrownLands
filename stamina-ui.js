@@ -21,6 +21,8 @@
     if (session !== s) return;
     if (result.state && (!s.state || result.state.revision >= s.state.revision)) s.state = result.state;
     if (result.state?.serverNowMs) s.offset = result.state.serverNowMs - Date.now();
+    if (result.state?.serverNowMs) s.resetDueAt = Math.max(s.resetDueAt || 0,
+      Date.parse(M.day(result.state.serverNowMs)) + 86400000);
     if (typeof result.huntingEnabled === "boolean") s.enabled = result.huntingEnabled;
     if (Number.isSafeInteger(result.crowns) && result.walletRevision >= s.walletRevision) {
       s.crowns = result.crowns; s.walletRevision = result.walletRevision;
@@ -30,6 +32,8 @@
     tick();
   }
   async function refresh(s) {
+    if (session !== s || s.refreshing) return;
+    s.refreshing = true;
     try { const result = await s.api.getStaminaState(); if (session !== s) return;
       s.error = ""; accept(s, result);
       const check = s.shopCheck = (s.shopCheck || 0) + 1;
@@ -43,6 +47,7 @@
       }
       if (session === s) tick();
     } catch (error) { if (session === s) { s.error = error.message || "Stamina unavailable. Try again."; tick(); } }
+    finally { s.nextDailyAttempt = s.resetDueAt && Date.now() + s.offset < s.resetDueAt ? 0 : Date.now() + 30000; s.refreshing = false; }
   }
   function sync({ uid, api, onWallet }) {
     if (session?.uid === uid) return;
@@ -64,6 +69,12 @@
     return root.CrownlandsCombatTimersUI?.remaining(until, Date.now() + (session?.offset || 0)) || "—";
   }
   function tick() {
+    const active = session;
+    if (active && (active.resetDueAt ? Date.now() + active.offset >= active.resetDueAt : active.nextDailyAttempt)
+      && !document.hidden && !active.busy && !active.refreshing && Date.now() >= (active.nextDailyAttempt || 0)) {
+      active.nextDailyAttempt = Date.now() + 30000;
+      void refresh(active);
+    }
     const state = value(), card = document.getElementById("staminaButton");
     if (card) {
       card.querySelector("[data-stamina-value]").textContent = state ? `${state.value}/100` : "—/100";
@@ -81,6 +92,8 @@
     const price = state ? M.refillPrice(state.value) : null, cost = `${price} ${price === 1 ? "Crown" : "Crowns"}`;
     const set = (selector, text) => { dialog.querySelector(selector).textContent = text; };
     set("[data-panel-value]", state ? `${state.value}/100` : "—/100");
+    set("[data-stamina-reset]", s.resetDueAt && Date.now() + s.offset >= s.resetDueAt
+      ? "Checking daily reset…" : `Free reset to 100 at 00:00 UTC${s.resetDueAt ? ` · ${duration(s.resetDueAt)} remaining` : ""}.`);
     const progress = dialog.querySelector("progress"); progress.value = state?.value || 0;
     progress.setAttribute("aria-label", state ? `Stamina ${state.value} of 100` : "Stamina unavailable");
     set("[data-hunts]", state ? number(state.hunts) : "—");
@@ -128,11 +141,11 @@
       const dialog = s.dialog = document.createElement("dialog"); dialog.className = "stamina-panel";
       dialog.setAttribute("aria-labelledby", "stamina-panel-title");
       dialog.innerHTML = `<header><h2 id="stamina-panel-title">Stamina &amp; hunts</h2><button type="button" data-stamina-close aria-label="Close stamina refill">×</button></header><div class="stamina-panel-layout"><section class="stamina-refill" aria-label="Stamina refill"><div class="stamina-panel-body">
-        <h3>Your stamina <strong data-panel-value>—/100</strong></h3><progress max="100" value="0"></progress>
+        <h3>Your stamina <strong data-panel-value>—/100</strong></h3><progress max="100" value="0"></progress><p data-stamina-reset>Free reset to 100 at 00:00 UTC.</p>
         <h3>Refill stamina</h3><p class="stamina-offer" data-refill-stamina>—</p><dl><div><dt>Crowns</dt><dd data-refill-crowns>—</dd></div><div><dt>Paid refills today</dt><dd data-refill-used>—/1</dd></div></dl>
         <p data-stamina-feedback role="status"></p><button type="button" data-stamina-refresh>Refresh review</button>
         <div data-stamina-shop-loading hidden></div><details><summary>Stamina &amp; hunts</summary><p>Solo hunts: <strong data-hunts>—</strong> · 10 stamina each<br>Boss rallies: <strong data-boss-hunts>—</strong> · 20 stamina per member</p>
-        <p>Stamina only replenishes through the 30-Crown refill. No automatic recovery or hunt refunds.</p></details></div>
+        <p>Stamina resets to 100 at 00:00 UTC, even while offline. One extra refill to 100 costs 30 Crowns each UTC day. No gradual recovery or hunt refunds.</p></details></div>
         <footer><button type="button" data-refill-buy disabled>Loading stamina…</button></footer></section><section data-enemy-search aria-label="Find enemies"></section></div>`;
       document.body.append(dialog);
       s.search = root.installMarauderSearch?.(dialog, { isCurrent: () => session === s && dialog.open,
@@ -167,5 +180,7 @@
     s.success = ""; tick(); void refresh(s);
   }
   document.addEventListener("click", event => { const opener = event.target.closest("#staminaButton,[data-open-stamina]"); if (opener) open(opener); });
+  document.addEventListener("visibilitychange", tick);
+  root.addEventListener?.("online", tick);
   root.CrownlandsStaminaUI = Object.freeze({ sync, tick, wallet, open, value });
 })(globalThis);

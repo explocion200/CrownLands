@@ -2,7 +2,7 @@
 const assert = require("node:assert/strict");
 const M = require("../functions/marauder-rules");
 for (let value = 0; value <= 100; value++) assert.equal(M.refillPrice(value), value === 100 ? 0 : 30);
-assert.equal(M.REFILL_VERSION, 3);
+assert.equal(M.REFILL_VERSION, 4);
 assert.equal(M.BOSS_HUNT_COST, 20);
 assert.equal(M.HUNT_COST, 10);
 for (const invalid of [-1, 101, 1.5, NaN, Infinity, null, '70']) assert.throws(() => M.refillPrice(invalid));
@@ -78,6 +78,18 @@ assert.equal(M.MAX_STAMINA / M.BOSS_HUNT_COST, 5);
 assert.throws(() => M.changeStamina({ ...stamina, value: 19 }, -20, now), /20 stamina/);
 assert.equal(M.changeStamina({ ...stamina, value: 20 }, -20, now).value, 0);
 assert.equal(M.view({ ...stamina, value: 70 }, now).bossHunts, 3);
+const today = M.day(now), tomorrow = M.day(now + 86400000);
+let daily = M.dailyStamina({...stamina,value:0,dailyResetDay:today,paidDay:today}, now+86400000-1);
+assert.equal(daily.value,0);
+daily = M.dailyStamina(daily, now+86400000);
+assert.equal(daily.value,100); assert.equal(daily.dailyResetDay,tomorrow);
+assert.equal(M.view(daily,now+86400000).paidRefillsToday,0);
+daily = M.changeStamina(daily,-20,now+86400000);
+assert.equal(M.dailyStamina(daily,now+86400000+60000).value,80);
+assert.equal(M.dailyStamina(daily,now+100*86400000).value,100);
+assert.equal(M.dailyStamina(daily,now).value,80,"A backward clock cannot grant an extra reset");
+assert.throws(()=>M.dailyStamina({...daily,dailyResetDay:"2026-02-30"},now));
+assert.equal(M.view(daily,now+100*86400000).value,80,"The client must not predict a free reset");
 
 // Exercise the existing server combat and departure-recovery implementations
 // with NPC defense, including exact-power losses and very large armies.

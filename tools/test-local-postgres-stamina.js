@@ -21,7 +21,11 @@ const assert=require("node:assert/strict"),{randomBytes,randomUUID,createHash}=r
   const saved={version:1,value:70,recoveredAtMs:Date.now()-40*86400000,revision:1,paidDay:""};
   await stamina.set(saved);await wallet.set({version:1,crowns:120,revision:1});
   await db.doc(`marauderPopulation/${identity.resetGeneration}--${identity.realmShardId}`).set({enabled:true});
-  const loaded=await call("getStaminaState");assert.equal(loaded.state.value,70);assert.equal(loaded.offer.price,30);assert.deepEqual(await read(stamina),saved);
+  const caughtUp=await call("getStaminaState");assert.equal(caughtUp.state.value,100);assert.equal(caughtUp.offer.price,0);assert.equal(caughtUp.state.dailyResetDay,new Date().toISOString().slice(0,10));
+  assert.equal((await read(wallet)).crowns,120);
+  saved.dailyResetDay=caughtUp.state.dailyResetDay;
+  await stamina.set({...saved,revision:caughtUp.state.revision+1});
+  const loaded=await call("getStaminaState");assert.equal(loaded.state.value,70);assert.equal(loaded.offer.price,30);
   const request={requestId:randomUUID(),offer:loaded.offer};
   await call("refillStamina",request);await call("refillStamina",request);
   assert.equal((await read(stamina)).value,100);assert.equal((await read(wallet)).crowns,90);
@@ -31,6 +35,7 @@ const assert=require("node:assert/strict"),{randomBytes,randomUUID,createHash}=r
   await source.update({troops:10000,troopFloat:10000,productionUpdatedAtMs:Date.now()});
   const order={sourceRegionId:regionId,targetRegionId:regionId,targetType:"marauder",targetSpawnId:enemy.spawnId,
    army:{id:"stamina_hunt_"+randomUUID(),kind:"attack",fromId:claim.cityId,toId:enemy.id,troops:200,requestedTroops:200,targetType:"marauder",targetSpawnId:enemy.spawnId,sourceRegionId:regionId,targetRegionId:regionId}};
+  await stamina.set({...saved,value:0,dailyResetDay:new Date(Date.now()-86400000).toISOString().slice(0,10)});
   const sent=await call("sendArmyOrder",order);await call("sendArmyOrder",order);assert.equal((await read(stamina)).value,90);
   await target.delete();await pub.delete();await db.doc(`armies/${sent.movement.id}`).update({arrivesAtMs:Date.now()-1000});
   const settled=await call("resolveArmyOrder",{armyId:sent.movement.id});assert.equal(settled.outcome,"target_unavailable");
@@ -64,13 +69,15 @@ const assert=require("node:assert/strict"),{randomBytes,randomUUID,createHash}=r
    await assert.rejects(call("launchClanRally",{clanId,rallyId}),/20 stamina/);
    assert.equal((await read(insufficient)).value,19);assert.equal((await read(insufficient===stamina?allyStamina:stamina)).value,20);
   }
-  await stamina.set({...saved,value:20});await allyStamina.set({...saved,value:20});
+  const yesterday=new Date(Date.now()-86400000).toISOString().slice(0,10);
+  await stamina.set({...saved,value:0,dailyResetDay:yesterday});await allyStamina.set({...saved,value:0,dailyResetDay:yesterday});
   assert((await call("getBossRallyReadiness",{clanId,rallyId})).participants.every(p=>p.ready));
+  assert.equal((await read(stamina)).value,0,"Read-only readiness does not persist the daily grant");
   const launch=await call("launchClanRally",{clanId,rallyId});await call("launchClanRally",{clanId,rallyId});
-  assert.equal(launch.movement.staminaCost,20);assert.equal((await read(stamina)).value,0);assert.equal((await read(allyStamina)).value,0);
+  assert.equal(launch.movement.staminaCost,20);assert.equal((await read(stamina)).value,80);assert.equal((await read(allyStamina)).value,80);
   await bossRef.delete();await db.doc("armies/"+launch.movement.id).update({arrivesAtMs:Date.now()-1000});
   const invalid=await call("resolveArmyOrder",{armyId:launch.movement.id});assert.equal(invalid.outcome,"target_unavailable");assert(invalid.reports.every(r=>r.staminaRefunded===0));
-  await call("resolveArmyOrder",{armyId:launch.movement.id});assert.equal((await read(stamina)).value,0);assert.equal((await read(allyStamina)).value,0);
+  await call("resolveArmyOrder",{armyId:launch.movement.id});assert.equal((await read(stamina)).value,80);assert.equal((await read(allyStamina)).value,80);
   console.log("PostgreSQL boss stamina passed: both members at 19/20, atomic rejection, 20-point launch, duplicate launch/settlement and no invalid-target refund.");
   console.log("PostgreSQL stamina passed: shared transaction cases, real callables, old timestamps, flat price, duplicate refill/dispatch/settlement, invalid hunt with no stamina refund.");
  }finally{await db.pool.query(`DROP SCHEMA IF EXISTS ${db.schema} CASCADE`);await db.close();}
