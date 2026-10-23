@@ -24,7 +24,7 @@ const levels = ["log", "warn", "error", "info", "debug"];
 const timingCounters = ["dbWriteQueries", "dbWriteRows", "transactionAttempts", "dbReadQueries", "dbReadRows", "dbTransactionAttempts", "dbSerializationFailures", "dbDeadlocks", "dbRetries", "dbDocumentCacheHits", "routeCacheHits", "routeCacheMisses"];
 const timingPhases = ["realmContext", "worldValidation", "documentReads", "economyPreparation", "routePlanning", "transaction", "dbPoolWait", "dbRead", "dbWrite", "dbCommit", "dbBackoff"];
 const arrivalSampleLimit = 32;
-const durationBoundsMs = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000, 60000, 1000000];
+const durationBoundsMs = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000, 60000, 1000000, Number.MAX_SAFE_INTEGER];
 const total = (a, b) => Math.min(Number.MAX_SAFE_INTEGER, a + b);
 function observe(aggregate, value) {
   aggregate.count = total(aggregate.count, 1); aggregate.sum = total(aggregate.sum, value);
@@ -44,8 +44,10 @@ function arrivalSample(details) {
   const requestDurationMs = boundedNumber(ownValue(details, "requestDurationMs"));
   if (operation !== "scheduledArmyArrival" || !["resolved", "skipped", "error"].includes(outcome) || requestDurationMs === undefined) return null;
   const sample = { operation, outcome, requestDurationMs, phaseDurationMs: {} };
-  const queueDelayMs = boundedNumber(ownValue(details, "queueDelayMs"));
-  if (queueDelayMs !== undefined) sample.queueDelayMs = queueDelayMs;
+  const queueDelayMs = ownValue(details, "queueDelayMs");
+  // Backlog age can exceed the processing-duration bound after an outage.
+  if (typeof queueDelayMs === "number" && Number.isFinite(queueDelayMs) && queueDelayMs >= 0)
+    sample.queueDelayMs = Math.min(Number.MAX_SAFE_INTEGER, Math.round(queueDelayMs));
   for (const key of timingCounters) {
     const value = boundedNumber(ownValue(details, key));
     if (value !== undefined) sample[key] = value;

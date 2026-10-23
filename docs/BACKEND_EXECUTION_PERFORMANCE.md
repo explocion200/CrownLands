@@ -29,7 +29,8 @@ Implementation and isolated tests do not establish a live installation.
   and skips. Fixed histogram buckets and counters aggregate since process start;
   only 32 recent numeric samples remain. Queue delay starts at the recorded arrival
   deadline; transaction retries/backoff, reads and writes are separate dimensions.
-  Durations are capped at 1,000,000 ms; the last bucket includes that capped tail.
+  Processing durations are capped at 1,000,000 ms. Queue delays preserve larger
+  safe integer milliseconds, so an hours-long backlog is not clipped to that cap.
   Phase durations can overlap and must not be summed as exclusive wall time.
   No player/order identity, SQL, snapshots or raw error text is retained.
 
