@@ -40,18 +40,20 @@ the primary documents and their own retention rules remain untouched.
 
 ## Installation
 
-The worker initialization prepares three indexes concurrently, outside a long
-blocking table transaction: completed debug jobs by finish time/ID, processed
+An explicit `--prepare-indexes --confirm-schema <schema>` command prepares three
+indexes concurrently, separately from worker startup: completed debug jobs by finish time/ID, processed
 changes by dispatch time/ID, and job source-change references. Index creation has
 short lock and bounded statement timeouts. Missing/invalid indexes cause the
 maintenance tool to stop; a dry run never creates or repairs indexes. An interrupted
 invalid index requires an explicit reviewed repair before cleanup. Runtime
 installation remains subject to the publisher compatibility hold and separate
-backend approval. No scheduled deletion job is enabled.
+backend approval. Normal worker startup does not depend on these large history
+indexes. No scheduled deletion job is enabled.
 
 ## Operator procedure
 
-1. Install and verify the compatible backend and valid indexes after approval.
+1. After separate live index-preparation approval, run `node tools/maintain-internal-history.js --prepare-indexes --confirm-schema migration_game_live`.
+   Verify completion before maintenance. No worker restart is needed for this step.
 2. Run `node tools/maintain-internal-history.js` for a default live-schema dry run.
    The default wall budget is 20 seconds/20 batches. It writes only an ignored,
    owner-readable local checkpoint under `release-artifacts/history-retention/`.

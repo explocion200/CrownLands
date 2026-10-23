@@ -13,6 +13,9 @@ const {main}=require("./maintain-internal-history");
   try {
     await db.initialize();await db.doc("realmConfig/current").set(scope);
     const queue=new JobQueue({store:db,routes:[]});await queue.initialize();
+    await assert.rejects(historyBatch(db,await createHistoryRun(db,{now}),{now}),/indexes/);
+    await assert.rejects(main(["--schema",s,"--prepare-indexes"]),/confirm-schema/);
+    await main(["--schema",s,"--prepare-indexes","--confirm-schema",s]);
     for(const address of ["players/owner","players/owner/serverReports/report","players/owner/estateReceipts/reward","realmEvents/archive/activity/event","realmGenerations/archive/assignments/player"])
       await db.doc(address).set({privateSentinel:address,preserved:true});
     const insertChange=async({created=old,dispatched=old}={})=>(await db.pool.query(`INSERT INTO ${s}.changes(path,before_body,after_body,created_at,dispatched_at)
