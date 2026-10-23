@@ -284,8 +284,8 @@
       const controller = new root.AbortController(); chatController = controller;
       let delay = 50;
       try {
-        // One held response, outside the six action-request slots. The server
-        // wakes it on committed chat changes and reauthorizes every snapshot.
+        // One held response uses a background slot. The server wakes it on
+        // committed chat changes and reauthorizes every snapshot.
         const result = await post("watch-chat", { targets: active.map(watcher => spec(watcher.target)), ...(chatCursor ? { cursor: chatCursor } : {}) }, false, controller.signal);
         if (disposed || generation !== chatGeneration || controller.signal.aborted) return;
         if (!/^[a-f0-9]{64}$/.test(result?.cursor || "") || !Array.isArray(result.results) || result.results.length !== active.length) throw makeError("unavailable");
