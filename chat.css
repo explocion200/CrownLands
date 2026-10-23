@@ -299,6 +299,8 @@
   white-space: pre-wrap;
 }
 
+.chat-clan-tag{display:inline-block;margin-inline-start:4px;color:#633638;font:600 .85em/1.2 "Segoe UI",Arial,sans-serif;white-space:nowrap}
+.chat-clan-tag[hidden]{display:none!important}
 .chat-message-sender {
   display: inline;
   min-height: 0;

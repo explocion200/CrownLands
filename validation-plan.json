@@ -1,21 +1,27 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "1b625e34a4a09e44d59ad721c2540f015f30233c",
+  "baseCommit": "3e1d33e8606d64079eb415cf183279f972158f4a",
   "coverage": [
     {
       "paths": [
-        "game.js",
-        "tools/validate-clan-loading-browser.js"
+        "chat-ui.js",
+        "chat.css",
+        "social-ui.js",
+        "social-ui.css",
+        "tools/validate-chat-clan-tags.js",
+        "tools/validate-chat.js",
+        "tools/validate-social-browser.js"
       ],
       "tests": [
-        "tools/validate-clan-loading-browser.js",
-        "tools/validate-clans.js",
-        "tools/validate-clan-ledger-ui.js",
-        "tools/validate-clan-notifications-browser.js",
-        "tools/validate-deferred-ui-styles-browser.js",
-        "tools/validate-war-cities-browser.js"
+        "tools/validate-chat-clan-tags.js",
+        "tools/validate-chat.js",
+        "tools/validate-social-browser.js",
+        "tools/validate-chat-reward-ledgers-browser.js",
+        "tools/validate-chat-locations-browser.js",
+        "tools/validate-chat-translation.js",
+        "tools/validate-map-chat-responsiveness-browser.js"
       ],
-      "reason": "Recover a failed or stalled Clan snapshot with a bounded deadline and explicit reconnect, preserving scoped callbacks and existing subscription teardown. Desktop and two landscape touch sizes cover retry, reopen, unavailable membership, late success, stale clan responses and usable controls. Exercise deferred stylesheet recovery, Clan permissions/ledger, saved heraldry/notifications and Lost Holdings source/built flows because they share the Clan window and subscription lifecycle. Client presentation/recovery only; no server-authoritative behavior or data changes require emulator cases. Reuse installed Chrome on CI and close the test server on browser-launch failure."
+      "reason": "Display current public clan tags beside Global/Clan/mini-chat and private message names, using the existing authorized public identity reader. Preserve authoritative Friends/conversation identities and compact layouts. Exercise bounded/deduplicated lookups, current clan changes and departure, negative-cache/failure recovery, private contacts absent from the current leaderboard, hidden-window queue pausing, realm/account reset and late replies; existing message-supplied identity is ignored. Desktop and landscape/narrow/portrait browser checks cover labels, long names, clanless friends, profile and conversation tap behavior, injection safety, compose/translation/location actions and responsive geometry. Shared chat rendering also requires draft/scroll, reward shell and map/chat responsiveness checks. No server code, permissions, APIs or data formats change, so no emulator suite is required. The unrelated archived chat-button art draft validator was checked separately and fails the same unread-badge assertion on unchanged main (3e1d33e8). It is excluded from this tag change; active production unread/draft/scroll behavior is exercised by the ledger and responsiveness browser validators."
     },
     {
       "paths": [
@@ -25,7 +31,17 @@
       "tests": [
         "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "The fix adds 1272 game.js bytes. Bound the measured 1260-byte source overage at 1.25 KiB and 851-byte installation-cache overage at 1 KiB. No new assets, dependencies, background polling, or production service requests; preserve all remaining budgets."
+      "reason": "Bound the measured 4860-byte shared chat growth at 5 KiB above the previous ledger allowance; the full delivered cache grows by 5845 bytes, bounded at 6 KiB. No new artwork or dependencies. The tag lookup uses existing public reads, batches at most ten identities, and caches only in the current session."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
+      ],
+      "tests": [
+        "tools/validate-chat-clan-tags.js",
+        "tools/validate-social-browser.js"
+      ],
+      "reason": "Record the explicitly requested clan tags and their identity/privacy/display semantics. Feature implementation is distinguished from separately verified static publication; no gameplay rules or backend rollout changes."
     }
   ]
 }

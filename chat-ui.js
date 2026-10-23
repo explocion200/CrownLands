@@ -45,6 +45,58 @@
     };
   }
 
+  function setClanTag(node, value) {
+    const tag = String(value || "").trim().slice(0, 5);
+    node.textContent = tag ? `[${tag}]` : "";
+    node.hidden = !tag;
+    node.setAttribute("aria-label", tag ? `Clan ${tag}` : "");
+  }
+
+  function clanTagElement(documentRef, uid) {
+    const node = documentRef.createElement("small");
+    node.className = "chat-clan-tag";
+    node.dataset.clanUid = uid || "";
+    setClanTag(node, "");
+    return node;
+  }
+
+  // Current public identities also cover messages written before clan tags were
+  // displayed. Bound requests to ten distinct players at a time, cache misses,
+  // and discard results from a previous account/realm. Nothing is persisted.
+  function createClanTagLookup({ load, scope = () => "", active = () => true, now = Date.now, onChange = () => {} }) {
+    const cache = new Map(), pending = new Set();
+    let version = 0, activeScope = scope(), running = null;
+    function reset() { version++; cache.clear(); pending.clear(); running = null; activeScope = scope(); }
+    function checkScope() { if (scope() !== activeScope) reset(); }
+    function get(uid) { checkScope(); const row = cache.get(uid); return row?.until > now() ? row.tag : ""; }
+    function refresh(uids) {
+      checkScope();
+      for (const uid of [...new Set(uids)].slice(0, CHAT_RENDER_LIMIT)) {
+        if (!/^[A-Za-z0-9_-]{1,128}$/.test(uid) || cache.get(uid)?.until > now()) continue;
+        cache.delete(uid); cache.set(uid, { tag: "", until: now() + 60000 }); pending.add(uid);
+      }
+      while (cache.size > CHAT_RENDER_LIMIT * 2) { const oldest = cache.keys().next().value; cache.delete(oldest); pending.delete(oldest); }
+      if (running || !pending.size) return running || Promise.resolve();
+      const currentVersion = version;
+      running = (async () => {
+        while (pending.size && version === currentVersion && active()) {
+          const batch = [...pending].slice(0, 10); batch.forEach(uid => pending.delete(uid));
+          let rows = [];
+          try { rows = await load(batch); } catch { /* Keep names usable; retry on the next visible refresh. */ }
+          checkScope(); if (version !== currentVersion) return;
+          for (const uid of batch) {
+            if (!cache.has(uid)) continue;
+            const row = (Array.isArray(rows) ? rows : []).find(item => (item.id || item.uid) === uid);
+            cache.set(uid, { tag: row?.clanId ? String(row.clanTag || "").trim().slice(0, 5) : "", until: now() + 60000 });
+          }
+          onChange();
+        }
+      })().finally(() => { if (version === currentVersion) running = null; });
+      return running;
+    }
+    return Object.freeze({ get, refresh, reset });
+  }
+
   function mergeMessages(current = [], incoming = [], limit = CHAT_RENDER_LIMIT) {
     const byId = new Map();
     [...current, ...incoming].forEach(raw => {
@@ -303,7 +355,9 @@
     const sender = documentRef.createElement("button");
     sender.type = "button";
     sender.className = "chat-message-sender player-name-link";
+    sender.dataset.playerName = message.senderDisplayName;
     sender.textContent = message.senderDisplayName;
+    sender.append(clanTagElement(documentRef, message.senderUid));
     sender.setAttribute("aria-label", `View ${message.senderDisplayName}'s profile`);
     if (!message.senderUid) sender.disabled = true;
     else sender.addEventListener("click", () => onSender?.(message.senderUid));
@@ -405,6 +459,33 @@
     const chatNow = () => options.now?.() ?? api?.getServerNowMs?.() ?? Date.now();
     const scheduleTimer = options.setTimeout || windowRef?.setTimeout?.bind(windowRef);
     const cancelTimer = options.clearTimeout || windowRef?.clearTimeout?.bind(windowRef);
+    let clanTagTimer = null;
+    const clanTags = createClanTagLookup({
+      load: ids => api?.loadPlayerIdentities?.(ids) || [],
+      scope: () => JSON.stringify([uid, api?.getRealmIdentity?.()]),
+      active: () => !documentRef.hidden && (mode === "quick" && quickPreviewVisible || mode === "full" && !elements.dialog.classList.contains("social-active")),
+      onChange: paintClanTags,
+    });
+    function paintClanTags() {
+      for (const container of [elements.list, elements.quickMessages]) {
+        for (const node of container.querySelectorAll("[data-clan-uid]")) {
+          setClanTag(node, clanTags.get(node.dataset.clanUid));
+          const sender = node.parentElement;
+          if (sender.dataset.playerName) sender.setAttribute("aria-label", `View ${sender.dataset.playerName}'s profile${node.hidden ? "" : ` · ${node.getAttribute("aria-label")}`}`);
+        }
+      }
+    }
+    function refreshClanTags() {
+      if (clanTagTimer !== null) cancelTimer?.(clanTagTimer);
+      clanTagTimer = null;
+      paintClanTags();
+      if (!uid || documentRef.hidden || !api?.loadPlayerIdentities || mode === "closed"
+        || (mode === "full" && elements.dialog.classList.contains("social-active"))) return;
+      const container = mode === "quick" ? elements.quickMessages : elements.list;
+      if (mode === "quick" && !quickPreviewVisible) return;
+      void clanTags.refresh([...container.querySelectorAll("[data-clan-uid]")].map(node => node.dataset.clanUid));
+      clanTagTimer = scheduleTimer?.(refreshClanTags, 60000);
+    }
     const translationApi = options.translation || windowRef?.CrownlandsChatTranslation;
     const deviceLanguage = () => translationApi?.preferredLanguage(windowRef?.navigator?.languages || [], windowRef?.navigator?.language);
     const translation = translationApi?.create({
@@ -638,6 +719,7 @@
         renderQuick();
       }
       if (mode === "closed") translation?.update({ messages: [], active: false });
+      refreshClanTags();
       detectVisibleMessages();
     }
 
@@ -714,7 +796,8 @@
         const row = documentRef.createElement("div"); row.className = "mini-row";
         const line = documentRef.createElement("p");
         const name = documentRef.createElement("strong");
-        name.textContent = `${message.senderDisplayName}:`;
+        name.textContent = message.senderDisplayName;
+        name.append(clanTagElement(documentRef, message.senderUid), documentRef.createTextNode(":"));
         const text = documentRef.createElement("span");
         text.textContent = displayMessage(message).text;
         text.dir = "auto";
@@ -728,6 +811,7 @@
         if (focusedId === message.id) row.querySelector("button")?.focus({ preventScroll: true });
       });
       elements.quickMessages.scrollTop = wasAtBottom && !focusedId ? elements.quickMessages.scrollHeight : priorTop;
+      refreshClanTags();
     }
 
     function renderMessages({ scrollToBottom = false, preserveFromTop = false } = {}) {
@@ -784,6 +868,7 @@
         || current.length >= CHAT_RENDER_LIMIT;
       elements.loadOlder.disabled = loadingOlder;
       elements.loadOlder.textContent = loadingOlder ? "Loading..." : "Load older messages";
+      refreshClanTags();
     }
 
     function renderComposer() {
@@ -980,6 +1065,7 @@
       uid = nextUid;
       clanId = nextClanId;
       if (accountChanged) {
+        clanTags.reset();
         activeSend = null;
         sending = false;
         if (nextUid !== sessionUid) elements.input.value = "";
@@ -1012,6 +1098,7 @@
       const normalizedClanId = String(nextClanId || "").trim();
       if (normalizedClanId === clanId) return diagnostics();
       clanId = normalizedClanId;
+      clanTags.reset();
       translation?.clear();
       messages.clan = [];
       hasOlder.clan = true;
@@ -1020,6 +1107,7 @@
       unread.clan = false;
       lastReadAtMs.clan = loadLastRead("clan");
       subscriptions.updateClan(clanId);
+      refreshClanTags();
       if (channel === "clan") {
         renderMessages({ scrollToBottom: true });
         renderComposer();
@@ -1030,6 +1118,9 @@
     }
 
     function dispose(options = {}) {
+      clanTags.reset();
+      if (clanTagTimer !== null) cancelTimer?.(clanTagTimer);
+      clanTagTimer = null;
       returnFromLocation = false;
       sessionGeneration += 1;
       activeSend = null;
@@ -1158,6 +1249,7 @@
       renderMessages();
     }
     windowRef?.addEventListener?.("focus", refreshExpiry);
+    documentRef.addEventListener("visibilitychange", refreshClanTags);
     windowRef?.addEventListener?.("online", renderChannelDetails);
     windowRef?.addEventListener?.("offline", renderChannelDetails);
     windowRef?.addEventListener?.("crownlands:server-clock-updated", refreshExpiry);
@@ -1192,6 +1284,9 @@
     CHAT_CHANNELS,
     nextChatMode,
     normalizeMessage,
+    setClanTag,
+    clanTagElement,
+    createClanTagLookup,
     mergeMessages,
     isMessageListNearBottom,
     calculateQuickPanelGeometry,

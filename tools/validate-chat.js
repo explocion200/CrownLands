@@ -226,7 +226,7 @@ requires(client, /const safeLimit = Math\.max\(1, Math\.min\(100,[\s\S]*?limit\(
 requires(ui, /textContent\s*=\s*message\.text/, "User-authored chat content must use textContent.");
 assert.doesNotMatch(ui, /\.innerHTML\s*=/, "Chat UI must not inject message HTML.");
 requires(ui, /line\.append\(sender, colon, body, time\)/, "Full Global and Clan Chat must render sender, colon, message, and timestamp on one line.");
-requires(ui, /name\.textContent\s*=\s*`\$\{message\.senderDisplayName\}:`/, "Quick Peek must render the sender and colon inline.");
+requires(ui, /name\.append\(clanTagElement\(documentRef, message\.senderUid\), documentRef\.createTextNode\(":"\)\)/, "Quick Peek must keep the sender, clan tag and colon inline.");
 requires(game, /function disposeOnlineChat[\s\S]*?CrownlandsChat\?\.dispose/, "Chat listeners must be disposed with the online session.");
 requires(game, /disposeOnlineChat\(\{ resetSession: true \}\)/, "Authentication teardown must reset the Chat session default.");
 requires(game, /crownlands:chat-player-profile/, "Chat sender names must open public profiles.");

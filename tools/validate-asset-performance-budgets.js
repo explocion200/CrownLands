@@ -103,10 +103,12 @@ const { MAX_INSTALL_PRECACHE_BYTES } = require("./asset-performance-budgets");
 // 2 KiB. No image assets, runtime dependencies or polling are added.
 // Compact shared locations and draft/scroll preservation add 905 bytes to the
 // 121,581-byte ledger baseline; bound this at one additional KiB.
+// Current clan-tag lookup/rendering adds 4,860 bytes (127,346 total). Bound the
+// 4,466-byte overage at 5 KiB; no new assets or dependencies.
 assert(["chat-ledger-ui.css", "chat-ui.js", "chat-translation.js", "reward-ledger-ui.js", "reward-ledger-ui.css",
   "assets/icons/chat-ledger-seal.svg", "assets/icons/hero-reward-crown.svg"]
-  .reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 120 * 1024,
-"Chat and reward ledger shell files exceed their 120 KiB budget.");
+  .reduce((sum, file) => sum + normalizedTextBytes(file), 0) <= 125 * 1024,
+"Chat and reward ledger shell files exceed their 125 KiB budget.");
 assert(normalizedTextBytes("chat-locations-ui.js") <= 12 * 1024, "Location sharing controls exceed 12 KiB.");
 // The in-game recipient list and fixed footer add 1,297 CSS bytes; bound the
 // complete stylesheet at 5 KiB, with no added image or runtime dependency.

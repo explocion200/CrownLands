@@ -32,6 +32,11 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       socialQa.messages.push(...Array.from({ length: 19 }, (_, i) => ({ id: "fixture-" + i, sequence: i + 2, senderUid: i % 2 ? "alice" : "bob", senderDisplayName: i % 2 ? "Alice" : "Bob", text: "Private conversation line " + (i + 2) + ": the north road is clear. Meet at the castle after your troops return.", createdAtMs: Date.now() + i, expiresAtMs: Date.now() + 90 * 86400000 })));
       const player = { uid: "bob", name: "Bob of Stoneward", clanTag: "CODE", flag: { primary: "#336633", secondary: "#eee1b9", pattern: "solid", symbol: "crown" } };
       socialQa.player = player;
+      socialQa.identityCalls = [];
+      socialQa.loadPlayerIdentities = async ids => {
+        socialQa.identityCalls.push(ids);
+        return ids.filter(id => ["alice", "bob"].includes(id)).map(id => ({ id, clanId: "fixture-" + id, clanTag: id === "alice" ? "WEST" : "CODE" }));
+      };
       socialQa.api = { social: async input => {
         socialQa.calls.push(input);
         const base = { serverNowMs: Date.now() };
@@ -47,9 +52,14 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
         return { ok: true };
       }, subscribeSocialSignals: callback => { socialQa.signal = callback; return () => {}; }, registerPushNotifications: async () => ({}), enablePushNotifications: async options => { socialQa.alertCategory = options.category; return { enabled: true }; }, disablePushNotifications: async options => { socialQa.disabledCategory = options.category; }, getNotificationPermission: () => "default", translateChatMessages: async () => ({ translations: [{ id: "b".repeat(40), text: "Translated fixture" }] }) };
       const globalChat = CrownlandsChat.init(); globalChat.dispose({ resetSession: true });
+      socialQa.api.loadPlayerIdentities = socialQa.loadPlayerIdentities;
       globalChat.start({ uid: "alice", clanId: "fixture-clan", api: {
+        loadPlayerIdentities: socialQa.loadPlayerIdentities,
         getServerNowMs: () => Date.now(),
-        subscribeChatMessages(options, handlers) { queueMicrotask(() => handlers.onMessages([{ id: "global-density", senderUid: "bob", senderDisplayName: "Bob", text: "Meet at the castle.", createdAtMs: Date.now(), status: "visible", channel: options.channel }], { initial: true, hasMore: false })); return () => {}; },
+        subscribeChatMessages(options, handlers) { queueMicrotask(() => handlers.onMessages([
+          { id: "global-density", senderUid: "bob", senderDisplayName: "Bob", senderClanTag: "FAKE", text: "Meet at the castle.", createdAtMs: Date.now(), status: "visible", channel: options.channel },
+          { id: "no-clan", senderUid: "free", senderDisplayName: "Free Ruler", text: "Hello everyone.", createdAtMs: Date.now(), status: "visible", channel: options.channel }
+        ], { initial: true, hasMore: false })); return () => {}; },
         loadOlderChatMessages: async () => []
       } }); globalChat.setMode("full");
       socialQa.failStatus = 1; await CrownlandsSocial.start({ api: socialQa.api, uid: "alice", flagRenderer: FlagRenderer });
@@ -77,6 +87,11 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
           return { frame: measure(document.getElementById("chatDialog")), header: measure(document.querySelector(".chat-header")), title: measure(document.getElementById("chatTitle")), tabs: [...document.querySelectorAll(".chat-tabs button")].map(measure) };
         });
         if (!sharedShell) sharedShell = shell;
+        if (channel === "global" || channel === "clan") {
+          assert.deepEqual(await ev('[...document.querySelectorAll("#chatMessageList .chat-clan-tag")].map(n=>({text:n.textContent,hidden:n.hidden}))'), [{text:"[CODE]",hidden:false},{text:"",hidden:true}], "Current public clan identity must decorate old Global/Clan messages, ignoring message-provided tags");
+          assert(await ev('document.querySelector(".chat-message-sender").getAttribute("aria-label").includes("Clan CODE")'));
+          if ([1440,844,568].includes(width)) await client.send("Page.captureScreenshot", { format: "png" }).then(shot => fs.writeFileSync(path.join(artifacts, `clan-tags-${channel}-${width}.png`), Buffer.from(shot.data, "base64")));
+        }
         assert.deepEqual(shell, sharedShell, `Chat frame, header and all four tabs must stay the same on ${channel} at ${width}x${height}`);
         assert(shell.tabs.every(tab => tab.height >= 44 && tab.x >= shell.frame.x && tab.x + tab.width <= shell.frame.x + shell.frame.width), "Every chat tab must remain visible and tappable");
         if (channel === "friends" || channel === "messages") {
@@ -133,6 +148,8 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
           targets: [...document.querySelectorAll(".social-thread-heading button,.social-compose button")].every(button => button.getBoundingClientRect().height >= 44) };
       });
       layouts.push({ width, height, ...layout });
+      assert(await ev('[...document.querySelectorAll(".social-message")].every(row=>row.querySelector(".chat-clan-tag").textContent === (row.classList.contains("is-own")?"[WEST]":"[CODE]"))'), "Private message tags must cover both participants, including existing messages");
+      assert(await ev('document.querySelector(".social-thread-heading .chat-clan-tag").textContent === "[CODE]"'), "Conversation header keeps its authoritative contact tag");
       await client.send("Page.captureScreenshot", { format: "png" }).then(shot => fs.writeFileSync(path.join(artifacts, `messages-${width}x${height}.png`), Buffer.from(shot.data, "base64")));
       const minHistoryHeight = height <= 360 ? 90 : height <= 480 ? 140 : height <= 600 ? 240 : 350;
       assert(layout.composerInside && layout.logHeight >= minHistoryHeight && !layout.overflow && !layout.injectedImage && layout.targets && layout.textSize === layout.globalTextSize && layout.textSize >= 12 && layout.inputSize >= 16 && layout.scrollable && layout.latestVisible, JSON.stringify({ width, height, ...layout }));
@@ -184,6 +201,10 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       assert(await ev('!document.querySelector(".social-message-menu").open && !document.querySelector(".social-report")'), "Message controls must close without leaving extra space");
       await ev('socialQa.messages=socialQa.savedMessages');
     }
+    await ev('socialQa.fullHistory=socialQa.messages;socialQa.player.uid="unlisted";socialQa.messages=[{...socialQa.messages[0],senderUid:"unlisted"}];CrownlandsSocial.open("messages")'); await delay(100); await click(".social-conversation");
+    assert.equal(await ev('document.querySelector(".social-message .chat-clan-tag").textContent'), "[CODE]", "An authorized private contact absent from this realm's leaderboard keeps their clan tag");
+    assert(await ev('!socialQa.identityCalls.flat().includes("unlisted")'), "Use the existing contact identity without a second public lookup");
+    await ev('socialQa.player.uid="bob";socialQa.messages=socialQa.fullHistory');
     for (const selector of [".social-conversation .social-flag", ".social-conversation .social-player small", ".social-conversation .social-contact-meta", ".social-conversation .social-unread", ".social-conversation"]) {
       await ev('socialQa.unread=1;CrownlandsSocial.open("messages")'); await delay(100); await click(selector);
       assert(await ev('!document.querySelector(".social-thread").hidden && CrownlandsSocial.diagnostics().conversationId === "a".repeat(40)'));
@@ -197,6 +218,9 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       assert(await ev('!document.querySelector(".social-thread").hidden'), "Keyboard activation must open the conversation: " + JSON.stringify(key));
     }
     assert.equal(await ev('socialQa.profileOpens'), 0, "Conversation-row clicks opened a player profile");
+    await ev('socialQa.player.clanTag="";CrownlandsSocial.open("friends")'); await delay(100);
+    assert(await ev('document.querySelector(".social-friend .chat-clan-tag").hidden'), "An un-clanned friend must not have empty brackets");
+    await ev('socialQa.player.clanTag="CODE";CrownlandsSocial.open("messages")'); await delay(100); await click(".social-conversation");
     await click(".social-thread-heading button");
     assert(await ev('document.querySelector(".social-thread").hidden && document.querySelector(".social-list").getBoundingClientRect().width > 0'), "Back must restore the list on phones");
     await ev('[...document.querySelectorAll("#socialToolbar button")].find(b=>b.textContent==="Requests").click()'); await delay(100);
@@ -221,6 +245,10 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     await ev('document.getElementById("globalTab").click()');
     assert.equal(await ev('document.getElementById("socialPanel").hidden'), true);
     assert(await ev('document.querySelector(".composer-panel").getBoundingClientRect().height > 0 && document.getElementById("chatHistory").getBoundingClientRect().height > 100'), "Returning to Global must restore its history and composer");
+    await ev('CrownlandsChat.init().setMode("quick")'); await delay(100);
+    assert.equal(await ev('document.querySelector("#quickChatMessages .chat-clan-tag").textContent'), "[CODE]", "Compact public preview retains clan tags");
+    assert(await ev('socialQa.identityCalls.length < 10 && socialQa.identityCalls.every(ids=>ids.length<=10)'), "Repeated renders must reuse the bounded identity cache");
+    await ev('CrownlandsChat.init().setMode("full")');
     await ev('CrownlandsSocial.open("friends");socialQa.deferRemove=true'); await delay(100);
     await click(".social-friend .social-row-actions button:last-child");
     assert(await ev('document.querySelector(".social-friend .social-row-actions button:last-child").disabled'), "Removal must retain its pending guard");
