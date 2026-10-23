@@ -1,74 +1,73 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "0a73c19e0732245191423bddfcd4a5430fdd77ae",
+  "baseCommit": "55842fa83532b659020aa37b10b9dba1c8fc3e06",
   "coverage": [
     {
       "paths": [
         "functions/index.js",
-        "functions/test/peace-shield-capture-cases.js",
-        "functions/test/emulator-peace-shield-returns.js",
-        "tools/test-local-postgres-shield-capture.js",
-        "tools/validate-city-wall-shields.js",
-        "tools/validate-peace-shield-returns.js",
-        "functions/test/emulator-combat-authorization.js",
-        "functions/test/retaliation-impact-cases.js",
-        "functions/test/emulator-daily-missions.js",
-        "functions/test/emulator-rally-lifecycle.js"
+        "functions/clan-war-cities.js",
+        "functions/test/clan-war-cities-cases.js",
+        "functions/test/emulator-clan-war-cities.js",
+        "tools/test-local-postgres-war-cities.js",
+        "tools/test-local-postgres-war-city-commands.js",
+        "firestore.indexes.json"
       ],
       "tests": [
-        "tools/test-local-postgres-shield-capture.js",
-        "tools/validate-city-wall-shields.js",
-        "tools/validate-peace-shield-returns.js",
+        "tools/test-local-postgres-war-cities.js",
+        "tools/test-local-postgres-war-city-commands.js",
         "tools/validate-authoritative-army-orders.js",
-        "tools/validate-siege-combat.js",
-        "tools/validate-daily-missions.js",
-        "tools/validate-holding-towers.js",
-        "tools/validate-player-camp-defense.js",
-        "functions/test/emulator-peace-shield-returns.js",
+        "tools/validate-clan-reinforcements.js",
+        "tools/validate-reinforcement-retargeting.js",
+        "functions/test/emulator-clan-war-cities.js",
         "functions/test/emulator-combat-authorization.js",
         "functions/test/emulator-world-travel.js",
-        "functions/test/emulator-holding-tower-lifecycle.js",
-        "tools/test-local-postgres-retaliation-impact.js",
-        "functions/test/emulator-daily-missions.js",
-        "functions/test/emulator-rally-lifecycle.js"
+        "functions/test/emulator-city-relinquishment-limit.js",
+        "functions/test/emulator-peace-shield-returns.js",
+        "functions/test/emulator-clan-power-events.js"
       ],
-      "reason": "Actual neutral capture previously saved zero despite an active owner item. Shared real-adapter regression covers capture, retries, offline protection of previously affected cities, damaged dispatch/repaired arrival and cancellation. Profile-aware checks affect normal/Tower-origin dispatch, settlement and daily PvP suggestions. Preserve wall deadlines, stronghold/camp exclusions, retaliation, departure cancellation and mid-route reversal through affected combat/travel/Tower emulator suites and focused policy validators. Existing retaliation, daily-mission and rally-return fixtures now seed the authoritative owner item alongside its cached city deadline; verify both active rejection and cancellation without weakening expected protection."
+      "reason": "Atomic regular-city loss tracking and a new authenticated restoration command affect combat settlement, ownership stats, troop returns and privacy. Shared cases cover realm/member isolation, original-loss lineage, pagination, stale requests and concurrent receipts. Actual PostgreSQL commands exercise three fictional players through combat loss/recapture, blocked Main City/incoming/capture locks, return transaction, Shield/wall/level/XP preservation, both economies and real troop arrival/replay. Existing travel, capture protections, relinquishment, Shield and clan-power emulator gates protect the reused authoritative dependencies; the bounded Firestore query has its equivalent index."
     },
     {
       "paths": [
-        "local-backend/world/reader.js",
-        "tools/test-local-postgres-shield-reader.js",
-        "tools/test-local-postgres-world-read-performance.js"
+        "game.js",
+        "firebaseClient.js",
+        "modal-ui.js",
+        "clan-ledger-ui.css",
+        "tools/validate-war-cities-browser.js",
+        "tools/validate-clans.js",
+        "tools/validate-clan-war-room.js",
+        "tools/validate-clan-treasury-browser.js"
       ],
       "tests": [
-        "tools/test-local-postgres-shield-reader.js",
-        "tools/test-local-postgres-world-read-performance.js",
-        "tools/test-local-postgres-live-reader.js",
-        "tools/validate-continuous-city-shields.js"
+        "tools/validate-war-cities-browser.js",
+        "tools/validate-clans.js",
+        "tools/validate-clan-war-room.js",
+        "tools/validate-clan-ledger-ui.js",
+        "tools/validate-war-room-responsive-browser.js",
+        "tools/validate-clan-treasury-browser.js",
+        "tools/validate-ui-refresh-browser.js",
+        "tools/test-local-production-client.js",
+        "functions/test/emulator-clan-war-cities.js"
       ],
-      "reason": "Bounded current-realm owner shield deadline joins extend existing cosmetics projection without reading inventories. Tests verify owner-only updates, missing/stale city timers, exact repair/expiry, capture, world/generation/shard isolation, response privacy, read-only behavior, cache invalidation/reuse and measured 16-section reads. Pin the original pre-optimization performance reference so subsequent validation-plan bases cannot invalidate the measurement; seed consistent account/city timers for unchanged-behavior parity."
+      "reason": "Adds the fifth Clan tab, authenticated bridge, private scope-bound polling and voluntary confirmation. Source and delivered browser tests exercise desktop and two landscape sizes with mouse/touch, five-tab navigation, scroll/focus retention, cancel/accept, request errors, stale-session rejection, background/resume polling and no reads after closing the board. Clan/War Room/Treasury regressions cover shared navigation and modal refresh. Existing local production transport validates the generic authenticated callable wrapper; server suite verifies authority for displayed actions."
     },
     {
       "paths": [
-        "world/native.js",
-        "world/preview.js",
-        "tools/check-continuous-city-shields.js",
-        "tools/test-local-postgres-city-shields-browser.js"
+        "tools/asset-performance-budgets.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
       "tests": [
-        "tools/test-local-postgres-city-shields-browser.js",
-        "tools/validate-continuous-city-shields.js",
-        "tools/test-local-postgres-native-auth-world.js"
+        "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Existing native action UI now reads the same owner-qualified public shield deadline and authoritative clock as the map indicator, and refreshes selected controls on eligibility changes. Actual authenticated browser checks cover two viewers, desktop 1440x900 and landscape 844x390/568x320, zoom, missing city timer, stationary repair, Shielded/Attack button changes, cancellation, capture, expiration with failed polls/clock skew, and cleanup; native-auth action suite covers selection/navigation/commands and permission loss affected by the shared bridge."
+      "reason": "Bound the measured 7014-byte offline-shell addition within 8 KiB, shared refresh metadata within 0.25 KiB and lazy Clan CSS within 90 KiB. No new artwork, dependencies or map-loop work. Retain all unrelated payload and runtime budgets."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/SHIELD_WALL_REPAIR_ACTIVATION.md"
+        "docs/CLAN_WAR_CITIES.md"
       ],
       "tests": [],
-      "reason": "Document the existing confirmed wall eligibility rule, reproduced capture defect, tested implementation, current local realm, no data rewrite, and explicit backend-first compatibility hold. Implementation and pending deployment remain clearly distinguished."
+      "reason": "Record the confirmed new Clan tab and voluntary city restoration, explicit owner-troop return choice, preserved capture safeguards, new-loss-only history limitation, privacy/pagination and backend-first rollout. No production changes authorized or claimed; deployment remains separately verified."
     }
   ]
 }

@@ -153,12 +153,13 @@ function captureHoldingDetailsRefresh(city) {
 function captureClanViewRefresh() {
   const viewKey = JSON.stringify([getOnlineSessionRequestScope(), state?.clanId, state?.clanRole, activeClanMobileSection,
     activeClanBrowserSection, activeClanRewardSection, clanShieldEditorOpen, clanRenameEditorOpen,
-    activeClanMobileSection === "warroom" ? [onlineClanRallies.find(rally => rally.id === selectedClanRallyId)?.id || onlineClanRallies[0]?.id, clanWarroomSheet] : null]);
+    activeClanMobileSection === "warroom" ? [onlineClanRallies.find(rally => rally.id === selectedClanRallyId)?.id || onlineClanRallies[0]?.id, clanWarroomSheet] : null,
+    activeClanMobileSection === "warcities" ? clanWarCitiesView.cursor : null]);
   const restore = clanContent.dataset.refreshView === viewKey ? captureUiRefreshState(clanView, {
     scrollSelectors: [".description-scroll", ".activity-scroll", ".scroll-region", ".clan-roster", ".clan-list",
       ".clan-browser-panel", ".clan-rename-card", ".clan-shield-editor-preview", ".clan-shield-editor-controls"],
     focusAttributes: ["data-clan-form", "data-clan-action", "data-member-id", "data-clan-rally", "data-reward-id",
-      "data-clan-section", "data-clan-browser-section", "data-clan-reward", "data-war-sheet", "data-rally-action", "data-rally-id", "data-player-profile-uid", "data-boss-readiness", "aria-label"],
+      "data-clan-section", "data-clan-browser-section", "data-clan-reward", "data-war-sheet", "data-war-city-key", "data-rally-action", "data-rally-id", "data-player-profile-uid", "data-boss-readiness", "aria-label"],
     draftSelector: '.clan-browser form input, .clan-browser form textarea, .clan-browser form select',
   }) : () => {};
   return () => {

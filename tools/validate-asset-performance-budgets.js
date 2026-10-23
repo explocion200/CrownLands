@@ -253,7 +253,8 @@ const entrypointBudgets = {
   // Aggregate shell, artwork, request and installation limits stay unchanged.
   // Clan support navigation, safe sharing and authoritative preview freshness: +8.25 KiB source, within the shared 10 KiB shell allowance.
   // War Room participant/table/Details navigation adds 2,614 source bytes.
-  "game.js": (3 + 8.25 + 1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25 + 2 + 3 + 0.25 + 2 + 1 + 0.5 + 5 + 3 + 1) * 1024,
+  // War Cities navigation and its private board add under 8 KiB.
+  "game.js": (8 + 3 + 8.25 + 1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25 + 2 + 3 + 0.25 + 2 + 1 + 0.5 + 5 + 3 + 1) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   // Medal crown selectors add under 0.5 KiB; retain all other payload limits.
@@ -266,11 +267,12 @@ const entrypointBudgets = {
   // Keep game.js and the aggregate offline-shell caps unchanged.
   // Shield confirmation adds under 4 KiB of event-driven dialog code, with no
   // images, timers, network requests or work in the rendering loop.
-  "modal-ui.js": (5 + 8 + 4) * 1024,
+  "modal-ui.js": (5 + 8 + 4 + 0.25) * 1024,
   "skills-ledger-ui.css": 37 * 1024,
   // Current main's Clan controls total 86,047 bytes, 31 over the previous cap.
   // Compact responsive roster replaces old columns; lazy stylesheet stays below 88 KiB.
-  "clan-ledger-ui.css": 88 * 1024,
+  // Five-tab navigation and compact War Cities rows add under 2 KiB of lazy CSS.
+  "clan-ledger-ui.css": 90 * 1024,
   "settings-ledger-ui.css": 32 * 1024,
   // Per-stack new-item counts and shared markers add 237 bytes; bound at 0.25 KiB.
   "common-gear-ui.js": (72 + 28 + 0.25) * 1024,

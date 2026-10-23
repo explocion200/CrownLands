@@ -15,7 +15,7 @@ const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   const ev=async expression=>{const r=await client.send("Runtime.evaluate",{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result.value;};
   const wait=async expression=>{for(let i=0;i<700;i++){if(await ev(expression))return;await delay(80);}throw Error("Timeout: "+expression+JSON.stringify(errors));};
   const screenshot=async name=>fs.writeFileSync(path.join(artifacts,name+".png"),Buffer.from((await client.send("Page.captureScreenshot",{format:"png"})).data,"base64"));
-  const navigationVisible=()=>ev(`(()=>{const buttons=[...document.querySelectorAll('.clan-section-nav button,.rewards-tabs button')];return buttons.length===7&&buttons.every(b=>{const r=b.getBoundingClientRect();return r.height>=44&&r.top>=0&&r.bottom<=innerHeight&&b.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));});})()`);
+  const navigationVisible=()=>ev(`(()=>{const buttons=[...document.querySelectorAll('.clan-section-nav button,.rewards-tabs button')];return buttons.length===8&&buttons.every(b=>{const r=b.getBoundingClientRect();return r.height>=44&&r.top>=0&&r.bottom<=innerHeight&&b.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));});})()`);
   for(const [width,height]of[[1440,900],[1280,591],[844,390],[568,320]]){
    await client.send("Emulation.setDeviceMetricsOverride",{width,height,deviceScaleFactor:1,mobile:height<600});
    await client.send("Page.navigate",{url:address.url+"/__benchmark__/?scenario=A&visualMarches=0&section=rewards&reward=treasury"});

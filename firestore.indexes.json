@@ -1,6 +1,17 @@
 {
   "indexes": [
     {
+      "collectionGroup": "warCities",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "worldId", "order": "ASCENDING" },
+        { "fieldPath": "resetGeneration", "order": "ASCENDING" },
+        { "fieldPath": "realmShardId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "key", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "treasuryUsage",
       "queryScope": "COLLECTION_GROUP",
       "fields": [

@@ -1868,6 +1868,13 @@ Place the Shop left of the Tower, Workshop right, Infirmary lower-left and Train
 
 The current reset path preserves clan identity, roster, membership, roles, name, tag, and heraldry while rebuilding generation-scoped clan state. The rollover is transactional and fails without partial season changes when a preserved clan record is incomplete or inconsistent. Clan Treasury/ledger, seasonal statistics, goals, rallies, reinforcements, gifts activity, benefits, leaderboards, and objective ownership are reset for the new generation. Emulator coverage includes concurrent member claims, replay safety, invalid rosters, missing records, disbanded clans, removed members, and the 30-member limit. **Status:** `IMPLEMENTED — PENDING SCHEDULED RESET VERIFICATION`.
 
+### War Cities — confirmed October 23, 2026
+
+- Clan navigation adds War Cities alongside Overview, War Room, Rewards and Members, using the existing desktop/landscape frame. Track new regular-city losses to other players, displaying the original clanmate, captor, current holder, map and a navigation-only Location control. Existing historical events are not backfilled without reliable clan-at-loss evidence.
+- A recovered city's current owner may explicitly return it to the original member while both remain in the clan. Their troops return by march to their own eligible holding; allied reinforcements use existing ownership-change returns. The recipient receives the current city level, investment and walls, with their own Shield eligibility. No capture rewards, extra level loss or arbitrary city gifts are introduced.
+- Existing Main City/objective exclusions, incoming-march/rally safety and capture locks remain enforced. Normal recapture still uses ordinary battle, Shield, power, linked-account and former-clan rules. Leaders and Officers cannot transfer another member's city.
+- Capture records, return receipts and authorization are server-owned and realm/generation/shard scoped. Current membership protects every request. A re-loss preserves the original claim; original-owner recovery closes it. Retries cannot duplicate troops or overwrite newer losses. Season changes and disbanding invalidate access. **Status:** `IMPLEMENTED — PENDING VALIDATION AND AUTHORIZED BACKEND DEPLOYMENT`; details and selected checks are in [Clan War Cities](CLAN_WAR_CITIES.md).
+
 ### Clan Heraldry
 
 - Legacy v1 clan heraldry remains compatible in both clients.

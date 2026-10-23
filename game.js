@@ -2326,7 +2326,10 @@ let clanWarroomScope = "";
 let clanLedgerConfirmationOpen = false;
 let clanRenameSaving = false;
 let selectedClanMemberUid = "";
-const CLAN_MOBILE_SECTIONS = Object.freeze(["overview", "warroom", "rewards", "members"]);
+const CLAN_MOBILE_SECTIONS = Object.freeze(["overview", "warroom", "warcities", "rewards", "members"]);
+let clanWarCitiesView = { scope: "", entries: [], cursor: "", nextCursor: "", busy: false, loaded: false, error: "" };
+let clanWarCitiesTimer = null;
+const clanWarCitiesOperations = new Map();
 const CLAN_BROWSER_SECTIONS = Object.freeze(["discover", "create"]);
 let activeClanMobileSection = "overview";
 let activeClanBrowserSection = "discover";
@@ -25955,6 +25958,10 @@ function updateClanQuestCountdown() {
 }
 
 function stopClanRealtimeSubscriptions({ clear = true, preserveApplications = false } = {}) {
+  if (clear) {
+    resetClanWarCities();
+    clearInterval(clanWarCitiesTimer); clanWarCitiesTimer = null;
+  }
   clanStateSubscriptionGeneration += 1;
   activeClanSubscriptionScope = "";
   resetClanTreasuryState();
@@ -26745,6 +26752,7 @@ function renderClanSectionNavigation(canManageApplications = false) {
       count: onlineClanRallies.length,
       countLabel: `${onlineClanRallies.length} active ${onlineClanRallies.length === 1 ? "rally" : "rallies"}`,
     },
+    { key: "warcities", label: "War Cities", mark: renderCrownlandsIcon("attack"), count: 0, countLabel: "" },
     {
       key: "rewards",
       label: "Rewards",
@@ -26830,6 +26838,71 @@ function setClanMobileSection(section, options = {}) {
   renderClanView();
   revealClanSection(value);
   if (options.focus) focusClanNavigationButton("data-clan-section", value);
+  if (value === "warcities") void loadClanWarCities();
+}
+
+function clanWarCitiesScope() { return `${getOnlineRequestScope()}:${state?.clanId || ""}`; }
+function resetClanWarCities() {
+  clanWarCitiesView = { scope: clanWarCitiesScope(), entries: [], cursor: "", nextCursor: "", busy: false, loaded: false, error: "" };
+  clanWarCitiesOperations.clear();
+}
+async function loadClanWarCities(cursor = clanWarCitiesView.cursor) {
+  if (!state?.clanId || activeProfileTab !== "clan" || !isClanSectionActive("warcities")) return;
+  if (clanWarCitiesView.scope !== clanWarCitiesScope()) { resetClanWarCities(); cursor = ""; }
+  const view = clanWarCitiesView;
+  if (view.busy) return;
+  view.busy = true; view.error = ""; view.cursor = cursor || "";
+  renderClanView();
+  try {
+    const result = await getOnlineApi()?.clanWarCities({ action: "list", cursor: view.cursor });
+    if (view !== clanWarCitiesView || view.scope !== clanWarCitiesScope()) return;
+    if (result?.version !== 1 || result.clanId !== state.clanId) throw Error("War Cities requires the updated game server.");
+    view.entries = result.entries; view.nextCursor = result.nextCursor; view.loaded = true;
+  } catch (error) {
+    if (view !== clanWarCitiesView || view.scope !== clanWarCitiesScope()) return;
+    view.entries = []; view.loaded = false;
+    view.error = error?.code === "functions/not-found" ? "War Cities is waiting for the server update." : error.message || "War Cities could not load. Try Refresh.";
+  } finally {
+    if (view === clanWarCitiesView && view.scope === clanWarCitiesScope()) { view.busy = false; renderClanView(); }
+  }
+  if (!clanWarCitiesTimer) clanWarCitiesTimer = window.setInterval(() => {
+    if (clanWarCitiesView.scope !== clanWarCitiesScope()) { resetClanWarCities(); renderClanView(); }
+    if (activeProfileTab === "clan" && isClanSectionActive("warcities") && profileScreen.classList.contains("open")) {
+      if (!document.hidden) void loadClanWarCities();
+    } else { clearInterval(clanWarCitiesTimer); clanWarCitiesTimer = null; }
+  }, 5000);
+}
+function renderClanWarCitiesPanel() {
+  if (clanWarCitiesView.scope !== clanWarCitiesScope()) resetClanWarCities();
+  const v = clanWarCitiesView;
+  return `<section id="clanWarcitiesPanel" class="clan-section-panel clan-war-cities ${isClanSectionActive("warcities") ? "active" : ""}" role="tabpanel" aria-labelledby="clanSectionTabWarcities">
+    <header><div><h3>War Cities</h3><small>Recover your clanmates’ lost cities</small></div><button type="button" data-clan-action="war-cities-refresh" ${v.busy ? "disabled" : ""}>${v.busy ? "Loading…" : "Refresh"}</button></header>
+    ${v.error ? `<p role="status">${escapeHtml(v.error)}</p>` : ""}
+    <div class="war-cities-list scroll-region" aria-busy="${v.busy}">${v.entries.map(e => `<article>
+      <div class="war-city-copy"><strong>${escapeHtml(e.cityName)}</strong><small>${escapeHtml(getRegionLabel(e.location.regionId))} · Originally ${escapeHtml(e.originalOwnerName)}</small><span>Taken by ${escapeHtml(e.captorName)}</span><small>Now held by ${escapeHtml(e.currentOwnerName)} · ${e.status === "recovered" ? "Recovered" : "Lost"}</small></div>
+      <div class="war-city-actions"><button type="button" data-clan-action="war-city-location" data-war-city-key="${e.key}">Location</button>${e.canReturn ? `<button type="button" data-clan-action="war-city-return" data-war-city-key="${e.key}" ${v.busy ? "disabled" : ""}>Return city</button>` : e.status === "recovered" ? `<small>${escapeHtml(e.returnBlockedReason || "Its owner can return it")}</small>` : ""}</div>
+    </article>`).join("") || (v.loaded ? '<p>No lost cities on this page. New player captures are tracked from the War Cities update onward.</p>' : !v.error ? '<p>Loading your clan’s cities…</p>' : "")}</div>
+    <footer><small>Location only navigates. Returning keeps the city’s level and sends your troops home.</small><div>${v.cursor ? '<button type="button" data-clan-action="war-cities-first">First page</button>' : ""}${v.nextCursor ? '<button type="button" data-clan-action="war-cities-next">Next page</button>' : ""}</div></footer></section>`;
+}
+async function handleWarCityAction(action, key) {
+  if (action === "war-cities-refresh" || action === "war-cities-first") return loadClanWarCities(action.endsWith("first") ? "" : clanWarCitiesView.cursor);
+  if (action === "war-cities-next") return loadClanWarCities(clanWarCitiesView.nextCursor);
+  const view = clanWarCitiesView, entry = view.entries.find(e => e.key === key);
+  if (!entry || view.busy || view.scope !== clanWarCitiesScope()) return;
+  if (action === "war-city-location") { closeProfileScreen({ force: true }); return locateClanIntelligence({ ...entry, targetName: entry.cityName }); }
+  if (action !== "war-city-return" || !entry.canReturn) return;
+  const accepted = await confirmClanLedgerAction(`Return ${entry.cityName}?`, `Give this city back to ${entry.originalOwnerName}? Its level and walls stay as they are. Your troops travel to another city you own; allied reinforcements return to their owners. Incoming marches, rally troops and capture protection must clear first.`, "Return city");
+  if (!accepted || view !== clanWarCitiesView || view.scope !== clanWarCitiesScope()) return;
+  const operationKey = `${entry.key}:${entry.lossEventId}`;
+  if (!clanWarCitiesOperations.has(operationKey)) clanWarCitiesOperations.set(operationKey, crypto.randomUUID());
+  view.busy = true; renderClanView();
+  try {
+    await getOnlineApi().clanWarCities({ action: "return", key: entry.key, lossEventId: entry.lossEventId, operationId: clanWarCitiesOperations.get(operationKey) });
+    if (view !== clanWarCitiesView || view.scope !== clanWarCitiesScope()) return;
+    clanWarCitiesOperations.delete(operationKey); view.entries = view.entries.filter(e => e.key !== key);
+    showToast(`${entry.cityName} returned to ${entry.originalOwnerName}.`);
+  } catch (error) { if (view === clanWarCitiesView && view.scope === clanWarCitiesScope()) view.error = error.message || "Return failed. Try again."; }
+  finally { if (view === clanWarCitiesView && view.scope === clanWarCitiesScope()) { view.busy = false; renderClanView(); } }
 }
 
 function setClanBrowserSection(section, options = {}) {
@@ -27642,6 +27715,7 @@ function renderClanViewContent() {
     ${renderClanOverviewPanel(canLead)}
     ${renderClanMembersPanel(canLead, canManageApplications)}
     ${renderClanRallyPanel()}
+    ${renderClanWarCitiesPanel()}
     ${renderClanRewardsPanel()}`;
   applyClanRosterFlags();
   bindClanTreasuryPanel();
@@ -27908,6 +27982,7 @@ async function handleClanClick(event) {
   const button = event.target.closest("[data-clan-action]");
   if (!button || button.disabled) return;
   const action = button.dataset.clanAction;
+  if (action.startsWith("war-city-") || action.startsWith("war-cities-")) { void handleWarCityAction(action, button.dataset.warCityKey); return; }
   if (action === "intelligence") { void openClanIntelligence(); return; }
   if (action === "donate-treasury") {
     event.preventDefault();

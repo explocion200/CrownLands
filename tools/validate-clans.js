@@ -160,7 +160,7 @@ requires(client, /function renderPaths[\s\S]*?getArmyRouteRelationshipClass\(att
 requires(client, /function refreshClanRelationshipPresentation[\s\S]*?pathRenderSignature\s*=\s*""[\s\S]*?renderPaths\(\)[\s\S]*?renderArmies\(true\)/, "Clan membership events do not immediately redraw allied paths and moving army markers.");
 requires(updateArmyTokenElementSource, /const clanAlly = isCurrentClanmateArmy\(attack\)[\s\S]*?clanAlly[\s\S]*?"clan-ally"[\s\S]*?clanAlly && isHostileClanMarch\(attack\) \? " clan-attack"[\s\S]*?\$\{ownerClass\}\$\{marchClass\}[\s\S]*?relationshipLabel = clanAlly \? "Clan ally "/, "Moving clanmate army markers do not distinguish allied attacks from movement while retaining an accessible label.");
 requires(client, /function showClanHub[\s\S]*?showProfileClan\(\)/, "The Clan HUD button does not open the Clan area directly.");
-requires(client, /CLAN_MOBILE_SECTIONS\s*=\s*Object\.freeze\(\["overview",\s*"warroom",\s*"rewards",\s*"members"\]\)[\s\S]*?activeClanMobileSection\s*=\s*"overview"/, "The mobile clan hub is missing its four-section state.");
+requires(client, /CLAN_MOBILE_SECTIONS\s*=\s*Object\.freeze\(\["overview",\s*"warroom",\s*"warcities",\s*"rewards",\s*"members"\]\)[\s\S]*?activeClanMobileSection\s*=\s*"overview"/, "The mobile clan hub is missing its five-section state.");
 requires(client, /function showProfileClan\([^)]*\)[\s\S]*?enteringClan[\s\S]*?activeClanMobileSection\s*=\s*"overview"/, "Opening the Clan area does not reset mobile navigation to Overview.");
 requires(client, /function handleOnlinePlayerClanSnapshot[\s\S]*?previousClanId\s*!==\s*state\.clanId[\s\S]*?activeClanMobileSection\s*=\s*"overview"/, "Changing clans does not reset mobile navigation to Overview.");
 requires(

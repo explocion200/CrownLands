@@ -1217,6 +1217,7 @@
   }
 
   async function clanIntelligence(payload = {}) { return callServerFunction("clanIntelligence", payload); }
+  async function clanWarCities(payload = {}) { return callServerFunction("clanWarCities", payload); }
   function subscribeClanIntelligence(clanId, onChange, onError, scope = {}) {
     if (!LOCAL || !client.db || !client.user?.uid) return () => {};
     const { collection, query, where, limit, documentId } = client.modules.firestore;
@@ -3791,6 +3792,7 @@
     social,
     subscribeSocialSignals,
     clanIntelligence,
+    clanWarCities,
     subscribeClanIntelligence,
     sendChatMessage,
     translateChatMessages,
