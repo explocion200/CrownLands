@@ -87,11 +87,11 @@ async function main(built = false) {
       await ready('document.documentElement?.dataset.warReady === "true"');
       await evaluate('Promise.all(document.getAnimations().filter(a=>Number.isFinite(a.effect?.getComputedTiming().endTime)).map(a=>a.finished.catch(()=>{})))');
       await evaluate(`(() => {
-        window.warCityQA={calls:[],reject:false,held:false,resolve:null,rows:Array.from({length:8},(_,i)=>({
+        window.warCityQA={calls:[],orders:[],reject:false,held:false,resolve:null,rows:Array.from({length:8},(_,i)=>({
           key:String(i).repeat(64),lossEventId:'loss'+i,cityName:['Oakwatch Meadows','Stoneford','Ravenhill'][i%3],
-          originalOwnerName:'Elowen Vale',captorName:'Blackthorn',currentOwnerName:i?'Blackthorn':'Aldric',
-          status:i?'lost':'recovered',canReturn:!i,location:{targetType:'city',targetId:warQA.source.id,regionId:getCityRegionId(warQA.source)}}))};
-        const api=getOnlineApi();getOnlineApi=()=>({...api,clanWarCities:async input=>{
+          originalOwnerName:'Elowen Vale',captorName:'Blackthorn',currentOwnerName:'Blackthorn',
+          status:'lost',canReturn:false,location:{targetType:'city',targetId:warQA.source.id,regionId:getCityRegionId(warQA.source)}}))};
+        const api=getOnlineApi();getOnlineApi=()=>({...api,sendArmyOrder:async input=>{warCityQA.orders.push(input);throw Error('Location must not dispatch troops');},clanWarCities:async input=>{
           warCityQA.calls.push(input);
           if(warCityQA.held) await new Promise(resolve=>warCityQA.resolve=resolve);
           if(warCityQA.reject) throw Error('Connection unavailable. Retry.');
@@ -101,6 +101,21 @@ async function main(built = false) {
       })()`);
       await click('[data-clan-section="warcities"]');
       await ready('clanWarCitiesView.loaded && !clanWarCitiesView.busy');
+      assert.equal(await evaluate('document.querySelector("[data-clan-section=warcities]").textContent.trim()'), 'Lost Holdings');
+      assert.equal(await evaluate('document.querySelector("#clanWarcitiesPanel h3").textContent'), 'Lost Holdings');
+      assert.equal(await evaluate('document.querySelectorAll("[data-clan-action=war-city-return]").length'), 0);
+      // Recovery is observed on the open tab, without navigating or manually refreshing.
+      await evaluate('Object.assign(warCityQA.rows[0],{status:"recovered",canReturn:true,currentOwnerName:"Aldric"});Object.assign(warCityQA.rows[1],{status:"recovered",currentOwnerName:"Rowan"})');
+      await ready('document.querySelectorAll("[data-clan-action=war-city-return]").length===1');
+      assert(await evaluate(`(() => {
+        const b=document.querySelector('[data-clan-action="war-city-return"]'), row=b.closest('article'), l=row.querySelector('[data-clan-action="war-city-location"]');
+        const r=b.getBoundingClientRect(), p=l.getBoundingClientRect();
+        return activeClanMobileSection==='warcities' && b.dataset.warCityKey==='0'.repeat(64)
+          && row.textContent.includes('Oakwatch Meadows') && row.textContent.includes('Recovered')
+          && p.right<=r.left && Math.abs(p.y+p.height/2-r.y-r.height/2)<1
+          && p.width===44 && p.height===44 && l.getAttribute('aria-label').includes('Oakwatch')
+          && getComputedStyle(l,'::after').backgroundImage.includes('location-map-flag-192x192-cf45708cfe0c.webp');
+      })()`), 'Recovery controls must use the shared location icon on the same city row');
       const measurement = await evaluate(`(() => {
         const p=document.querySelector('#clanWarcitiesPanel'), r=p.getBoundingClientRect(), list=p.querySelector('.war-cities-list').getBoundingClientRect();
         const buttons=[...document.querySelectorAll('.clan-section-nav button'),...p.querySelectorAll('article:first-child button')];
@@ -129,6 +144,15 @@ async function main(built = false) {
       assert.equal(await evaluate('document.querySelectorAll(".war-cities-list article").length'),0);
       await evaluate('warCityQA.reject=false');
       await click('[data-clan-action="war-cities-refresh"]'); await ready('clanWarCitiesView.loaded && !clanWarCitiesView.busy');
+      // Opening a location clears an armed order and cannot send troops.
+      await evaluate('sendMode=true;selectedTargetId="armed-target";scoutNearbySourceId="armed-source";regroupSourceId="armed-source"');
+      await click('[data-clan-action="war-city-location"]');
+      await ready('!sendMode && !profileScreen.classList.contains("open")');
+      assert(await evaluate('selectedTargetId===null && scoutNearbySourceId===null && regroupSourceId===null'));
+      assert.equal(await evaluate('warCityQA.orders.length'),0);
+      await evaluate('profileScreen.classList.add("open");showProfileClan({force:true})');
+      await click('[data-clan-section="warcities"]');
+      await ready('clanWarCitiesView.loaded && !clanWarCitiesView.busy');
       // Backgrounding the phone suspends requests, but returning must resume them.
       if (width === 844) {
         await evaluate('Object.defineProperty(document,"hidden",{configurable:true,value:true})');

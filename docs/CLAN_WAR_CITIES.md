@@ -1,16 +1,22 @@
-# Clan War Cities
+# Clan Lost Holdings
 
 Confirmed October 23, 2026. Implemented on `codex/clan-war-cities`;
-validation and deployment are recorded separately. This document does not claim
-the feature is live.
+the capture/return feature was verified live through PR #708 at build
+`c28ca465aaf34db22c4440162881760db1190fb8`. The Lost Holdings naming and
+location-icon refinement is confirmed on the same date and awaits its own publication.
 
 ## Behavior
 
 The fifth Clan tab preserves the current parchment/burgundy window on desktop
 and landscape phones. Each row identifies the city and map, original clanmate,
-captor at the loss, current holder and Lost/Recovered state. Location navigates
+captor at the loss, current holder and Lost/Recovered state. The tab is named
+**Lost Holdings** and uses the existing map-and-flag location icon. Location navigates
 without sending an army. Normal attacks and their existing protections still
-govern recapture; this feature adds no ordinary-city rally exception.
+govern recapture, including weak-player protection. Listing a city grants no
+extra attack, retaliation or capture permission. The recovering owner gets the
+Return city action on the same row, to the right of the location icon, when the
+open board refreshes. Other members see who recovered it. This feature adds no
+ordinary-city rally exception.
 
 Only the current recovering owner can voluntarily return a city, and both rulers
 must remain current members of the same active clan. Officers cannot give away
@@ -62,16 +68,18 @@ claims or player-data backfill are inferred.
   membership and generation isolation, private summaries, bounded pagination,
   concurrent return retries and stale-loss rejection.
 - Real PostgreSQL commands: three fictional players, actual combat loss and
-  recapture, guarded return, matching Shield deadline, unchanged walls/level,
+  recapture, protected raid without a weak-player bypass, guarded return, matching
+  Shield deadline, unchanged walls/level,
   preserved XP, both ownership stats, real return march and duplicate settlement.
 - Source and built UI: 1440×900 mouse and 844×390 / 568×320 simulated touch;
-  five-tab layout, scrolling/focus, confirmation/cancellation, failed requests and
+  five-tab layout, shared location icon, same-row live recovery, safe location-only
+  navigation, scrolling/focus, confirmation/cancellation, failed requests and
   old-session response rejection, and background/resume polling. Screenshots and measurements are generated in
   ignored `release-artifacts/war-cities/`.
 - Selected existing combat, travel, relinquishment, Shield and Clan UI regressions
   are listed with exact-base dependency coverage in `validation-plan.json`.
 
-The lazy Clan stylesheet stays below 90 KiB. The offline-shell addition is 7,014 bytes, bounded
+The lazy Clan stylesheet stays below 90 KiB. The offline-shell addition remains bounded
 at 8 KiB and introduces no artwork or dependencies. Board polling is confined to
 the open tab, never the map rendering loop.
 

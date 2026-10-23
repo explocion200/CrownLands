@@ -1,73 +1,40 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "55842fa83532b659020aa37b10b9dba1c8fc3e06",
+  "baseCommit": "c28ca465aaf34db22c4440162881760db1190fb8",
   "coverage": [
     {
       "paths": [
-        "functions/index.js",
-        "functions/clan-war-cities.js",
-        "functions/test/clan-war-cities-cases.js",
-        "functions/test/emulator-clan-war-cities.js",
-        "tools/test-local-postgres-war-cities.js",
-        "tools/test-local-postgres-war-city-commands.js",
-        "firestore.indexes.json"
-      ],
-      "tests": [
-        "tools/test-local-postgres-war-cities.js",
-        "tools/test-local-postgres-war-city-commands.js",
-        "tools/validate-authoritative-army-orders.js",
-        "tools/validate-clan-reinforcements.js",
-        "tools/validate-reinforcement-retargeting.js",
-        "functions/test/emulator-clan-war-cities.js",
-        "functions/test/emulator-combat-authorization.js",
-        "functions/test/emulator-world-travel.js",
-        "functions/test/emulator-city-relinquishment-limit.js",
-        "functions/test/emulator-peace-shield-returns.js",
-        "functions/test/emulator-clan-power-events.js"
-      ],
-      "reason": "Atomic regular-city loss tracking and a new authenticated restoration command affect combat settlement, ownership stats, troop returns and privacy. Shared cases cover realm/member isolation, original-loss lineage, pagination, stale requests and concurrent receipts. Actual PostgreSQL commands exercise three fictional players through combat loss/recapture, blocked Main City/incoming/capture locks, return transaction, Shield/wall/level/XP preservation, both economies and real troop arrival/replay. Existing travel, capture protections, relinquishment, Shield and clan-power emulator gates protect the reused authoritative dependencies; the bounded Firestore query has its equivalent index."
-    },
-    {
-      "paths": [
         "game.js",
-        "firebaseClient.js",
-        "modal-ui.js",
         "clan-ledger-ui.css",
-        "tools/validate-war-cities-browser.js",
-        "tools/validate-clans.js",
-        "tools/validate-clan-war-room.js",
-        "tools/validate-clan-treasury-browser.js"
+        "tools/validate-war-cities-browser.js"
       ],
       "tests": [
         "tools/validate-war-cities-browser.js",
         "tools/validate-clans.js",
-        "tools/validate-clan-war-room.js",
         "tools/validate-clan-ledger-ui.js",
         "tools/validate-war-room-responsive-browser.js",
-        "tools/validate-clan-treasury-browser.js",
-        "tools/validate-ui-refresh-browser.js",
-        "tools/test-local-production-client.js",
-        "functions/test/emulator-clan-war-cities.js"
+        "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Adds the fifth Clan tab, authenticated bridge, private scope-bound polling and voluntary confirmation. Source and delivered browser tests exercise desktop and two landscape sizes with mouse/touch, five-tab navigation, scroll/focus retention, cancel/accept, request errors, stale-session rejection, background/resume polling and no reads after closing the board. Clan/War Room/Treasury regressions cover shared navigation and modal refresh. Existing local production transport validates the generic authenticated callable wrapper; server suite verifies authority for displayed actions."
+      "reason": "Rename the Clan tab and visible board copy to Lost Holdings, reuse the shared accessible 44px location artwork and keep Location/Return inline on desktop and narrow landscape. Source and built browser tests verify live Lost-to-Recovered refresh on the same row, current-owner-only action, icon geometry/art, navigation clearing armed commands without dispatch, confirmation, scrolling/focus, background polling and stale scope rejection. Shared Clan/War Room regressions protect the existing five-tab frame; retain existing asset budgets."
     },
     {
       "paths": [
-        "tools/asset-performance-budgets.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/test-local-postgres-war-city-commands.js"
       ],
       "tests": [
-        "tools/validate-asset-performance-budgets.js"
+        "tools/test-local-postgres-war-city-commands.js",
+        "functions/test/emulator-clan-war-cities.js",
+        "functions/test/emulator-combat-authorization.js"
       ],
-      "reason": "Bound the measured 7014-byte offline-shell addition within 8 KiB, shared refresh metadata within 0.25 KiB and lazy Clan CSS within 90 KiB. No new artwork, dependencies or map-loop work. Retain all unrelated payload and runtime budgets."
+      "reason": "Regression coverage for the explicit no-bypass requirement: a stronger clanmate inspecting a recorded loss still previews/dispatches a protected raid, receives no borrowed retaliation entitlement and cannot capture; ordinary eligible recapture preserves row identity and exposes Return only to the recovering owner. Reuse actual PostgreSQL commands and current combat/claim emulator suites. No server implementation, data schema or release contract change."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CLAN_WAR_CITIES.md"
+        "docs/CLAN_WAR_CITIES.md",
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
       ],
       "tests": [],
-      "reason": "Record the confirmed new Clan tab and voluntary city restoration, explicit owner-troop return choice, preserved capture safeguards, new-loss-only history limitation, privacy/pagination and backend-first rollout. No production changes authorized or claimed; deployment remains separately verified."
+      "reason": "Record the user-confirmed Lost Holdings name, shared location icon, same-row restoration and unchanged weak-player protection. Distinguish the already verified PR708 backend deployment from this pending client publication; retain internal API/storage identifiers and existing city-only scope."
     }
   ]
 }
