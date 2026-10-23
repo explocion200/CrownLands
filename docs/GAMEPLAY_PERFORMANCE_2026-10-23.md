@@ -71,8 +71,27 @@ An initial home sample was invalid because a late daily dialog obscured the map;
 the benchmark now dismisses startup dialogs and rejects zero-frame samples.
 The map interaction fixture also dismisses startup dialogs before map selections.
 
-Final packaged measurements, the 30-minute soak and required PR checks remain
-pending. Reports/screenshots are under ignored `release-artifacts/map-pan-performance/`.
+The packaged untraced repeat and fresh base-commit comparison measured:
+
+| Size / CPU | Crowded base home/min FPS | Crowded candidate home/min FPS | Candidate min p95 | Normal candidate home/min FPS |
+|---|---|---|---|---|
+| 844×390 / 4× | 23.7 / 6.6 | 24.9 / 7.2 | 300 ms | 39.8 / 14.0 |
+| 568×320 / 4× | 34.4 / 9.2 | 36.3 / 10.8 | 216.8 ms | 47.6 / 20.1 |
+| 1440×900 / 1× | 60.0 / 56.6 | 59.8 / 55.4 | 33.3 ms | 60.0 / 59.2 |
+
+The small desktop difference is within observed run variation; this is not a
+claim of a general FPS increase. The source and packaged repeats both miss the
+crowded-mobile target. No visual reduction was used to conceal that limitation.
+
+The 30-minute packaged soak passed 60 samples: 394–412 active markers, 348–372
+retained markers, 19 renderer listeners and 337 total browser listeners, four
+full terrain images, at most 16 thumbnails and two asset requests. The heap
+cycled between 15.0 and 47.1 MB and ended at 15.7 MB; labels stayed within their
+2,048-entry measurement cache. Other isolated test work ran during the long
+retention soak, after the FPS samples. This validates resource bounds, not a
+30-minute latency benchmark. Authorization revocation while obscured cleared
+the map. Reports/screenshots are under ignored
+`release-artifacts/map-pan-performance/`. Required PR checks are still pending.
 
 ## Remaining ordered updates
 
