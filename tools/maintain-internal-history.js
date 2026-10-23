@@ -18,7 +18,10 @@ async function main(args=process.argv.slice(2)) {
   if((options.apply||options.prepare)&&options.confirm!==options.schema)throw Error("Apply or index preparation requires --confirm-schema matching --schema. Live index preparation and deletion each require their applicable owner approval.");
   const checkpoint=path.resolve(options.resume||options.checkpoint||`release-artifacts/history-retention/${Date.now()}-${crypto.randomBytes(4).toString("hex")}.json`);
   const store=new Store({schema:options.schema}),controller=new AbortController();
-  const stop=()=>controller.abort();process.once("SIGINT",stop);process.once("SIGTERM",stop);
+  const stop=()=>controller.abort();
+  // Index setup keeps normal process cancellation; it is separate from the
+  // short cleanup transactions that must finish/roll back before exit.
+  if(!options.prepare){process.once("SIGINT",stop);process.once("SIGTERM",stop);}
   try {
     if(options.prepare){await prepareHistoryIndexes(store.pool,options.schema);console.log(JSON.stringify({indexesReady:true,schema:options.schema,deleted:0}));return;}
     let state=options.resume?JSON.parse(fs.readFileSync(checkpoint,"utf8")):await createHistoryRun(store,{apply:options.apply});
