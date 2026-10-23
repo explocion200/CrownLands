@@ -13,7 +13,11 @@
   const visible = () => ready && section && dialog()?.open && !doc.hidden;
   let clanTagTimer, clanTags;
   function paintClanTags() {
-    for (const node of thread?.querySelectorAll("[data-clan-uid]") || []) root.CrownlandsChat.setClanTag(node, clanTags?.get(node.dataset.clanUid));
+    for (const node of thread?.querySelectorAll("[data-clan-uid]") || []) {
+      // The authorized contact identity also covers peers who have not entered this realm.
+      const tag = node.dataset.clanUid === current?.player?.uid ? current.player.clanTag : clanTags?.get(node.dataset.clanUid);
+      root.CrownlandsChat.setClanTag(node, tag);
+    }
   }
   function refreshClanTags() {
     clearTimeout(clanTagTimer); paintClanTags();
@@ -24,7 +28,7 @@
       active: () => visible() && Boolean(current),
       onChange: paintClanTags,
     });
-    void clanTags.refresh(history.map(message => message.senderUid));
+    void clanTags.refresh(history.filter(message => message.senderUid === uid).map(message => message.senderUid));
     clanTagTimer = setTimeout(refreshClanTags, 60000);
   }
   const setStatus = text => { if (status) status.textContent = text || ""; };

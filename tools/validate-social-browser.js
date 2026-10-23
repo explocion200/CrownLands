@@ -201,6 +201,10 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       assert(await ev('!document.querySelector(".social-message-menu").open && !document.querySelector(".social-report")'), "Message controls must close without leaving extra space");
       await ev('socialQa.messages=socialQa.savedMessages');
     }
+    await ev('socialQa.fullHistory=socialQa.messages;socialQa.player.uid="unlisted";socialQa.messages=[{...socialQa.messages[0],senderUid:"unlisted"}];CrownlandsSocial.open("messages")'); await delay(100); await click(".social-conversation");
+    assert.equal(await ev('document.querySelector(".social-message .chat-clan-tag").textContent'), "[CODE]", "An authorized private contact absent from this realm's leaderboard keeps their clan tag");
+    assert(await ev('!socialQa.identityCalls.flat().includes("unlisted")'), "Use the existing contact identity without a second public lookup");
+    await ev('socialQa.player.uid="bob";socialQa.messages=socialQa.fullHistory');
     for (const selector of [".social-conversation .social-flag", ".social-conversation .social-player small", ".social-conversation .social-contact-meta", ".social-conversation .social-unread", ".social-conversation"]) {
       await ev('socialQa.unread=1;CrownlandsSocial.open("messages")'); await delay(100); await click(selector);
       assert(await ev('!document.querySelector(".social-thread").hidden && CrownlandsSocial.diagnostics().conversationId === "a".repeat(40)'));

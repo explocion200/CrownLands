@@ -21,7 +21,7 @@
         "tools/validate-chat-translation.js",
         "tools/validate-map-chat-responsiveness-browser.js"
       ],
-      "reason": "Display current public clan tags beside Global/Clan/mini-chat and private message names, using the existing authorized public identity reader. Preserve authoritative Friends/conversation identities and compact layouts. Exercise bounded/deduplicated lookups, current clan changes and departure, negative-cache/failure recovery, hidden-window queue pausing, realm/account reset and late replies; existing message-supplied identity is ignored. Desktop and landscape/narrow/portrait browser checks cover labels, long names, clanless friends, profile and conversation tap behavior, injection safety, compose/translation/location actions and responsive geometry. Shared chat rendering also requires draft/scroll, reward shell and map/chat responsiveness checks. No server code, permissions, APIs or data formats change, so no emulator suite is required. The unrelated archived chat-button art draft validator was checked separately and fails the same unread-badge assertion on unchanged main (3e1d33e8). It is excluded from this tag change; active production unread/draft/scroll behavior is exercised by the ledger and responsiveness browser validators."
+      "reason": "Display current public clan tags beside Global/Clan/mini-chat and private message names, using the existing authorized public identity reader. Preserve authoritative Friends/conversation identities and compact layouts. Exercise bounded/deduplicated lookups, current clan changes and departure, negative-cache/failure recovery, private contacts absent from the current leaderboard, hidden-window queue pausing, realm/account reset and late replies; existing message-supplied identity is ignored. Desktop and landscape/narrow/portrait browser checks cover labels, long names, clanless friends, profile and conversation tap behavior, injection safety, compose/translation/location actions and responsive geometry. Shared chat rendering also requires draft/scroll, reward shell and map/chat responsiveness checks. No server code, permissions, APIs or data formats change, so no emulator suite is required. The unrelated archived chat-button art draft validator was checked separately and fails the same unread-badge assertion on unchanged main (3e1d33e8). It is excluded from this tag change; active production unread/draft/scroll behavior is exercised by the ledger and responsiveness browser validators."
     },
     {
       "paths": [
@@ -31,7 +31,7 @@
       "tests": [
         "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Bound the measured 4860-byte shared chat growth at 5 KiB above the previous ledger allowance; the full delivered cache grows by 5754 bytes, bounded at 6 KiB. No new artwork or dependencies. The tag lookup uses existing public reads, batches at most ten identities, and caches only in the current session."
+      "reason": "Bound the measured 4860-byte shared chat growth at 5 KiB above the previous ledger allowance; the full delivered cache grows by 5845 bytes, bounded at 6 KiB. No new artwork or dependencies. The tag lookup uses existing public reads, batches at most ten identities, and caches only in the current session."
     },
     {
       "paths": [
