@@ -41,6 +41,17 @@
       ],
       "tests": [],
       "reason": "Record the explicitly confirmed daily-reset rule, legacy adoption, focused evidence and separately authorized backend-first rollout; distinguish implementation from verified live deployment."
+    },
+    {
+      "paths": [
+        "tools/asset-performance-budgets.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Measured requested daily reset/countdown increases delivered shell by 2,125 bytes to 4,643,831 (2,039 beyond the cap) and the NPC source group to 66,616. Bound only these additions at 2 KiB delivered and 3 KiB source; actual build/source budgets, lazy artwork, entry points and every other limit remain checked."
     }
   ]
 }
