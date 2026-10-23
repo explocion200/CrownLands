@@ -18,10 +18,11 @@
     },
     {
       "paths": [
-        "docs/INTERNAL_HISTORY_RETENTION.md"
+        "docs/INTERNAL_HISTORY_RETENTION.md",
+        "docs/BACKEND_EXECUTION_PERFORMANCE.md"
       ],
       "tests": [],
-      "reason": "Documents confirmed seven-day scope, separate install/deletion approvals, bounded indexed operation and non-compaction limits. No production cleanup or deployment claim."
+      "reason": "Documents confirmed seven-day scope, separate install/deletion approvals, bounded indexed operation and non-compaction limits. No production cleanup or deployment claim. Clarifies the preceding backend update\u2019s explicit administrator migration, narrow worker grants and restricted-role preflight; permanent startup does not perform schema creation."
     }
   ]
 }

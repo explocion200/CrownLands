@@ -82,9 +82,21 @@ or database concurrency without a separate reviewed capacity change.
 
 The current PostgreSQL runtime requires a coordinated, separately authorized
 installation. The only new state is the compact internal job-status table/trigger;
-no player record or archived world is rewritten. Bootstrap has a two-second lock
-timeout and must fail safely if another operator holds the job table. The initial
+no player record or archived world is rewritten. Permanent services use restricted
+roles and do not call `JobQueue.initialize()`. The reviewed administrator installer
+must call `initializeJobStatus` in a transaction before restarting the worker. It
+must grant the worker only SELECT and UPDATE of the `total` column on the new
+table, plus execution of the status trigger function; schema CREATE, table INSERT
+and table DELETE remain forbidden. Apply the existing runtime write-fence trigger
+to the new table. Verify actual restricted-role status reads and job completions
+in an isolated schema before installation. Fixture-owner initialization alone is
+not proof of production compatibility.
+
+The migration has a two-second lock timeout and must fail safely if another
+operator holds the job table. The initial
 historical count is a one-time migration cost; inspect installation timing. Use
 the existing runtime fingerprint and publisher compatibility hold. Install the
 backend, verify game/worker health and runtime identity, then publish its matching
-client. This update does not delete history or compact database files.
+client. This update does not delete history or compact database files. A runtime rollback
+may leave the additive status table/trigger installed: the prior worker remains
+compatible, and deleting that internal state is not part of automatic rollback.
