@@ -1,8 +1,10 @@
 "use strict";
 const assert=require("node:assert/strict"),fs=require("node:fs"),path=require("node:path");
 // Real authenticated production area packets, only disposable fixture data.
-module.exports=async(pages,pilot,city,output,harness)=>{
+module.exports=async(pages,pilot,city,output,harness,{checkActions=false}={})=>{
  const [page,other]=pages,ref=pilot.cityRef(city),saved=(await ref.get()).data(),key=city.regionId+":"+city.id;
+ const profiles=pilot.players.map(p=>pilot.store.doc(`players/${p.uid}`));
+ const effects=await Promise.all(profiles.map(async p=>(await p.get()).data().itemEffects||{}));
  const camera=await page.evaluate(()=>nativeContinuousWorld.view.snapshot().camera),results=[];
  const marker=p=>p.locator(`#continuous-game-surface .castle[data-key="${key}"]`);
  const center=async(p,edge="max")=>{
@@ -16,9 +18,20 @@ module.exports=async(pages,pilot,city,output,harness)=>{
   assert(!await p.evaluate(()=>modal.open),"A login dialog must not obscure the visual check");
  };
  const has=(p,shown)=>p.waitForFunction(({key,shown})=>{const n=nativeContinuousWorld.root.querySelector(`[data-key="${key}"]`);return n&&n.classList.contains("peace-shielded")===shown&&n.querySelectorAll(".city-shield-field").length===Number(shown);},{key,shown},{timeout:15000});
+ const action=async shown=>{
+  if(!checkActions)return;
+  await other.waitForFunction(shown=>{const b=document.querySelector("#continuous-game-actions .wheel-attack");return b&&b.disabled===shown&&b.textContent.includes(shown?"Shielded":"Attack");},shown,{timeout:15000}).catch(async error=>{
+    console.error("Shield action fixture",await other.evaluate(key=>{const v=nativeContinuousWorld.view,c=getArmyTargetById(v.getObject(key).id),o=v.getObject(key);return {key,cityRegion:getCityRegionId(c),owner:c.owner,ownerMatch:c.ownerUid===o.ownerUid,itemKind:o.kind,expires:o.peaceShieldExpiresAtMs,now:v.serverNowMs(),helper:getCityPeaceShieldExpiresAtMs(c),protected:isCityProtectedByPeaceShield(c)};},key));throw error;
+  });
+ };
  try{
-  await ref.update({ownerUid:pilot.players[0].uid,ownerShieldExpiresAtMs:Date.now()+120000,fortificationState:null});
+  const ownerExpiry=Date.now()+120000;
+  await profiles[0].update({"itemEffects.shieldExpiresAtMs":ownerExpiry});
+  await profiles[1].update({"itemEffects.shieldExpiresAtMs":0});
+  // A previously captured city can still have zero in the denormalized copy.
+  await ref.update({ownerUid:pilot.players[0].uid,ownerShieldExpiresAtMs:0,fortificationState:null});
   for(const p of pages){await center(p);await has(p,true);}
+  if(checkActions){await marker(other).click();await action(true);}
   for(const [width,height]of [[1440,900],[844,390],[568,320]]){
    await page.setViewportSize({width,height});
    const sizes=[];
@@ -42,12 +55,18 @@ module.exports=async(pages,pilot,city,output,harness)=>{
   const repairAtMs=Date.now()+5000;
   await ref.update({fortificationState:{version:1,integrityBps:5000,lastDamagedAtMs:Date.now()-5000,repairAtMs}});
   for(const p of pages)await has(p,false);
+  await action(false);
   for(const p of pages)await has(p,true);
+  await action(true);
   // New damage, shield cancellation and capture must remove stale artwork.
   await ref.update({fortificationState:{version:1,integrityBps:9999,lastDamagedAtMs:Date.now(),repairAtMs:Date.now()+60000}});await has(page,false);
   await ref.update({fortificationState:null});await has(page,true);
+  await profiles[0].update({"itemEffects.shieldExpiresAtMs":0});for(const p of pages)await has(p,false);
+  await action(false);
+  await profiles[0].update({"itemEffects.shieldExpiresAtMs":ownerExpiry});for(const p of pages)await has(p,true);
+  await action(true);
   await ref.update({ownerUid:pilot.players[1].uid,ownerShieldExpiresAtMs:0});for(const p of pages)await has(p,false);
-  const expires=Date.now()+5000;await ref.update({ownerShieldExpiresAtMs:expires});for(const p of pages)await has(p,true);
+  const expires=Date.now()+5000;await profiles[1].update({"itemEffects.shieldExpiresAtMs":expires});for(const p of pages)await has(p,true);
   // Simulate failed polls and a badly skewed phone clock. Expiry uses the last
   // authoritative server clock and does not need camera motion or a new packet.
   const read=harness.worldData.read;
@@ -58,9 +77,10 @@ module.exports=async(pages,pilot,city,output,harness)=>{
   await page.waitForFunction(key=>nativeContinuousWorld.view.getObject(key)?.ownerUid===""&&nativeContinuousWorld.view.getObject(key)?.peaceShieldExpiresAtMs===0,key);await has(page,false);
   assert.equal(await page.evaluate(key=>nativeContinuousWorld.view.getObject(key).peaceShieldExpiresAtMs,key),0);
  }finally{
+  for(const [i,p]of profiles.entries())await p.update({itemEffects:effects[i]});
   await ref.set(saved);await page.setViewportSize({width:1440,height:900});
   await page.evaluate(camera=>nativeContinuousWorld.view.view(camera.x,camera.y,camera.zoom),camera);
  }
  fs.writeFileSync(path.join(output,"city-shield-checks.json"),JSON.stringify(results,null,2));
- console.log("Continuous shield browser: two viewers, desktop/mobile, zoom, repair, new damage, capture, neutral exclusion and offline/skewed-clock expiry passed.");
+ console.log("Continuous shield browser: two viewers, desktop/mobile, zoom, missing city timer, repair, new damage, cancellation, capture, neutral exclusion and offline/skewed-clock expiry passed.");
 };

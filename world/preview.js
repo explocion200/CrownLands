@@ -333,6 +333,7 @@ window.createContinuousWorldView = async function (options = {}) {
       dispose,
       invalidate: () => { dirty = true; },
       getObject: key => objects.get(key) || byMarch.get(key),
+      serverNowMs: () => performance.now() + serverTimeOffset * 1000,
       focus: item => { camera = M.clamp({ ...camera, x: item.x, y: item.y }, size); dirty = true; },
       clear: () => clear(false),
       get selectedKey() { return selected; },

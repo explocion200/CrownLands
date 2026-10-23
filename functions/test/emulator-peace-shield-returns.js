@@ -484,7 +484,14 @@ async function main() {
     );
   }
 
-  console.log("Emulator Peace Shield returns passed: atomic activation, exact reversals, exclusions, view cleanup, Swift timing, and fallback arrival.");
+  await require("./peace-shield-capture-cases")({ db,
+    call: (name, actor, data) => callFunction(name, actor.token, data), owner: shieldOwner, rival,
+    source: { id: ownerClaim.cityId, regionId: ownerRegionId },
+    target: { id: fallbackSourceId, regionId: ownerRegionId },
+    enemySource: { id: rivalClaim.cityId, regionId: rivalRegionId },
+    cityRef: city => db.doc(`islands/${islandIdForRegion(city.regionId)}/cities/${city.id}`),
+  });
+  console.log("Emulator Peace Shield returns passed: atomic activation, exact reversals, exclusions, view cleanup, Swift timing, fallback arrival and capture protection.");
 }
 
 main()

@@ -148,7 +148,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   overlay.addEventListener("pointerdown", () => { suppressMapClick = false; }, true);
   const original = { renderCities, renderArmies, renderPaths, renderHarvestBonuses, centerOnMap, centerOnCity, centerOnWorldPoint, beginMapVisualTransition, updateMainCityReturnButton,
     renderWorldMap, renderIslandTeleporters, preloadIslandMap, preloadNearbyIslandMaps,
-    getNearbyScoutCandidates, getNearbyRegroupCandidates, toggleScoutNearby, toggleRegroup, createHarvestBonusPoint, isHarvestBonusPlacementSafe };
+    getNearbyScoutCandidates, getNearbyRegroupCandidates, toggleScoutNearby, toggleRegroup, createHarvestBonusPoint, isHarvestBonusPlacementSafe, getCityPeaceShieldExpiresAtMs };
   let view, bridge, transitioning = false, restoringSelection = false, disposed = false, lastWheel = "", wheelPoint = null, pendingFocus = null, frameView = null;
   // A Location command can precede the bounded area's first snapshot. Resolve
   // its exact display position when that snapshot arrives, unless the player
@@ -156,6 +156,16 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   const cancelPendingFocus = () => { pendingFocus = null; };
   for (const type of ["pointerdown","wheel","keydown","click"]) host.addEventListener(type,cancelPendingFocus,true);
   let areasReady = false, bulk = null, bulkGeneration = 0, pickupPlacement;
+  getCityPeaceShieldExpiresAtMs = (city, nowMs = Date.now()) => {
+    const item = city && view?.getObject(`${getCityRegionId(city)}:${city.id}`);
+    if (areasReady && item?.kind === "castle" && item.ownerUid === city.ownerUid
+        && getOnlineSessionRequestScope() === session && Number.isFinite(item.peaceShieldExpiresAtMs)) {
+      // The area feed already resolves current-owner and wall eligibility.
+      // Keep action feedback aligned even if the legacy city copy is stale.
+      return item.peaceShieldExpiresAtMs > view.serverNowMs() ? item.peaceShieldExpiresAtMs : 0;
+    }
+    return original.getCityPeaceShieldExpiresAtMs(city, nowMs);
+  };
   const pickupNodes=new Map();
   const castleActions=createContinuousCastleActions(()=>view?.invalidate());
   function renderPickups(){
@@ -223,7 +233,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
       if(focusCastleActions(point))return;
     }
     wheelPoint = point;
-    const signature = JSON.stringify([point.key,target.owner,target.troops,target.level,Math.floor(getProjectedGold()),scoutNearbySourceId,regroupSourceId,pendingBulkOrderAction?.phase]);
+    const signature = JSON.stringify([point.key,target.owner,target.troops,target.level,getCityPeaceShieldExpiresAtMs(target),Math.floor(getProjectedGold()),scoutNearbySourceId,regroupSourceId,pendingBulkOrderAction?.phase]);
     if (signature === lastWheel) return;
     clearWheel(); wheelPoint = point; lastWheel = signature;
     cityLayer.replaceChildren();
@@ -357,6 +367,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
           const selected=view.getObject(restoreSelection);restoreSelection=null;
           if(selected?.selectable){restoringSelection=true;view.select(selected.key);}
         }
+        paintWheel();
       },
     onSelect: item => {
       if(item.kind==="tower-building"){
@@ -415,7 +426,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   function dispose() {
     if(disposed)return;disposed=true;castleActions.dispose();window.removeEventListener("pagehide",dispose);bridge.dispose();view?.dispose();host.remove();overlay.remove();pickups.remove();pickupNodes.clear();mapWorld.hidden=false;setMainCityReturnHudMode(false);
     ({renderCities,renderArmies,renderPaths,renderHarvestBonuses,centerOnMap,centerOnCity,centerOnWorldPoint,beginMapVisualTransition,updateMainCityReturnButton,
-      renderWorldMap,renderIslandTeleporters,preloadIslandMap,preloadNearbyIslandMaps,getNearbyScoutCandidates,getNearbyRegroupCandidates,toggleScoutNearby,toggleRegroup,createHarvestBonusPoint,isHarvestBonusPlacementSafe}=original);
+      renderWorldMap,renderIslandTeleporters,preloadIslandMap,preloadNearbyIslandMaps,getNearbyScoutCandidates,getNearbyRegroupCandidates,toggleScoutNearby,toggleRegroup,createHarvestBonusPoint,isHarvestBonusPlacementSafe,getCityPeaceShieldExpiresAtMs}=original);
     delete window.CrownlandsContinuousControls;
     delete window.CrownlandsContinuousWorld;cityRenderSignature="";renderedMapBoundsSignature="";renderAll();
   }

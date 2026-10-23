@@ -263,7 +263,7 @@ assert.doesNotMatch(activationSource, /writeReport|battleReports/, "Shield rever
 assert.match(serverSource, /const movement = createMidRouteReturnMovement\(army, nowMs, RECALL_HORN_ITEM_ID\)/);
 assert.match(
   serverSource,
-  /if \(isCityShielded\(target, uid, nowMs\)\) \{\s*throw new HttpsError\("failed-precondition", "That city is protected by a Royal Peace Shield\."\);/,
+  /if \(isCityShielded\(target, uid, nowMs, defenderPowerData\)\) \{\s*throw new HttpsError\("failed-precondition", "That city is protected by a Royal Peace Shield\."\);/,
   "New attacks against shielded regular cities must remain blocked."
 );
 assert.match(

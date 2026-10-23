@@ -7,6 +7,7 @@ const {createAuthenticatedNativeHarness}=require("./map-benchmark/seamless/nativ
  const pilot=await createGameplayPilot({productionRouting:true}),output=path.resolve("release-artifacts/city-shields");fs.mkdirSync(output,{recursive:true});
  let world,harness,browser;const pages=[],errors=[],outside=[];
  try{
+  for(const player of pilot.players)await pilot.store.doc(`players/${player.uid}`).update({clanId:""});
   const deployment=require("./map-benchmark/seamless/production-test-policy").productionTestPolicy(pilot.store);
   world=require("../local-backend/world/service").createWorldService({store:pilot.store,readPool:pilot.reader.pool,deployment,directory:path.join(output,"terrain"),enabled:true});
   await world.prepare(pilot.players[0].uid);
@@ -22,7 +23,7 @@ const {createAuthenticatedNativeHarness}=require("./map-benchmark/seamless/nativ
    await page.getByRole("button",{name:"Keep analytics off"}).click();await page.waitForFunction(()=>!document.getElementById("enterKingdomBtn")?.disabled);
    await page.locator("#enterKingdomBtn").click();await page.waitForFunction(()=>!!window.nativeContinuousWorld&&!isMapInteractionBlocked(),null,{timeout:90000});
   }
-  await require("./check-continuous-city-shields")(pages,pilot,pilot.pair[0],output,harness);
+  await require("./check-continuous-city-shields")(pages,pilot,pilot.pair[0],output,harness,{checkActions:true});
   assert.deepEqual(errors,[]);assert.deepEqual(outside,[]);
   await harness.auth.signOut(harness.sessions[0].token);
   await pages[0].waitForFunction(()=>!window.nativeContinuousWorld||nativeContinuousWorld.view.snapshot().feed.authExpired);

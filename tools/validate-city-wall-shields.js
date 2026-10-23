@@ -72,4 +72,13 @@ assert.equal(client.shielded({ ...damaged, owner: "player", ownerShieldExpiresAt
 assert.equal(client.shielded({ ...damaged, owner: "player", ownerShieldExpiresAtMs: 0 }, now + 60_000), true,
   "The current player's active item timer covers a repaired city");
 assert.equal(damaged.fortificationState.integrityBps, 5000, "Eligibility checks must not rewrite stored wall state");
+const activeOwner = { itemEffects: { shieldExpiresAtMs: now + 120_000 } };
+for (const time of [now, now + 59_999, now + 60_000, now + 120_000]) {
+  assert.equal(server.scope.isCityShielded({ ...damaged, ownerShieldExpiresAtMs: 0 }, "attacker", time, activeOwner),
+    time >= now + 60_000 && time < now + 120_000, "Current owner repairs must cover old missing city timers");
+}
+assert.equal(server.scope.isCityShielded(city, "attacker", now, { itemEffects: {} }), false, "Stale city timers cannot revive a cancelled item");
+assert.equal(server.scope.isCityShielded({ ...city, kind: "stronghold" }, "attacker", now, activeOwner), false);
+assert.equal(server.scope.isCityShielded({ ...city, ownerUid: "new-owner" }, "attacker", now, { itemEffects: {} }), false,
+  "A captor cannot inherit the previous owner's active item");
 console.log("City wall shields passed: client/server parity, exact repair and expiry boundaries, offline recovery, ownership changes, later damage and objective exclusions.");
