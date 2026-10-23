@@ -36525,6 +36525,7 @@ exports.resolveDueArmyOrders = onSchedule({
     });
 
     await processWithConcurrency(targets, SCHEDULED_ARMY_RESOLVE_CONCURRENCY, async target => OPERATION_TIMING.run(async () => {
+      const queueDelayMs = Math.max(0, Date.now() - target.arrivesAtMs);
       let outcome = "skipped";
       try {
         const result = await runWithRealmShard(target.realmShardId, () => resolveArmyOrderById({
@@ -36551,11 +36552,10 @@ exports.resolveDueArmyOrders = onSchedule({
         });
       } finally {
         const timing = OPERATION_TIMING.snapshot();
-        // Keep operational diagnostics bounded and free of army/player IDs,
-        // source documents and SQL. Fast successful arrivals do not add logs.
-        if (timing.requestDurationMs >= 500 || outcome === "error") {
-          console.log("crownlands_arrival_timing", { operation: "scheduledArmyArrival", outcome, ...timing });
-        }
+        // Capture fast and slow outcomes alike. The local worker retains fixed
+        // aggregate buckets and only 32 recent samples, without player/order IDs.
+        // Queue delay starts at the committed arrival deadline, not travel launch.
+        console.log("crownlands_arrival_timing", { operation: "scheduledArmyArrival", outcome, queueDelayMs, ...timing });
       }
     }));
 

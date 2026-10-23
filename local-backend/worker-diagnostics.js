@@ -21,9 +21,18 @@ const codes = new Set([
 ]);
 const countKeys = ["scanned", "resolved", "skipped", "failed", "paid", "backlogPending"];
 const levels = ["log", "warn", "error", "info", "debug"];
-const timingCounters = ["transactionAttempts", "dbReadQueries", "dbReadRows", "dbTransactionAttempts", "dbSerializationFailures", "dbDeadlocks", "dbRetries", "dbDocumentCacheHits", "routeCacheHits", "routeCacheMisses"];
-const timingPhases = ["realmContext", "worldValidation", "documentReads", "economyPreparation", "routePlanning", "transaction", "dbPoolWait", "dbRead", "dbCommit", "dbBackoff"];
+const timingCounters = ["dbWriteQueries", "dbWriteRows", "transactionAttempts", "dbReadQueries", "dbReadRows", "dbTransactionAttempts", "dbSerializationFailures", "dbDeadlocks", "dbRetries", "dbDocumentCacheHits", "routeCacheHits", "routeCacheMisses"];
+const timingPhases = ["realmContext", "worldValidation", "documentReads", "economyPreparation", "routePlanning", "transaction", "dbPoolWait", "dbRead", "dbWrite", "dbCommit", "dbBackoff"];
 const arrivalSampleLimit = 32;
+const durationBoundsMs = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 30000, 60000, 1000000];
+const total = (a, b) => Math.min(Number.MAX_SAFE_INTEGER, a + b);
+function observe(aggregate, value) {
+  aggregate.count = total(aggregate.count, 1); aggregate.sum = total(aggregate.sum, value);
+  aggregate.max = Math.max(aggregate.max, value);
+  const bucket = durationBoundsMs.findIndex(bound => value <= bound);
+  aggregate.buckets[bucket] = total(aggregate.buckets[bucket], 1);
+}
+const distribution = () => ({ count: 0, sum: 0, max: 0, buckets: durationBoundsMs.map(() => 0) });
 const pgNotice = "DeprecationWarning: Calling client.query() when the client is already executing a query is deprecated and will be removed in pg@9.0. Use async/await or an external async flow control mechanism instead.\n(Use `node --trace-deprecation ...` to show where the warning was created)";
 const ownValue = (object, key) => object && typeof object === "object"
   ? Object.getOwnPropertyDescriptor(object, key)?.value : undefined;
@@ -35,6 +44,8 @@ function arrivalSample(details) {
   const requestDurationMs = boundedNumber(ownValue(details, "requestDurationMs"));
   if (operation !== "scheduledArmyArrival" || !["resolved", "skipped", "error"].includes(outcome) || requestDurationMs === undefined) return null;
   const sample = { operation, outcome, requestDurationMs, phaseDurationMs: {} };
+  const queueDelayMs = boundedNumber(ownValue(details, "queueDelayMs"));
+  if (queueDelayMs !== undefined) sample.queueDelayMs = queueDelayMs;
   for (const key of timingCounters) {
     const value = boundedNumber(ownValue(details, key));
     if (value !== undefined) sample[key] = value;
@@ -52,6 +63,9 @@ class WorkerDiagnostics {
     this.counts = Object.fromEntries(levels.map(level => [level, 0]));
     this.events = new Map();
     this.arrivalTimings = [];
+    this.arrivalAggregate = { since: new Date().toISOString(), samples: 0, outcomes: { resolved: 0, skipped: 0, error: 0 },
+      durationBoundsMs, request: distribution(), queueDelay: distribution(),
+      phases: Object.fromEntries(timingPhases.map(key => [key, distribution()])), counters: Object.fromEntries(timingCounters.map(key => [key, 0])) };
   }
   record(level, label, details) {
     if (!levels.includes(level)) return;
@@ -66,6 +80,12 @@ class WorkerDiagnostics {
     if (level === "log" && label === "crownlands_arrival_timing") {
       const sample = arrivalSample(details);
       if (sample) {
+        const aggregate = this.arrivalAggregate;
+        aggregate.samples = total(aggregate.samples, 1); aggregate.outcomes[sample.outcome] = total(aggregate.outcomes[sample.outcome], 1);
+        observe(aggregate.request, sample.requestDurationMs);
+        if (sample.queueDelayMs !== undefined) observe(aggregate.queueDelay, sample.queueDelayMs);
+        for (const [phase, value] of Object.entries(sample.phaseDurationMs)) observe(aggregate.phases[phase], value);
+        for (const key of timingCounters) aggregate.counters[key] = total(aggregate.counters[key], sample[key] || 0);
         this.arrivalTimings.push(sample);
         if (this.arrivalTimings.length > arrivalSampleLimit) this.arrivalTimings.shift();
       }
@@ -84,7 +104,7 @@ class WorkerDiagnostics {
       if (Number.isSafeInteger(value) && value >= 0) event.outcomes[name] = (event.outcomes[name] || 0) + value;
     }
   }
-  snapshot() { return structuredClone({ counts: this.counts, events: [...this.events.values()], ...(this.arrivalTimings.length ? { arrivalTimings: this.arrivalTimings } : {}) }); }
+  snapshot() { return structuredClone({ counts: this.counts, events: [...this.events.values()], ...(this.arrivalTimings.length ? { arrivalTimings: this.arrivalTimings, arrivalAggregate: this.arrivalAggregate } : {}) }); }
   capture(target = console) {
     const original = Object.fromEntries(levels.map(level => [level, target[level]]));
     for (const level of levels) target[level] = (...args) => this.record(level, ...args);

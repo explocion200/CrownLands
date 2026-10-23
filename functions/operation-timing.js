@@ -2,9 +2,9 @@
 const { AsyncLocalStorage } = require("node:async_hooks");
 const { performance } = require("node:perf_hooks");
 const context = new AsyncLocalStorage();
-const phases = new Set(["realmContext", "worldValidation", "documentReads", "economyPreparation", "routePlanning", "transaction", "dbPoolWait", "dbRead", "dbCommit", "dbBackoff"]);
+const phases = new Set(["realmContext", "worldValidation", "documentReads", "economyPreparation", "routePlanning", "transaction", "dbPoolWait", "dbRead", "dbWrite", "dbCommit", "dbBackoff"]);
 
-const counters = new Set(["dbReadQueries", "dbReadRows", "dbTransactionAttempts", "dbSerializationFailures", "dbDeadlocks", "dbRetries", "dbDocumentCacheHits"]);
+const counters = new Set(["dbWriteQueries", "dbWriteRows", "dbReadQueries", "dbReadRows", "dbTransactionAttempts", "dbSerializationFailures", "dbDeadlocks", "dbRetries", "dbDocumentCacheHits"]);
 function count(key, amount = 1) {
   const timing = context.getStore();
   if (!timing || !counters.has(key) || !Number.isFinite(amount) || amount < 0) return;

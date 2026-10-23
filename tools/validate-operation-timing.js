@@ -15,7 +15,8 @@ const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
       timing.scout({ scoutStage: "launch", scoutSourceType: "tower", scoutTargetType: "city", scoutBatchSize: 1,
         scoutOriginCandidates: 7, scoutOriginRoutes: 2, scoutOriginsPruned: 5, ownerUid: "private-player", scoutReport: { troops: 999 } });
       timing.routeCache(true); timing.routeCache(false);
-      timing.count("dbReadQueries", 2);timing.count("dbReadRows", 7);
+      timing.count("dbReadQueries", 2);timing.count("dbReadRows", 7);timing.count("dbWriteQueries", 2);timing.count("dbWriteRows", 9);
+      await timing.measure("dbWrite", () => wait(1));
       timing.count("ownerUid", "private-player");timing.count("dbReadRows", Infinity);timing.count("dbReadRows", -1);
       await timing.measure("dbPoolWait", () => wait(1));
       await timing.measure("realmContext", () => wait(12));
@@ -32,6 +33,7 @@ const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
     }),
   ]);
   assert.equal(first.transactionAttempts, 1);
+  assert.equal(first.dbWriteQueries,2);assert.equal(first.dbWriteRows,9);assert(first.phaseDurationMs.dbWrite>=0);
   assert.equal(first.dbReadQueries,2);assert.equal(first.dbReadRows,7);
   assert(!Object.hasOwn(second,"dbReadQueries"));
   assert.equal(timing.run(()=>{timing.count("dbReadRows",2e6);return timing.snapshot();}).dbReadRows,1000000);

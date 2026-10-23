@@ -1,57 +1,67 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "3e983e383a7241b6aba58f0709512609f70fe388",
+  "baseCommit": "c4708633578ea5a0c554c36fbf4fc3a4297c91bb",
   "coverage": [
     {
       "paths": [
-        "local-client.js",
-        "local-backend/client-data.js",
-        "local-backend/game-http.js",
-        "world/delta-feed.js",
-        "tools/test-local-chat-client.js",
-        "tools/test-local-postgres-game-http.js",
-        "tools/test-local-transport-priority.js",
-        "tools/test-local-watch-revisions.js",
-        "tools/test-local-browser-client.js"
+        "local-backend/store.js",
+        "local-backend/jobs.js",
+        "local-backend/job-status.js",
+        "local-backend/worker-loop.js",
+        "tools/test-local-postgres-execution-performance.js"
       ],
       "tests": [
-        "tools/test-local-transport-priority.js",
-        "tools/test-local-watch-revisions.js",
-        "tools/test-local-browser-client.js",
-        "tools/test-local-chat-client.js",
-        "tools/test-local-production-client.js",
-        "tools/test-local-postgres-game-http.js",
-        "tools/test-local-postgres-season-isolation.js",
+        "tools/test-local-postgres-execution-performance.js",
+        "tools/test-local-postgres-store.js",
+        "tools/test-local-postgres-transaction-retries.js",
+        "tools/test-local-postgres-transaction-cache.js",
+        "tools/test-local-postgres-jobs.js",
+        "tools/test-local-postgres-worker-loop.js",
+        "tools/test-local-postgres-worker-service.js",
         "tools/test-local-postgres-clan-support.js",
-        "tools/validate-world-update-work.js",
-        "functions/test/emulator-clan-support.js"
+        "tools/test-local-postgres-clan-shop.js",
+        "tools/test-local-postgres-stamina.js",
+        "tools/test-local-social-integration.js",
+        "tools/test-local-postgres-production-routes.js"
       ],
-      "reason": "Priority/backoff and capability-negotiated watch transport affect authoritative permissions, stale session/world guards, command refresh and map retries. Real PostgreSQL API fixtures and source/minified client tests cover limits, cancellation, legacy response compatibility and revocation; shared Clan Support emulator cases preserve report privacy and expiry."
+      "reason": "The shared SQL write/journal path affects atomic receipts, transformations, callbacks and job dispatch across gameplay. Focused real PostgreSQL suites cover rollback/concurrency/retries, economy and clan actions, chat notification commits, recorded movement routes, leases/restarts/catch-up and bounded health counters without running unrelated visual or balance suites."
     },
     {
       "paths": [
-        "clan-intelligence-ui.js",
-        "game.js",
-        "tools/validate-clan-building-layout-browser.js",
-        "tools/validate-war-cities-browser.js",
-        "tools/asset-performance-budgets.js",
-        "tools/validate-asset-performance-budgets.js"
+        "functions/index.js",
+        "functions/operation-timing.js",
+        "local-backend/worker-diagnostics.js",
+        "tools/validate-operation-timing.js",
+        "tools/validate-scheduled-arrival-timing.js"
       ],
       "tests": [
-        "tools/validate-war-cities-browser.js",
-        "tools/validate-clan-building-layout-browser.js",
-        "tools/test-local-postgres-clan-support.js",
-        "tools/validate-asset-performance-budgets.js",
-        "tools/validate-production-artifact.js"
+        "tools/validate-operation-timing.js",
+        "tools/validate-scheduled-arrival-timing.js",
+        "tools/test-local-postgres-worker-loop.js",
+        "functions/test/emulator-combat-authorization.js",
+        "functions/test/emulator-bulk-army-orders.js"
       ],
-      "reason": "Keyed updates are confined to Lost Holdings and Intelligence; actual desktop/landscape fixtures cover unchanged node/focus/scroll retention, loading/errors, return actions, report detail, expiry and membership revocation while preserving surrounding clan UI. The existing offline shell grows by 2,308 source bytes for the keyed reconciler; the shared-cache overage is bounded within 2 KiB and the existing entrypoint allowance grows by 2.25 KiB, without adding assets or precache entries."
+      "reason": "All scheduled outcomes are measured without changing arrival resolution, concurrency or gameplay; numeric-only aggregate privacy, async timing isolation and recorded authoritative army behavior require shared emulator coverage."
     },
     {
       "paths": [
-        "docs/GAMEPLAY_TRANSPORT_PERFORMANCE.md"
+        "local-backend/world/service.js",
+        "tools/test-local-postgres-world-service.js"
+      ],
+      "tests": [
+        "tools/test-local-postgres-world-service.js",
+        "tools/test-local-postgres-live-reader.js",
+        "tools/test-local-postgres-world-visibility.js",
+        "tools/test-local-watch-revisions.js"
+      ],
+      "reason": "Removing duplicate preparation reads must preserve fresh account/realm/membership and private troop visibility, catalog changes, cancellation and public-only coalescing. Real cookie mixed-traffic fixtures include subscription, chat, commands and concurrent area lanes with complete attempt/failure accounting. Combined revision-token payload measurement shares the freshly authorized watch path; its expiry and membership tests must remain green."
+    },
+    {
+      "paths": [
+        "docs/BACKEND_EXECUTION_PERFORMANCE.md"
       ],
       "tests": [],
-      "reason": "Documents implemented protocol, isolated validation and compatible rollout requirements; no claim of live installation."
+      "reason": "Records implementation, counters migration, diagnostic interpretation and separately approved rollout requirements; deployment remains unverified."
     }
   ]
 }

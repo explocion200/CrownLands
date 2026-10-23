@@ -11,14 +11,15 @@ const {ChatEvents}=require("../local-backend/chat-events");
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const stats=values=>{const sorted=values.toSorted((a,b)=>a-b);return {count:sorted.length,p50:sorted[Math.floor(sorted.length*.5)],p95:sorted[Math.floor(sorted.length*.95)],p99:sorted[Math.floor(sorted.length*.99)],max:sorted.at(-1)};};
 const playerCount=Number(process.env.CROWNLANDS_WORLD_LOAD_PLAYERS||24);
-assert([24,50,100].includes(playerCount),"Load steps are 24, 50 or 100 fictional players");
+assert([24,25,50,100].includes(playerCount),"Load steps are 24, 25, 50 or 100 fictional players");
 // Wait for every actor to stop before tearing down its database/HTTP server,
 // including overload failures; Promise.all alone leaves rejected groups running.
 const settle=async jobs=>{const results=await Promise.allSettled(jobs),failed=results.find(r=>r.status==="rejected");if(failed)throw failed.reason;return results.map(r=>r.value);};
 (async()=>{
   const pilot=await createGameplayPilot({productionRouting:true}),directory=fs.mkdtempSync(path.join(os.tmpdir(),"world-service-"));
   let world,harness,events,disabled;
-  const loop=monitorEventLoopDelay({resolution:10}),timings={area:[],command:[],chat:[]},statuses={},retries={area:0,command:0,chat:0},failures={area:0,command:0,chat:0};
+  const loop=monitorEventLoopDelay({resolution:10}),timings={area:[],command:[],chat:[],watch:[]},statuses={},retries={area:0,command:0,chat:0,watch:0},failures={area:0,command:0,chat:0,watch:0};
+  const outcomes=Object.fromEntries(Object.keys(timings).map(kind=>[kind,{requested:0,success:0,failed:0,exhausted:0,attempts:0}]));
   try{
     const deployment=productionTestPolicy(pilot.store),config={store:pilot.store,readPool:pilot.reader.pool,deployment,directory,
       // Raster composition is tested by the real production browser suite. Keep
@@ -49,16 +50,22 @@ const settle=async jobs=>{const results=await Promise.allSettled(jobs),failed=re
     events=new ChatEvents(new Pool({host:"/var/run/postgresql",database:"crownlands_migration",max:1}),pilot.store.schema);await events.start();
     harness=await createAuthenticatedNativeHarness(pilot,{productionWorld:world,chatEvents:events});
     async function request(i,route,input,kind="command",retry=true){
-      const started=performance.now(),cookies=harness.cookies(i);
-      for(let n=0;n<8;n++){
+      const started=performance.now(),cookies=harness.cookies(i),counts=outcomes[kind];counts.requested++;
+      try { for(let n=0;n<8;n++){
+        counts.attempts++;
         const res=await harness.request("https://playcrownlands.com/api/local-game/v1/"+route,"POST",{
           origin:"https://playcrownlands.com","content-type":"application/json","x-crownlands-csrf":harness.sessions[i].csrf,
           cookie:cookies.map(c=>c.name+"="+c.value).join("; "),"x-crownlands-client-ip":"192.168.1."+(i+10)},Buffer.from(JSON.stringify(input)));
         statuses[res.status]=(statuses[res.status]||0)+1;
-        if(retry&&[429,503].includes(res.status)){retries[kind]++;await wait(100+(i%7)*37+n*60);continue;}
-        const body=JSON.parse(res.body);timings[kind].push(performance.now()-started);return {status:res.status,...body};
+        if(retry&&[429,503].includes(res.status)){
+          retries[kind]++;const retryAfter=Math.min(120000,Math.max(0,Number(res.headers?.["retry-after"]||0)*1000));
+          await wait(Math.max(retryAfter,Math.min(30000,1000*2**n))+(i%7)*37);continue;
+        }
+        const body=JSON.parse(res.body);if(res.status===200){timings[kind].push(performance.now()-started);counts.success++;}else counts.failed++;
+        return {status:res.status,...body};
       }
-      failures[kind]++;throw Error("Request did not recover: "+route);
+      counts.exhausted++;throw Error("Request did not recover: "+route);
+      } catch(error){failures[kind]++;counts.failed++;throw error;}
     }
     const uid=pilot.players[0].uid,[source,target]=pilot.pair;
     const preview={...identity,...token,sourceRegionId:source.regionId,targetRegionId:target.regionId,fromId:source.id,toId:target.id,kind:"attack"};
@@ -70,7 +77,10 @@ const settle=async jobs=>{const results=await Promise.allSettled(jobs),failed=re
     await assert.rejects(disabled.validateCommand("sendArmyOrder",token),e=>e.status===409);
     const input=ids=>({protocol:1,revision:scene.revision,realm:scene.realmId,ids});
     const ids=scene.sections.slice(0,16).map(s=>s.id),key=source.regionId+":"+source.id;
-    const ours=await world.read({uid},"areas",input([source.regionId]));
+    let preparationReads=0;const poolQuery=config.readPool.query;
+    config.readPool.query=function(...args){if(String(args[0]).includes('.documents'))preparationReads++;return poolQuery.apply(this,args);};
+    const ours=await world.read({uid},"areas",input([source.regionId]));config.readPool.query=poolQuery;
+    assert.equal(preparationReads,0,"Warm area read repeated preparation reads outside its authorization snapshot");
     const theirs=await world.read({uid:pilot.players[1].uid},"areas",input([source.regionId]));
     assert.equal(ours.objects.upsert.find(o=>o.key===key).troopVisibility,"exact");
     assert(!Object.hasOwn(theirs.objects.upsert.find(o=>o.key===key),"troops"));
@@ -94,7 +104,17 @@ const settle=async jobs=>{const results=await Promise.allSettled(jobs),failed=re
     // committed chat all share one HTTP admission gate and one action pool.
     const channel="globalChat/"+pilot.identity.resetGeneration+"--"+pilot.identity.realmShardId+"/messages";
     const chatTarget={collection:channel,filters:Object.entries({...pilot.identity,status:"visible"}).filter(([k])=>k!=="releaseId").map(([k,v])=>({field:[k],op:"==",value:encode(v)})),orders:[{field:["createdAtMs"],direction:"desc"}],limit:80};
+    for(const values of Object.values(outcomes))for(const key of Object.keys(values))values[key]=0;
+    for(const key of Object.keys(statuses))delete statuses[key];
+    for(const kind of Object.keys(timings)){timings[kind]=[];retries[kind]=0;failures[kind]=0;}
     loop.enable();
+    const subscriptions=settle(pilot.players.map(async(p,i)=>{
+      await wait(i*47);
+      for(let round=0;round<6;round++){
+        const result=await request(i,"watch",{targets:[{path:`players/${p.uid}`} ]},"watch");
+        assert.equal(result.status,200);assert.equal(result.result[0].documents[0].path,`players/${p.uid}`);await wait(1500);
+      }
+    }));
     const reads=settle(pilot.players.map(async(p,i)=>{
       await wait(i*43);let cursor;
       for(let round=0;round<8;round++){
@@ -119,8 +139,8 @@ const settle=async jobs=>{const results=await Promise.allSettled(jobs),failed=re
       const sent=await request(0,"call/sendArmyOrder",{data:{...identity,...token,armyId,sourceRegionId:source.regionId,targetRegionId:target.regionId,army:{id:armyId,fromId:source.id,toId:target.id,kind:"scout",troops:1,requestedTroops:1,sourceRegionId:source.regionId,targetRegionId:target.regionId}}});
       assert.equal(sent.status,200,JSON.stringify(sent));
     }})();
-    let loadError;try{await settle([reads,chatting,commands]);}catch(error){loadError=error;}loop.disable();
-    const report={players:playerCount,sections:scene.sections.length,iterations:8,statuses,retries,failures,
+    let loadError;try{await settle([reads,chatting,commands,subscriptions]);}catch(error){loadError=error;}loop.disable();
+    const report={players:playerCount,sections:scene.sections.length,iterations:8,statuses,retries,failures,outcomes,
       timings:Object.fromEntries(Object.entries(timings).map(([k,v])=>[k,stats(v)])),eventLoopP95Ms:loop.percentile(95)/1e6,world:world.stats(),externalRequests:0};
     const output="release-artifacts/continuous-production/shared-load"+(playerCount===24?"":"-"+playerCount)+".json";
     fs.mkdirSync("release-artifacts/continuous-production",{recursive:true});fs.writeFileSync(output,JSON.stringify(report,null,2));

@@ -58,10 +58,7 @@ class WorkerLoop {
     this.timer = setTimeout(cycle, 0);
   }
   async status() {
-    const s = this.queue.schema;
-    const rows = (await this.queue.controlStore.pool.query(`SELECT status,count(*) AS count FROM ${s}.work_jobs GROUP BY status`)).rows;
-    const counts = { pending: 0, running: 0, complete: 0, dead: 0 };
-    for (const row of rows) counts[row.status] = Number(row.count);
+    const counts = await require("./job-status").readJobStatus(this.queue);
     return { rehearsal: !this.deployment, stopped: this.stopped, expiresAt: Number.isFinite(this.expiry) ? new Date(this.expiry).toISOString() : null,
       lastSuccessfulTick: this.lastSuccess ? new Date(this.lastSuccess).toISOString() : null,
       operationalFailures: this.failures, activeHandlers: this.queue.active, jobs: counts };
