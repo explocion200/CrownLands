@@ -9,7 +9,8 @@ async function check(source, capable) {
     document: { hidden: false }, AbortController,
     setTimeout: (fn, delay) => { const id = ++timerId; timers.set(id, { fn, delay }); return id; }, clearTimeout: id => timers.delete(id), setInterval() {}, clearInterval() {},
     fetch: async (url, options = {}) => {
-      if (url.endsWith("/health")) return Response.json({ ready: true, rehearsal: false, protocol: 1, epoch: "a".repeat(32), ...(capable ? { capabilities: ["watch-revisions-v1"] } : {}) });
+      if (url.endsWith("/health")) return Response.json({ ready: true, rehearsal: false, protocol: 1, epoch: "a".repeat(32) },
+        { headers: url === "/api/local-game/health" && capable ? { "X-Crownlands-Capabilities": "future-capability, watch-revisions-v1" } : {} });
       if (url.endsWith("/session")) return Response.json({ csrf: "fixture", user: { uid }, authTime: 1 });
       const input = JSON.parse(options.body); calls.push({ url, input });
       if (hold) await new Promise(resolve => pending.push(resolve));

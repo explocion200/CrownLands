@@ -67,7 +67,13 @@ function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, d
       }
       if (url.search) throw fail("invalid-argument");
       if (active >= maxConcurrent) throw fail("resource-exhausted"); active++; counted = true;
-      if (req.method === "GET" && url.pathname === "/api/local-game/health") { await store.pool.query("SELECT 1"); return send(res, 200, { ready: true, rehearsal: !permanent, capabilities: ["watch-revisions-v1"], ...(permanent ? { protocol: 1, epoch: deployment.epoch } : {}) }); }
+      if (req.method === "GET" && url.pathname === "/api/local-game/health") {
+        await store.pool.query("SELECT 1");
+        // Publisher identity checks require the established health JSON shape.
+        // Optional transport capabilities belong in headers, not that identity.
+        res.setHeader("X-Crownlands-Capabilities", "watch-revisions-v1");
+        return send(res, 200, { ready: true, rehearsal: !permanent, ...(permanent ? { protocol: 1, epoch: deployment.epoch } : {}) });
+      }
       if (req.method === "GET" && worldData?.asset && url.pathname.startsWith("/api/local-game/world-assets/")) {
         const session = await auth.session(cookies(req.headers.cookie)[COOKIE]);
         if (!session) throw fail("unauthenticated");

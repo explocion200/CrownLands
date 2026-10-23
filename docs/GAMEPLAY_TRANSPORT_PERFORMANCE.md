@@ -64,3 +64,14 @@ of this update.
 The keyed panel reconciler adds 2,308 bytes to the existing raw offline shell
 (4,667,839 bytes total). Its 1,983-byte overage is bounded by a 2 KiB shared-budget
 allowance; no artwork, dependencies or new installation-cache entries are added.
+
+## Health-check compatibility correction
+
+The first approved installation rolled back because capability negotiation added
+a field to the permanent health response, which the existing publisher compares
+exactly. Advertise `watch-revisions-v1` in `X-Crownlands-Capabilities` instead and
+keep the health JSON identity unchanged. The client reads this optional header;
+servers without it retain full watch responses. No installed publisher changes
+or relaxed identity checks are needed. Permanent-runtime and source/minified
+transport tests cover the actual health shape, header and legacy behavior.
+Implementation and a successful merge do not establish deployment.

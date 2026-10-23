@@ -31,7 +31,8 @@ async function child(directory,role){
   assert.equal(active.standby,false);assert.equal(connected,['worker','game'].includes(role)?3:1);
   if(active.server){const endpoint=role==='auth'?'/local-auth/health':role==='game'?'/api/local-game/health':'/invalid';
    const result=await request(active.server.address().port,endpoint);assert.equal(result.status,role==='payments'?404:200);
-   if(role!=='payments')assert.deepEqual(JSON.parse(result.body),{ready:true,rehearsal:false,protocol:1,epoch});}
+   if(role!=='payments')assert.deepEqual(JSON.parse(result.body),{ready:true,rehearsal:false,protocol:1,epoch},'Preserve the publisher health identity contract');
+   if(role==='game')assert.equal(result.headers['x-crownlands-capabilities'],'watch-revisions-v1');}
   if(role==='auth'){
    const port=active.server.address().port;
    for(const headers of [{},{'X-Crownlands-Deployment':'wrong'}])assert.equal((await request(port,'/local-auth/v1/session',{headers})).status,503);
@@ -119,6 +120,9 @@ async function main(){
   // initialize closes its injected pool, matching production CLI lifecycle.
   await require('./local-migration/initialize_permanent_schema').initialize({pool,control:()=>control});
   pool=new Pool({host:directory,user:'postgres',database:'crownlands_migration'});
+  // Rehearse the original empty cutover before applying the later compact-counter
+  // migration. This cluster is disposable; the live game database is never used.
+  await pool.query(`DROP TRIGGER maintain_job_totals ON ${GAME}.work_jobs; DROP TABLE ${GAME}.work_job_totals`);
   const maintenanceSql=options=>execFileSync('python3',['-c',
    'import sys; sys.path.insert(0,sys.argv[1]); import transfer_maintenance as t; print(t.database_sql(sys.argv[2],empty=sys.argv[3]=="yes",maintenance=sys.argv[4]=="yes"))',
    path.join(__dirname,'local-migration'),epoch,options.empty?'yes':'no',options.maintenance?'yes':'no'],{encoding:'utf8',env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'}});
@@ -219,6 +223,16 @@ async function main(){
   process.env.CROWNLANDS_BACKEND='postgres-rehearsal';process.env.CROWNLANDS_REHEARSAL_SCHEMA=GAME;
   const routes=require('../local-backend/platform').describe(require('../functions'));
   const fixtureStore=new (require('../local-backend/store').Store)({schema:GAME,pool});const schedules=new (require('../local-backend/jobs').JobQueue)({store:fixtureStore,routes}).schedules;
+  const migration=await pool.connect();
+  try{
+   await migration.query('BEGIN');
+   await require('../local-backend/job-status').initializeJobStatus(migration,GAME);
+   await migration.query(`GRANT SELECT,UPDATE(total) ON ${GAME}.work_job_totals TO "crownlands-worker";
+    GRANT EXECUTE ON FUNCTION ${GAME}.update_job_totals() TO "crownlands-worker";
+    CREATE TRIGGER runtime_write_fence BEFORE INSERT OR UPDATE OR DELETE ON ${GAME}.work_job_totals
+    FOR EACH STATEMENT EXECUTE FUNCTION crownlands_control.fence_writes()`);
+   await migration.query('COMMIT');
+  }catch(error){await migration.query('ROLLBACK');throw error;}finally{migration.release();}
   const account={localId:'permanent-fixture',email:'permanent@example.test',emailVerified:true,
    providerUserInfo:[{providerId:'password',email:'permanent@example.test'}],localPassword:await require('../local-backend/passwords').createLocalPassword('Synthetic password 2026')};
   await pool.query(`INSERT INTO ${AUTH}.accounts(uid,body) VALUES($1,$2)`,[account.localId,account]);

@@ -31,7 +31,7 @@
         const response = await root.fetch(path, { credentials: "same-origin", cache: "no-store", headers: deploymentHeaders, signal: root.AbortSignal?.timeout(10000) });
         const status = await response.json();
         if (!response.ok || status.ready !== true || status.rehearsal !== false || status.protocol !== 1 || status.epoch !== config.epoch) throw makeError("auth/network-request-failed", "Crownlands is being updated. Please try again shortly.");
-        if (path === "/api/local-game/health") revisionSupported = status.capabilities?.includes("watch-revisions-v1") === true;
+        if (path === "/api/local-game/health") revisionSupported = (response.headers?.get("X-Crownlands-Capabilities") || "").split(",").some(value => value.trim() === "watch-revisions-v1");
       })).catch(error => { readiness = null; throw error; });
       await readiness;
     }
