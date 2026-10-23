@@ -4232,7 +4232,7 @@ function renderHoldingTowerModal(tower) {
     modalTitle.textContent = supportOpen ? window.CrownlandsClanTowerBuildings.definition(buildingId).name : "Engineers’ Workshop";
     const buildingUi = supportOpen ? window.CrownlandsClanSupportBuildingsUi : window.CrownlandsEngineersWorkshopUi;
     buildingUi.mount(modalBody, { ...tower, clanName: clanIdentity?.name || tower.clanName }, {
-      buildingId, intelligence: { api: getOnlineApi(), identity: () => `${getOnlineRequestScope()}:${state?.clanId || ""}`, renderSnapshot: entry => window.CrownlandsScoutReportUI.renderSharedSnapshot(entry), onLocate: entry => void locateClanIntelligence(entry) },
+      buildingId, intelligence: { patchContent: reconcileClanPanel, api: getOnlineApi(), identity: () => `${getOnlineRequestScope()}:${state?.clanId || ""}`, renderSnapshot: entry => window.CrownlandsScoutReportUI.renderSharedSnapshot(entry), onLocate: entry => void locateClanIntelligence(entry) },
       view: buildingView, treasuryBalance, actionBusy: holdingTowerActionsInFlight.has(tower.id),
       onClose: () => modal.close(),
       onBack: () => { holdingTowerDetailsTab = "overview"; renderHoldingTowerModal(holdingTowerSnapshots.get(tower.id) || tower); },
@@ -26917,7 +26917,7 @@ async function loadClanWarCities(cursor, { noticeOnly = false } = {}) {
   const log = !noticeOnly && view.showLog, page = log ? view.log : view;
   cursor ??= page.cursor;
   view.busy = true;
-  if (!noticeOnly) { view.error = ""; page.error = ""; page.cursor = cursor || ""; renderClanView(); }
+  if (!noticeOnly) { view.error = ""; page.error = ""; page.cursor = cursor || ""; refreshClanWarCitiesPanel(); }
   try {
     const result = await getOnlineApi().clanWarCities({ action: log ? "log" : "list", cursor: cursor || "" });
     if (view !== clanWarCitiesView || view.scope !== clanWarCitiesScope()) return;
@@ -26935,31 +26935,64 @@ async function loadClanWarCities(cursor, { noticeOnly = false } = {}) {
   } finally {
     if (view === clanWarCitiesView && view.scope === clanWarCitiesScope()) {
       view.busy = false;
-      if (!noticeOnly) renderClanView();
+      if (!noticeOnly) refreshClanWarCitiesPanel();
       else {
         updateClanWarCitiesNoticeBadge();
         if (isClanSectionActive("warcities")) {
-          if (view.error) renderClanView();
+          if (view.error) refreshClanWarCitiesPanel();
           else if (!view.showLog && !view.loaded) void loadClanWarCities();
         }
       }
     }
   }
 }
+// Reconcile only these small, server-backed clan panels. Stable keys preserve
+// row controls, focus and scroll while counters/status text change in place.
+function reconcileClanPanel(host, html) {
+  const template = document.createElement("template"); template.innerHTML = html;
+  const key = node => node.nodeType === 1 ? node.getAttribute("data-menu-key") || node.id : "";
+  const same = (a, b) => a && a.nodeType === b.nodeType && a.nodeName === b.nodeName && key(a) === key(b);
+  function children(parent, source) {
+    const prior = [...parent.childNodes], keyed = new Map(prior.filter(key).map(node => [key(node), node])), used = new Set();
+    for (const [index, next] of [...source.childNodes].entries()) {
+      const candidate = key(next) ? keyed.get(key(next)) : prior[index];
+      const node = !used.has(candidate) && same(candidate, next) ? candidate : next.cloneNode(true);
+      if (node === candidate) {
+        if (node.nodeType === 3) { if (node.nodeValue !== next.nodeValue) node.nodeValue = next.nodeValue; }
+        else if (node.nodeType === 1) {
+          for (const attr of [...node.attributes]) if (!next.hasAttribute(attr.name)) node.removeAttribute(attr.name);
+          for (const attr of next.attributes) if (node.getAttribute(attr.name) !== attr.value) node.setAttribute(attr.name, attr.value);
+          children(node, next);
+        }
+      }
+      used.add(node);
+      if (parent.childNodes[index] !== node) parent.insertBefore(node, parent.childNodes[index] || null);
+    }
+    for (const node of prior) if (!used.has(node)) node.remove();
+  }
+  children(host, template.content);
+}
+function refreshClanWarCitiesPanel() {
+  const panel = clanContent?.querySelector("#clanWarcitiesPanel");
+  if (!panel || !isClanSectionActive("warcities")) { renderClanView(); return; }
+  const template = document.createElement("template"); template.innerHTML = renderClanWarCitiesPanel();
+  reconcileClanPanel(panel, template.content.firstElementChild.innerHTML);
+  updateClanWarCitiesNoticeBadge();
+}
 function renderClanWarCitiesPanel() {
   if (clanWarCitiesView.scope !== clanWarCitiesScope()) resetClanWarCities();
   const v = clanWarCitiesView, page = v.showLog ? v.log : v;
   return `<section id="clanWarcitiesPanel" class="clan-section-panel clan-war-cities ${isClanSectionActive("warcities") ? "active" : ""}" role="tabpanel" aria-labelledby="clanSectionTabWarcities">
-    <header><div><h3>Lost Holdings</h3><small>${v.showLog ? "Clan event log · Newest first" : "Recover your clanmates’ lost cities"}</small></div><div class="war-city-actions"><button type="button" data-clan-action="war-cities-log" ${v.busy || (!v.showLog && !v.logSupported) ? "disabled" : ""} title="${v.logSupported ? "View clan event history" : "Event log requires the updated server"}">${v.showLog ? "Back" : "Log"}</button><button type="button" data-clan-action="war-cities-refresh" ${v.busy ? "disabled" : ""}>${v.busy ? "Loading…" : "Refresh"}</button></div></header>
-    ${page.error ? `<p role="status">${escapeHtml(page.error.replaceAll("War Cities", "Lost Holdings"))}</p>` : ""}
-    <div class="war-cities-list scroll-region" aria-busy="${v.busy}">${v.showLog ? renderClanWarCitiesLog(page) : v.entries.map(e => `<article>
+    <header data-menu-key="header"><div><h3>Lost Holdings</h3><small>${v.showLog ? "Clan event log · Newest first" : "Recover your clanmates’ lost cities"}</small></div><div class="war-city-actions"><button type="button" data-clan-action="war-cities-log" ${v.busy || (!v.showLog && !v.logSupported) ? "disabled" : ""} title="${v.logSupported ? "View clan event history" : "Event log requires the updated server"}">${v.showLog ? "Back" : "Log"}</button><button type="button" data-clan-action="war-cities-refresh" ${v.busy ? "disabled" : ""}>${v.busy ? "Loading…" : "Refresh"}</button></div></header>
+    ${page.error ? `<p data-menu-key="error" role="status">${escapeHtml(page.error.replaceAll("War Cities", "Lost Holdings"))}</p>` : ""}
+    <div data-menu-key="rows" class="war-cities-list scroll-region" aria-busy="${v.busy}">${v.showLog ? renderClanWarCitiesLog(page) : v.entries.map(e => `<article data-menu-key="${escapeHtml(e.key)}">
       <div class="war-city-copy"><strong>${escapeHtml(e.cityName)}</strong><small>${escapeHtml(getRegionLabel(e.location.regionId))} · Originally ${escapeHtml(e.originalOwnerName)}</small><span>Taken by ${escapeHtml(e.captorName)}</span><small>Now held by ${escapeHtml(e.currentOwnerName)} · ${e.status === "recovered" ? "Recovered · Awaiting return decision" : "Lost"}</small></div>
       <div class="war-city-actions"><button type="button" class="location-icon-button" data-clan-action="war-city-location" data-war-city-key="${e.key}" aria-label="Go to ${escapeHtml(e.cityName)}" title="View city on map"></button>${e.canReturn ? `<button type="button" data-clan-action="war-city-return" data-war-city-key="${e.key}" ${v.busy ? "disabled" : ""}>Return city</button>` : e.status === "recovered" ? `<small>${escapeHtml(e.returnBlockedReason || "Its owner can return it")}</small>` : ""}</div>
     </article>`).join("") || (v.loaded ? '<p>No lost cities on this page. Only captures recorded since tracking began are listed.</p>' : !v.error ? '<p>Loading your clan’s cities…</p>' : "")}</div>
-    <footer><small>${v.showLog ? "Events are recorded from the log update onward. Refresh for new events." : "Normal attack protection applies. Return city sends your troops home."}</small><div>${page.cursor ? '<button type="button" data-clan-action="war-cities-first">First page</button>' : ""}${page.nextCursor ? '<button type="button" data-clan-action="war-cities-next">Next page</button>' : ""}</div></footer></section>`;
+    <footer data-menu-key="footer"><small>${v.showLog ? "Events are recorded from the log update onward. Refresh for new events." : "Normal attack protection applies. Return city sends your troops home."}</small><div>${page.cursor ? '<button type="button" data-clan-action="war-cities-first">First page</button>' : ""}${page.nextCursor ? '<button type="button" data-clan-action="war-cities-next">Next page</button>' : ""}</div></footer></section>`;
 }
 function renderClanWarCitiesLog(page) {
-  return page.entries.map(e => `<article class="war-city-event"><time>${escapeHtml(new Date(e.occurredAtMs).toLocaleString())}</time><span>${escapeHtml(e.text)}</span></article>`).join("")
+  return page.entries.map(e => `<article class="war-city-event" data-menu-key="${escapeHtml(e.id || `${e.occurredAtMs}:${e.text}`)}"><time>${escapeHtml(new Date(e.occurredAtMs).toLocaleString())}</time><span>${escapeHtml(e.text)}</span></article>`).join("")
     || (page.loaded ? "<p>No events recorded yet.</p>" : !page.error ? "<p>Loading clan history…</p>" : "");
 }
 async function handleWarCityAction(action, key) {
@@ -26979,7 +27012,7 @@ async function handleWarCityAction(action, key) {
   if (!accepted || view !== clanWarCitiesView || view.scope !== clanWarCitiesScope()) return;
   const operationKey = `${entry.key}:${entry.lossEventId}`;
   if (!clanWarCitiesOperations.has(operationKey)) clanWarCitiesOperations.set(operationKey, crypto.randomUUID());
-  view.busy = true; renderClanView();
+  view.busy = true; refreshClanWarCitiesPanel();
   try {
     await getOnlineApi().clanWarCities({ action: "return", key: entry.key, lossEventId: entry.lossEventId, operationId: clanWarCitiesOperations.get(operationKey) });
     if (view !== clanWarCitiesView || view.scope !== clanWarCitiesScope()) return;
@@ -26988,7 +27021,7 @@ async function handleWarCityAction(action, key) {
     view.noticeCursor = ""; view.noticeCheckedAtMs = 0;
     showToast(`${entry.cityName} returned to ${entry.originalOwnerName}.`);
   } catch (error) { if (view === clanWarCitiesView && view.scope === clanWarCitiesScope()) view.error = error.message || "Return failed. Try again."; }
-  finally { if (view === clanWarCitiesView && view.scope === clanWarCitiesScope()) { view.busy = false; renderClanView(); } }
+  finally { if (view === clanWarCitiesView && view.scope === clanWarCitiesScope()) { view.busy = false; refreshClanWarCitiesPanel(); } }
 }
 
 function setClanBrowserSection(section, options = {}) {

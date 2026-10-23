@@ -1,4 +1,5 @@
 "use strict";
+const { createHash } = require("node:crypto");
 const V = require("./values");
 const { Store, DocumentReference } = require("./store");
 const { Access, deny } = require("./access");
@@ -71,8 +72,10 @@ class ClientData {
     }
     return query;
   }
-  async read(auth, targets, { partial = false } = {}) {
+  async read(auth, targets, { partial = false, revisions } = {}) {
     if (!Array.isArray(targets) || !targets.length || targets.length > 80) throw invalid();
+    if (revisions !== undefined && (!partial || !Array.isArray(revisions) || revisions.length !== targets.length
+      || revisions.some(value => value !== null && (typeof value !== "string" || !/^[a-f0-9]{64}$/.test(value))))) throw invalid();
     const queries = targets.map(target => this.query(target));
     return this.store.runTransaction(async tx => {
       const access = await new Access({ store: this.store, transaction: tx, auth }).initialize();
@@ -95,7 +98,13 @@ class ClientData {
         const bytes = Buffer.byteLength(JSON.stringify(response)) + 2;
         if (bytes > remainingBytes) throw Object.assign(Error("Game data response is too large."), { code: "resource-exhausted" });
         remainingBytes -= bytes;
-        results.push(response);
+        // Tokens suppress bytes, never authorization. Query and per-document
+        // permission/expiry checks above run in this request's fresh snapshot.
+        // Include the principal and query so a token cannot cross subscriptions.
+        if (revisions !== undefined) {
+          const revision = createHash("sha256").update(JSON.stringify([auth.uid, targets[index], response])).digest("hex");
+          results.push(revisions[index] === revision ? { unchanged: true, revision } : { ...response, revision });
+        } else results.push(response);
         } catch (error) {
           // Watchers share one bounded request/snapshot, but a revoked clan
           // membership must not suppress an unrelated active-session listener.
