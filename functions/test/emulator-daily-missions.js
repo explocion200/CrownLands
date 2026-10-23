@@ -239,10 +239,13 @@ async function main() {
   const statePath = `players/${player.uid}/dailyMissions/${first.cycleKey}`;
   const stateRef = db.doc(statePath);
   await stateRef.delete();
-  await safeTargetRef.set({ ownerShieldExpiresAtMs: Date.now() + 86_400_000 }, { merge: true });
+  const shieldDeadline = Date.now() + 86_400_000;
+  await db.doc(`players/${stranger.uid}`).update({ "itemEffects.shieldExpiresAtMs": shieldDeadline });
+  await safeTargetRef.set({ ownerShieldExpiresAtMs: shieldDeadline }, { merge: true });
   const shieldedStatus = await callFunction("getDailyMissionStatus", player.token);
   assert(!shieldedStatus.dailyMissionState.capacitySnapshot?.safePvpTargets?.length, "A shielded city was recommended as a safe PvP target.");
   await stateRef.delete();
+  await db.doc(`players/${stranger.uid}`).update({ "itemEffects.shieldExpiresAtMs": 0 });
   await safeTargetRef.set({ ownerShieldExpiresAtMs: 0, alliedReinforcementTroops: 1 }, { merge: true });
   const reinforcedStatus = await callFunction("getDailyMissionStatus", player.token);
   assert(!reinforcedStatus.dailyMissionState.capacitySnapshot?.safePvpTargets?.length, "A reinforced city was recommended as a safe PvP target.");
@@ -532,7 +535,8 @@ async function main() {
     reward: legacyVolumeReward,
   };
   await Promise.all([
-    safeTargetRef.set({ ownerShieldExpiresAtMs: Date.now() + 86_400_000 }, { merge: true }),
+    db.doc(`players/${stranger.uid}`).update({ "itemEffects.shieldExpiresAtMs": shieldDeadline }),
+    safeTargetRef.set({ ownerShieldExpiresAtMs: shieldDeadline }, { merge: true }),
     stateRef.set({
       schemaVersion: 1,
       missions: [legacyClaimedMission, legacyUnsafeMission, legacyVolumeMission],

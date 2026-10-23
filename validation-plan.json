@@ -9,7 +9,11 @@
         "functions/test/emulator-peace-shield-returns.js",
         "tools/test-local-postgres-shield-capture.js",
         "tools/validate-city-wall-shields.js",
-        "tools/validate-peace-shield-returns.js"
+        "tools/validate-peace-shield-returns.js",
+        "functions/test/emulator-combat-authorization.js",
+        "functions/test/retaliation-impact-cases.js",
+        "functions/test/emulator-daily-missions.js",
+        "functions/test/emulator-rally-lifecycle.js"
       ],
       "tests": [
         "tools/test-local-postgres-shield-capture.js",
@@ -23,9 +27,12 @@
         "functions/test/emulator-peace-shield-returns.js",
         "functions/test/emulator-combat-authorization.js",
         "functions/test/emulator-world-travel.js",
-        "functions/test/emulator-holding-tower-lifecycle.js"
+        "functions/test/emulator-holding-tower-lifecycle.js",
+        "tools/test-local-postgres-retaliation-impact.js",
+        "functions/test/emulator-daily-missions.js",
+        "functions/test/emulator-rally-lifecycle.js"
       ],
-      "reason": "Actual neutral capture previously saved zero despite an active owner item. Shared real-adapter regression covers capture, retries, offline protection of previously affected cities, damaged dispatch/repaired arrival and cancellation. Profile-aware checks affect normal/Tower-origin dispatch, settlement and daily PvP suggestions. Preserve wall deadlines, stronghold/camp exclusions, retaliation, departure cancellation and mid-route reversal through affected combat/travel/Tower emulator suites and focused policy validators."
+      "reason": "Actual neutral capture previously saved zero despite an active owner item. Shared real-adapter regression covers capture, retries, offline protection of previously affected cities, damaged dispatch/repaired arrival and cancellation. Profile-aware checks affect normal/Tower-origin dispatch, settlement and daily PvP suggestions. Preserve wall deadlines, stronghold/camp exclusions, retaliation, departure cancellation and mid-route reversal through affected combat/travel/Tower emulator suites and focused policy validators. Existing retaliation, daily-mission and rally-return fixtures now seed the authoritative owner item alongside its cached city deadline; verify both active rejection and cancellation without weakening expected protection."
     },
     {
       "paths": [

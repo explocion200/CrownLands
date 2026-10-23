@@ -1301,6 +1301,8 @@ async function main() {
     },
     expectedReason: "clan_owned_original_city",
   });
+  const returnShieldDeadline = Date.now() + 3_600_000;
+  await db.doc(`players/${defender.uid}`).update({ "itemEffects.shieldExpiresAtMs": returnShieldDeadline });
   await runRedirectCase({
     label: "shielded",
     targetPatch: {
@@ -1308,10 +1310,11 @@ async function main() {
       ownerKind: "player",
       ownerUid: defender.uid,
       ownerName: "Rally Defender",
-      ownerShieldExpiresAtMs: Date.now() + 3_600_000,
+      ownerShieldExpiresAtMs: returnShieldDeadline,
     },
     expectedReason: "shielded_original_city",
   });
+  await db.doc(`players/${defender.uid}`).update({ "itemEffects.shieldExpiresAtMs": 0 });
   await db.doc(`players/${defender.uid}`).set({
     mainCityId: leaderClaim.cityId,
     mainIslandId: leaderClaim.islandId,
