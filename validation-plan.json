@@ -15,7 +15,7 @@
         "tools/validate-deferred-ui-styles-browser.js",
         "tools/validate-war-cities-browser.js"
       ],
-      "reason": "Recover a failed or stalled Clan snapshot with a bounded deadline and explicit reconnect, preserving scoped callbacks and existing subscription teardown. Desktop and two landscape touch sizes cover retry, reopen, unavailable membership, late success, stale clan responses and usable controls. Exercise deferred stylesheet recovery, Clan permissions/ledger, saved heraldry/notifications and Lost Holdings source/built flows because they share the Clan window and subscription lifecycle. Client presentation/recovery only; no server-authoritative behavior or data changes require emulator cases."
+      "reason": "Recover a failed or stalled Clan snapshot with a bounded deadline and explicit reconnect, preserving scoped callbacks and existing subscription teardown. Desktop and two landscape touch sizes cover retry, reopen, unavailable membership, late success, stale clan responses and usable controls. Exercise deferred stylesheet recovery, Clan permissions/ledger, saved heraldry/notifications and Lost Holdings source/built flows because they share the Clan window and subscription lifecycle. Client presentation/recovery only; no server-authoritative behavior or data changes require emulator cases. Reuse installed Chrome on CI and close the test server on browser-launch failure."
     },
     {
       "paths": [

@@ -5,10 +5,12 @@ const { createMapBenchmarkServer } = require("./map-benchmark/server");
 
 (async () => {
   const server = createMapBenchmarkServer(), address = await server.listen();
-  const browser = await chromium.launch({ headless: true, ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}) });
+  const executablePath = [process.env.CHROME_PATH, process.env.CROWNLANDS_CHROME_PATH, "/usr/bin/google-chrome", "/usr/bin/chromium"].find(file => file && fs.existsSync(file));
+  let browser;
   const output = path.resolve("release-artifacts/clan-loading"); fs.mkdirSync(output, { recursive: true });
   const results = [];
   try {
+    browser = await chromium.launch({ headless: true, ...(executablePath ? { executablePath } : {}) });
     for (const [width, height] of [[1440, 900], [844, 390], [568, 320]]) {
       const page = await browser.newPage({ viewport: { width, height }, hasTouch: height < 500 });
       const retry = () => height < 500 ? page.locator('[data-clan-action="retry-clan"]').tap() : page.locator('[data-clan-action="retry-clan"]').click();
@@ -81,5 +83,5 @@ const { createMapBenchmarkServer } = require("./map-benchmark/server");
     }
     fs.writeFileSync(path.join(output, "results.json"), JSON.stringify(results, null, 2));
     console.log("Clan loading recovery passed at desktop and two landscape sizes: failures, retry, reopen, timeout, late responses and membership isolation.");
-  } finally { await browser.close(); await server.close(); }
+  } finally { try { await browser?.close(); } finally { await server.close(); } }
 })().catch(error => { console.error(error); process.exitCode = 1; });
