@@ -49,7 +49,7 @@
         "tools/test-local-production-client.js",
         "functions/test/emulator-clan-war-cities.js"
       ],
-      "reason": "Adds the fifth Clan tab, authenticated bridge, private scope-bound polling and voluntary confirmation. Source and delivered browser tests exercise desktop and two landscape sizes with mouse/touch, five-tab navigation, scroll/focus retention, cancel/accept, request errors and stale-session rejection. Clan/War Room/Treasury regressions cover shared navigation and modal refresh. Existing local production transport validates the generic authenticated callable wrapper; server suite verifies authority for displayed actions."
+      "reason": "Adds the fifth Clan tab, authenticated bridge, private scope-bound polling and voluntary confirmation. Source and delivered browser tests exercise desktop and two landscape sizes with mouse/touch, five-tab navigation, scroll/focus retention, cancel/accept, request errors, stale-session rejection, background/resume polling and no reads after closing the board. Clan/War Room/Treasury regressions cover shared navigation and modal refresh. Existing local production transport validates the generic authenticated callable wrapper; server suite verifies authority for displayed actions."
     },
     {
       "paths": [
@@ -59,7 +59,7 @@
       "tests": [
         "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Bound the measured 7002-byte offline-shell addition within 8 KiB, shared refresh metadata within 0.25 KiB and lazy Clan CSS within 90 KiB. No new artwork, dependencies or map-loop work. Retain all unrelated payload and runtime budgets."
+      "reason": "Bound the measured 7014-byte offline-shell addition within 8 KiB, shared refresh metadata within 0.25 KiB and lazy Clan CSS within 90 KiB. No new artwork, dependencies or map-loop work. Retain all unrelated payload and runtime budgets."
     },
     {
       "paths": [

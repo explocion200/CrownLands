@@ -129,6 +129,23 @@ async function main(built = false) {
       assert.equal(await evaluate('document.querySelectorAll(".war-cities-list article").length'),0);
       await evaluate('warCityQA.reject=false');
       await click('[data-clan-action="war-cities-refresh"]'); await ready('clanWarCitiesView.loaded && !clanWarCitiesView.busy');
+      // Backgrounding the phone suspends requests, but returning must resume them.
+      if (width === 844) {
+        await evaluate('Object.defineProperty(document,"hidden",{configurable:true,value:true})');
+        const count = await evaluate('warCityQA.calls.length');
+        await delay(5200);
+        assert.equal(await evaluate('warCityQA.calls.length'), count);
+        assert(await evaluate('!!clanWarCitiesTimer'), 'Backgrounding lost the refresh timer');
+        await evaluate('delete document.hidden');
+        await ready(`warCityQA.calls.length > ${count} && !clanWarCitiesView.busy`);
+        await click('[data-clan-section="warroom"]');
+        const closedCount = await evaluate('warCityQA.calls.length');
+        await delay(5200);
+        assert.equal(await evaluate('warCityQA.calls.length'), closedCount, 'Closed board kept requesting data');
+        assert.equal(await evaluate('clanWarCitiesTimer'), null);
+        await click('[data-clan-section="warcities"]');
+        await ready('clanWarCitiesView.loaded && !clanWarCitiesView.busy');
+      }
       // Identity changes must discard a response already in flight.
       await evaluate('warCityQA.held=true; void loadClanWarCities()');
       await ready('!!warCityQA.resolve');

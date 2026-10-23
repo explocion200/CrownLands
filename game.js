@@ -26867,8 +26867,9 @@ async function loadClanWarCities(cursor = clanWarCitiesView.cursor) {
   }
   if (!clanWarCitiesTimer) clanWarCitiesTimer = window.setInterval(() => {
     if (clanWarCitiesView.scope !== clanWarCitiesScope()) { resetClanWarCities(); renderClanView(); }
-    if (activeProfileTab === "clan" && isClanSectionActive("warcities") && !document.hidden && profileScreen.classList.contains("open")) void loadClanWarCities();
-    else { clearInterval(clanWarCitiesTimer); clanWarCitiesTimer = null; }
+    if (activeProfileTab === "clan" && isClanSectionActive("warcities") && profileScreen.classList.contains("open")) {
+      if (!document.hidden) void loadClanWarCities();
+    } else { clearInterval(clanWarCitiesTimer); clanWarCitiesTimer = null; }
   }, 5000);
 }
 function renderClanWarCitiesPanel() {

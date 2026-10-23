@@ -66,12 +66,12 @@ claims or player-data backfill are inferred.
   preserved XP, both ownership stats, real return march and duplicate settlement.
 - Source and built UI: 1440×900 mouse and 844×390 / 568×320 simulated touch;
   five-tab layout, scrolling/focus, confirmation/cancellation, failed requests and
-  old-session response rejection. Screenshots and measurements are generated in
+  old-session response rejection, and background/resume polling. Screenshots and measurements are generated in
   ignored `release-artifacts/war-cities/`.
 - Selected existing combat, travel, relinquishment, Shield and Clan UI regressions
   are listed with exact-base dependency coverage in `validation-plan.json`.
 
-The lazy Clan stylesheet stays below 90 KiB. The offline-shell addition is 7,002 bytes, bounded
+The lazy Clan stylesheet stays below 90 KiB. The offline-shell addition is 7,014 bytes, bounded
 at 8 KiB and introduces no artwork or dependencies. Board polling is confined to
 the open tab, never the map rendering loop.
 
