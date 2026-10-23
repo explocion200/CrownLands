@@ -19,6 +19,7 @@ const settle=async jobs=>{const results=await Promise.allSettled(jobs),failed=re
   const pilot=await createGameplayPilot({productionRouting:true}),directory=fs.mkdtempSync(path.join(os.tmpdir(),"world-service-"));
   let world,harness,events,disabled;
   const loop=monitorEventLoopDelay({resolution:10}),timings={area:[],command:[],chat:[],watch:[]},statuses={},retries={area:0,command:0,chat:0,watch:0},failures={area:0,command:0,chat:0,watch:0};
+  const watchPayload={full:0,unchanged:0,wireBytes:0,fullEquivalentBytes:0};
   const outcomes=Object.fromEntries(Object.keys(timings).map(kind=>[kind,{requested:0,success:0,failed:0,exhausted:0,attempts:0}]));
   try{
     const deployment=productionTestPolicy(pilot.store),config={store:pilot.store,readPool:pilot.reader.pool,deployment,directory,
@@ -109,10 +110,14 @@ const settle=async jobs=>{const results=await Promise.allSettled(jobs),failed=re
     for(const kind of Object.keys(timings)){timings[kind]=[];retries[kind]=0;failures[kind]=0;}
     loop.enable();
     const subscriptions=settle(pilot.players.map(async(p,i)=>{
-      await wait(i*47);
+      await wait(i*47);let revision=null,prior;
       for(let round=0;round<6;round++){
-        const result=await request(i,"watch",{targets:[{path:`players/${p.uid}`} ]},"watch");
-        assert.equal(result.status,200);assert.equal(result.result[0].documents[0].path,`players/${p.uid}`);await wait(1500);
+        const result=await request(i,"watch",{targets:[{path:`players/${p.uid}`}],revisions:[revision]},"watch");
+        assert.equal(result.status,200);const item=result.result[0];assert.match(item.revision,/^[a-f0-9]{64}$/);
+        if(item.unchanged){assert(prior);assert.equal(item.revision,revision);watchPayload.unchanged++;}
+        else{assert.equal(item.documents[0].path,`players/${p.uid}`);prior={documents:item.documents,document:item.document};watchPayload.full++;}
+        watchPayload.wireBytes+=Buffer.byteLength(JSON.stringify(item));watchPayload.fullEquivalentBytes+=Buffer.byteLength(JSON.stringify(prior));
+        revision=item.revision;await wait(1500);
       }
     }));
     const reads=settle(pilot.players.map(async(p,i)=>{
@@ -140,11 +145,12 @@ const settle=async jobs=>{const results=await Promise.allSettled(jobs),failed=re
       assert.equal(sent.status,200,JSON.stringify(sent));
     }})();
     let loadError;try{await settle([reads,chatting,commands,subscriptions]);}catch(error){loadError=error;}loop.disable();
-    const report={players:playerCount,sections:scene.sections.length,iterations:8,statuses,retries,failures,outcomes,
+    const report={players:playerCount,sections:scene.sections.length,iterations:8,statuses,retries,failures,outcomes,watchPayload,
       timings:Object.fromEntries(Object.entries(timings).map(([k,v])=>[k,stats(v)])),eventLoopP95Ms:loop.percentile(95)/1e6,world:world.stats(),externalRequests:0};
     const output="release-artifacts/continuous-production/shared-load"+(playerCount===24?"":"-"+playerCount)+".json";
     fs.mkdirSync("release-artifacts/continuous-production",{recursive:true});fs.writeFileSync(output,JSON.stringify(report,null,2));
     if(loadError)throw loadError;
+    assert(watchPayload.unchanged>0);assert(watchPayload.wireBytes<watchPayload.fullEquivalentBytes,"Revision tokens did not reduce mixed-load subscription bytes");
     assert(world.stats().reader.peakDatabase<=2);assert.equal(pilot.store.pool.waitingCount,0);
     const loadWorldStats=world.stats();
     // Ownership changes and loss of realm membership invalidate privileged data.
