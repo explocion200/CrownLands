@@ -14,7 +14,7 @@
     const authState = { currentUser: null }, observers = new Set(), watchers = new Set();
     const db = { kind: "local-database" }; let csrf, authTime, refreshing, watchTimer, authTimer, revision = 0, disposed = false, activeRequests = 0, backgroundRequests = 0;
     const pendingRequests = [];
-    let polling = false, pollAgain = false, chatTimer, chatController, chatConnected = false, chatCursor, chatGeneration = 0;
+    let polling = false, pollAgain = false, chatTimer, chatController, chatConnected = false, chatCursor, chatGeneration = 0, watchController;
     let chatSupported = typeof root.AbortController === "function";
     const chatWatcher = watcher => watcher.target.kind === "collection" && /^(?:(globalChat|clans)\/[^/]+\/messages|socialAccounts\/[^/]+\/signals)$/.test(watcher.target.path);
     const makeError = (code, message) => Object.assign(Error(message || "The request could not be completed."), { code });
@@ -23,7 +23,7 @@
       Math.min(30000, 10000 * 2 ** Math.min(2, failures - 1)) * (1 + Math.random() * 0.2));
     const readOnlyCall = (path, input) => path.startsWith("call/") && (/^call\/(?:get|preview|list|find)[A-Z]/.test(path)
       || ["list", "detail", "log", "status", "history", "unread", "preview"].includes(input?.data?.action));
-    const isBackground = (path, input) => ["read", "watch", "world/catalog", "world/areas"].includes(path)
+    const isBackground = (path, input) => ["read", "watch", "watch-chat", "world/catalog", "world/areas"].includes(path)
       || readOnlyCall(path, input) && !path.startsWith("call/preview");
     async function ready() {
       if (!production) return;
@@ -286,7 +286,7 @@
       try {
         // One held response, outside the six action-request slots. The server
         // wakes it on committed chat changes and reauthorizes every snapshot.
-        const result = await performPost("watch-chat", { targets: active.map(watcher => spec(watcher.target)), ...(chatCursor ? { cursor: chatCursor } : {}) }, false, controller.signal);
+        const result = await post("watch-chat", { targets: active.map(watcher => spec(watcher.target)), ...(chatCursor ? { cursor: chatCursor } : {}) }, false, controller.signal);
         if (disposed || generation !== chatGeneration || controller.signal.aborted) return;
         if (!/^[a-f0-9]{64}$/.test(result?.cursor || "") || !Array.isArray(result.results) || result.results.length !== active.length) throw makeError("unavailable");
         chatCursor = result.cursor; chatConnected = true; chatFailures = 0;
@@ -319,13 +319,14 @@
       if (!watchers.size) return;
       polling = true; pollAgain = false;
       const deliveries = active.map(watcher => watcher.delivery || 0);
+      const controller = watchController = typeof root.AbortController === "function" ? new root.AbortController() : null;
       let delay = root.document.hidden ? 10000 : 1500;
       try {
         // A single bounded request prevents dozens of listeners from flooding
         // the host. The server authorizes every target and returns independent
         // permission failures without exposing a forbidden document.
         const results = active.length ? await post("watch", { targets: active.map(watcher => spec(watcher.target)),
-          ...(revisionSupported ? { revisions: active.map(watcher => watcher.token || null) } : {}) }) : [];
+          ...(revisionSupported ? { revisions: active.map(watcher => watcher.token || null) } : {}) }, false, controller?.signal) : [];
         watchFailures = 0; watchNotBefore = 0;
         if (!Array.isArray(results) || results.length !== active.length) throw makeError("unavailable");
         for (const [index, watcher] of active.entries()) {
@@ -334,6 +335,7 @@
           deliver(watcher, results[index]);
         }
       } catch (error) {
+        if (controller?.signal.aborted) { pollAgain = true; } else {
         delay = retryDelay(error, ++watchFailures); watchNotBefore = Date.now() + delay;
         const terminal = ["permission-denied", "unauthenticated", "invalid-argument"].includes(error.code);
         for (const watcher of active) if (watchers.has(watcher)) {
@@ -344,6 +346,8 @@
           try { watcher.error?.(error); } catch { /* Keep remaining listeners independent. */ }
         }
       }
+      }
+      if (watchController === controller) watchController = null;
       polling = false;
       watchTimer = !disposed && watchers.size ? root.setTimeout(poll, Math.max(pollAgain ? 0 : delay, watchNotBefore - Date.now())) : null;
     }
@@ -378,7 +382,7 @@
         if (watchers.size >= 80) throw makeError("resource-exhausted", "Too many active game listeners.");
         watchers.add(watcher);
         wake(); if (chatWatcher(watcher)) restartChat();
-        return () => { watchers.delete(watcher); if (chatWatcher(watcher)) restartChat(); };
+        return () => { if (watchers.delete(watcher)) { watchController?.abort(); wake(); } if (chatWatcher(watcher)) restartChat(); };
       },
     };
     const messaging = root.CrownlandsLocalPush?.create() || { isSupported: async () => false };
@@ -387,7 +391,7 @@
         if (!["catalog", "areas", "options"].includes(operation)) throw makeError("invalid-argument");
         return post("world/" + operation, input, false, signal);
       } },
-      dispose: () => { disposed = true; revision++; restartChat(); messaging.dispose?.(); root.clearInterval(authTimer); root.clearTimeout(watchTimer); watchers.clear(); observers.clear();
+      dispose: () => { disposed = true; revision++; watchController?.abort(); restartChat(); messaging.dispose?.(); root.clearInterval(authTimer); root.clearTimeout(watchTimer); watchers.clear(); observers.clear();
         root.document.removeEventListener?.("visibilitychange", foreground); root.removeEventListener?.("online", foreground);
         for (const request of pendingRequests.splice(0)) request.reject(); } };
   }

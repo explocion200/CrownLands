@@ -30,6 +30,12 @@ async function check(source, capable) {
     pending.shift()(); await flush(); assert(calls.at(-1).url.endsWith("/call/sendArmyOrder"), "A command waited behind queued reads");
     hold = false; for (const resolve of pending.splice(0)) resolve(); await Promise.all([...background, ...foreground, queuedAction]);
     assert(!calls.some(call => call.url.endsWith("/world/areas")), "Superseded queued read was sent");
+    hold = true; const blockers = Array.from({ length: 4 }, read); await flush();
+    const stop = f.onSnapshot(f.doc(db, "players/obsolete"), () => { throw Error("Obsolete subscription delivered"); });
+    const watchCount = calls.filter(call => call.url.endsWith("/watch")).length, queuedWatch = tick();
+    await flush(); stop(); await queuedWatch;
+    assert.equal(calls.filter(call => call.url.endsWith("/watch")).length, watchCount, "Unsubscribed queued read was sent");
+    hold = false; for (const resolve of pending.splice(0)) resolve(); await Promise.all(blockers);
     const snapshots = [], errors = []; f.onSnapshot(f.doc(db, "players/fixture"), snap => snapshots.push(snap.get("value")), error => errors.push(error));
     await tick(); await tick(); assert.deepEqual(snapshots, [1]);
     const watch = calls.filter(call => call.url.endsWith("/watch"));
