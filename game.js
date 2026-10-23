@@ -2311,6 +2311,8 @@ const rallyActionRequests = new Set();
 let clanMemberUidSet = new Set();
 let clanRosterReady = false;
 let clanUiLoading = false;
+let clanStateError = "";
+let clanStateLoadTimer = null;
 let clanShieldDraft = null;
 let clanShieldEditorOpen = false;
 let clanShieldSaving = false;
@@ -25958,6 +25960,8 @@ function updateClanQuestCountdown() {
 }
 
 function stopClanRealtimeSubscriptions({ clear = true, preserveApplications = false } = {}) {
+  clearTimeout(clanStateLoadTimer); clanStateLoadTimer = null;
+  clanStateError = "";
   if (clear) {
     resetClanWarCities();
     clearInterval(clanWarCitiesTimer); clanWarCitiesTimer = null;
@@ -26045,7 +26049,7 @@ function startClanRealtimeSubscriptions(api, clanId) {
   const id = String(clanId || "").trim();
   if (!id || !api?.subscribeClanState) return false;
   const session = getOnlineSessionRequestScope();
-  if (activeClanSubscriptionId === id && activeClanSubscriptionScope === session && typeof clanStateUnsubscribe === "function") {
+  if (!clanStateError && activeClanSubscriptionId === id && activeClanSubscriptionScope === session && typeof clanStateUnsubscribe === "function") {
     startClanTreasurySubscription(api, id);
     if (!clanRalliesUnsubscribe && api?.subscribeClanRallies) {
       startClanRallySubscription(api, id);
@@ -26060,9 +26064,17 @@ function startClanRealtimeSubscriptions(api, clanId) {
   const isCurrent = () => generation === clanStateSubscriptionGeneration
     && session === getOnlineSessionRequestScope() && state?.clanId === id;
   clanRosterReady = false;
+  clanStateLoadTimer = setTimeout(() => {
+    if (!isCurrent() || clanSnapshot) return;
+    clanStateLoadTimer = null;
+    clanStateError = "Your clan is taking too long to load. Retry to reconnect.";
+    renderClanView();
+  }, 15000);
   clanStateUnsubscribe = api.subscribeClanState(id, {
     onClan: clan => {
       if (!isCurrent() || (clan && clan.id !== id)) return;
+      clearTimeout(clanStateLoadTimer); clanStateLoadTimer = null;
+      clanStateError = clan?.status === "active" ? "" : "Your clan is unavailable. Retry to refresh your membership.";
       const previousIdentity = clanSnapshot
         ? `${clanSnapshot.id}|${clanSnapshot.name || ""}|${clanSnapshot.tag || ""}|${JSON.stringify(clanSnapshot.shield || clanSnapshot.banner)}`
         : "";
@@ -26086,6 +26098,9 @@ function startClanRealtimeSubscriptions(api, clanId) {
       markOnlineRealtimeRecoveryNeeded(error);
       console.warn(`Clan ${source || "state"} subscription failed`, error);
       if (source === "members") clanRosterReady = false;
+      clanStateError = "Your clan could not load. Check your connection and retry.";
+      clearTimeout(clanStateLoadTimer); clanStateLoadTimer = null;
+      renderClanView();
     },
   });
   startClanRallySubscription(api, id);
@@ -26408,6 +26423,7 @@ async function refreshClanState(options = {}) {
     }
   } catch (error) {
     console.warn("Could not refresh clan state", error);
+    if (state === requestedState && getCurrentOnlineUid() === requestedUid) clanStateError = "Your clan could not load. Check your connection and retry.";
     if (!options.silent) showToast(error?.message || "Could not load clans.");
   } finally {
     clanUiLoading = false;
@@ -27724,7 +27740,7 @@ function renderClanViewContent() {
   clanContent.classList.toggle("shield-editor-open", shieldEditorVisible);
   clanView?.classList.toggle("shield-editor-active", shieldEditorVisible);
   if ((clanUiLoading && !clanSnapshot && !clanSearchResults.length && !clanContent.querySelector(".clan-browser")) || (state?.clanId && !clanSnapshot)) {
-    clanContent.innerHTML = `<section class="clan-empty"><h3>Loading clans…</h3></section>`;
+    clanContent.innerHTML = `<section class="clan-empty" role="status"><h3>${clanStateError ? "Clan unavailable" : "Loading clans…"}</h3>${clanStateError ? `<p>${escapeHtml(clanStateError)}</p><button type="button" data-clan-action="retry-clan">Retry connection</button>` : ""}</section>`;
     return;
   }
   if (!state?.clanId || !clanSnapshot) {
@@ -28053,6 +28069,12 @@ async function handleClanClick(event) {
   const button = event.target.closest("[data-clan-action]");
   if (!button || button.disabled) return;
   const action = button.dataset.clanAction;
+  if (action === "retry-clan") {
+    if (clanUiLoading) return;
+    stopClanRealtimeSubscriptions({ clear: true });
+    void refreshClanState();
+    return;
+  }
   if (action.startsWith("war-city-") || action.startsWith("war-cities-")) { void handleWarCityAction(action, button.dataset.warCityKey); return; }
   if (action === "intelligence") { void openClanIntelligence(); return; }
   if (action === "donate-treasury") {

@@ -257,7 +257,8 @@ const entrypointBudgets = {
   // Lost Holdings availability adds 2,789 source bytes; bound the remaining
   // per-file overage at 1 KiB within its 2 KiB shared shell allowance.
   // Lost Holdings log adds 1,624 source bytes; existing headroom plus 1.5 KiB, with no new assets.
-  "game.js": (1.5 + 1 + 8 + 3 + 8.25 + 1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25 + 2 + 3 + 0.25 + 2 + 1 + 0.5 + 5 + 3 + 1) * 1024,
+  // Clan loading recovery adds 1,272 bytes; bound its source increase at 1.25 KiB.
+  "game.js": (1.25 + 1.5 + 1 + 8 + 3 + 8.25 + 1 + 1766 + 16 + 1 + 3 + 3 + 3 + 41 + 4 + 44 + 5 + 7 + 8 + 1 + 3 + 1 + 1 + 5 + 1 + 2 + 1 + 1 + 4 + 1 + 1 + 0.5 + 0.25 + 2 + 3 + 0.25 + 2 + 1 + 0.5 + 5 + 3 + 1) * 1024,
   "login-screen.css": 8 * 1024,
   "kingdom-ledgers-ui.js": 11 * 1024,
   // Medal crown selectors add under 0.5 KiB; retain all other payload limits.
