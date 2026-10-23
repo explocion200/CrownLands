@@ -104,10 +104,18 @@ function createWorldService({store,readPool,deployment,directory,enabled=false,t
     async read(auth,operation,input,signal){
       if(signal?.aborted)throw fail("aborted","Map request cancelled.",499);
       if(!enabled){if(operation==="catalog")return {enabled:false,protocol:PROTOCOL};throw fail("failed-precondition","Refresh to use the current map.",409);}
-      const entry=await prepare(auth.uid);
+      // Existing readers authorize the fresh realm/profile/catalog together in
+      // their own read-only snapshot. Do not fetch those documents a second
+      // time merely to retrieve the already-prepared public terrain/catalog.
+      if(closed)throw fail("unavailable","World service stopped.");
+      const entry=operation==="catalog"||!state?await prepare(auth.uid):state;
+      if(operation!=="catalog")await deployment.assertActive();
       if(signal?.aborted)throw fail("aborted","Map request cancelled.",499);
       if(operation==="catalog"){await entry.reader.initialize(auth.uid);return entry.manifest;}
-      if(input.protocol!==PROTOCOL||input.revision!==entry.revision||input.realm!==entry.manifest.realmId)throw fail("failed-precondition","World changed; refresh the map.",409);
+      if(input.protocol!==PROTOCOL||input.revision!==entry.revision||input.realm!==entry.manifest.realmId){
+        await entry.reader.initialize(auth.uid); // A retired member still loses access immediately.
+        throw fail("failed-precondition","World changed; refresh the map.",409);
+      }
       if(operation==="areas")return entry.reader.read(auth.uid,input.ids,input.cursor,signal);
       if(operation==="options")return options(auth.uid,input.key,entry);
       throw fail("not-found","Unknown world operation.");

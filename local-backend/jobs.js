@@ -40,7 +40,7 @@ class JobQueue {
     if (!Number.isInteger(maxActive) || maxActive < 1 || maxActive > 8) throw Error("Invalid worker concurrency");
     this.store = store; this.controlStore = controlStore; this.schema = store.schema; this.leaseSeconds = leaseSeconds; this.maxAttempts = maxAttempts;
     this.maxActive = maxActive; this.active = 0; this.stopping = false; this.stopAt = Infinity;
-    this.routes = new Map(); this.triggers = []; this.schedules = [];
+    this.routes = new Map(); this.triggers = []; this.schedules = []; this.scheduledThrough = -1;
     for (const route of routes) {
       if (!/^[A-Za-z][A-Za-z0-9]{1,100}$/.test(route.name) || this.routes.has(route.name) || typeof route.handler !== "function") throw Error("Invalid or duplicate handler");
       if (!["created", "written", "schedule"].includes(route.kind)) continue;
@@ -71,6 +71,7 @@ class JobQueue {
       CREATE INDEX IF NOT EXISTS work_jobs_handler ON ${s}.work_jobs(handler,id) WHERE status IN ('pending','running');
       CREATE TABLE IF NOT EXISTS ${s}.work_schedules (name text PRIMARY KEY, signature text NOT NULL, last_minute bigint NOT NULL);
       REVOKE ALL ON ${s}.work_jobs,${s}.work_schedules FROM PUBLIC;`);
+    await this.transaction(client => require("./job-status").initializeJobStatus(client, s));
   }
   async transaction(callback) {
     const client = await this.controlStore.pool.connect();
@@ -82,14 +83,18 @@ class JobQueue {
   async dispatchChanges(limit = 200) {
     if (!Number.isInteger(limit) || limit < 1 || limit > 1000) throw Error("Invalid dispatch limit");
     return this.transaction(async client => {
-      const rows = (await client.query(`SELECT id,path,before_body,after_body FROM ${this.schema}.changes WHERE dispatched_at IS NULL ORDER BY id LIMIT $1 FOR UPDATE SKIP LOCKED`, [limit])).rows;
+      const rows = (await client.query(`SELECT id,path,before_body IS NOT NULL AS had_before,after_body IS NOT NULL AS has_after FROM ${this.schema}.changes WHERE dispatched_at IS NULL ORDER BY id LIMIT $1 FOR UPDATE SKIP LOCKED`, [limit])).rows;
+      const jobs = [];
       for (const row of rows) {
         for (const route of this.triggers) {
           const params = matchDocument(route.options.document, row.path);
-          if (!params || (route.kind === "created" && (row.before_body || !row.after_body))) continue;
-          await client.query(`INSERT INTO ${this.schema}.work_jobs(job_key,handler,kind,event) VALUES($1,$2,$3,$4) ON CONFLICT(job_key) DO NOTHING`, [`change:${row.id}:${route.name}`, route.name, route.kind, { changeId: row.id, params }]);
+          if (!params || (route.kind === "created" && (row.had_before || !row.has_after))) continue;
+          jobs.push({ job_key: `change:${row.id}:${route.name}`, handler: route.name, kind: route.kind, event: { changeId: row.id, params } });
         }
       }
+      if (jobs.length) await client.query(`INSERT INTO ${this.schema}.work_jobs(job_key,handler,kind,event)
+        SELECT job_key,handler,kind,event FROM jsonb_to_recordset($1::jsonb) AS rows(job_key text,handler text,kind text,event jsonb)
+        ON CONFLICT(job_key) DO NOTHING`, [JSON.stringify(jobs)]);
       // Mark each row in the same commit as its jobs. Identity sequences do not
       // follow commit order; a global last-ID cursor would lose late commits.
       await client.query(`UPDATE ${this.schema}.changes SET dispatched_at=clock_timestamp() WHERE id=ANY($1::bigint[])`, [rows.map(row => row.id)]);
@@ -99,13 +104,16 @@ class JobQueue {
   async enqueueSchedules(at = Date.now()) {
     if (!Number.isSafeInteger(at) || at < 0 || at > 8640000000000000) throw Error("Invalid scheduler time");
     const target = Math.floor(at / minuteMs);
-    return this.transaction(async client => {
+    if (target <= this.scheduledThrough) return 0;
+    let caughtUp = true;
+    const added = await this.transaction(async client => {
       let added = 0;
       for (const schedule of this.schedules) {
         await client.query(`INSERT INTO ${this.schema}.work_schedules(name,signature,last_minute) VALUES($1,$2,$3) ON CONFLICT(name) DO NOTHING`, [schedule.name, schedule.signature, target - 1]);
         const state = (await client.query(`SELECT signature,last_minute FROM ${this.schema}.work_schedules WHERE name=$1 FOR UPDATE`, [schedule.name])).rows[0];
         if (state.signature !== schedule.signature) throw Error("Schedule changed; review the retained cursor before replacing it");
         const prior = Number(state.last_minute), end = Math.min(target, prior + 360);
+        if (end < target) caughtUp = false;
         for (let minute = prior + 1; minute <= end; minute++) {
           if (!schedule.matches(minute * minuteMs)) continue;
           const result = await client.query(`INSERT INTO ${this.schema}.work_jobs(job_key,handler,kind,event) VALUES($1,$2,'schedule',$3) ON CONFLICT(job_key) DO NOTHING`, [`schedule:${schedule.name}:${minute}`, schedule.name, { scheduleTime: new Date(minute * minuteMs).toISOString() }]);
@@ -115,6 +123,10 @@ class JobQueue {
       }
       return added;
     });
+    // Cache only a successfully committed, fully caught-up minute. A restart
+    // rereads durable cursors; failures and multi-batch catch-up never skip work.
+    if (caughtUp) this.scheduledThrough = Math.max(this.scheduledThrough, target);
+    return added;
   }
   async claim() {
     return this.transaction(async client => {

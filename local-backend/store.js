@@ -426,16 +426,30 @@ class Store {
     const changedPaths = paths.filter(path => !isDeepStrictEqual(original.get(path)?.fields, bodies.get(path)?.fields)
       || Boolean(original.get(path)) !== Boolean(bodies.get(path)));
     if (serializable && changedPaths.length) await lock(changedPaths);
-    for (const path of changedPaths) {
-      const before = original.get(path), after = bodies.get(path);
-      if (after) {
-        const parts = path.split("/");
-        await tx.client.query(`INSERT INTO ${this.schema}.documents(path,collection_id,parent_path,body,source_sha256) VALUES($1,$2,$3,$4,$5) ON CONFLICT(path) DO UPDATE SET body=EXCLUDED.body,source_sha256=EXCLUDED.source_sha256`, [path, parts.at(-2), parts.slice(0, -2).join("/"), after, hash(after)]);
-      } else await tx.client.query(`DELETE FROM ${this.schema}.documents WHERE path=$1`, [path]);
-      await tx.client.query(`INSERT INTO ${this.schema}.changes(path,before_body,after_body) VALUES($1,$2,$3)`, [path, before || null, after || null]);
-      const chat = require("./chat-events"), topic = chat.topic(path.split("/").slice(0, -1).join("/"));
-      if (topic) await tx.client.query("SELECT pg_notify($1,$2)", [chat.channel(this.schema), topic]);
+    // Keep the existing ordered key locks and before/after snapshots, but send
+    // compatible rows together. Small chunks bound parameter/JSON memory; every
+    // chunk, journal row, notification and receipt still commits atomically.
+    const chat = require("./chat-events"), topics = new Set();
+    for (let offset = 0; offset < changedPaths.length; offset += 32) {
+      const entries = changedPaths.slice(offset, offset + 32).map(path => {
+        const before = original.get(path), after = bodies.get(path), parts = path.split("/");
+        const topic = chat.topic(parts.slice(0, -1).join("/")); if (topic) topics.add(topic);
+        return { path, collection_id: parts.at(-2), parent_path: parts.slice(0, -2).join("/"),
+          body: after || null, source_sha256: after ? hash(after) : null, before_body: before || null };
+      });
+      const write = async (sql, values) => { Timing.count("dbWriteQueries"); return Timing.measure("dbWrite", () => tx.client.query(sql, values)); };
+      const upserts = entries.filter(row => row.body), deletions = entries.filter(row => !row.body).map(row => row.path);
+      if (upserts.length) await write(`INSERT INTO ${this.schema}.documents(path,collection_id,parent_path,body,source_sha256)
+        SELECT path,collection_id,parent_path,body,source_sha256 FROM jsonb_to_recordset($1::jsonb)
+        AS rows(path text,collection_id text,parent_path text,body jsonb,source_sha256 text) ORDER BY path
+        ON CONFLICT(path) DO UPDATE SET body=EXCLUDED.body,source_sha256=EXCLUDED.source_sha256`, [JSON.stringify(upserts)]);
+      if (deletions.length) await write(`DELETE FROM ${this.schema}.documents WHERE path=ANY($1::text[])`, [deletions]);
+      await write(`INSERT INTO ${this.schema}.changes(path,before_body,after_body)
+        SELECT path,before_body,body FROM jsonb_to_recordset($1::jsonb) AS rows(path text,before_body jsonb,body jsonb) ORDER BY path`, [JSON.stringify(entries)]);
+      Timing.count("dbWriteRows", entries.length);
     }
+    if (topics.size) await tx.client.query("SELECT pg_notify($1,topic) FROM unnest($2::text[]) AS topic", [chat.channel(this.schema), [...topics]]);
+
   }
   batch() {
     const batch = new Transaction(this, null);
