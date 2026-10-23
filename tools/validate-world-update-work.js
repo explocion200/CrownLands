@@ -12,6 +12,13 @@ assert.equal(next.serverTime,101);assert.equal(next.revision,2);assert.deepEqual
 for(const invalid of [{viewer:"other"},{epoch:"other"},{fromRevision:0},{revision:0},{ids:["b"]},{serverTime:NaN},{objects:{upsert:{length:0},remove:[]}},{routes:{length:0}}])assert.throws(()=>applyPacket(previous,{...packet,...invalid},ids,cursor));
 const changed=applyPacket(previous,{...packet,objects:{upsert:[{...snapshot.objects.upsert[0],ownerUid:"enemy",troopVisibility:"hidden",troops:null}],remove:[]}},ids,cursor);
 assert.notEqual(changed.sections,previous.sections);assert.equal(changed.sections[0].objects[0].troopVisibility,"hidden");
+assert.equal(changed.marches,previous.marches);assert.equal(changed.routes,previous.routes);
+const marchOnly=applyPacket(previous,{...packet,marches:{upsert:[{...snapshot.marches.upsert[0],troops:20}],remove:[]}},ids,cursor);
+assert.equal(marchOnly.sections,previous.sections,"An army update must not invalidate castle geometry");
+assert.equal(marchOnly.routes,previous.routes);
+const twoIds=["a","b"],two=applyPacket(empty,{...snapshot,ids:twoIds,objects:{upsert:[...snapshot.objects.upsert,{key:"b:c",sectionId:"b"}],remove:[]}},twoIds,null);
+const oneChanged=applyPacket(two,{...packet,ids:twoIds,objects:{upsert:[{...snapshot.objects.upsert[0],troops:11}],remove:[]}},twoIds,cursor);
+assert.equal(oneChanged.sections[1],two.sections[1],"An unrelated section must retain identity");
 const removed=applyPacket(previous,{...packet,objects:{upsert:[],remove:["a:c"]},marches:{upsert:[],remove:["march:x"]}},ids,cursor);
 assert.equal(removed.sections[0].objects.length,0);assert.equal(removed.routes.length,0);
 const switched=applyPacket(previous,{...snapshot,epoch:"two",viewer:"other",revision:0},ids,cursor);

@@ -191,7 +191,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     }
     for(const[id,node]of pickupNodes)if(!present.has(id)){node.remove();pickupNodes.delete(id);}
   }
-  const locate = (id,region) => view?.scene.objects.find(o => o.id === id && (!region || o.sectionId === region));
+  const locate = (id,region) => region?view?.getObject(region+":"+id):view?.scene.objects.find(o => o.id === id);
   function clearWheel() { overlay.replaceChildren(); lastWheel = ""; wheelPoint = null; }
   let castleFocusPending=false;
   function focusCastleActions(point) {
@@ -351,6 +351,8 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
       return [{left:wheelPoint.x-halfWidth,right:wheelPoint.x+halfWidth,top:y-halfHeight,bottom:y+halfHeight}];
     },
     loadAreas: (ids, signal, cursor) => readWorld("areas", { realm: scene.realmId, ids, cursor }, signal),
+    presentationVisible: () => isMapPresentationVisible(),
+    current: () => {if(getOnlineSessionRequestScope()===session)return true;dispose();return false;},
       onAreas: data => {
         areasReady = !data.authExpired && !data.failed && data.authoritative === true;
         if (!areasReady) {
@@ -397,7 +399,12 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
       // Reveal readable castle controls in the same paint as the close-up map,
       // never over the preceding tiny overview sprite.
       if(castleFocusPending){castleFocusPending=false;paintWheel();}
-      for(const node of pickupNodes.values()){const p=project(node.worldPoint);node.hidden=!areasReady||!pickupPlacement.safe(node.bonus,{size})||p.x< -30||p.y< -30||p.x>size.width+30||p.y>size.height+30;node.style.display=node.hidden?"none":"";node.style.left=`${p.x}px`;node.style.top=`${p.y}px`;node.style.transform=`translate(-50%,-50%) scale(${.8*Math.min(1,camera.zoom/SeamlessModel.forWorld(scene).limits(size).max)})`;}
+      for(const node of pickupNodes.values()){
+        const p=project(node.worldPoint),hidden=!areasReady||!pickupPlacement.safe(node.bonus,{size})||p.x< -30||p.y< -30||p.x>size.width+30||p.y>size.height+30;
+        if(node.hidden!==hidden){node.hidden=hidden;node.style.display=hidden?"none":"";}
+        const scale=.8*Math.min(1,camera.zoom/SeamlessModel.forWorld(scene).limits(size).max),key=`${p.x}:${p.y}:${scale}`;
+        if(node.presentationKey!==key){node.presentationKey=key;node.style.left=`${p.x}px`;node.style.top=`${p.y}px`;node.style.transform=`translate(-50%,-50%) scale(${scale})`;}
+      }
       if (areasReady&&!sendMode&&!bridge.running&&!transitioning&&bridge.selected&&view.selectedKey
           && !selectedSourceId&&!selectedTargetId&&!selectedTowerMapId
           && view.getObject(view.selectedKey)?.kind!=="troop") view.clear();
@@ -493,7 +500,7 @@ function createContinuousHarvestPlacement(view) {
     }
     // A moving army can temporarily cross otherwise clear ground. Never
     // reserve or expose a pickup underneath its token or selected controls.
-    const selected=view.scene.objects.find(o=>o.key===view.selectedKey);
+    const selected=view.getObject(view.selectedKey);
     if(selected && overlaps(p,c.radius,{left:selected.left-150,top:selected.top-150,right:selected.left+selected.width+150,bottom:selected.top+selected.height+150}))return false;
     return safe && !view.scene.marches.some(m=>m.position && Math.hypot(p.x-m.position.x,p.y-m.position.y)
       < c.radius+(view.selectedKey===m.key?110:55)/c.maxZoom)

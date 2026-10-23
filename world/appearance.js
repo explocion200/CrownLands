@@ -165,9 +165,10 @@
       const covered=!result.hidden&&controls.some(c=>SeamlessModel.intersects(c,result.rect.left,result.rect.top,result.rect.right-result.rect.left,result.rect.bottom-result.rect.top));
       if(!result.hidden&&!covered)labelBounds.set(result.key,result.rect);
       const {banner,item}=byKey.get(result.key);
-      banner.classList.toggle("compact",Boolean(result.compact));
-      banner.style.visibility=result.hidden||covered?"hidden":"";
-      banner.style.transform=`translate(${result.dx||0}px,${(result.dy||0)-4+(item.labelTop??item.top)-item.top}px) scale(${bannerScale(item)})`;
+      const compact=Boolean(result.compact),visibility=result.hidden||covered?"hidden":"",transform=`translate(${result.dx||0}px,${(result.dy||0)-4+(item.labelTop??item.top)-item.top}px) scale(${bannerScale(item)})`;
+      if(banner.classList.contains("compact")!==compact)banner.classList.toggle("compact",compact);
+      if(banner.style.visibility!==visibility)banner.style.visibility=visibility;
+      if(banner.style.transform!==transform)banner.style.transform=transform;
     }
     window.SeamlessAppearance.labelBounds=labelBounds;
   }

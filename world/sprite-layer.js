@@ -26,10 +26,14 @@
       // Cache an overscanned drawing at the exact zoom. Pure pans translate this
       // canvas on the compositor; zoom/content changes redraw at native density.
       const margin=96,dpr=Math.min(2,devicePixelRatio||1);
-      const signature=JSON.stringify([z,size.width,size.height,dpr,items.map(o=>[o.key,o.left,o.top,o.width,o.height,this.assets.get(o.asset)])]);
+      if(this.items!==items||this.assetRevision!==this.assets.revision||this.assets.revision===undefined){
+        this.items=items;this.assetRevision=this.assets.revision;
+        this.content=JSON.stringify(items.map(o=>[o.key,o.left,o.top,o.width,o.height,this.assets.get(o.asset)]));
+        for(const [path,img]of this.images)if(!this.assets.get(path)){img.onload=null;this.images.delete(path);}
+      }
+      const signature=JSON.stringify([z,size.width,size.height,dpr,this.content]);
       let tile=this.drawing;
       const width=Math.ceil((size.width+margin*2)*dpr),height=Math.ceil((size.height+margin*2)*dpr);
-      for(const [path,img]of this.images)if(!this.assets.get(path)){img.onload=null;this.images.delete(path);}
       if(width*height*4>48*1024*1024){
         this.drawing=null;this.tileBytes=0;this.back.style.cssText="";const ctx=this.context(this.back,size);
         for(const o of items){const img=this.image(o.asset);if(img&&Math.max(o.width,o.height)*z>=8)ctx.drawImage(img,tx+o.left*z,ty+o.top*z,o.width*z,o.height*z);}return;

@@ -447,7 +447,10 @@ const npcLabelBudget=512;
 // Six courtyard sprites reuse existing art/subscriptions. Their geometry,
 // selection and exclusions add 3,648 lazy bytes; no initial-load/precache growth.
 const clanCourtyardBudget=3840;
-assert(worldBytes<=64*1024+256+castleActionLayoutBudget+worldClearanceBudget+cityShieldBudget+npcLabelBudget+clanCourtyardBudget,"Lazy continuous-world modules exceed 75 KiB");
+// Incremental indexes/data identities, viewport rebasing and visibility gating
+// add bounded lazy code only; no new artwork, boot or precache downloads.
+const incrementalWorldBudget=4096;
+assert(worldBytes<=64*1024+256+castleActionLayoutBudget+worldClearanceBudget+cityShieldBudget+npcLabelBudget+clanCourtyardBudget+incrementalWorldBudget,"Lazy continuous-world modules exceed 79 KiB");
 assert(!worker.includes('world/'),"Continuous world must not expand installation precaching");
 for(const f of worldFiles)assert(!fs.readFileSync(f,"utf8").includes('/__benchmark__/'),"No private preview endpoints in the game");
 if (baseClientBytes - worldBytes > baseClientBudget + campFlagArtBudget) {

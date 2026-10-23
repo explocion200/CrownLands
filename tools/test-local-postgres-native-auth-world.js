@@ -39,6 +39,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     }
     const page = pages[0], [source, target] = pilot.pair;
     const select = async (p, city) => {
+      // A late daily/welcome dialog from login obscures the map. Model the
+      // player's dismissal before attempting to interact with terrain.
+      await p.evaluate(()=>{if(modal.open)modal.close();});
       const section = pilot.reader.sections.get(city.regionId);
       await p.evaluate(({ x, y }) => nativeContinuousWorld.view.view(x, y), { x: section.x + 724, y: section.y + 543 });
       // Programmatic camera changes are applied on the next frame. Let its

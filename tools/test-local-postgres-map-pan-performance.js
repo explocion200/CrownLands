@@ -39,10 +39,15 @@ const output=path.resolve("release-artifacts/map-pan-performance",(ref?"baseline
    for(const zoom of ["home","min"]){
     await page.evaluate(zoom=>{if(modal.open)modal.close();clearSelection(false);const v=CrownlandsContinuousWorld.view,s=v.scene.sections.find(s=>s.name==="Stoneward");v.view(s.x+724,s.y+543,SeamlessModel.forWorld(v.scene).limits(v.snapshot().size)[zoom]);},zoom);
     await page.waitForTimeout(2000);
+    // Startup can deliver a welcome/reward dialog after the initial enter.
+    // An intentionally obscured renderer is not a meaningful pan measurement.
+    await page.evaluate(()=>{if(modal.open)modal.close();});
     // Warm the identical route first. Initial authentication and artwork decode
     // are separate from sustained pan performance; residency stays bounded.
     await page.evaluate(async()=>{const v=CrownlandsContinuousWorld.view,c=v.snapshot().camera;let start;await new Promise(done=>{function move(t){start??=t;const e=t-start;v.view(c.x+Math.sin(e/1400)*1200,c.y+Math.sin(e/2000)*800,c.zoom);if(e<6500)requestAnimationFrame(move);else {v.view(c.x,c.y,c.zoom);done();}}requestAnimationFrame(move);});});
     await page.waitForTimeout(1000);
+    await page.evaluate(()=>{if(modal.open)modal.close();});
+    await page.waitForFunction(()=>isMapPresentationVisible());
     const tracing=process.env.CROWNLANDS_MAP_TRACE==="1"&&width===844&&zoom==="min",events=[];
     const collect=packet=>events.push(...packet.value);if(tracing){cdp.on("Tracing.dataCollected",collect);await cdp.send("Tracing.start",{categories:"devtools.timeline",transferMode:"ReportEvents"});}
     const before=(await cdp.send("Performance.getMetrics")).metrics;
@@ -53,6 +58,7 @@ const output=path.resolve("release-artifacts/map-pan-performance",(ref?"baseline
     });
     const after=(await cdp.send("Performance.getMetrics")).metrics,perf={};for(const name of ["TaskDuration","ScriptDuration","LayoutDuration","RecalcStyleDuration","JSHeapUsedSize"]){const a=after.find(m=>m.name===name)?.value,b=before.find(m=>m.name===name)?.value;perf[name]=name==="JSHeapUsedSize"?a:a-b;}
     if(tracing){const ended=new Promise(resolve=>cdp.once("Tracing.tracingComplete",resolve));await cdp.send("Tracing.end");await ended;cdp.off("Tracing.dataCollected",collect);const durations={};for(const e of events)if(e.ph==="X"&&e.dur)durations[e.name]=(durations[e.name]||0)+e.dur/1000;fs.writeFileSync(path.join(output,"diagnostic-trace.json"),JSON.stringify(durations,null,2));}
+    assert(sample.frames>0&&Number.isFinite(sample.fps),"Pan measurement was obscured or did not produce frames");
     assert(sample.assets.full<=4&&sample.assets.thumbnails<=16&&sample.assets.peakRequests<=2);assert(!sample.feed.failed);assert(sample.nodes<2400);assert((sample.pooledNodes||0)<=512);
     if(sample.assets.sprites!==undefined)assert(sample.assets.sprites<=sample.assets.requestedSprites+64);
     if(sample.renderer)assert(sample.renderer.tiles<=1&&sample.renderer.tileBytes<=48*1024*1024);
@@ -75,6 +81,19 @@ const output=path.resolve("release-artifacts/map-pan-performance",(ref?"baseline
    await page.evaluate(()=>CrownlandsContinuousWorld.view.refresh());await page.locator(marker).getByText("Updated cache fixture",{exact:true}).waitFor();
    await page.evaluate(()=>{document.fonts.dispatchEvent(new Event("loadingdone"));CrownlandsContinuousWorld.view.invalidate();delete window.__retainedMarker;});
    await page.waitForFunction(()=>SeamlessAppearance.stats().measurements>0);
+   {
+    const geometry=await page.evaluate(()=>CrownlandsContinuousWorld.view.snapshot().geometryUpdates);
+    await pilot.store.doc(`islands/${pilot.identity.worldId}--${pilot.identity.realmShardId}--${probe.sectionId}/cities/${probe.id}`).update({name:"Single incremental update"});
+    await page.evaluate(()=>CrownlandsContinuousWorld.view.refresh());await page.locator(marker).getByText("Single incremental update",{exact:true}).waitFor();
+    assert((await page.evaluate(()=>CrownlandsContinuousWorld.view.snapshot().geometryUpdates))-geometry<5,"One city update rebuilt the scene");
+    const projection=await page.locator(marker).evaluate((n,key)=>{const v=CrownlandsContinuousWorld.view,s=v.snapshot(),o=v.getObject(key),p=SeamlessModel.project(s.camera,{x:o.left,y:o.top},s.size),r=n.getBoundingClientRect(),vp=CrownlandsContinuousWorld.root.querySelector("#viewport").getBoundingClientRect();return {dx:r.x-vp.x-p.x,dy:r.y-vp.y-p.y,width:s.surface.width*s.camera.zoom,height:s.surface.height*s.camera.zoom,size:s.size};},probe.key);
+    assert(Math.abs(projection.dx)<1&&Math.abs(projection.dy)<1,"Presentation rebasing changed object coordinates");
+    assert(projection.width<=projection.size.width+385&&projection.height<=projection.size.height+385,"World surface is unbounded");
+    await page.evaluate(()=>modal.showModal());await page.waitForTimeout(100);
+    const paused=await page.evaluate(()=>CrownlandsContinuousWorld.view.snapshot());await page.waitForTimeout(1700);
+    const hidden=await page.evaluate(()=>CrownlandsContinuousWorld.view.snapshot());assert.equal(hidden.presentationFrames,paused.presentationFrames,"Obscured map kept painting");assert(hidden.feed.requests>paused.feed.requests,"Obscured map stopped authorization refreshes");
+    await page.evaluate(()=>modal.close());await page.waitForFunction(n=>CrownlandsContinuousWorld.view.snapshot().presentationFrames>n,paused.presentationFrames);
+   }
   }
   if(soakSeconds){
    await cdp.send("Emulation.setCPUThrottlingRate",{rate:1});
@@ -88,6 +107,12 @@ const output=path.resolve("release-artifacts/map-pan-performance",(ref?"baseline
     if(soak.length)assert.equal(s.listeners,soak[0].listeners);soak.push(s);
     fs.writeFileSync(path.join(output,"soak.json"),JSON.stringify({seconds:elapsed+30,samples:soak},null,2));console.log(`Soak ${elapsed+30}/${soakSeconds}s: ${s.nodes} active nodes, ${s.pooledNodes||0} retained.`);
    }
+  }
+  if(!ref){
+   await page.evaluate(()=>{if(!modal.open)modal.showModal();});
+   await pilot.store.doc("players/"+pilot.players[0].uid).update({worldId:"retired-fixture-world"});
+   await page.evaluate(()=>CrownlandsContinuousWorld.view.refresh());
+   await page.waitForFunction(()=>!window.CrownlandsContinuousWorld||CrownlandsContinuousWorld.view.snapshot().nodes===0);
   }
   assert.deepEqual(errors,[]);fs.writeFileSync(path.join(output,"report.json"),JSON.stringify({baseline:ref||null,source,crowded,traced:process.env.CROWNLANDS_MAP_TRACE==="1",results},null,2));
  }finally{await browser?.close();await harness?.close();await world?.close();await pilot.close();}

@@ -7,6 +7,13 @@ const tick=()=>new Promise(resolve=>setImmediate(resolve));
  const objects=Array.from({length:1800},(_,key)=>({key,left:random()*9000-500,top:random()*7000-500,width:20+random()*700,height:20+random()*700}));
  const index=new M.SpatialIndex(objects);
  for(let i=0;i<300;i++){const left=random()*8500,top=random()*6500,view={left,top,right:left+100+random()*4000,bottom:top+100+random()*2500};assert.deepEqual(index.query(view),objects.filter(o=>M.intersects(view,o.left,o.top,o.width,o.height)));}
+ // Moving, replacing and deleting entries must match a fresh brute-force query;
+ // count-only changes must retain their bucket membership and source order.
+ const priorCells=index.entries.get(0).cells;
+ objects[0]={...objects[0],troops:200};index.upsert(objects[0]);assert.equal(index.entries.get(0).cells,priorCells);
+ for(let i=0;i<100;i++){objects[i]={...objects[i],left:random()*9000,top:random()*7000};index.upsert(objects[i]);}
+ for(const o of objects.splice(100,80))index.remove(o.key);
+ for(let i=0;i<100;i++){const left=random()*8000,top=random()*6000,view={left,top,right:left+1700,bottom:top+1200};assert.deepEqual(index.query(view),objects.filter(o=>M.intersects(view,o.left,o.top,o.width,o.height)));}
  const pending=[],released=[],loader=new AssetLoader(()=>{},(path,signal)=>new Promise((resolve,reject)=>pending.push({path,signal,resolve,reject})),url=>released.push(url));
  loader.update(Array.from({length:10},(_,i)=>({path:"terrain-"+i,kind:"full",priority:i})));await tick();assert.equal(pending.length,2);
  loader.update([{path:"new",kind:"full",priority:0}]);assert(pending.every(p=>p.signal.aborted));pending.splice(0).forEach(p=>p.resolve(p.path));await tick();assert(!loader.get("terrain-0"));assert(released.includes("terrain-0"));
