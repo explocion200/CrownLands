@@ -5,11 +5,17 @@ const validId = value => typeof value === "string" && /^[A-Za-z0-9_-]{1,160}$/.t
 const keyFor = (realm, regionId, cityId) => createHash("sha256")
   .update(JSON.stringify([realm.worldId, realm.resetGeneration, realm.realmShardId, regionId, cityId])).digest("hex");
 const PAGE_SIZE = 25;
+const name = value => String(value || "Ruler").slice(0, 40);
 
 // Private, generation-qualified loss records. Public city snapshots never contain this board.
 function createService({ db, HttpsError, realm, validateProfile, assertWorld, cityRef, regularCity, transact, transfer }) {
   const fail = (code, message) => new HttpsError(code, message);
   const recordRef = (clanId, key) => db.doc(`clans/${clanId}/warCities/${key}`);
+  function logEvent(tx, r, clanId, eventId, kind, text, nowMs) {
+    const id = keyFor(r, eventId, kind);
+    tx.set(db.doc(`clans/${clanId}/warCityEvents/${id}`), { ...r, kind, text,
+      occurredAtMs: nowMs, orderKey: `${String(nowMs).padStart(16, "0")}_${id}` });
+  }
   async function membership(tx, uid, clanId, r) {
     if (!validId(uid) || !validId(clanId)) return null;
     const [profile, member] = await Promise.all([tx.get(db.doc(`players/${uid}`)), tx.get(db.doc(`clans/${clanId}/members/${uid}`))]);
@@ -50,6 +56,17 @@ function createService({ db, HttpsError, realm, validateProfile, assertWorld, ci
     if (!context) return;
     const { r, key, clans, target, regionId, defenderUid, defenderProfile, attackerUid, attackerProfile } = context;
     const lost = clans.get(defenderUid), recovered = clans.get(attackerUid);
+    const cityName = String(target.name || target.id).slice(0, 80);
+    if (lost && lost.clanId !== recovered?.clanId) {
+      logEvent(tx, r, lost.clanId, eventId, "lost",
+        `${name(defenderProfile.playerName || target.ownerName)} lost ${cityName} to ${name(attackerProfile.playerName)}.`, nowMs);
+    }
+    if (recovered && current(recovered.old, r) && recovered.old.status === "open"
+      && (recovered.preserve || recovered.old.originalOwnerUid === attackerUid)) {
+      const self = recovered.old.originalOwnerUid === attackerUid;
+      logEvent(tx, r, recovered.clanId, eventId, "recovered",
+        `${name(attackerProfile.playerName)} recovered ${cityName} from ${name(defenderProfile.playerName || target.ownerName)}${self ? " for themselves" : ` for ${name(recovered.old.originalOwnerName)}`}.`, nowMs);
+    }
     if (lost && lost.clanId !== recovered?.clanId && !lost.preserve) {
       tx.set(lost.ref, { ...r, key, clanId: lost.clanId, status: "open", cityId: target.id, regionId,
         cityName: String(target.name || target.id).slice(0, 80), originalOwnerUid: defenderUid,
@@ -62,15 +79,27 @@ function createService({ db, HttpsError, realm, validateProfile, assertWorld, ci
     }
   }
   async function execute(uid, input = {}) {
-    const action = input.action || "list";
-    if (!input || typeof input !== "object" || Array.isArray(input) || !["list", "return"].includes(action)
+    const action = input?.action || "list";
+    if (!input || typeof input !== "object" || Array.isArray(input) || !["list", "log", "return"].includes(action)
       || Object.keys(input).some(key => !["action", "cursor", "key", "lossEventId", "operationId"].includes(key))
-      || (input.cursor && !/^[a-f0-9]{64}$/.test(input.cursor))
+      || (input.cursor && (typeof input.cursor !== "string" || !(action === "log" ? /^\d{16}_[a-f0-9]{64}$/ : /^[a-f0-9]{64}$/).test(input.cursor)))
       || (action === "return" && (!/^[a-f0-9]{64}$/.test(input.key || "") || !validId(input.lossEventId) || !validId(input.operationId)))) {
       throw fail("invalid-argument", "Choose a valid War Cities action.");
     }
     return transact(async tx => {
-      const { r, clanId } = await authorize(tx, uid), nowMs = Date.now();
+      const { r, clanId, profile } = await authorize(tx, uid), nowMs = Date.now();
+      if (action === "log") {
+        let query = db.collection(`clans/${clanId}/warCityEvents`).where("worldId", "==", r.worldId)
+          .where("resetGeneration", "==", r.resetGeneration).where("realmShardId", "==", r.realmShardId)
+          .orderBy("orderKey", "desc");
+        if (input.cursor) query = query.where("orderKey", "<", input.cursor);
+        const page = await tx.get(query.limit(PAGE_SIZE + 1));
+        return { version: 1, logVersion: 1, clanId, ...r, serverTimeMs: nowMs,
+          entries: page.docs.slice(0, PAGE_SIZE).map(snap => {
+            const event = snap.data();
+            return { kind: event.kind, text: event.text, occurredAtMs: event.occurredAtMs };
+          }), nextCursor: page.docs.length > PAGE_SIZE ? page.docs[PAGE_SIZE - 1].data().orderKey : "" };
+      }
       if (action === "list") {
         let query = db.collection(`clans/${clanId}/warCities`).where("worldId", "==", r.worldId)
           .where("resetGeneration", "==", r.resetGeneration).where("realmShardId", "==", r.realmShardId)
@@ -93,7 +122,7 @@ function createService({ db, HttpsError, realm, validateProfile, assertWorld, ci
             returnBlockedReason: holder && city.ownerUid === uid && (city.isMainCity || holder.mainCityId === city.id) ? "Choose another Main City before returning this city." : "",
             location: { targetType: "city", regionId: loss.regionId, targetId: loss.cityId } });
         }
-        return { version: 1, clanId, ...r, serverTimeMs: nowMs, entries,
+        return { version: 1, logVersion: 1, clanId, ...r, serverTimeMs: nowMs, entries,
           nextCursor: page.docs.length > PAGE_SIZE ? page.docs[PAGE_SIZE - 1].data().key : "" };
       }
       const receiptRef = db.doc(`players/${uid}/warCityReceipts/${keyFor(r, clanId, input.operationId)}`);
@@ -109,6 +138,8 @@ function createService({ db, HttpsError, realm, validateProfile, assertWorld, ci
       const original = await membership(tx, loss.originalOwnerUid, clanId, r);
       if (!original) throw fail("failed-precondition", "The original ruler is no longer in your clan.");
       const result = await transfer(tx, { uid, clanId, loss, nowMs, operationId: input.operationId });
+      logEvent(tx, r, clanId, `${uid}:${input.operationId}`, "returned",
+        `${name(profile.playerName)} chose to return ${String(loss.cityName).slice(0, 80)} to ${name(original.playerName || loss.originalOwnerName)}.`, nowMs);
       tx.set(lossRef, { status: "returned", returnedAtMs: nowMs, returnedByUid: uid }, { merge: true });
       tx.create(receiptRef, { ...r, key: input.key, lossEventId: input.lossEventId, result, createdAtMs: nowMs });
       return result;

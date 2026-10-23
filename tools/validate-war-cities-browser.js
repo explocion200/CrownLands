@@ -58,7 +58,7 @@ async function main(built = false) {
     };
     const ready = async expression => {
       for (let attempt = 0; attempt < 240; attempt++) { if (await evaluate(expression)) return; await delay(100); }
-      throw Error(`Timeout: ${expression}; ${errors.join("\n")}`);
+      throw Error(`Timeout: ${expression}; ${errors.join("\n")}; ${await evaluate('JSON.stringify({tab:activeProfileTab,section:activeClanMobileSection,open:profileScreen.classList.contains("open"),clan:state.clanId,snapshot:clanSnapshot?.id,view:clanWarCitiesView})')}`);
     };
     const click = async selector => {
       await evaluate('Promise.all(document.getAnimations().filter(a=>Number.isFinite(a.effect?.getComputedTiming().endTime)).map(a=>a.finished.catch(()=>{})))');
@@ -97,7 +97,8 @@ async function main(built = false) {
           if(warCityQA.held) await new Promise(resolve=>warCityQA.resolve=resolve);
           if(warCityQA.reject) throw Error('Connection unavailable. Retry.');
           if(input.action==='return'){warCityQA.rows=warCityQA.rows.filter(e=>e.key!==input.key);return {ok:true};}
-          return {version:1,clanId,...(warCityQA.pages?.[input.cursor||''] || {entries:warCityQA.rows,nextCursor:''})};
+          if(input.action==='log') return {version:1,logVersion:1,clanId,...(warCityQA.logPages?.[input.cursor||''] || {entries:[],nextCursor:''})};
+          return {version:1,logVersion:warCityQA.oldServer?undefined:1,clanId,...(warCityQA.pages?.[input.cursor||''] || {entries:warCityQA.rows,nextCursor:''})};
         }});
       })()`);
       // The notification must arrive before visiting Lost Holdings; no board/HUD polling is needed on the map.
@@ -143,6 +144,45 @@ async function main(built = false) {
       measurements.push(measurement); assert(measurement.buttonsVisible && !measurement.overflow && measurement.inside && measurement.listHeight>85,JSON.stringify(measurement));
       assert.equal(await evaluate('document.querySelectorAll(".clan-section-nav button").length'),5);
       await shot(`war-cities-${width}.png`);
+      const frame = await evaluate('JSON.stringify(profileScreen.getBoundingClientRect().toJSON())');
+      await evaluate(`warCityQA.logPages={
+        '':{entries:Array.from({length:8},(_,i)=>({kind:['returned','recovered','lost'][i%3],occurredAtMs:Date.UTC(2026,9,23,14,30)-i*60000,
+          text:['Aldric chose to return Oakwatch Meadows to Elowen Vale.','Rowan recovered Stoneford from Blackthorn for Elowen Vale.','Elowen Vale lost Ravenhill to Blackthorn.'][i%3]})),nextCursor:'older'},
+        older:{entries:[{kind:'lost',occurredAtMs:Date.UTC(2026,9,22),text:'<img src=x onerror=alert(1)> lost a city.'}],nextCursor:''}}`);
+      await click('[data-clan-action="war-cities-log"]');
+      await ready('clanWarCitiesView.showLog && clanWarCitiesView.log.loaded && !clanWarCitiesView.busy');
+      assert.equal(await evaluate('document.querySelectorAll(".war-city-event").length'),8);
+      assert.equal(await evaluate('JSON.stringify(profileScreen.getBoundingClientRect().toJSON())'),frame,'Log resized the Clan window');
+      assert(await evaluate('hasClanWarCitiesNotice()'), 'Reading history dismissed the action notice');
+      assert.equal(await evaluate('clanWarCitiesView.entries.length'),8,'Log replaced the holdings page');
+      assert(await evaluate(`(() => {const p=document.querySelector('#clanWarcitiesPanel');return p.scrollWidth<=p.clientWidth+1 && p.querySelector('.war-cities-list').clientHeight>85 && [...p.querySelectorAll('button')].every(b=>{const r=b.getBoundingClientRect();return r.height>=44 && r.left>=0 && r.right<=innerWidth && r.bottom<=innerHeight})})()`));
+      await shot(`war-cities-log-${width}.png`);
+      await click('[data-clan-action="war-cities-next"]');
+      await ready('clanWarCitiesView.log.cursor==="older" && !clanWarCitiesView.busy');
+      assert.equal(await evaluate('document.querySelector(".war-city-event span").textContent'),'<img src=x onerror=alert(1)> lost a city.');
+      assert.equal(await evaluate('document.querySelector(".war-city-event img")'),null,'Log text interpreted markup');
+      await click('[data-clan-action="war-cities-first"]');
+      await ready('!clanWarCitiesView.log.cursor && !clanWarCitiesView.busy');
+      await evaluate('document.querySelector(".war-cities-list").scrollTop=90;window.logScroll=document.querySelector(".war-cities-list").scrollTop;renderClanView()');
+      assert.equal(await evaluate('document.querySelector(".war-cities-list").scrollTop'),await evaluate('logScroll'));
+      await evaluate('warCityQA.reject=true');
+      await click('[data-clan-action="war-cities-refresh"]');
+      await ready('!!clanWarCitiesView.log.error && !clanWarCitiesView.busy');
+      assert.equal(await evaluate('document.querySelectorAll(".war-city-event").length'),0,'Failed log read retains private history');
+      assert(await evaluate('document.querySelector("#clanWarcitiesPanel [role=status]").textContent.includes("Retry")'));
+      await evaluate('warCityQA.reject=false;warCityQA.logPages=null');
+      await click('[data-clan-action="war-cities-refresh"]');
+      await ready('clanWarCitiesView.log.loaded && !clanWarCitiesView.busy');
+      assert(await evaluate('document.querySelector(".war-cities-list").textContent.includes("No events recorded yet")'));
+      await click('[data-clan-action="war-cities-log"]');
+      await ready('!clanWarCitiesView.showLog && clanWarCitiesView.loaded && !clanWarCitiesView.busy');
+      assert(await evaluate('document.querySelector(".war-cities-list").textContent.includes("Awaiting return decision")'));
+      await evaluate('warCityQA.oldServer=true');
+      await click('[data-clan-action="war-cities-refresh"]');await ready('!clanWarCitiesView.busy');
+      assert.equal(await evaluate('document.querySelector("[data-clan-action=war-cities-log]").disabled'),true,'Log enabled against unsupported backend');
+      await evaluate('warCityQA.oldServer=false');
+      await click('[data-clan-action="war-cities-refresh"]');await ready('!clanWarCitiesView.busy');
+
       await evaluate(`(() => {const list=document.querySelector('.war-cities-list');list.scrollTop=100;const button=list.querySelectorAll('[data-clan-action="war-city-location"]')[2];button.focus({preventScroll:true});renderClanView();})()`);
       assert.equal(await evaluate('document.querySelector(".war-cities-list").scrollTop'),100);
       assert.equal(await evaluate('document.activeElement.dataset.warCityKey'),'2'.repeat(64));
@@ -236,6 +276,14 @@ async function main(built = false) {
       await evaluate('state.clanId="different-clan";renderClanView();warCityQA.resolve()');
       await ready('clanWarCitiesView.entries.length===0 && !clanWarCitiesView.busy');
       assert.equal(await evaluate('hasClanWarCitiesNotice()'),false);
+      await evaluate('warCityQA.held=false;warCityQA.rows=[];state.clanId=clanSnapshot.id;resetClanWarCities();renderClanView();setClanMobileSection("warcities")');
+      await ready('clanWarCitiesView.loaded && !clanWarCitiesView.busy');
+      await evaluate('warCityQA.held=true;warCityQA.resolve=null;warCityQA.logPages={"":{entries:[{text:"Private old clan history",occurredAtMs:Date.now()}],nextCursor:""}}');
+      await click('[data-clan-action="war-cities-log"]');await ready('!!warCityQA.resolve');
+      await evaluate('state.clanId="new-clan";renderClanView();warCityQA.resolve()');
+      await ready('!clanWarCitiesView.busy');
+      assert.equal(await evaluate('clanWarCitiesView.log.entries.length'),0,'Old clan log response leaked');
+      assert(!(await evaluate('clanContent.textContent')).includes('Private old clan history'));
       console.log(`Lost Holdings notification, pagination, layout, actions, retry and scope guards passed at ${width}x${height}`);
     }
     assert.deepEqual(errors, []);
