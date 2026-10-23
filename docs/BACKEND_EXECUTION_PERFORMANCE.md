@@ -57,7 +57,26 @@ unchanged. At 100 players, map overload delays are a material limitation even
 though commands stayed responsive and all requests eventually succeeded. Retry
 latency is included, not discarded from percentiles. This is a short synthetic
 local workload, not internet latency or sustained production capacity. The final
-combined protocol run and required PR checks remain pending before merge.
+combined protocol run is recorded below; required PR checks remain merge gates.
+
+## Combined transport/backend repeat
+
+After integrating the merged transport update, all three real-cookie workloads
+passed again, including ownership changes, catalog growth and season isolation.
+General watches sent revision tokens and retained their last authorized snapshot
+on unchanged responses. Measured response bytes exclude HTTP headers and compare
+the returned result with the same authorized full snapshot.
+
+| Players | Completed requests | Map 429 retries | Exhausted / failed | Command p95 | Map p95 / max including retries | Watch bytes saved |
+|---|---|---|---|---|---|---|
+| 25 | 390 | 0 | 0 / 0 | 98 ms | 57 ms / 0.1 s | 79.6% |
+| 50 | 740 | 11 | 0 / 0 | 134 ms | 85 ms / 10.3 s | 81.3% |
+| 100 | 1,440 | 50 | 0 / 0 | 184 ms | 10067 ms / 10.3 s | 82.1% |
+
+Results are saved in `release-artifacts/continuous-production/shared-load-{25,50,100}.json`.
+The 100-player test remains below the two-second command gate, but retry-delayed
+map reads remain a limitation. These results do not justify increasing admission
+or database concurrency without a separate reviewed capacity change.
 
 ## Rollout
 
