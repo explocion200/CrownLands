@@ -1,28 +1,30 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "3073e7163f0d44141570b48133ce693477c64985",
+  "baseCommit": "a89fd55c5631d2c357b473738b8b72f2bd6384f7",
   "coverage": [
     {
       "paths": [
-        "local-backend/history-retention.js",
-        "tools/maintain-internal-history.js",
-        "tools/test-internal-history-retention.js"
+        "local-backend/game-http.js",
+        "local-client.js",
+        "tools/test-local-transport-priority.js",
+        "tools/test-local-postgres-permanent.js"
       ],
       "tests": [
-        "tools/test-internal-history-retention.js",
-        "tools/test-local-postgres-jobs.js",
-        "tools/test-local-postgres-worker-loop.js",
-        "tools/test-local-postgres-worker-service.js"
+        "tools/test-local-transport-priority.js",
+        "tools/test-local-postgres-permanent.js",
+        "tools/test-local-postgres-game-http.js",
+        "tools/test-local-watch-revisions.js",
+        "tools/test-local-deployment.js",
+        "tools/test-local-production-client.js"
       ],
-      "reason": "Indexed, explicit internal-history maintenance and separately approved index preparation require real PostgreSQL transactional checks. Tests prove dry-run defaults, immutable game/account/report/receipt/archive documents, source-reference protection, exact cutoff/cursor resume, duplicate identity retention, atomic cancellation/timeout behavior and worker restart/lease compatibility. No shared Firebase gameplay function, schema or game rule changes, so no emulator gameplay suite is relevant."
+      "reason": "Keep the permanent health JSON compatible with exact publisher identity validation while negotiating watch revision support through an optional header. Exercise real restricted-role permanent services, source/minified client capability and legacy behavior, authenticated HTTP/watch privacy, production packaging and unchanged publisher activation/rollback gates. Shared Firebase gameplay functions and rules are unchanged; no emulator gameplay suite applies. The disposable permanent-cluster fixture now applies the reviewed compact-counter migration after rehearsing the original empty cutover, matching the actual installation sequence and narrow worker grants; historical production migration tools stay unchanged."
     },
     {
       "paths": [
-        "docs/INTERNAL_HISTORY_RETENTION.md",
-        "docs/BACKEND_EXECUTION_PERFORMANCE.md"
+        "docs/GAMEPLAY_TRANSPORT_PERFORMANCE.md"
       ],
       "tests": [],
-      "reason": "Documents confirmed seven-day scope, separate install/deletion approvals, bounded indexed operation and non-compaction limits. No production cleanup or deployment claim. Clarifies the preceding backend update\u2019s explicit administrator migration, narrow worker grants and restricted-role preflight; permanent startup does not perform schema creation."
+      "reason": "Records the installation compatibility failure and narrow correction without claiming successful deployment or changing game rules."
     }
   ]
 }
