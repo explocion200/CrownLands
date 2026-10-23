@@ -26752,7 +26752,7 @@ function renderClanSectionNavigation(canManageApplications = false) {
       count: onlineClanRallies.length,
       countLabel: `${onlineClanRallies.length} active ${onlineClanRallies.length === 1 ? "rally" : "rallies"}`,
     },
-    { key: "warcities", label: "War Cities", mark: renderCrownlandsIcon("attack"), count: 0, countLabel: "" },
+    { key: "warcities", label: "Lost Holdings", mark: renderCrownlandsIcon("attack"), count: 0, countLabel: "" },
     {
       key: "rewards",
       label: "Rewards",
@@ -26856,12 +26856,12 @@ async function loadClanWarCities(cursor = clanWarCitiesView.cursor) {
   try {
     const result = await getOnlineApi()?.clanWarCities({ action: "list", cursor: view.cursor });
     if (view !== clanWarCitiesView || view.scope !== clanWarCitiesScope()) return;
-    if (result?.version !== 1 || result.clanId !== state.clanId) throw Error("War Cities requires the updated game server.");
+    if (result?.version !== 1 || result.clanId !== state.clanId) throw Error("Lost Holdings requires the updated game server.");
     view.entries = result.entries; view.nextCursor = result.nextCursor; view.loaded = true;
   } catch (error) {
     if (view !== clanWarCitiesView || view.scope !== clanWarCitiesScope()) return;
     view.entries = []; view.loaded = false;
-    view.error = error?.code === "functions/not-found" ? "War Cities is waiting for the server update." : error.message || "War Cities could not load. Try Refresh.";
+    view.error = error?.code === "functions/not-found" ? "Lost Holdings is waiting for the server update." : error.message || "Lost Holdings could not load. Try Refresh.";
   } finally {
     if (view === clanWarCitiesView && view.scope === clanWarCitiesScope()) { view.busy = false; renderClanView(); }
   }
@@ -26876,13 +26876,13 @@ function renderClanWarCitiesPanel() {
   if (clanWarCitiesView.scope !== clanWarCitiesScope()) resetClanWarCities();
   const v = clanWarCitiesView;
   return `<section id="clanWarcitiesPanel" class="clan-section-panel clan-war-cities ${isClanSectionActive("warcities") ? "active" : ""}" role="tabpanel" aria-labelledby="clanSectionTabWarcities">
-    <header><div><h3>War Cities</h3><small>Recover your clanmates’ lost cities</small></div><button type="button" data-clan-action="war-cities-refresh" ${v.busy ? "disabled" : ""}>${v.busy ? "Loading…" : "Refresh"}</button></header>
-    ${v.error ? `<p role="status">${escapeHtml(v.error)}</p>` : ""}
+    <header><div><h3>Lost Holdings</h3><small>Recover your clanmates’ lost cities</small></div><button type="button" data-clan-action="war-cities-refresh" ${v.busy ? "disabled" : ""}>${v.busy ? "Loading…" : "Refresh"}</button></header>
+    ${v.error ? `<p role="status">${escapeHtml(v.error.replaceAll("War Cities", "Lost Holdings"))}</p>` : ""}
     <div class="war-cities-list scroll-region" aria-busy="${v.busy}">${v.entries.map(e => `<article>
       <div class="war-city-copy"><strong>${escapeHtml(e.cityName)}</strong><small>${escapeHtml(getRegionLabel(e.location.regionId))} · Originally ${escapeHtml(e.originalOwnerName)}</small><span>Taken by ${escapeHtml(e.captorName)}</span><small>Now held by ${escapeHtml(e.currentOwnerName)} · ${e.status === "recovered" ? "Recovered" : "Lost"}</small></div>
-      <div class="war-city-actions"><button type="button" data-clan-action="war-city-location" data-war-city-key="${e.key}">Location</button>${e.canReturn ? `<button type="button" data-clan-action="war-city-return" data-war-city-key="${e.key}" ${v.busy ? "disabled" : ""}>Return city</button>` : e.status === "recovered" ? `<small>${escapeHtml(e.returnBlockedReason || "Its owner can return it")}</small>` : ""}</div>
-    </article>`).join("") || (v.loaded ? '<p>No lost cities on this page. New player captures are tracked from the War Cities update onward.</p>' : !v.error ? '<p>Loading your clan’s cities…</p>' : "")}</div>
-    <footer><small>Location only navigates. Returning keeps the city’s level and sends your troops home.</small><div>${v.cursor ? '<button type="button" data-clan-action="war-cities-first">First page</button>' : ""}${v.nextCursor ? '<button type="button" data-clan-action="war-cities-next">Next page</button>' : ""}</div></footer></section>`;
+      <div class="war-city-actions"><button type="button" class="location-icon-button" data-clan-action="war-city-location" data-war-city-key="${e.key}" aria-label="Go to ${escapeHtml(e.cityName)}" title="View city on map"></button>${e.canReturn ? `<button type="button" data-clan-action="war-city-return" data-war-city-key="${e.key}" ${v.busy ? "disabled" : ""}>Return city</button>` : e.status === "recovered" ? `<small>${escapeHtml(e.returnBlockedReason || "Its owner can return it")}</small>` : ""}</div>
+    </article>`).join("") || (v.loaded ? '<p>No lost cities on this page. Only captures recorded since tracking began are listed.</p>' : !v.error ? '<p>Loading your clan’s cities…</p>' : "")}</div>
+    <footer><small>Normal attack protection applies. Return city sends your troops home.</small><div>${v.cursor ? '<button type="button" data-clan-action="war-cities-first">First page</button>' : ""}${v.nextCursor ? '<button type="button" data-clan-action="war-cities-next">Next page</button>' : ""}</div></footer></section>`;
 }
 async function handleWarCityAction(action, key) {
   if (action === "war-cities-refresh" || action === "war-cities-first") return loadClanWarCities(action.endsWith("first") ? "" : clanWarCitiesView.cursor);
