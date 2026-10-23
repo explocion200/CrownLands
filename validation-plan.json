@@ -1,37 +1,21 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "58aa9a8e6b59a1c3070212d84004fc9bf412a817",
+  "baseCommit": "1b625e34a4a09e44d59ad721c2540f015f30233c",
   "coverage": [
     {
       "paths": [
-        "functions/clan-war-cities.js",
-        "firestore.indexes.json",
-        "functions/test/clan-war-cities-cases.js",
-        "tools/test-local-postgres-war-city-commands.js"
-      ],
-      "tests": [
-        "functions/test/emulator-clan-war-cities.js",
-        "tools/test-local-postgres-war-cities.js",
-        "tools/test-local-postgres-war-city-commands.js"
-      ],
-      "reason": "Persist private loss/recovery/return events atomically with existing combat and return transactions. Shared emulator/PostgreSQL cases cover history after return, failed/canceled-operation exclusion, retries, tied-timestamp pagination and member/realm/shard isolation. Real command integration verifies actual combat, protected raid, return safety and replay with existing troop movement and Shield semantics; default-deny raw log reads/queries and whitelisted responses prevent leakage. Add corresponding retained adapter index only, no database backfill."
-    },
-    {
-      "paths": [
         "game.js",
-        "clan-ledger-ui.css",
-        "tools/validate-war-cities-browser.js"
+        "tools/validate-clan-loading-browser.js"
       ],
       "tests": [
-        "tools/validate-war-cities-browser.js",
+        "tools/validate-clan-loading-browser.js",
         "tools/validate-clans.js",
         "tools/validate-clan-ledger-ui.js",
         "tools/validate-clan-notifications-browser.js",
-        "functions/test/emulator-clan-war-cities.js",
-        "tools/test-local-postgres-war-cities.js",
-        "tools/test-local-postgres-war-city-commands.js"
+        "tools/validate-deferred-ui-styles-browser.js",
+        "tools/validate-war-cities-browser.js"
       ],
-      "reason": "Add Log/Back and paginated plain text in the existing Lost Holdings frame. Desktop and two landscape touch viewports exercise source/delivered assets, awaiting-return decision state, frame stability, scrolling, errors/empty history, escaped names, old-server gating and stale-clan responses. Preserve notices, regular city/location actions and one bounded window-scoped request/timer."
+      "reason": "Recover a failed or stalled Clan snapshot with a bounded deadline and explicit reconnect, preserving scoped callbacks and existing subscription teardown. Desktop and two landscape touch sizes cover retry, reopen, unavailable membership, late success, stale clan responses and usable controls. Exercise deferred stylesheet recovery, Clan permissions/ledger, saved heraldry/notifications and Lost Holdings source/built flows because they share the Clan window and subscription lifecycle. Client presentation/recovery only; no server-authoritative behavior or data changes require emulator cases."
     },
     {
       "paths": [
@@ -41,15 +25,7 @@
       "tests": [
         "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Measured 1624 game bytes plus 210 lazy stylesheet bytes; existing headroom plus 1.5 KiB covers main script and installation cache overages. No new assets, dependencies or network requests; preserve remaining budgets."
-    },
-    {
-      "paths": [
-        "docs/CLAN_WAR_CITIES.md",
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md"
-      ],
-      "tests": [],
-      "reason": "Document confirmed simple event history and awaiting-return behavior, privacy, persistence, cursor semantics and separate installation/compatibility hold. Distinguish verified prior notification release from this log pending authorized backend installation."
+      "reason": "The fix adds 1272 game.js bytes. Bound the measured 1260-byte source overage at 1.25 KiB and 851-byte installation-cache overage at 1 KiB. No new assets, dependencies, background polling, or production service requests; preserve all remaining budgets."
     }
   ]
 }

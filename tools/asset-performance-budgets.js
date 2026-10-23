@@ -80,5 +80,7 @@
 // The open-window refresh adds about 3 KiB of source; existing headroom covers
 // part of it. Bound the remaining shell growth at 2 KiB, with no new assets.
 // Lost Holdings text history adds 1,834 client bytes; bound residual cache growth at 1.5 KiB.
-const MAX_INSTALL_PRECACHE_BYTES = 1536 + 2 * 1024 + 8 * 1024 + (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024 + 2 * 1024 + 4 * 1024 + 512 + 1024 + 8 * 1024 + 12 * 1024 + 3 * 1024 + 5 * 1024 + 2 * 1024 + 20 * 1024 + 1024 + 512 + 1536 + 1536 + 10 * 1024 + 2 * 1024 + 3 * 1024;
+// Clan loading recovery adds 1,272 bytes; bound the 851-byte cache overage at 1 KiB.
+// It reuses existing subscriptions and adds no assets, dependencies or polling.
+const MAX_INSTALL_PRECACHE_BYTES = 1024 + 1536 + 2 * 1024 + 8 * 1024 + (3784 + 36 + 44 + 32 + 100 + 40 + 16 + 128 + 4 + 4 + 3 + 52 + 4 + 64 + 48 + 24 + 2 + 2 + 24 + 4 + 4 + 3 + 2 + 3) * 1024 + 2048 + 24 * 1024 + 8 * 1024 + 2 * 1024 + 4 * 1024 + 512 + 1024 + 8 * 1024 + 12 * 1024 + 3 * 1024 + 5 * 1024 + 2 * 1024 + 20 * 1024 + 1024 + 512 + 1536 + 1536 + 10 * 1024 + 2 * 1024 + 3 * 1024;
 module.exports = { MAX_INSTALL_PRECACHE_BYTES };
