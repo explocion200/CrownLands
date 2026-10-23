@@ -123,6 +123,10 @@ async function main(built = false) {
       })()`), 'Lost Holdings uses the shared accessible notification inside its tab');
       assert.equal(await evaluate('document.querySelector("#clanWarcitiesPanel h3").textContent'), 'Lost Holdings');
       assert.equal(await evaluate('document.querySelectorAll("[data-clan-action=war-city-return]").length'), 0);
+      await evaluate(`window.stablePanel=document.querySelector('#clanWarcitiesPanel');window.stableRow=stablePanel.querySelector('article');window.stableLocation=stableRow.querySelector('button');stableLocation.focus();window.stableList=stablePanel.querySelector('.war-cities-list');stableList.scrollTop=70;window.stableScroll=stableList.scrollTop;`);
+      await evaluate('loadClanWarCities()');
+      assert(await evaluate(`stablePanel===document.querySelector('#clanWarcitiesPanel') && stableRow===stablePanel.querySelector('article') && stableLocation===document.activeElement && stableList.scrollTop===stableScroll`), 'Polling replaced rows, focus or scroll');
+      await evaluate('stableList.scrollTop=0');
       // Recovery is observed on the open tab, without navigating or manually refreshing.
       await evaluate('Object.assign(warCityQA.rows[0],{status:"recovered",canReturn:true,currentOwnerName:"Aldric"});Object.assign(warCityQA.rows[1],{status:"recovered",currentOwnerName:"Rowan"})');
       await ready('document.querySelectorAll("[data-clan-action=war-city-return]").length===1');

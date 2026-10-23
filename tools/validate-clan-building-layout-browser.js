@@ -149,6 +149,9 @@ async function main() {
       await ev(() => openClanTowerBuilding(layoutTower.id, "scout_lodge", { section: "intelligence" }));
       await ready(() => modalBody.querySelector(".intel-entry"));
       assert.match(await ev(() => modalBody.querySelector("#intelligencePanel").textContent), /1 \/ 20 reports/);
+      await ev(() => { window.intelRow = modalBody.querySelector('.intel-entry'); window.intelButton = intelRow.querySelector('[data-intel-detail]'); intelButton.focus(); layoutQa.intelSignal(); });
+      await ready(() => !modalBody.querySelector('[data-intel-refresh]').disabled);
+      assert(await ev(() => intelRow === modalBody.querySelector('.intel-entry') && intelButton === document.activeElement), 'Intelligence refresh replaced an unchanged row or focus');
       await screenshot(`${width}-intelligence-list.png`);
       await click("[data-intel-detail]");
       await ready(() => modalBody.querySelector(".intel-breakdown"));

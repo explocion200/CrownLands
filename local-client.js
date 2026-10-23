@@ -12,19 +12,26 @@
       : !privatePath || (config && config.mode !== "rehearsal"))) throw Error("The local client requires a configured production game or private rehearsal.");
     const deploymentHeaders = production ? { "X-Crownlands-Deployment": config.epoch } : {};
     const authState = { currentUser: null }, observers = new Set(), watchers = new Set();
-    const db = { kind: "local-database" }; let csrf, authTime, refreshing, watchTimer, authTimer, revision = 0, disposed = false, activeRequests = 0;
+    const db = { kind: "local-database" }; let csrf, authTime, refreshing, watchTimer, authTimer, revision = 0, disposed = false, activeRequests = 0, backgroundRequests = 0;
     const pendingRequests = [];
-    let polling = false, pollAgain = false, chatTimer, chatController, chatConnected = false, chatCursor, chatGeneration = 0;
+    let polling = false, pollAgain = false, chatTimer, chatController, chatConnected = false, chatCursor, chatGeneration = 0, watchController;
     let chatSupported = typeof root.AbortController === "function";
     const chatWatcher = watcher => watcher.target.kind === "collection" && /^(?:(globalChat|clans)\/[^/]+\/messages|socialAccounts\/[^/]+\/signals)$/.test(watcher.target.path);
     const makeError = (code, message) => Object.assign(Error(message || "The request could not be completed."), { code });
-    let readiness;
+    let readiness, revisionSupported = false, watchFailures = 0, chatFailures = 0, watchNotBefore = 0;
+    const retryDelay = (error, failures) => Math.max(error.retryAfterMs || 0,
+      Math.min(30000, 10000 * 2 ** Math.min(2, failures - 1)) * (1 + Math.random() * 0.2));
+    const readOnlyCall = (path, input) => path.startsWith("call/") && (/^call\/(?:get|preview|list|find)[A-Z]/.test(path)
+      || ["list", "detail", "log", "status", "history", "unread", "preview"].includes(input?.data?.action));
+    const isBackground = (path, input) => ["read", "watch", "watch-chat", "world/catalog", "world/areas"].includes(path)
+      || readOnlyCall(path, input) && !path.startsWith("call/preview");
     async function ready() {
       if (!production) return;
       if (!readiness) readiness = Promise.all(["/local-auth/health", "/api/local-game/health"].map(async path => {
         const response = await root.fetch(path, { credentials: "same-origin", cache: "no-store", headers: deploymentHeaders, signal: root.AbortSignal?.timeout(10000) });
         const status = await response.json();
         if (!response.ok || status.ready !== true || status.rehearsal !== false || status.protocol !== 1 || status.epoch !== config.epoch) throw makeError("auth/network-request-failed", "Crownlands is being updated. Please try again shortly.");
+        if (path === "/api/local-game/health") revisionSupported = status.capabilities?.includes("watch-revisions-v1") === true;
       })).catch(error => { readiness = null; throw error; });
       await readiness;
     }
@@ -36,7 +43,7 @@
         if (!response.ok) throw makeError("auth/network-request-failed"); const result = await response.json();
         csrf = result.csrf;
         const prior = JSON.stringify([authState.currentUser, authTime]);
-        if (result.user?.uid !== authState.currentUser?.uid || result.authTime !== authTime) { revision++; restartChat(); }
+        if (result.user?.uid !== authState.currentUser?.uid || result.authTime !== authTime) { revision++; for (const watcher of watchers) { watcher.token = undefined; watcher.identity = undefined; watcher.previous = undefined; } restartChat(); }
         if (authState.currentUser && result.user?.uid === authState.currentUser.uid) Object.assign(authState.currentUser, result.user);
         else authState.currentUser = result.user;
         authTime = result.authTime;
@@ -54,17 +61,15 @@
       if (disposed) throw unavailable();
       signal?.throwIfAborted();
       if (pendingRequests.length >= 128) throw makeError(path.startsWith("call/") ? "functions/resource-exhausted" : "resource-exhausted", "Too many pending game requests.");
-      // Login starts many independent listeners/callables. Bound each tab to
-      // six in-flight game requests so the server's admission limit is useful
-      // protection rather than a source of normal startup failures.
+      const background = isBackground(path, input);
+      // Four background slots leave two of the existing six slots for commands
+      // and explicit route previews. Queued actions overtake queued polling.
       await new Promise((resolve, reject) => {
-        if (activeRequests < 6) { activeRequests++; resolve(); }
-        else {
-          const cleanup = () => signal?.removeEventListener("abort", abort);
-          const entry = { resolve: () => { cleanup(); resolve(); }, reject: () => { cleanup(); reject(unavailable()); } };
-          const abort = () => { const index = pendingRequests.indexOf(entry); if (index >= 0) { pendingRequests.splice(index, 1); cleanup(); reject(signal.reason); } };
-          pendingRequests.push(entry); signal?.addEventListener("abort", abort, { once: true });
-        }
+        const cleanup = () => signal?.removeEventListener("abort", abort);
+        const entry = { background, resolve: () => { cleanup(); resolve(); }, reject: () => { cleanup(); reject(unavailable()); } };
+        const abort = () => { const index = pendingRequests.indexOf(entry); if (index >= 0) { pendingRequests.splice(index, 1); cleanup(); reject(signal.reason); } };
+        pendingRequests.push(entry); signal?.addEventListener("abort", abort, { once: true });
+        drainRequests();
       });
       try {
         if (disposed || requestedRevision !== revision) throw unavailable();
@@ -73,10 +78,23 @@
           throw makeError("functions/failed-precondition", "The world changed while this request waited. Please try again.");
         if (requestedWorld && worldCommands.has(path.slice(5))) input = { ...input, data: { ...input.data,
           clientWorldProtocol: requestedWorld.protocol, clientWorldRevision: requestedWorld.revision } };
-        return await performPost(path, input, false, signal);
+        const result = await performPost(path, input, false, signal);
+        if (path === "write" || path.startsWith("call/") && !readOnlyCall(path, input)) wake(75);
+        return result;
       } finally {
-        const next = pendingRequests.shift();
-        if (next) next.resolve(); else activeRequests--;
+        activeRequests--; if (background) backgroundRequests--;
+        drainRequests();
+      }
+    }
+    function drainRequests() {
+      if (disposed) return;
+      while (activeRequests < 6) {
+        let index = pendingRequests.findIndex(entry => !entry.background);
+        if (index < 0 && backgroundRequests < 4) index = pendingRequests.findIndex(entry => entry.background);
+        if (index < 0) break;
+        const [entry] = pendingRequests.splice(index, 1);
+        activeRequests++; if (entry.background) backgroundRequests++;
+        entry.resolve();
       }
     }
     async function performPost(path, input, authentication, signal) {
@@ -90,7 +108,9 @@
       if (disposed || (!authentication && started !== revision)) throw makeError(normalizeCode("functions/unauthenticated"), "The account session changed.");
       if (!response.ok || result.error) {
         if (response.status === 401) await session().catch(() => {});
-        throw Object.assign(makeError(normalizeCode(result.error?.code || (authentication ? "auth/network-request-failed" : "functions/unavailable")), result.error?.message), { status: response.status, details: result.error?.details });
+        const retry = response.headers?.get("Retry-After");
+        const retryAfterMs = retry ? Math.min(120000, Math.max(0, /^\d+(?:\.\d+)?$/.test(retry) ? Number(retry) * 1000 : Date.parse(retry) - Date.now())) || 0 : 0;
+        throw Object.assign(makeError(normalizeCode(result.error?.code || (authentication ? "auth/network-request-failed" : "functions/unavailable")), result.error?.message), { status: response.status, details: result.error?.details, retryAfterMs });
       }
       return authentication ? result : result.result;
     }
@@ -198,9 +218,10 @@
     function snapshot(result, previous) {
       if (result.document) return documentSnapshot(result.documents[0]);
       const docs = result.documents.map(documentSnapshot), prior = previous?.docs || [], changes = [];
-      for (const [index, doc] of prior.entries()) if (!docs.some(next => next.ref.path === doc.ref.path)) changes.push({ type: "removed", doc, oldIndex: index, newIndex: -1 });
+      const nextPaths = new Set(docs.map(doc => doc.ref.path)), priorIndices = new Map(prior.map((doc, index) => [doc.ref.path, index]));
+      for (const [index, doc] of prior.entries()) if (!nextPaths.has(doc.ref.path)) changes.push({ type: "removed", doc, oldIndex: index, newIndex: -1 });
       for (const [index, doc] of docs.entries()) {
-        const old = prior.findIndex(previous => previous.ref.path === doc.ref.path);
+        const old = priorIndices.get(doc.ref.path) ?? -1;
         if (old === -1 || prior[old].raw.body?.updateTime !== doc.raw.body?.updateTime || old !== index) changes.push({ type: old === -1 ? "added" : "modified", doc, oldIndex: old, newIndex: index });
       }
       return { docs, size: docs.length, empty: !docs.length, forEach: callback => docs.forEach(callback), docChanges: () => changes, metadata: { fromCache: false, hasPendingWrites: false } };
@@ -228,22 +249,27 @@
     function deliver(watcher, result) {
       if (!watchers.has(watcher)) return;
       if (result.error) {
-        watchers.delete(watcher);
+        watchers.delete(watcher); watcher.token = undefined; watcher.previous = undefined; watcher.identity = undefined;
         try { watcher.error?.(makeError(result.error.code, result.error.message)); } catch { /* Independent listener. */ }
         return;
       }
-      const identity = JSON.stringify(result);
+      if (result.unchanged) {
+        if (watcher.previous && watcher.token === result.revision) return;
+        watcher.token = undefined; wake(); return;
+      }
+      watcher.token = /^[a-f0-9]{64}$/.test(result.revision || "") ? result.revision : undefined;
+      const identity = watcher.token || JSON.stringify(result);
       if (identity !== watcher.identity) {
         watcher.identity = identity; watcher.delivery = (watcher.delivery || 0) + 1;
         watcher.previous = snapshot(result, watcher.previous);
         try { watcher.next(watcher.previous); } catch { /* Independent listener. */ }
       }
     }
-    function wake() {
+    function wake(delay = 0) {
       if (disposed) return;
       if (polling) { pollAgain = true; return; }
       root.clearTimeout(watchTimer);
-      watchTimer = watchers.size ? root.setTimeout(poll, 0) : null;
+      watchTimer = watchers.size ? root.setTimeout(poll, Math.max(delay, watchNotBefore - Date.now())) : null;
     }
     function restartChat() {
       chatGeneration++; chatController?.abort(); chatController = null;
@@ -258,16 +284,16 @@
       const controller = new root.AbortController(); chatController = controller;
       let delay = 50;
       try {
-        // One held response, outside the six action-request slots. The server
-        // wakes it on committed chat changes and reauthorizes every snapshot.
-        const result = await performPost("watch-chat", { targets: active.map(watcher => spec(watcher.target)), ...(chatCursor ? { cursor: chatCursor } : {}) }, false, controller.signal);
+        // One held response uses a background slot. The server wakes it on
+        // committed chat changes and reauthorizes every snapshot.
+        const result = await post("watch-chat", { targets: active.map(watcher => spec(watcher.target)), ...(chatCursor ? { cursor: chatCursor } : {}) }, false, controller.signal);
         if (disposed || generation !== chatGeneration || controller.signal.aborted) return;
         if (!/^[a-f0-9]{64}$/.test(result?.cursor || "") || !Array.isArray(result.results) || result.results.length !== active.length) throw makeError("unavailable");
-        chatCursor = result.cursor; chatConnected = true;
+        chatCursor = result.cursor; chatConnected = true; chatFailures = 0;
         active.forEach((watcher, index) => deliver(watcher, result.results[index]));
       } catch (error) {
         if (disposed || generation !== chatGeneration || controller.signal.aborted) return;
-        chatConnected = false; chatCursor = undefined; delay = 10000;
+        chatConnected = false; chatCursor = undefined; delay = retryDelay(error, ++chatFailures);
         if (error.code === "not-found") chatSupported = false; // Compatible older server.
         if (["permission-denied", "unauthenticated", "invalid-argument"].includes(error.code)) {
           for (const watcher of active) deliver(watcher, { error });
@@ -293,12 +319,15 @@
       if (!watchers.size) return;
       polling = true; pollAgain = false;
       const deliveries = active.map(watcher => watcher.delivery || 0);
+      const controller = watchController = typeof root.AbortController === "function" ? new root.AbortController() : null;
       let delay = root.document.hidden ? 10000 : 1500;
       try {
         // A single bounded request prevents dozens of listeners from flooding
         // the host. The server authorizes every target and returns independent
         // permission failures without exposing a forbidden document.
-        const results = active.length ? await post("watch", { targets: active.map(watcher => spec(watcher.target)) }) : [];
+        const results = active.length ? await post("watch", { targets: active.map(watcher => spec(watcher.target)),
+          ...(revisionSupported ? { revisions: active.map(watcher => watcher.token || null) } : {}) }, false, controller?.signal) : [];
+        watchFailures = 0; watchNotBefore = 0;
         if (!Array.isArray(results) || results.length !== active.length) throw makeError("unavailable");
         for (const [index, watcher] of active.entries()) {
           // A slow general snapshot cannot overwrite a newer chat response.
@@ -306,18 +335,21 @@
           deliver(watcher, results[index]);
         }
       } catch (error) {
-        delay = 10000;
+        if (controller?.signal.aborted) { pollAgain = true; } else {
+        delay = retryDelay(error, ++watchFailures); watchNotBefore = Date.now() + delay;
         const terminal = ["permission-denied", "unauthenticated", "invalid-argument"].includes(error.code);
         for (const watcher of active) if (watchers.has(watcher)) {
           if (terminal) watchers.delete(watcher);
           // Error handlers can clear their visible state. On recovery, deliver
           // the next authorized snapshot even when its data has not changed.
-          else watcher.identity = undefined;
+          watcher.identity = undefined; watcher.token = undefined; watcher.previous = undefined;
           try { watcher.error?.(error); } catch { /* Keep remaining listeners independent. */ }
         }
       }
+      }
+      if (watchController === controller) watchController = null;
       polling = false;
-      watchTimer = !disposed && watchers.size ? root.setTimeout(poll, pollAgain ? 0 : delay) : null;
+      watchTimer = !disposed && watchers.size ? root.setTimeout(poll, Math.max(pollAgain ? 0 : delay, watchNotBefore - Date.now())) : null;
     }
     const firestore = {
       getFirestore: () => db, Timestamp,
@@ -350,7 +382,7 @@
         if (watchers.size >= 80) throw makeError("resource-exhausted", "Too many active game listeners.");
         watchers.add(watcher);
         wake(); if (chatWatcher(watcher)) restartChat();
-        return () => { watchers.delete(watcher); if (chatWatcher(watcher)) restartChat(); };
+        return () => { if (watchers.delete(watcher)) { watchController?.abort(); wake(); } if (chatWatcher(watcher)) restartChat(); };
       },
     };
     const messaging = root.CrownlandsLocalPush?.create() || { isSupported: async () => false };
@@ -359,7 +391,7 @@
         if (!["catalog", "areas", "options"].includes(operation)) throw makeError("invalid-argument");
         return post("world/" + operation, input, false, signal);
       } },
-      dispose: () => { disposed = true; revision++; restartChat(); messaging.dispose?.(); root.clearInterval(authTimer); root.clearTimeout(watchTimer); watchers.clear(); observers.clear();
+      dispose: () => { disposed = true; revision++; watchController?.abort(); restartChat(); messaging.dispose?.(); root.clearInterval(authTimer); root.clearTimeout(watchTimer); watchers.clear(); observers.clear();
         root.document.removeEventListener?.("visibilitychange", foreground); root.removeEventListener?.("online", foreground);
         for (const request of pendingRequests.splice(0)) request.reject(); } };
   }

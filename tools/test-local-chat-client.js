@@ -67,7 +67,7 @@ async function check(source) {
     await tick("poll");
 
     const retry = tick("pollChat"); await flush(); chatRequests.at(-1).finish({ error: { code: "functions/unavailable" } }); await retry;
-    assert.equal(timer("pollChat")[1].delay, 10000);
+    assert(timer("pollChat")[1].delay >= 10000 && timer("pollChat")[1].delay <= 12000);
     await tick("poll"); assert(calls.at(-1).input.targets.some(target => target.collection), "Fallback lost chat subscription");
 
     // Old account/channel responses are aborted and cannot repopulate the view.

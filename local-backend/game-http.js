@@ -67,7 +67,7 @@ function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, d
       }
       if (url.search) throw fail("invalid-argument");
       if (active >= maxConcurrent) throw fail("resource-exhausted"); active++; counted = true;
-      if (req.method === "GET" && url.pathname === "/api/local-game/health") { await store.pool.query("SELECT 1"); return send(res, 200, { ready: true, rehearsal: !permanent, ...(permanent ? { protocol: 1, epoch: deployment.epoch } : {}) }); }
+      if (req.method === "GET" && url.pathname === "/api/local-game/health") { await store.pool.query("SELECT 1"); return send(res, 200, { ready: true, rehearsal: !permanent, capabilities: ["watch-revisions-v1"], ...(permanent ? { protocol: 1, epoch: deployment.epoch } : {}) }); }
       if (req.method === "GET" && worldData?.asset && url.pathname.startsWith("/api/local-game/world-assets/")) {
         const session = await auth.session(cookies(req.headers.cookie)[COOKIE]);
         if (!session) throw fail("unauthenticated");
@@ -131,8 +131,8 @@ function createGameServer({ store, auth, routes, ownerUid, expiresAt, preview, d
             signal: controller.signal, holdMs: chatHoldMs, recheckMs: chatRecheckMs,
             read: targets => data.read(session.auth, targets, { partial: true }) });
         } else if (operation === "read" || operation === "watch") {
-          if (Object.keys(input).some(key => key !== "targets")) throw fail("invalid-argument");
-          result = await data.read(session.auth, input.targets, { partial: operation === "watch" });
+          if (Object.keys(input).some(key => key !== "targets" && !(operation === "watch" && key === "revisions"))) throw fail("invalid-argument");
+          result = await data.read(session.auth, input.targets, { partial: operation === "watch", revisions: input.revisions });
         } else if (operation === "write") {
           if (Object.keys(input).some(key => !["writes", "checks"].includes(key))) throw fail("invalid-argument");
           result = await data.write(session.auth, input.writes, input.checks);

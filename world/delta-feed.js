@@ -57,14 +57,14 @@
       sections, marches:delta&&same(previous.marches,nextMarches)?previous.marches:nextMarches, routes:delta&&same(previous.routes,nextRoutes)?previous.routes:nextRoutes };
   }
   class DeltaFeed extends AreaFeed {
-    constructor(changed, load) { super(changed, load); this.cursor = null; this.cursorIds = ""; this.snapshots = 0; this.deltas = 0; this.bytes = 0; this.authExpired = false; }
+    constructor(changed, load) { super(changed, load); this.cursor = null; this.cursorIds = ""; this.snapshots = 0; this.deltas = 0; this.bytes = 0; this.authExpired = false; this.failures = 0; this.retryAt = 0; }
     set(ids) {
       const next = [...new Set(ids)].slice(0, 16).sort();
       if (JSON.stringify(next) !== JSON.stringify(this.ids)) { this.cursor = null; this.cursorIds = ""; this.data = { ...this.data, authoritative: false }; }
       super.set(next);
     }
     async refresh() {
-      if (this.disposed || this.pending || !this.ids.length || this.authExpired) return;
+      if (this.disposed || this.pending || !this.ids.length || this.authExpired || Date.now() < this.retryAt) return;
       const generation = this.generation, ids = [...this.ids], controller = new AbortController(); this.pending = controller; this.requests++;
       const cursor = this.cursorIds === JSON.stringify(ids) ? this.cursor : null;
       const timeout = setTimeout(() => controller.abort(), 8000); let loaded = false;
@@ -74,12 +74,14 @@
         loaded = true;
         const data = applyPacket(this.data, packet, ids, cursor); data.receivedAt = performance.now() / 1000;
         this.cursor = { epoch: packet.epoch, revision: packet.revision }; this.cursorIds = JSON.stringify(ids);
-        this.data = data; this.failed = false; this[packet.kind === "snapshot" ? "snapshots" : "deltas"]++;
+        this.data = data; this.failed = false; this.failures = 0; this.retryAt = 0; this[packet.kind === "snapshot" ? "snapshots" : "deltas"]++;
         this.bytes += new TextEncoder().encode(JSON.stringify(packet)).length;
         this.peakSections = Math.max(this.peakSections, data.sections.length); this.changed(data);
       } catch (error) {
         if (!this.disposed && generation === this.generation) {
           this.failed = true;
+          this.retryAt = Date.now() + Math.max(error.retryAfterMs || 0,
+            Math.min(30000, 1000 * 2 ** Math.min(5, this.failures++)) * (1 + Math.random() * 0.2));
           if (error.status === 401 || error.status === 403 || error.status === 409 || error.status === 410) {
             this.authExpired = true; this.cursor = null;
             this.data = { revision: -1, sections: [], marches: [], routes: [], authExpired: true };
@@ -90,7 +92,7 @@
         }
       } finally { clearTimeout(timeout); if (this.pending === controller) this.pending = null; }
     }
-    stats() { return { ...super.stats(), epoch: this.cursor?.epoch, snapshots: this.snapshots, deltas: this.deltas, bytes: this.bytes, authExpired: this.authExpired }; }
+    stats() { return { ...super.stats(), epoch: this.cursor?.epoch, snapshots: this.snapshots, deltas: this.deltas, bytes: this.bytes, authExpired: this.authExpired, retryAt: this.retryAt }; }
   }
   return { DeltaFeed, applyPacket };
 });

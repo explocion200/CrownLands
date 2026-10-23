@@ -1,44 +1,57 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "5d3c4bddebbffe8b666b02b904b70bf97e692e43",
+  "baseCommit": "3e983e383a7241b6aba58f0709512609f70fe388",
   "coverage": [
     {
       "paths": [
-        "tools/test-local-postgres-map-pan-performance.js",
-        "tools/test-local-postgres-native-auth-world.js",
-        "tools/validate-continuous-pickup-placement.js",
-        "tools/validate-production-artifact.js",
-        "tools/validate-world-render-cache.js",
-        "tools/validate-world-update-work.js",
-        "world/appearance.js",
-        "world/assets.js",
+        "local-client.js",
+        "local-backend/client-data.js",
+        "local-backend/game-http.js",
         "world/delta-feed.js",
-        "world/model.js",
-        "world/native.js",
-        "world/preview.css",
-        "world/preview.js",
-        "world/sprite-layer.js"
+        "tools/test-local-chat-client.js",
+        "tools/test-local-postgres-game-http.js",
+        "tools/test-local-transport-priority.js",
+        "tools/test-local-watch-revisions.js",
+        "tools/test-local-browser-client.js"
       ],
       "tests": [
+        "tools/test-local-transport-priority.js",
+        "tools/test-local-watch-revisions.js",
+        "tools/test-local-browser-client.js",
+        "tools/test-local-chat-client.js",
+        "tools/test-local-production-client.js",
+        "tools/test-local-postgres-game-http.js",
+        "tools/test-local-postgres-season-isolation.js",
+        "tools/test-local-postgres-clan-support.js",
         "tools/validate-world-update-work.js",
-        "tools/validate-world-render-cache.js",
-        "tools/validate-continuous-map-labels.js",
-        "tools/validate-continuous-pickup-placement.js",
-        "tools/validate-continuous-pickup-animation.js",
-        "tools/validate-continuous-city-shields.js",
-        "tools/validate-production-artifact.js",
-        "tools/test-local-postgres-production-world.js",
-        "tools/test-local-postgres-map-pan-performance.js"
+        "functions/test/emulator-clan-support.js"
       ],
-      "reason": "Incremental area identities/index mutations and bounded presentation affect all native map markers, projection, selection, paths, disclosure, pickups, shields and loaded-art caches. Pure validators cover data and cache invariants; real authenticated PostgreSQL/browser fixtures cover native commands and interactions at desktop and both landscape sizes. The warmed pan test verifies node identity, single-city updates, surface bounds and obscured rendering with authorization polling. Package validation protects lazy module size and release boundaries. No authoritative game/server code or gameplay rules change."
+      "reason": "Priority/backoff and capability-negotiated watch transport affect authoritative permissions, stale session/world guards, command refresh and map retries. Real PostgreSQL API fixtures and source/minified client tests cover limits, cancellation, legacy response compatibility and revocation; shared Clan Support emulator cases preserve report privacy and expiry."
     },
     {
       "paths": [
-        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/GAMEPLAY_PERFORMANCE_2026-10-23.md"
+        "clan-intelligence-ui.js",
+        "game.js",
+        "tools/validate-clan-building-layout-browser.js",
+        "tools/validate-war-cities-browser.js",
+        "tools/asset-performance-budgets.js",
+        "tools/validate-asset-performance-budgets.js"
+      ],
+      "tests": [
+        "tools/validate-war-cities-browser.js",
+        "tools/validate-clan-building-layout-browser.js",
+        "tools/test-local-postgres-clan-support.js",
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
+      ],
+      "reason": "Keyed updates are confined to Lost Holdings and Intelligence; actual desktop/landscape fixtures cover unchanged node/focus/scroll retention, loading/errors, return actions, report detail, expiry and membership revocation while preserving surrounding clan UI. The existing offline shell grows by 2,308 source bytes for the keyed reconciler; the shared-cache overage is bounded within 2 KiB and the existing entrypoint allowance grows by 2.25 KiB, without adding assets or precache entries."
+    },
+    {
+      "paths": [
+        "docs/GAMEPLAY_TRANSPORT_PERFORMANCE.md"
       ],
       "tests": [],
-      "reason": "Record the owner-approved performance targets and operational retention boundaries, separately verified PR714 installation, rendering implementation and measured limitations. Documentation does not establish deployment of this feature."
+      "reason": "Documents implemented protocol, isolated validation and compatible rollout requirements; no claim of live installation."
     }
   ]
 }

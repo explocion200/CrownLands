@@ -140,7 +140,7 @@ const { COOKIE, CSRF } = require("../local-backend/auth-http");
     await store.doc(`islands/${island}/cities/city3`).delete();
     await tick(); assert(counts[1].some(([type, id]) => type === "removed" && id === "city3")); assert(counts[1].some(([type, id]) => type === "modified" && id === "city2"));
     root.document.hidden = true; await tick(); assert.equal([...timers.values()][0].delay, 10000);
-    stopCities(); stopProfile(); await tick(); assert.equal(timers.size, 0);
+    stopCities(); stopProfile(); assert.equal(timers.size, 0, "Unsubscribing the last listener cancels its queued timer");
 
     await client.auth.reload(); let pendingStarted;
     const started = new Promise(resolve => { pendingStarted = resolve; }); pauseWatch = pendingStarted;
