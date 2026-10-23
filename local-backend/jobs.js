@@ -72,6 +72,7 @@ class JobQueue {
       CREATE TABLE IF NOT EXISTS ${s}.work_schedules (name text PRIMARY KEY, signature text NOT NULL, last_minute bigint NOT NULL);
       REVOKE ALL ON ${s}.work_jobs,${s}.work_schedules FROM PUBLIC;`);
     await this.transaction(client => require("./job-status").initializeJobStatus(client, s));
+    await require("./history-retention").prepareHistoryIndexes(this.controlStore.pool, s);
   }
   async transaction(callback) {
     const client = await this.controlStore.pool.connect();

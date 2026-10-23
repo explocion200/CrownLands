@@ -1,67 +1,27 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "c4708633578ea5a0c554c36fbf4fc3a4297c91bb",
+  "baseCommit": "3073e7163f0d44141570b48133ce693477c64985",
   "coverage": [
     {
       "paths": [
-        "local-backend/store.js",
-        "local-backend/jobs.js",
-        "local-backend/job-status.js",
-        "local-backend/worker-loop.js",
-        "tools/test-local-postgres-execution-performance.js"
+        "local-backend/history-retention.js",
+        "tools/maintain-internal-history.js",
+        "tools/test-internal-history-retention.js"
       ],
       "tests": [
-        "tools/test-local-postgres-execution-performance.js",
-        "tools/test-local-postgres-store.js",
-        "tools/test-local-postgres-transaction-retries.js",
-        "tools/test-local-postgres-transaction-cache.js",
+        "tools/test-internal-history-retention.js",
         "tools/test-local-postgres-jobs.js",
         "tools/test-local-postgres-worker-loop.js",
-        "tools/test-local-postgres-worker-service.js",
-        "tools/test-local-postgres-clan-support.js",
-        "tools/test-local-postgres-clan-shop.js",
-        "tools/test-local-postgres-stamina.js",
-        "tools/test-local-social-integration.js",
-        "tools/test-local-postgres-production-routes.js"
+        "tools/test-local-postgres-worker-service.js"
       ],
-      "reason": "The shared SQL write/journal path affects atomic receipts, transformations, callbacks and job dispatch across gameplay. Focused real PostgreSQL suites cover rollback/concurrency/retries, economy and clan actions, chat notification commits, recorded movement routes, leases/restarts/catch-up and bounded health counters without running unrelated visual or balance suites."
+      "reason": "Indexed, explicit internal-history maintenance and separately approved index preparation require real PostgreSQL transactional checks. Tests prove dry-run defaults, immutable game/account/report/receipt/archive documents, source-reference protection, exact cutoff/cursor resume, duplicate identity retention, atomic cancellation/timeout behavior and worker restart/lease compatibility. No shared Firebase gameplay function, schema or game rule changes, so no emulator gameplay suite is relevant."
     },
     {
       "paths": [
-        "functions/index.js",
-        "functions/operation-timing.js",
-        "local-backend/worker-diagnostics.js",
-        "tools/validate-operation-timing.js",
-        "tools/validate-scheduled-arrival-timing.js"
-      ],
-      "tests": [
-        "tools/validate-operation-timing.js",
-        "tools/validate-scheduled-arrival-timing.js",
-        "tools/test-local-postgres-worker-loop.js",
-        "functions/test/emulator-combat-authorization.js",
-        "functions/test/emulator-bulk-army-orders.js"
-      ],
-      "reason": "All scheduled outcomes are measured without changing arrival resolution, concurrency or gameplay; numeric-only aggregate privacy, async timing isolation and recorded authoritative army behavior require shared emulator coverage."
-    },
-    {
-      "paths": [
-        "local-backend/world/service.js",
-        "tools/test-local-postgres-world-service.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-world-service.js",
-        "tools/test-local-postgres-live-reader.js",
-        "tools/test-local-postgres-world-visibility.js",
-        "tools/test-local-watch-revisions.js"
-      ],
-      "reason": "Removing duplicate preparation reads must preserve fresh account/realm/membership and private troop visibility, catalog changes, cancellation and public-only coalescing. Real cookie mixed-traffic fixtures include subscription, chat, commands and concurrent area lanes with complete attempt/failure accounting. Combined revision-token payload measurement shares the freshly authorized watch path; its expiry and membership tests must remain green."
-    },
-    {
-      "paths": [
-        "docs/BACKEND_EXECUTION_PERFORMANCE.md"
+        "docs/INTERNAL_HISTORY_RETENTION.md"
       ],
       "tests": [],
-      "reason": "Records implementation, counters migration, diagnostic interpretation and separately approved rollout requirements; deployment remains unverified."
+      "reason": "Documents confirmed seven-day scope, separate install/deletion approvals, bounded indexed operation and non-compaction limits. No production cleanup or deployment claim."
     }
   ]
 }
