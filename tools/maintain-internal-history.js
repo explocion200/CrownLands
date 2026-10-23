@@ -9,7 +9,7 @@ async function main(args=process.argv.slice(2)) {
     if(args[i]==="--apply")options.apply=true;
     else if(args[i]==="--prepare-indexes")options.prepare=true;
     else if(fields[args[i]] && args[i+1] && !args[i+1].startsWith("--"))options[fields[args[i]]]=args[++i];
-    else throw Error("Use --schema, --checkpoint/--resume, --max-batches, --seconds; --apply also requires --confirm-schema.");
+    else throw Error("Use --schema, --checkpoint/--resume, --max-batches, --seconds; --apply or --prepare-indexes also requires --confirm-schema.");
   }
   options.batches=Number(options.batches);options.seconds=Number(options.seconds);
   if(!/^migration_game_[a-z0-9_]{1,30}$/.test(options.schema)||!Number.isInteger(options.batches)||options.batches<1||options.batches>10000
@@ -38,5 +38,5 @@ async function main(args=process.argv.slice(2)) {
     return state;
   } finally {process.removeListener("SIGINT",stop);process.removeListener("SIGTERM",stop);await store.close();}
 }
-if(require.main===module)main().catch(error=>{console.error(error.code==="history-maintenance-stopped"?error.message:"History maintenance stopped without advancing the failed batch. Check arguments, permissions, pressure and indexes; no automatic retry was attempted.");process.exitCode=1;});
+if(require.main===module)main().catch(error=>{console.error(error.code==="history-maintenance-stopped"?error.message:"History maintenance stopped. Check arguments, permissions, pressure, indexes and the checkpoint. A checkpoint-write failure may follow a committed batch; resume safely and verify with a fresh dry run. No automatic retry was attempted.");process.exitCode=1;});
 module.exports={main};
