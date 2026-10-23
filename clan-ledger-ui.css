@@ -695,3 +695,6 @@
   #profileScreen #clanContent .clan-war-cities button{font-size:13px;padding:4px 8px}
   #profileScreen #clanContent .clan-war-cities footer>small{font-size:11px}
 }
+
+#profileScreen #clanContent .war-cities-list .war-city-event{display:grid;justify-content:stretch;gap:4px;overflow-wrap:anywhere}
+#profileScreen #clanContent .war-city-event time{font-size:12px;color:#67583f}

@@ -55,6 +55,9 @@ const assert = require("node:assert/strict"), { randomUUID, randomBytes } = requ
     assert.equal(board.entries.length, 1); assert.equal(board.entries[0].status, "lost");
     assert.equal(board.entries[0].captorName, rival.label);
     const lostKey = board.entries[0].key;
+    const history = () => call("clanWarCities", leader, { action: "log" });
+    assert.equal((await history()).entries.length, 1);
+    assert((await history()).entries[0].text.includes(ally.label + " lost "));
     // A listed clan loss does not grant the recovering clanmate a power-protection bypass.
     await cityRef(leader.home).update({ troops: 2000000, troopFloat: 2000000 });
     for (const actor of users) await call("collectEconomy", actor);
@@ -73,6 +76,7 @@ const assert = require("node:assert/strict"), { randomUUID, randomBytes } = requ
     assert.equal((await call("clanWarCities", leader)).entries[0].status, "lost");
     await cityRef(leader.home).update({ troops: 50000, troopFloat: 50000 });
     await ref.update({ troops: 0, troopFloat: 0, productionUpdatedAtMs: Date.now() + 3600000 });
+    assert.equal((await history()).entries.length, 1, "Protected raid is not a recovery event");
     await capture(leader);
     board = await call("clanWarCities", leader);
     assert.equal(board.entries[0].status, "recovered"); assert(board.entries[0].canReturn);
@@ -92,6 +96,7 @@ const assert = require("node:assert/strict"), { randomUUID, randomBytes } = requ
     await incoming.set({ ...identity, id: incoming.id, status: "active", ownerUid: rival.uid, targetKey: `${target.regionId}:${target.id}` });
     await assert.rejects(call("clanWarCities", leader, request), /incoming marches/);
     await incoming.delete();
+    assert.equal((await history()).entries.length, 2, "Failed returns must not record decisions");
     const expiry = Date.now() + 3600000;
     await profile(ally).update({ "itemEffects.shieldExpiresAtMs": expiry });
     const before = await read(ref), donorBefore = await read(profile(leader)), recipientBefore = await read(profile(ally));
@@ -115,10 +120,18 @@ const assert = require("node:assert/strict"), { randomUUID, randomBytes } = requ
     await call("clanWarCities", leader, request);
     await call("resolveArmyOrder", leader, { armyId: movement.id, routeRegionIds: movement.routeRegionIds });
     assert.equal((await read(destination)).troops, delivered, "Retry duplicated returning troops");
+    const events = (await history()).entries;
+    assert.equal(events.length, 3);
+    assert.equal(events.filter(e => e.kind === "returned").length, 1);
+    assert(events.some(e => e.kind === "returned" && e.text.startsWith(leader.label + " chose to return ") && e.text.endsWith(ally.label + ".")));
+    await assert.rejects(call("clanWarCities", rival, { action: "log" }));
     const { Access } = require("../local-backend/access");
     await db.runTransaction(async tx => {
       const access = await new Access({ store: db, transaction: tx, auth: { uid: leader.uid } }).initialize();
       const path = `clans/${clanId}/warCities/${request.key}`;
+      const logs = db.collection(`clans/${clanId}/warCityEvents`), event = (await tx.get(logs.limit(1))).docs[0];
+      assert.equal(await access.canRead(event.ref.path, event.data()), false);
+      assert.equal(await access.canQuery(logs.limit(25)), false);
       assert.equal(await access.canRead(path, (await tx.get(db.doc(path))).data()), false, "Raw board bypasses command authorization");
     });
     console.log("Lost Holdings real commands: player loss, no weak-player bypass, same-row recapture, permission/main-city/incoming guards, concurrent return, shield/walls/level preservation, economy stats, owned troop journey, replay and private access passed.");

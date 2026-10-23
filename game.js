@@ -26843,7 +26843,7 @@ function setClanMobileSection(section, options = {}) {
 
 function clanWarCitiesScope() { return `${getOnlineRequestScope()}:${state?.clanId || ""}`; }
 function resetClanWarCities() {
-  clanWarCitiesView = { scope: clanWarCitiesScope(), entries: [], cursor: "", nextCursor: "", busy: false, loaded: false, error: "", noticeAvailable: false, noticeCursor: "", noticeCheckedAtMs: 0 };
+  clanWarCitiesView = { scope: clanWarCitiesScope(), entries: [], cursor: "", nextCursor: "", busy: false, loaded: false, error: "", noticeAvailable: false, noticeCursor: "", noticeCheckedAtMs: 0, logSupported: false, showLog: false, log: { entries: [], cursor: "", nextCursor: "", loaded: false, error: "" } };
   clanWarCitiesOperations.clear();
 }
 function hasClanWarCitiesNotice() {
@@ -26882,35 +26882,40 @@ function pollClanWarCities() {
   if (clanWarCitiesView.scope !== clanWarCitiesScope()) resetClanWarCities();
   if (document.hidden || clanWarCitiesView.busy) return;
   const view = clanWarCitiesView;
-  if (isClanSectionActive("warcities") && !view.cursor && !view.noticeCursor) {
+  if (isClanSectionActive("warcities") && !view.showLog && !view.cursor && !view.noticeCursor) {
     void loadClanWarCities();
   } else if (view.noticeCursor || Date.now() - (view.noticeCheckedAtMs || 0) >= 15000) {
     void loadClanWarCities(view.noticeCursor || "", { noticeOnly: true });
-  } else if (isClanSectionActive("warcities")) void loadClanWarCities();
+  } else if (isClanSectionActive("warcities") && !view.showLog) void loadClanWarCities();
 }
 function ensureClanWarCitiesPolling() {
   if (clanWarCitiesTimer || !clanWarCitiesPollingOpen()) return;
   clanWarCitiesTimer = window.setInterval(pollClanWarCities, 5000);
   pollClanWarCities();
 }
-async function loadClanWarCities(cursor = clanWarCitiesView.cursor, { noticeOnly = false } = {}) {
+async function loadClanWarCities(cursor, { noticeOnly = false } = {}) {
   if (!clanWarCitiesPollingOpen() || document.hidden || (!noticeOnly && !isClanSectionActive("warcities"))) return;
   if (clanWarCitiesView.scope !== clanWarCitiesScope()) { resetClanWarCities(); cursor = ""; }
   const view = clanWarCitiesView;
   if (view.busy) return;
+  const log = !noticeOnly && view.showLog, page = log ? view.log : view;
+  cursor ??= page.cursor;
   view.busy = true;
-  if (!noticeOnly) { view.error = ""; view.cursor = cursor || ""; renderClanView(); }
+  if (!noticeOnly) { view.error = ""; page.error = ""; page.cursor = cursor || ""; renderClanView(); }
   try {
-    const result = await getOnlineApi().clanWarCities({ action: "list", cursor: cursor || "" });
+    const result = await getOnlineApi().clanWarCities({ action: log ? "log" : "list", cursor: cursor || "" });
     if (view !== clanWarCitiesView || view.scope !== clanWarCitiesScope()) return;
     if (result?.version !== 1 || result.clanId !== state.clanId || !Array.isArray(result.entries)) throw Error("Lost Holdings requires the updated game server.");
-    if (noticeOnly || !cursor) acceptClanWarCitiesNoticePage(view, result);
-    if (!noticeOnly) { view.entries = result.entries; view.nextCursor = result.nextCursor; view.loaded = true; }
+    view.logSupported = result.logVersion === 1;
+    if (log && !view.logSupported) throw Error("The event log is waiting for the server update.");
+    if (!log && (noticeOnly || !cursor)) acceptClanWarCitiesNoticePage(view, result);
+    if (!noticeOnly) { page.entries = result.entries; page.nextCursor = result.nextCursor; page.loaded = true; }
   } catch (error) {
     if (view !== clanWarCitiesView || view.scope !== clanWarCitiesScope()) return;
     view.noticeAvailable = false; view.noticeCursor = ""; view.noticeCheckedAtMs = Date.now();
-    view.entries = []; view.loaded = false;
-    view.error = error?.code === "functions/not-found" ? "Lost Holdings is waiting for the server update." : error.message || "Lost Holdings could not load. Try Refresh.";
+    view.entries = []; view.loaded = false; view.log.entries = []; view.log.loaded = false;
+    page.error = error?.code === "functions/not-found" ? "Lost Holdings is waiting for the server update." : error.message || "Lost Holdings could not load. Try Refresh.";
+    if (noticeOnly && view.showLog) view.log.error = page.error;
   } finally {
     if (view === clanWarCitiesView && view.scope === clanWarCitiesScope()) {
       view.busy = false;
@@ -26919,7 +26924,7 @@ async function loadClanWarCities(cursor = clanWarCitiesView.cursor, { noticeOnly
         updateClanWarCitiesNoticeBadge();
         if (isClanSectionActive("warcities")) {
           if (view.error) renderClanView();
-          else if (!view.loaded) void loadClanWarCities();
+          else if (!view.showLog && !view.loaded) void loadClanWarCities();
         }
       }
     }
@@ -26927,19 +26932,29 @@ async function loadClanWarCities(cursor = clanWarCitiesView.cursor, { noticeOnly
 }
 function renderClanWarCitiesPanel() {
   if (clanWarCitiesView.scope !== clanWarCitiesScope()) resetClanWarCities();
-  const v = clanWarCitiesView;
+  const v = clanWarCitiesView, page = v.showLog ? v.log : v;
   return `<section id="clanWarcitiesPanel" class="clan-section-panel clan-war-cities ${isClanSectionActive("warcities") ? "active" : ""}" role="tabpanel" aria-labelledby="clanSectionTabWarcities">
-    <header><div><h3>Lost Holdings</h3><small>Recover your clanmates’ lost cities</small></div><button type="button" data-clan-action="war-cities-refresh" ${v.busy ? "disabled" : ""}>${v.busy ? "Loading…" : "Refresh"}</button></header>
-    ${v.error ? `<p role="status">${escapeHtml(v.error.replaceAll("War Cities", "Lost Holdings"))}</p>` : ""}
-    <div class="war-cities-list scroll-region" aria-busy="${v.busy}">${v.entries.map(e => `<article>
-      <div class="war-city-copy"><strong>${escapeHtml(e.cityName)}</strong><small>${escapeHtml(getRegionLabel(e.location.regionId))} · Originally ${escapeHtml(e.originalOwnerName)}</small><span>Taken by ${escapeHtml(e.captorName)}</span><small>Now held by ${escapeHtml(e.currentOwnerName)} · ${e.status === "recovered" ? "Recovered" : "Lost"}</small></div>
+    <header><div><h3>Lost Holdings</h3><small>${v.showLog ? "Clan event log · Newest first" : "Recover your clanmates’ lost cities"}</small></div><div class="war-city-actions"><button type="button" data-clan-action="war-cities-log" ${v.busy || (!v.showLog && !v.logSupported) ? "disabled" : ""} title="${v.logSupported ? "View clan event history" : "Event log requires the updated server"}">${v.showLog ? "Back" : "Log"}</button><button type="button" data-clan-action="war-cities-refresh" ${v.busy ? "disabled" : ""}>${v.busy ? "Loading…" : "Refresh"}</button></div></header>
+    ${page.error ? `<p role="status">${escapeHtml(page.error.replaceAll("War Cities", "Lost Holdings"))}</p>` : ""}
+    <div class="war-cities-list scroll-region" aria-busy="${v.busy}">${v.showLog ? renderClanWarCitiesLog(page) : v.entries.map(e => `<article>
+      <div class="war-city-copy"><strong>${escapeHtml(e.cityName)}</strong><small>${escapeHtml(getRegionLabel(e.location.regionId))} · Originally ${escapeHtml(e.originalOwnerName)}</small><span>Taken by ${escapeHtml(e.captorName)}</span><small>Now held by ${escapeHtml(e.currentOwnerName)} · ${e.status === "recovered" ? "Recovered · Awaiting return decision" : "Lost"}</small></div>
       <div class="war-city-actions"><button type="button" class="location-icon-button" data-clan-action="war-city-location" data-war-city-key="${e.key}" aria-label="Go to ${escapeHtml(e.cityName)}" title="View city on map"></button>${e.canReturn ? `<button type="button" data-clan-action="war-city-return" data-war-city-key="${e.key}" ${v.busy ? "disabled" : ""}>Return city</button>` : e.status === "recovered" ? `<small>${escapeHtml(e.returnBlockedReason || "Its owner can return it")}</small>` : ""}</div>
     </article>`).join("") || (v.loaded ? '<p>No lost cities on this page. Only captures recorded since tracking began are listed.</p>' : !v.error ? '<p>Loading your clan’s cities…</p>' : "")}</div>
-    <footer><small>Normal attack protection applies. Return city sends your troops home.</small><div>${v.cursor ? '<button type="button" data-clan-action="war-cities-first">First page</button>' : ""}${v.nextCursor ? '<button type="button" data-clan-action="war-cities-next">Next page</button>' : ""}</div></footer></section>`;
+    <footer><small>${v.showLog ? "Events are recorded from the log update onward. Refresh for new events." : "Normal attack protection applies. Return city sends your troops home."}</small><div>${page.cursor ? '<button type="button" data-clan-action="war-cities-first">First page</button>' : ""}${page.nextCursor ? '<button type="button" data-clan-action="war-cities-next">Next page</button>' : ""}</div></footer></section>`;
+}
+function renderClanWarCitiesLog(page) {
+  return page.entries.map(e => `<article class="war-city-event"><time>${escapeHtml(new Date(e.occurredAtMs).toLocaleString())}</time><span>${escapeHtml(e.text)}</span></article>`).join("")
+    || (page.loaded ? "<p>No events recorded yet.</p>" : !page.error ? "<p>Loading clan history…</p>" : "");
 }
 async function handleWarCityAction(action, key) {
-  if (action === "war-cities-refresh" || action === "war-cities-first") return loadClanWarCities(action.endsWith("first") ? "" : clanWarCitiesView.cursor);
-  if (action === "war-cities-next") return loadClanWarCities(clanWarCitiesView.nextCursor);
+  const v = clanWarCitiesView, page = v.showLog ? v.log : v;
+  if (action === "war-cities-log") {
+    if (v.busy || (!v.showLog && !v.logSupported)) return;
+    v.showLog = !v.showLog;
+    return loadClanWarCities("");
+  }
+  if (action === "war-cities-refresh" || action === "war-cities-first") return loadClanWarCities(action.endsWith("first") ? "" : page.cursor);
+  if (action === "war-cities-next") return loadClanWarCities(page.nextCursor);
   const view = clanWarCitiesView, entry = view.entries.find(e => e.key === key);
   if (!entry || view.busy || view.scope !== clanWarCitiesScope()) return;
   if (action === "war-city-location") { closeProfileScreen({ force: true }); return locateClanIntelligence({ ...entry, targetName: entry.cityName }); }

@@ -1,6 +1,16 @@
 {
   "indexes": [
     {
+      "collectionGroup": "warCityEvents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "worldId", "order": "ASCENDING" },
+        { "fieldPath": "resetGeneration", "order": "ASCENDING" },
+        { "fieldPath": "realmShardId", "order": "ASCENDING" },
+        { "fieldPath": "orderKey", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "warCities",
       "queryScope": "COLLECTION",
       "fields": [
