@@ -2278,6 +2278,8 @@ These are verified repository facts for commit `27105ae...`; exact deployed back
 
 ## 15. Seasons, Resets & Persistence
 
+**October 23, 2026 isolation audit:** The owner confirmed that only previously approved account/season carryover may enter the current game. The [current-season audit](CURRENT_SEASON_ISOLATION_AUDIT.md) records the actual October PostgreSQL realm, test/live database isolation, retained historical records versus active progression, and additional direct-read scope checks. This adds no persistence entitlement and does not delete archived data. The older implementation-status table below predates later estate, Gear-box and season-ranking releases; the audit cross-references those confirmed rules rather than treating historical `PLANNED` labels as current behavior. Backend/client hardening must be installed and verified separately from merge; the audit itself made no production writes.
+
 ### Confirmed design policy
 
 The persistence allowlist is explicit. The following are intended to persist across seasons/resets:

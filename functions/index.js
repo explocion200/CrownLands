@@ -17643,6 +17643,7 @@ exports.getCombatPlayerIdentity = onCall({
   let leaderboardSnap = await leaderboardEntryRef(targetUid).get();
   let leaderboard = leaderboardSnap.exists ? leaderboardSnap.data() || {} : {};
   const needsRebuild = !leaderboardSnap.exists
+    || !isCurrentRealmPowerSnapshot(leaderboard)
     || Math.max(0, Math.floor(safeNumber(leaderboard.kingPowerVersion, 0))) < GLOBAL_PLAYER_STATS_VERSION
     || !Number.isFinite(leaderboard.kingPower) || leaderboard.kingPower < 0;
 
@@ -17653,7 +17654,9 @@ exports.getCombatPlayerIdentity = onCall({
     leaderboardSnap = await leaderboardEntryRef(targetUid).get();
     leaderboard = leaderboardSnap.exists ? leaderboardSnap.data() || {} : {};
   }
-  if (!leaderboardSnap.exists) throw new HttpsError("not-found", "That kingdom could not be found.");
+  if (!leaderboardSnap.exists || !isCurrentRealmPowerSnapshot(leaderboard)) {
+    throw new HttpsError("not-found", "That kingdom is not available in the current season.");
+  }
 
   const identity = {
     uid: targetUid,

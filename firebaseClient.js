@@ -2412,9 +2412,14 @@
     if (!objectiveId) throw new Error("Unknown reward camp type.");
     const scope = getOnlineRequestScope();
     const { doc, getDoc } = client.modules.firestore;
-    const snapshot = await getDoc(doc(client.db, "players", uid, "objectiveStats", objectiveId));
+    const snapshot = await getDoc(doc(client.db, "players", uid, "objectiveStats", objectiveId)).catch(error => {
+      // Old fixed-ID Camp records are now denied by the local backend. Treat
+      // them as no progress; transport/server failures still offer retry.
+      if (["permission-denied", "functions/permission-denied"].includes(getFirebaseErrorCode(error))) return null;
+      throw error;
+    });
     if (scope !== getOnlineRequestScope()) throw new Error("Reward account or realm changed.");
-    const rawData = snapshot.exists() ? snapshot.data() || {} : {};
+    const rawData = snapshot?.exists() ? snapshot.data() || {} : {};
     // Existing private Camp records predate shard metadata. New records carry
     // it; neither an older world nor an explicitly different shard is reused.
     const data = rawData.resetGeneration === RESET_GENERATION && rawData.worldId === ONLINE_WORLD_ID

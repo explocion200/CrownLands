@@ -55,10 +55,27 @@ const { Access, PROFILE_UPDATE, PROFILE_CREATE_DENIED } = require("../local-back
     assert(await read(`realmEvents/${board}/activity/fixture`, scope));
     assert(await read(`realmGenerations/${scope.resetGeneration}/expansion/current`, {}));
     assert.equal(await read(`realmGenerations/${scope.resetGeneration}/assignments/${other}`, scope), false);
-    assert(await read(`islands/${island}/cities/fixture`, {}));
+    assert(await read(`islands/${island}/cities/fixture`, scope));
     assert.equal(await read(`islands/${island}/reports/fixture_hold_private`, {}), false);
-    assert(await read(`islands/old/cities/fixture`, { ...scope, ownerUid: uid }), "Recursive owner read matches the source rule");
+    assert.equal(await read(`islands/old/cities/fixture`, { ...scope, ownerUid: uid }), false, "Local owner reads also require the current island path");
     assert.equal(await read(`islands/old/cities/fixture`, { ...scope, ownerUid: other }), false);
+    // Paths and record metadata must agree. Exercise every direct/list path
+    // that previously trusted a current-looking container on its own.
+    for (const target of [
+      ...["cities", "camps", "marauders", "armies", "presence"].map(c => `islands/${island}/${c}/fixture`),
+      `clanLeaderboards/${board}/entries/house`,
+      `players/${uid}/objectiveStats/goldCamp`,
+    ]) {
+      assert(await read(target, scope), target);
+      for (const foreign of [{ ...scope, resetGeneration: "realm-2026-09" },
+        { ...scope, worldId: "test-world" }, { ...scope, realmShardId: "shard_0002" }, {}]) {
+        assert.equal(await read(target, foreign), false, target + " foreign record");
+        assert.equal(await read(target, foreign, "list"), false, target + " foreign list");
+      }
+    }
+    const preShard = { resetGeneration: scope.resetGeneration, worldId: scope.worldId };
+    assert(await read(`players/${uid}/objectiveStats/goldCamp`, preShard));
+    assert(await read(`islands/${island}/presence/${uid}`, preShard));
     assert(await read("armies/fixture", { ...scope, ownerUid: other, participantUids: [uid] }));
     assert.equal(await read("armies/fixture", { ...scope, ownerUid: other }), false);
     assert(await read("reinforcements/fixture", { ...scope, ownerUid: other, targetOwnerUid: uid, status: "stationed" }));
