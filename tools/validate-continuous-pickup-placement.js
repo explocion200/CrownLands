@@ -7,7 +7,7 @@ function fixture(){
   const scene={width:1448*5,height:1086*5,sections:[section],objects:[{sectionId:"current",kind:"scenery",left:1450,top:1088,width:10,height:10}],marches:[]};
   const status={size:{width:1448,height:1086},feed:{ids:["current"],failed:false,authExpired:false}};
   let terrainCalls=0,land=true;
-  const view={scene,selectedKey:null,placementState:()=>status,snapshot:()=>{throw Error("Diagnostic snapshot in pickup hot path");}};
+  const view={scene,selectedKey:null,getObject:key=>scene.objects.find(o=>o.key===key),placementState:()=>status,snapshot:()=>{throw Error("Diagnostic snapshot in pickup hot path");}};
   const ctx={window:{SeamlessAppearance:{labelBounds:new Map()}},SeamlessModel:model,
     HARVEST_BONUS_CENTER_SEARCH_FRACTIONS:[.15,.25,.35],HARVEST_BONUS_CENTER_SEARCH_ATTEMPTS_PER_ZONE:300,HARVEST_BONUS_CENTER_SEARCH_GOLDEN_ANGLE:Math.PI*(3-Math.sqrt(5)),
     getAllActiveHarvestBonuses:()=>[],isHarvestBonusTerrainSafePoint:()=>{terrainCalls++;return land;}};

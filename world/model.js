@@ -43,11 +43,20 @@
   // Queries retain source order so collision priorities and painting stay stable.
   class SpatialIndex {
     constructor(items, bounds = item => item, cell = 512) {
-      this.items=items;this.bounds=items.map(bounds);this.cell=cell;this.grid=new Map();
-      this.bounds.forEach((b,i)=>{for(const key of this.keys(b)){if(!this.grid.has(key))this.grid.set(key,[]);this.grid.get(key).push(i);}});
+      this.cell=cell;this.grid=new Map();this.entries=new Map();this.order=0;this.bounds=bounds;
+      items.forEach(item=>this.upsert(item));
     }
     keys(b){const keys=[];for(let x=Math.floor(b.left/this.cell);x<=Math.floor((b.left+b.width)/this.cell);x++)for(let y=Math.floor(b.top/this.cell);y<=Math.floor((b.top+b.height)/this.cell);y++)keys.push(x+":"+y);return keys;}
-    query(view){const found=new Set();for(const key of this.keys({left:view.left,top:view.top,width:view.right-view.left,height:view.bottom-view.top}))for(const i of this.grid.get(key)||[]){const b=this.bounds[i];if(intersects(view,b.left,b.top,b.width,b.height))found.add(i);}return [...found].sort((a,b)=>a-b).map(i=>this.items[i]);}
+    remove(key){const old=this.entries.get(key);if(!old)return;for(const cell of old.cells){const bucket=this.grid.get(cell);bucket.delete(key);if(!bucket.size)this.grid.delete(cell);}this.entries.delete(key);}
+    upsert(item){
+      const key=item.key,old=this.entries.get(key),b=this.bounds(item);
+      // A new count/owner snapshot replaces the result without touching buckets.
+      if(old&&["left","top","width","height"].every(k=>old.box[k]===b[k])){old.item=item;return;}
+      const order=old?.order??this.order++;this.remove(key);
+      const entry={item,order,box:{left:b.left,top:b.top,width:b.width,height:b.height},cells:this.keys(b)};
+      this.entries.set(key,entry);for(const cell of entry.cells){if(!this.grid.has(cell))this.grid.set(cell,new Set());this.grid.get(cell).add(key);}
+    }
+    query(view){const found=new Set();for(const cell of this.keys({left:view.left,top:view.top,width:view.right-view.left,height:view.bottom-view.top}))for(const key of this.grid.get(cell)||[]){const e=this.entries.get(key),b=e.box;if(intersects(view,b.left,b.top,b.width,b.height))found.add(e);}return [...found].sort((a,b)=>a.order-b.order).map(e=>e.item);}
   }
   function interestSections(sections, camera, size, previous = []) {
     const visibleSections = margin => sections.filter(s => intersects(visible(camera,size,margin),s.x,s.y,s.width,s.height));

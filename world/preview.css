@@ -7,7 +7,7 @@ button:focus-visible,#viewport:focus-visible{outline:3px solid #eab65a;outline-o
 #viewport.dragging{cursor:grabbing}
 /* Let the browser rasterize at the current zoom. A permanent will-change hint
    caches the whole world at its first scale, blurring sprites and text on zoom. */
-#world{position:absolute;left:0;top:0;transform-origin:0 0;width:4344px;height:3258px;background:#a2a05b}
+#world{position:absolute;left:0;top:0;transform-origin:0 0;contain:layout paint style;background:#a2a05b}
 #terrain,#objects,#marches{position:absolute;inset:0;pointer-events:none}
 #marches{contain:layout paint;z-index:2}
 #catalog-overview{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}

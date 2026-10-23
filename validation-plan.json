@@ -1,65 +1,44 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "a624354778aff53442282a28db59ef7082e4447c",
+  "baseCommit": "5d3c4bddebbffe8b666b02b904b70bf97e692e43",
   "coverage": [
     {
       "paths": [
-        "local-backend/access.js",
-        "tools/test-local-postgres-access.js",
-        "tools/test-local-postgres-season-isolation.js"
+        "tools/test-local-postgres-map-pan-performance.js",
+        "tools/test-local-postgres-native-auth-world.js",
+        "tools/validate-continuous-pickup-placement.js",
+        "tools/validate-production-artifact.js",
+        "tools/validate-world-render-cache.js",
+        "tools/validate-world-update-work.js",
+        "world/appearance.js",
+        "world/assets.js",
+        "world/delta-feed.js",
+        "world/model.js",
+        "world/native.js",
+        "world/preview.css",
+        "world/preview.js",
+        "world/sprite-layer.js"
       ],
       "tests": [
-        "tools/test-local-postgres-access.js",
-        "tools/test-local-postgres-season-isolation.js",
-        "tools/test-local-postgres-live-reader.js",
-        "tools/test-local-postgres-world-visibility.js",
-        "tools/test-local-postgres-permanent.js",
-        "tools/test-crown-payments.js"
+        "tools/validate-world-update-work.js",
+        "tools/validate-world-render-cache.js",
+        "tools/validate-continuous-map-labels.js",
+        "tools/validate-continuous-pickup-placement.js",
+        "tools/validate-continuous-pickup-animation.js",
+        "tools/validate-continuous-city-shields.js",
+        "tools/validate-production-artifact.js",
+        "tools/test-local-postgres-production-world.js",
+        "tools/test-local-postgres-map-pan-performance.js"
       ],
-      "reason": "Protect direct/list/watch responses from old or misplaced map, Camp and clan standings records, preserving missing-row/pre-shard compatibility and independent authorized watchers. Real PostgreSQL reset/retry proves seasonal data replacement and approved permanent stores; area reader tests cover current membership, privacy and revocation. Independent-cluster permanent service tests and sandbox payment tests verify test/live boundaries without production writes."
-    },
-    {
-      "paths": [
-        "functions/index.js",
-        "functions/test/emulator-combat-authorization.js"
-      ],
-      "tests": [
-        "tools/test-local-postgres-season-isolation.js",
-        "functions/test/emulator-combat-authorization.js",
-        "functions/test/emulator-reset-gate.js"
-      ],
-      "reason": "Combat identity must reject foreign or incomplete standings even in the current board and rebuild only from a current profile. New actual-call tests cover each scope dimension; combat authorization protects weak-player decisions and the reset emulator validates transactional identity/clan/Gear carryover and seasonal progression reset."
-    },
-    {
-      "paths": [
-        "firebaseClient.js",
-        "tools/validate-shared-camp-rewards.js"
-      ],
-      "tests": [
-        "tools/validate-shared-camp-rewards.js",
-        "tools/validate-camp-power-rewards-browser.js",
-        "tools/validate-realm-refresh.js",
-        "tools/validate-login-realm-sequence.js",
-        "functions/test/emulator-reset-gate.js"
-      ],
-      "reason": "Old fixed-ID Camp records now deny reads; display empty current progress without hiding network errors, retaining current reward counts and request-scope isolation. Browser checks cover desktop and 844x390/568x320 landscape. Shared adapter bootstrap/realm tests and reset emulator protect season transitions; no new visual design or production commands are introduced."
-    },
-    {
-      "paths": [
-        "tools/validate-reset-release.js"
-      ],
-      "tests": [
-        "tools/validate-reset-release.js"
-      ],
-      "reason": "Repair the reset audit validator false positive for a worldId filter immediately before generation in the same query; continue requiring both filters and all reset/persistence gates. No production query is reordered or changed."
+      "reason": "Incremental area identities/index mutations and bounded presentation affect all native map markers, projection, selection, paths, disclosure, pickups, shields and loaded-art caches. Pure validators cover data and cache invariants; real authenticated PostgreSQL/browser fixtures cover native commands and interactions at desktop and both landscape sizes. The warmed pan test verifies node identity, single-city updates, surface bounds and obscured rendering with authorization polling. Package validation protects lazy module size and release boundaries. No authoritative game/server code or gameplay rules change."
     },
     {
       "paths": [
         "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
-        "docs/CURRENT_SEASON_ISOLATION_AUDIT.md"
+        "docs/GAMEPLAY_PERFORMANCE_2026-10-23.md"
       ],
       "tests": [],
-      "reason": "Document the owner-confirmed existing carryover-only boundary, read-only live aggregates and isolated tests, known incomplete excluded standings, historical status notes, and backend-first compatible rollout. No new persistence rules or authorization for production mutations."
+      "reason": "Record the owner-approved performance targets and operational retention boundaries, separately verified PR714 installation, rendering implementation and measured limitations. Documentation does not establish deployment of this feature."
     }
   ]
 }

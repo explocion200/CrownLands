@@ -47,8 +47,14 @@
       const inside = item.kind === "troop" ? item.sections.some(id => ids.includes(id)) : ids.includes(item.sectionId);
       if (inside && !objects.has(item.key) && !marches.has(item.key)) removed.add(item.key);
     }
+    const same=(a,b)=>a?.length===b.length&&b.every((item,i)=>item===a[i]);
+    const grouped=new Map(ids.map(id=>[id,[]]));for(const item of objects.values())grouped.get(item.sectionId).push(item);
+    const priorSections=new Map(previous.sections.map(s=>[s.id,s]));
+    let sections=ids.map(id=>{const old=priorSections.get(id),items=grouped.get(id);return delta&&same(old?.objects,items)?old:{id,objects:items};});
+    if(delta&&same(previous.sections,sections))sections=previous.sections;
+    const nextMarches=[...marches.values()],nextRoutes=[...routes.values()];
     return { authoritative: true, viewer: packet.viewer, revision: packet.revision, epoch: packet.epoch, serverTime: packet.serverTime, scriptHealthy: packet.scriptHealthy, removed: [...removed],
-      sections: ids.map(id => ({ id, objects: [...objects.values()].filter(o => o.sectionId === id) })), marches: [...marches.values()], routes: [...routes.values()] };
+      sections, marches:delta&&same(previous.marches,nextMarches)?previous.marches:nextMarches, routes:delta&&same(previous.routes,nextRoutes)?previous.routes:nextRoutes };
   }
   class DeltaFeed extends AreaFeed {
     constructor(changed, load) { super(changed, load); this.cursor = null; this.cursorIds = ""; this.snapshots = 0; this.deltas = 0; this.bytes = 0; this.authExpired = false; }

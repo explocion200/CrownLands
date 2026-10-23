@@ -9,22 +9,35 @@ window.createContinuousWorldView = async function (options = {}) {
     const stageThree = true, fullCatalog = true;
     const scene = options.scene;
     const M = window.SeamlessModel.forWorld(scene);
-    let rawObjects=scene.objects||[],courtyardSignature="";
+    let rawObjects=scene.objects||[],courtyardSignature="",geometryUpdates=0;
+    const prepared=new Map(),children=new Map();
     scene.objects = rawObjects.map(SeamlessAppearance.geometry); scene.marches ||= [];
-    world.style.width = `${scene.width}px`; world.style.height = `${scene.height}px`;
     world.classList.toggle("full-catalog", fullCatalog);
     viewport.setAttribute("aria-label", `${scene.sections.length}-section world. Drag to explore, scroll or pinch to zoom. Select to inspect.`);
     const objects = new Map(scene.objects.map(o => [o.key, o]));
-    let objectIndex=new M.SpatialIndex(scene.objects);
+    const objectIndex=new M.SpatialIndex(scene.objects);
     function updateObjects(force=false){
       const towers=rawObjects.filter(o=>o.kind==="tower");
       const states=new Map(towers.map(o=>[o.id,options.getTowerState?.(o.id)]));
       const signature=JSON.stringify(towers.map(o=>{const s=states.get(o.id);return [o.key,o.ownerClanId,s?.ownerKind,s?.clanId,s?.ownershipRevision,s?.buildings,s?.buildingProject?.buildingId];}));
       if(!force&&signature===courtyardSignature)return;
       courtyardSignature=signature;
-      scene.objects=rawObjects.map(SeamlessAppearance.geometry).flatMap(o=>o.kind==="tower"?[o,...SeamlessAppearance.courtyard(o,states.get(o.id))]:[o]);
-      objects.clear();scene.objects.forEach(o=>objects.set(o.key,o));
-      objectIndex=new M.SpatialIndex(scene.objects);
+      const next=[];
+      for(const raw of rawObjects){
+        let entry=prepared.get(raw.key);
+        if(!entry||entry.raw!==raw){entry={raw,item:SeamlessAppearance.geometry(raw)};prepared.set(raw.key,entry);geometryUpdates++;}
+        next.push(entry.item);
+        if(raw.kind==="tower"){
+          const state=states.get(raw.id),key=JSON.stringify([raw.ownerClanId,state?.ownerKind,state?.clanId,state?.ownershipRevision,state?.buildings,state?.buildingProject?.buildingId]);
+          let saved=children.get(raw.key);
+          if(!saved||saved.item!==entry.item||saved.key!==key){saved={key,item:entry.item,items:SeamlessAppearance.courtyard(entry.item,state)};children.set(raw.key,saved);}
+          next.push(...saved.items);
+        }
+      }
+      const keys=new Set(next.map(o=>o.key));
+      for(const key of objects.keys())if(!keys.has(key)){objects.delete(key);objectIndex.remove(key);prepared.delete(key);children.delete(key);}
+      for(const item of next)if(objects.get(item.key)!==item){objects.set(item.key,item);objectIndex.upsert(item);}
+      scene.objects=next;
     }
     function prepareMarch(m, points) {
       const path = M.preparePath(points);
@@ -49,13 +62,31 @@ window.createContinuousWorldView = async function (options = {}) {
           $("routes").append(node);routeNodes.set(item.key,node);}
         if(node.dataset.route!==item.routeId){const points=item.points.map(p=>`${p.x},${p.y}`).join(" ");for(const line of node.children)line.setAttribute("points",points);node.dataset.route=item.routeId;}
         const owner=window.SeamlessAppearance.routeClass(item),kind=item.missionKind==="scout"?"scout-route":"";
-        [...node.children].forEach((line,i)=>line.setAttribute("class",`army-route-flow ${i?"":"army-route-base"} ${owner} ${kind}`));
+        [...node.children].forEach((line,i)=>{const value=`army-route-flow ${i?"":"army-route-base"} ${owner} ${kind}`;if(line.getAttribute("class")!==value)line.setAttribute("class",value);});
       }
     }
-    let patrolPlanAt = 0, lastAreaData = null, lastAreaFailed = false;
+    let patrolPlanAt = 0, lastAreaData = null, lastAreaFailed = false, marchCandidatesKey="";
     let disposed = false;
     let size, camera, selected = null, dirty = true, raf = 0, lastFrame = 0;
     let serverTimeOffset = 0, sceneTime = 0, frozenTime = null, lastPlan = "", plannedCamera = null, drawnCamera=null, zoomAt=0;
+    let surface=null,surfaceVersion=0,presentationFrames=0,presentationPaused=false;
+    // Only presentation coordinates are rebased. Saved identities, routes and
+    // the public camera continue to use canonical world coordinates.
+    function rebase(){
+      const margin=192,z=camera.zoom;
+      if(surface&&surface.zoom===z&&surface.screenWidth===size.width&&surface.screenHeight===size.height
+          &&Math.abs(surface.x-camera.x)*z<margin/2&&Math.abs(surface.y-camera.y)*z<margin/2)return false;
+      const width=(size.width+2*margin)/z,height=(size.height+2*margin)/z;
+      surface={x:camera.x,y:camera.y,zoom:z,screenWidth:size.width,screenHeight:size.height,left:camera.x-width/2,top:camera.y-height/2,width,height};surfaceVersion++;
+      world.style.width=`${width}px`;world.style.height=`${height}px`;
+      const overview=$("catalog-overview");overview.style.cssText=`left:${-surface.left}px;top:${-surface.top}px;width:${scene.width}px;height:${scene.height}px`;
+      $("routes").setAttribute("viewBox",`${surface.left} ${surface.top} ${width} ${height}`);
+      // Rebase whole containers, not every marker: changing hundreds of left/
+      // top properties would force layout at each overscan boundary.
+      const shift=`translate(${-surface.left}px,${-surface.top}px)`;
+      objectsLayer.style.transform=shift;$("terrain").style.transform=shift;
+      return true;
+    }
     const frameTimes = [], workTimes = [], pointers = new Map();
     let gesture = null, dragged = false, clickKey = null, suppressClick = false, listenerCount = 0;
     const cleanups = [];
@@ -177,6 +208,7 @@ window.createContinuousWorldView = async function (options = {}) {
     if (fullCatalog) {
       const Feed = stageThree ? window.SeamlessDeltaFeed.DeltaFeed : window.SeamlessFeed.AreaFeed;
       feed = new Feed(data => {
+        const previousData=lastAreaData;
         const unchanged=lastAreaData && data.sections===lastAreaData.sections && data.marches===lastAreaData.marches
           && data.routes===lastAreaData.routes && data.viewer===lastAreaData.viewer && data.epoch===lastAreaData.epoch
           && data.authoritative===lastAreaData.authoritative && data.authExpired===lastAreaData.authExpired && feed.failed===lastAreaFailed;
@@ -188,7 +220,11 @@ window.createContinuousWorldView = async function (options = {}) {
         const hadEpoch = Boolean(feedEpoch);
         const epochChanged = stageThree && data.epoch && data.epoch !== feedEpoch;
         if (data.epoch) feedEpoch = data.epoch;
-        if (principalChanged || (hadEpoch && epochChanged) || data.authExpired) {pooledNodes.clear();SeamlessAppearance.resetLayout();}
+        if (principalChanged || (hadEpoch && epochChanged) || data.authExpired) {
+          pooledNodes.clear();SeamlessAppearance.resetLayout();
+          for(const node of nodes.values())node.remove();nodes.clear();
+          for(const node of routeNodes.values())node.remove();routeNodes.clear();
+        }
         const inspectedSections = selectedSnapshot?.kind === "troop" ? selectedSnapshot.sections : [selectedSnapshot?.sectionId];
         const inspectedAreaPresent = inspectedSections.some(id => data.sections.some(s => s.id === id));
         const inspectedAreaLoaded = data.authoritative && inspectedAreaPresent;
@@ -199,13 +235,16 @@ window.createContinuousWorldView = async function (options = {}) {
         if (principalChanged || epochChanged || data.authExpired || data.removed?.includes(selected) || inspectedMissing
             || permissionChanged
             ) { selected = null; selectedSnapshot = null; options.onClear?.(); }
-        rawObjects=data.sections.flatMap(s=>s.objects);updateObjects(true);
+        if(data.sections!==previousData?.sections){rawObjects=data.sections.flatMap(s=>s.objects);updateObjects(true);}
         for(const key of pooledNodes.keys())if(!objects.has(key))pooledNodes.delete(key);
+        if(data.marches!==previousData?.marches||data.routes!==previousData?.routes){
         const routes = new Map(data.routes.map(r => [r.id, r.points]));
         marches = data.marches.map(m => {
           const old = byMarch.get(m.key); return old && !epochChanged && old.routeId === m.routeId ? { ...old, ...m } : prepareMarch(m, routes.get(m.routeId));
         });
         byMarch.clear(); marches.forEach(m => byMarch.set(m.key, m)); scene.marches = marches;
+        marchCandidatesKey="";
+        }
         refreshInspector(); dirty = true;
         options.onAreas?.({ ...data, failed: feed.failed });
       }, options.loadAreas);
@@ -240,6 +279,7 @@ window.createContinuousWorldView = async function (options = {}) {
       }
       paintedSections=nextPainted;
       renderRoutes(overview?[]:marches.filter(m=>M.intersects(view,m.bounds.left,m.bounds.top,m.bounds.right-m.bounds.left,m.bounds.bottom-m.bounds.top)));
+      const previousScenery=scenery;
       scenery = visibleObjects.filter(o => o.kind === "scenery"); sceneryCamera = "";
       const interactive = visibleObjects.filter(o => o.kind !== "scenery");
       window.SeamlessAppearance?.loadIdentities?.(interactive);
@@ -266,6 +306,7 @@ window.createContinuousWorldView = async function (options = {}) {
       // decoration if expanded details/controls occupy its otherwise clear spot.
       if(selectedObject)exclusions.push({left:selectedObject.left-150,top:selectedObject.top-150,right:selectedObject.left+selectedObject.width+150,bottom:selectedObject.top+selectedObject.height+150});
       scenery=M.clearScenery(scenery,exclusions);
+      if(scenery.length===previousScenery.length&&scenery.every((o,i)=>o===previousScenery[i]))scenery=previousScenery;
       world.classList.toggle("close-view", camera.zoom >= M.limits(size).home);
       world.classList.toggle("overview", overview);
       marchesLayer.classList.toggle("overview", overview);
@@ -278,7 +319,12 @@ window.createContinuousWorldView = async function (options = {}) {
     }
     function frame(now) {
       if (disposed) return;
+      if(options.current?.()===false)return;
+      if(document.hidden||options.presentationVisible?.()===false){presentationPaused=true;lastFrame=0;raf=requestAnimationFrame(frame);return;}
+      if(presentationPaused){presentationPaused=false;dirty=true;patrolPlanAt=0;}
       const start = performance.now();
+      presentationFrames++;
+      rebase();
       // Reuse rasterized layers only at a settled scale. A permanent hint kept
       // old low-resolution tiles while zooming; remove it before every zoom.
       if(!drawnCamera||drawnCamera.zoom!==camera.zoom){zoomAt=now;world.style.willChange="";}
@@ -286,7 +332,8 @@ window.createContinuousWorldView = async function (options = {}) {
       if (lastFrame && !document.hidden) { frameTimes.push(now - lastFrame); if (frameTimes.length > 900) frameTimes.shift(); }
       sceneTime = frozenTime ?? now / 1000 + serverTimeOffset;
       const view = M.visible(camera, size, 100);
-      activeMarches = (fullCatalog && camera.zoom < M.limits(size).detail ? [] : marches).filter(m => M.intersects(view, m.bounds.left, m.bounds.top, m.bounds.right - m.bounds.left, m.bounds.bottom - m.bounds.top));
+      const candidateKey=`${camera.x}:${camera.y}:${camera.zoom}:${size.width}:${size.height}`;
+      if(candidateKey!==marchCandidatesKey){activeMarches = (fullCatalog && camera.zoom < M.limits(size).detail ? [] : marches).filter(m => M.intersects(view, m.bounds.left, m.bounds.top, m.bounds.right - m.bounds.left, m.bounds.bottom - m.bounds.top));marchCandidatesKey=candidateKey;}
       for (const march of activeMarches) {
           let progress = Math.min(1, Math.max(0, (sceneTime - march.departAt) / (march.arriveAt - march.departAt)));
           if(march.returning)progress=march.returnStartProgress*(1-Math.min(1,Math.max(0,(sceneTime-march.recalledAt)/(march.arriveAt-march.recalledAt))));
@@ -315,10 +362,10 @@ window.createContinuousWorldView = async function (options = {}) {
       for(const march of activeMarches){const node=nodes.get(march.key);if(node)window.SeamlessAppearance?.tickMarch(node,march,sceneTime);}
       options.onFrame?.({ camera, size, project: p => M.project(camera, p, size) });
       if (disposed) return;
-      const transform=`translate3d(${size.width / 2 - camera.x * camera.zoom}px,${size.height / 2 - camera.y * camera.zoom}px,0) scale(${camera.zoom})`;
+      const transform=`translate3d(${size.width / 2 + (surface.left-camera.x)*camera.zoom}px,${size.height / 2 + (surface.top-camera.y)*camera.zoom}px,0) scale(${camera.zoom})`;
       if(world.style.transform!==transform)world.style.transform=transform;
       drawnCamera={...camera};
-      for (const march of activeMarches) { const node = nodes.get(march.key); if (node) { const p = M.project(camera, march.position, size); node.style.transform = `translate3d(${p.x}px,${p.y}px,0) scale(${Math.min(1,camera.zoom/M.limits(size).max)}) translate(-50%,-50%)`; } }
+      for (const march of activeMarches) { const node = nodes.get(march.key); if (node) { const p = M.project(camera, march.position, size),value=`translate3d(${p.x}px,${p.y}px,0) scale(${Math.min(1,camera.zoom/M.limits(size).max)}) translate(-50%,-50%)`;if(node.style.transform!==value)node.style.transform=value; } }
       const selectedMarch = byMarch.get(selected);
       if(selectedMarch&&!M.intersects(M.visible(camera,size),selectedMarch.position.x,selectedMarch.position.y,1,1))clear();
       workTimes.push(performance.now() - start); if (workTimes.length > 900) workTimes.shift();
@@ -339,7 +386,7 @@ window.createContinuousWorldView = async function (options = {}) {
       get selectedKey() { return selected; },
       scene, home, select, routeDraft:null, gameplay:null, refresh: () => feed?.refresh(),
       placementState: () => ({size,feed:feed && {ids:feed.ids,failed:feed.failed,authExpired:feed.authExpired}}),
-      snapshot: () => ({ camera: { ...camera }, size: { ...size }, selected, following: null, assets: assets.stats(), feed: feed?.stats(), nodes: nodes.size,pooledNodes:pooledNodes.size,renderer:sprites.stats?.(), listeners: listenerCount, frameTimes: [...frameTimes], workTimes: [...workTimes], marches: marches.map(m => ({ key: m.key, position: m.position })) }),
+      snapshot: () => ({ camera: { ...camera }, size: { ...size }, selected, following: null, surface:{...surface},surfaceVersion,geometryUpdates,presentationFrames, assets: assets.stats(), feed: feed?.stats(), nodes: nodes.size,pooledNodes:pooledNodes.size,renderer:sprites.stats?.(), listeners: listenerCount, frameTimes: [...frameTimes], workTimes: [...workTimes], marches: marches.map(m => ({ key: m.key, position: m.position })) }),
       view: (x, y, zoom) => { camera = M.clamp({ x, y, zoom: zoom ?? camera.zoom }, size); },
       time: value => { frozenTime = value; dirty = true; },
       resetMetrics: () => { frameTimes.length = 0; workTimes.length = 0; }
