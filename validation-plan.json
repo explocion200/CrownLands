@@ -34,7 +34,8 @@
         "game.js",
         "tools/validate-clan-building-layout-browser.js",
         "tools/validate-war-cities-browser.js",
-        "tools/asset-performance-budgets.js"
+        "tools/asset-performance-budgets.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
       "tests": [
         "tools/validate-war-cities-browser.js",
