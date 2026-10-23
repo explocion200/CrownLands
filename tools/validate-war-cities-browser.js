@@ -92,16 +92,34 @@ async function main(built = false) {
           originalOwnerName:'Elowen Vale',captorName:'Blackthorn',currentOwnerName:'Blackthorn',
           status:'lost',canReturn:false,location:{targetType:'city',targetId:warQA.source.id,regionId:getCityRegionId(warQA.source)}}))};
         const api=getOnlineApi();getOnlineApi=()=>({...api,sendArmyOrder:async input=>{warCityQA.orders.push(input);throw Error('Location must not dispatch troops');},clanWarCities:async input=>{
+          const clanId=state.clanId;
           warCityQA.calls.push(input);
           if(warCityQA.held) await new Promise(resolve=>warCityQA.resolve=resolve);
           if(warCityQA.reject) throw Error('Connection unavailable. Retry.');
           if(input.action==='return'){warCityQA.rows=warCityQA.rows.filter(e=>e.key!==input.key);return {ok:true};}
-          return {version:1,clanId:state.clanId,entries:warCityQA.rows,nextCursor:''};
+          return {version:1,clanId,...(warCityQA.pages?.[input.cursor||''] || {entries:warCityQA.rows,nextCursor:''})};
         }});
       })()`);
+      // The notification must arrive before visiting Lost Holdings; no board/HUD polling is needed on the map.
+      await evaluate('renderClanView()');
+      await ready('hasClanWarCitiesNotice() && !clanWarCitiesView.busy');
+      assert.equal(await evaluate('activeClanMobileSection'), 'warroom');
+      assert.equal(await evaluate('clanWarCitiesView.loaded'), false);
+      assert.equal(await evaluate('document.querySelector("[data-clan-section=warcities] .notification-badge").textContent'), '!');
+      const firstReadCount=await evaluate('warCityQA.calls.length');
+      await evaluate('window.noticeTimer=clanWarCitiesTimer;for(let i=0;i<5;i++)renderClanView()');
+      assert.equal(await evaluate('warCityQA.calls.length'),firstReadCount);
+      assert(await evaluate('noticeTimer===clanWarCitiesTimer'));
       await click('[data-clan-section="warcities"]');
       await ready('clanWarCitiesView.loaded && !clanWarCitiesView.busy');
-      assert.equal(await evaluate('document.querySelector("[data-clan-section=warcities]").textContent.trim()'), 'Lost Holdings');
+      assert.equal(await evaluate('document.querySelector("[data-clan-section=warcities] span:last-of-type").textContent.trim()'), 'Lost Holdings');
+      assert(await evaluate(`(() => {
+        const t=document.querySelector('[data-clan-section="warcities"]'),b=t.querySelector('.notification-badge');
+        const r=b.getBoundingClientRect(),p=t.getBoundingClientRect(),style=getComputedStyle(b);
+        return b.textContent==='!' && r.width===20 && r.height===20 && r.right<=p.right && r.left>=p.left
+          && style.color==='rgb(255, 255, 255)' && style.backgroundColor==='rgb(114, 54, 58)'
+          && t.getAttribute('aria-label').includes('cities to recover or return');
+      })()`), 'Lost Holdings uses the shared accessible notification inside its tab');
       assert.equal(await evaluate('document.querySelector("#clanWarcitiesPanel h3").textContent'), 'Lost Holdings');
       assert.equal(await evaluate('document.querySelectorAll("[data-clan-action=war-city-return]").length'), 0);
       // Recovery is observed on the open tab, without navigating or manually refreshing.
@@ -142,6 +160,7 @@ async function main(built = false) {
       await click('[data-clan-action="war-cities-refresh"]');
       await ready('clanWarCitiesView.error');
       assert.equal(await evaluate('document.querySelectorAll(".war-cities-list article").length'),0);
+      assert.equal(await evaluate('hasClanWarCitiesNotice()'),false);
       await evaluate('warCityQA.reject=false');
       await click('[data-clan-action="war-cities-refresh"]'); await ready('clanWarCitiesView.loaded && !clanWarCitiesView.busy');
       // Opening a location clears an armed order and cannot send troops.
@@ -163,19 +182,61 @@ async function main(built = false) {
         await evaluate('delete document.hidden');
         await ready(`warCityQA.calls.length > ${count} && !clanWarCitiesView.busy`);
         await click('[data-clan-section="warroom"]');
+        const noticeCount = await evaluate('warCityQA.calls.length');
+        await evaluate('clanWarCitiesView.noticeCheckedAtMs=0');
+        await ready(`warCityQA.calls.length > ${noticeCount} && !clanWarCitiesView.busy`);
+        await evaluate('closeProfileScreen({force:true})');
         const closedCount = await evaluate('warCityQA.calls.length');
         await delay(5200);
-        assert.equal(await evaluate('warCityQA.calls.length'), closedCount, 'Closed board kept requesting data');
+        assert.equal(await evaluate('warCityQA.calls.length'), closedCount, 'Closed Clan window kept requesting data');
         assert.equal(await evaluate('clanWarCitiesTimer'), null);
+        await evaluate('profileScreen.classList.add("open");showProfileClan({force:true})');
         await click('[data-clan-section="warcities"]');
         await ready('clanWarCitiesView.loaded && !clanWarCitiesView.busy');
       }
-      // Identity changes must discard a response already in flight.
-      await evaluate('warCityQA.held=true; void loadClanWarCities()');
+      // Availability stays after reading, includes a return for this member, and clears when resolved.
+      await click('[data-clan-section="warroom"]');
+      await evaluate('warCityQA.rows=[{...warCityQA.rows[0],status:"recovered",canReturn:true}];clanWarCitiesView.noticeCheckedAtMs=0;pollClanWarCities()');
+      await ready('!clanWarCitiesView.busy');
+      assert.equal(await evaluate('hasClanWarCitiesNotice()'),true);
+      await evaluate('warCityQA.rows[0].canReturn=false;clanWarCitiesView.noticeCheckedAtMs=0;pollClanWarCities()');
+      await ready('!clanWarCitiesView.busy');
+      assert.equal(await evaluate('hasClanWarCitiesNotice()'),false, 'Another owner’s return is not this member’s action');
+      await evaluate('warCityQA.rows[0].canReturn=true');
+      await click('[data-clan-section="warcities"]');
+      await ready('clanWarCitiesView.loaded && !clanWarCitiesView.busy');
+      await click('[data-clan-action="war-city-return"]');
+      await click('[data-clan-ledger-confirm="accept"]');
+      await ready('!clanWarCitiesView.busy');
+      assert.equal(await evaluate('hasClanWarCitiesNotice()'),false,'Returning the last eligible city kept its notice');
+      await click('[data-clan-section="warroom"]');
+      // Filtered/non-actionable first pages cannot hide a later lost city. One request per polling tick.
+      await evaluate('warCityQA.pages={"":{entries:[],nextCursor:"a".repeat(64)},["a".repeat(64)]:{entries:[{...warCityQA.rows[0],status:"lost"}],nextCursor:""}};resetClanWarCities();clanWarCitiesView.cursor="b".repeat(64);pollClanWarCities()');
+      await ready('!clanWarCitiesView.busy && !!clanWarCitiesView.noticeCursor');
+      const pageCount=await evaluate('warCityQA.calls.length');
+      assert.equal(await evaluate('hasClanWarCitiesNotice()'),false);
+      await evaluate('pollClanWarCities()');
+      await ready('!clanWarCitiesView.busy');
+      assert.equal(await evaluate('warCityQA.calls.length'),pageCount+1);
+      assert.equal(await evaluate('hasClanWarCitiesNotice()'),true);
+      assert.equal(await evaluate('clanWarCitiesView.cursor'),'b'.repeat(64),'Notification changed the visible page');
+      await evaluate('warCityQA.pages=null;warCityQA.rows=[];clanWarCitiesView.noticeCheckedAtMs=0;pollClanWarCities()');
+      await ready('!clanWarCitiesView.busy');
+      assert.equal(await evaluate('document.querySelector("[data-clan-section=warcities] .notification-badge")'),null);
+      // Failed background checks hide stale availability and do not trigger a request loop.
+      await evaluate('warCityQA.reject=true;clanWarCitiesView.noticeAvailable=true;clanWarCitiesView.noticeCheckedAtMs=0;pollClanWarCities()');
+      await ready('!clanWarCitiesView.busy');
+      assert.equal(await evaluate('hasClanWarCitiesNotice()'),false);
+      const failedCount=await evaluate('warCityQA.calls.length');
+      await evaluate('for(let i=0;i<5;i++){renderClanView();pollClanWarCities()}');
+      assert.equal(await evaluate('warCityQA.calls.length'),failedCount);
+      // Identity changes must discard an old clan's notification response already in flight.
+      await evaluate('warCityQA.reject=false;warCityQA.held=true;warCityQA.rows=[{status:"lost"}];clanWarCitiesView.noticeCheckedAtMs=0;pollClanWarCities()');
       await ready('!!warCityQA.resolve');
       await evaluate('state.clanId="different-clan";renderClanView();warCityQA.resolve()');
-      await ready('clanWarCitiesView.entries.length===0');
-      console.log(`War Cities layout, touch actions, confirmation, retry and stale-response guards passed at ${width}x${height}`);
+      await ready('clanWarCitiesView.entries.length===0 && !clanWarCitiesView.busy');
+      assert.equal(await evaluate('hasClanWarCitiesNotice()'),false);
+      console.log(`Lost Holdings notification, pagination, layout, actions, retry and scope guards passed at ${width}x${height}`);
     }
     assert.deepEqual(errors, []);
     fs.writeFileSync(path.join(artifacts, built ? "measurements-built.json" : "measurements.json"), JSON.stringify({built,measurements},null,2)+"\n");

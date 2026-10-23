@@ -26752,7 +26752,7 @@ function renderClanSectionNavigation(canManageApplications = false) {
       count: onlineClanRallies.length,
       countLabel: `${onlineClanRallies.length} active ${onlineClanRallies.length === 1 ? "rally" : "rallies"}`,
     },
-    { key: "warcities", label: "Lost Holdings", mark: renderCrownlandsIcon("attack"), count: 0, countLabel: "" },
+    { key: "warcities", label: "Lost Holdings", mark: renderCrownlandsIcon("attack"), count: 0, countLabel: hasClanWarCitiesNotice() ? "cities to recover or return" : "", available: hasClanWarCitiesNotice() },
     {
       key: "rewards",
       label: "Rewards",
@@ -26843,34 +26843,87 @@ function setClanMobileSection(section, options = {}) {
 
 function clanWarCitiesScope() { return `${getOnlineRequestScope()}:${state?.clanId || ""}`; }
 function resetClanWarCities() {
-  clanWarCitiesView = { scope: clanWarCitiesScope(), entries: [], cursor: "", nextCursor: "", busy: false, loaded: false, error: "" };
+  clanWarCitiesView = { scope: clanWarCitiesScope(), entries: [], cursor: "", nextCursor: "", busy: false, loaded: false, error: "", noticeAvailable: false, noticeCursor: "", noticeCheckedAtMs: 0 };
   clanWarCitiesOperations.clear();
 }
-async function loadClanWarCities(cursor = clanWarCitiesView.cursor) {
-  if (!state?.clanId || activeProfileTab !== "clan" || !isClanSectionActive("warcities")) return;
+function hasClanWarCitiesNotice() {
+  return clanWarCitiesView.scope === clanWarCitiesScope() && Boolean(clanWarCitiesView.noticeAvailable);
+}
+function updateClanWarCitiesNoticeBadge() {
+  const tab = clanContent?.querySelector('[data-clan-section="warcities"]');
+  if (!tab) return;
+  const available = hasClanWarCitiesNotice();
+  let badge = tab.querySelector(".notification-badge");
+  if (available && !badge) {
+    badge = document.createElement("b"); badge.className = "alert notification-badge";
+    badge.setAttribute("aria-hidden", "true"); badge.textContent = "!"; tab.append(badge);
+  } else if (!available) badge?.remove();
+  tab.setAttribute("aria-label", `Lost Holdings${available ? ", cities to recover or return, clan action available" : ""}`);
+}
+function clanWarCitiesPollingOpen() {
+  return Boolean(state?.clanId && clanSnapshot?.id === state.clanId && activeProfileTab === "clan"
+    && profileScreen?.classList.contains("open") && getOnlineApi()?.clanWarCities);
+}
+function acceptClanWarCitiesNoticePage(view, result) {
+  const available = result.entries.some(entry => entry.status === "lost" || entry.canReturn);
+  if (available || !result.nextCursor) {
+    view.noticeAvailable = available; view.noticeCursor = ""; view.noticeCheckedAtMs = Date.now();
+  } else {
+    // A page can contain only filtered/other-owner records. Continue one bounded page per tick.
+    view.noticeCursor = result.nextCursor;
+  }
+}
+function pollClanWarCities() {
+  if (!clanWarCitiesPollingOpen()) {
+    clearInterval(clanWarCitiesTimer); clanWarCitiesTimer = null;
+    clanWarCitiesView.noticeCheckedAtMs = 0;
+    return;
+  }
+  if (clanWarCitiesView.scope !== clanWarCitiesScope()) resetClanWarCities();
+  if (document.hidden || clanWarCitiesView.busy) return;
+  const view = clanWarCitiesView;
+  if (isClanSectionActive("warcities") && !view.cursor && !view.noticeCursor) {
+    void loadClanWarCities();
+  } else if (view.noticeCursor || Date.now() - (view.noticeCheckedAtMs || 0) >= 15000) {
+    void loadClanWarCities(view.noticeCursor || "", { noticeOnly: true });
+  } else if (isClanSectionActive("warcities")) void loadClanWarCities();
+}
+function ensureClanWarCitiesPolling() {
+  if (clanWarCitiesTimer || !clanWarCitiesPollingOpen()) return;
+  clanWarCitiesTimer = window.setInterval(pollClanWarCities, 5000);
+  pollClanWarCities();
+}
+async function loadClanWarCities(cursor = clanWarCitiesView.cursor, { noticeOnly = false } = {}) {
+  if (!clanWarCitiesPollingOpen() || document.hidden || (!noticeOnly && !isClanSectionActive("warcities"))) return;
   if (clanWarCitiesView.scope !== clanWarCitiesScope()) { resetClanWarCities(); cursor = ""; }
   const view = clanWarCitiesView;
   if (view.busy) return;
-  view.busy = true; view.error = ""; view.cursor = cursor || "";
-  renderClanView();
+  view.busy = true;
+  if (!noticeOnly) { view.error = ""; view.cursor = cursor || ""; renderClanView(); }
   try {
-    const result = await getOnlineApi()?.clanWarCities({ action: "list", cursor: view.cursor });
+    const result = await getOnlineApi().clanWarCities({ action: "list", cursor: cursor || "" });
     if (view !== clanWarCitiesView || view.scope !== clanWarCitiesScope()) return;
-    if (result?.version !== 1 || result.clanId !== state.clanId) throw Error("Lost Holdings requires the updated game server.");
-    view.entries = result.entries; view.nextCursor = result.nextCursor; view.loaded = true;
+    if (result?.version !== 1 || result.clanId !== state.clanId || !Array.isArray(result.entries)) throw Error("Lost Holdings requires the updated game server.");
+    if (noticeOnly || !cursor) acceptClanWarCitiesNoticePage(view, result);
+    if (!noticeOnly) { view.entries = result.entries; view.nextCursor = result.nextCursor; view.loaded = true; }
   } catch (error) {
     if (view !== clanWarCitiesView || view.scope !== clanWarCitiesScope()) return;
+    view.noticeAvailable = false; view.noticeCursor = ""; view.noticeCheckedAtMs = Date.now();
     view.entries = []; view.loaded = false;
     view.error = error?.code === "functions/not-found" ? "Lost Holdings is waiting for the server update." : error.message || "Lost Holdings could not load. Try Refresh.";
   } finally {
-    if (view === clanWarCitiesView && view.scope === clanWarCitiesScope()) { view.busy = false; renderClanView(); }
+    if (view === clanWarCitiesView && view.scope === clanWarCitiesScope()) {
+      view.busy = false;
+      if (!noticeOnly) renderClanView();
+      else {
+        updateClanWarCitiesNoticeBadge();
+        if (isClanSectionActive("warcities")) {
+          if (view.error) renderClanView();
+          else if (!view.loaded) void loadClanWarCities();
+        }
+      }
+    }
   }
-  if (!clanWarCitiesTimer) clanWarCitiesTimer = window.setInterval(() => {
-    if (clanWarCitiesView.scope !== clanWarCitiesScope()) { resetClanWarCities(); renderClanView(); }
-    if (activeProfileTab === "clan" && isClanSectionActive("warcities") && profileScreen.classList.contains("open")) {
-      if (!document.hidden) void loadClanWarCities();
-    } else { clearInterval(clanWarCitiesTimer); clanWarCitiesTimer = null; }
-  }, 5000);
 }
 function renderClanWarCitiesPanel() {
   if (clanWarCitiesView.scope !== clanWarCitiesScope()) resetClanWarCities();
@@ -26900,6 +26953,8 @@ async function handleWarCityAction(action, key) {
     await getOnlineApi().clanWarCities({ action: "return", key: entry.key, lossEventId: entry.lossEventId, operationId: clanWarCitiesOperations.get(operationKey) });
     if (view !== clanWarCitiesView || view.scope !== clanWarCitiesScope()) return;
     clanWarCitiesOperations.delete(operationKey); view.entries = view.entries.filter(e => e.key !== key);
+    view.noticeAvailable = view.entries.some(e => e.status === "lost" || e.canReturn);
+    view.noticeCursor = ""; view.noticeCheckedAtMs = 0;
     showToast(`${entry.cityName} returned to ${entry.originalOwnerName}.`);
   } catch (error) { if (view === clanWarCitiesView && view.scope === clanWarCitiesScope()) view.error = error.message || "Return failed. Try again."; }
   finally { if (view === clanWarCitiesView && view.scope === clanWarCitiesScope()) { view.busy = false; renderClanView(); } }
@@ -27640,6 +27695,7 @@ function renderClanView() {
   const restore = captureClanViewRefresh();
   renderClanViewContent();
   restore();
+  ensureClanWarCitiesPolling();
 }
 
 function renderClanViewContent() {
