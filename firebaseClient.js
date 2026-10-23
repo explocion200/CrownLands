@@ -2412,11 +2412,9 @@
     if (!objectiveId) throw new Error("Unknown reward camp type.");
     const scope = getOnlineRequestScope();
     const { doc, getDoc } = client.modules.firestore;
-    const snapshot = await getDoc(doc(client.db, "players", uid, "objectiveStats", objectiveId)).catch(error => {
-      // Old fixed-ID Camp records are now denied by the local backend. Treat
-      // them as no progress; transport/server failures still offer retry.
-      if (["permission-denied", "functions/permission-denied"].includes(getFirebaseErrorCode(error))) return null;
-      throw error;
+    const snapshot = await getDoc(doc(client.db, "players", uid, "objectiveStats", objectiveId)).catch(e => {
+      if (["permission-denied", "functions/permission-denied"].includes(getFirebaseErrorCode(e))) return null;
+      throw e;
     });
     if (scope !== getOnlineRequestScope()) throw new Error("Reward account or realm changed.");
     const rawData = snapshot?.exists() ? snapshot.data() || {} : {};
