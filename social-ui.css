@@ -18,6 +18,7 @@
 .social-player{display:inline-flex;align-items:center;gap:8px;min-width:0;overflow-wrap:anywhere;font:600 var(--chat-name-size,14px)/1.4 Georgia,serif}
 .social-flag{display:inline-block;flex:0 0 24px;width:24px;height:32px}
 .social-player strong{overflow-wrap:anywhere;font-weight:inherit}.social-player small{white-space:nowrap;font:11px/1.4 "Segoe UI",Arial,sans-serif}
+.social-player .chat-clan-tag{margin-inline-start:0;flex:none}
 .social-presence{color:#766d5c}.social-presence.is-online{color:#35612b;font-weight:bold}
 .social-friend{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 8px}
 .social-friend>.social-name{grid-area:1/1;min-width:0}.social-friend .social-player{display:flex;gap:6px}.social-friend .social-player strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.social-friend .social-player small{flex:none}
@@ -47,4 +48,4 @@
 @media(max-width:900px) and (orientation:landscape){.social-message{--pm-name:119px;--pm-time:47px;--pm-gap:9px;--pm-y:5px;--pm-x:7px}.social-message-sender{font-size:13px}.social-message time{font-size:10px}#chatDialog .social-message>p{font-size:12px}}
 @media(max-width:650px){.social-message{--pm-name:88px;--pm-time:45px;--pm-gap:6px;--pm-x:5px}}
 @media(max-width:650px) and (orientation:landscape){.social-message{--pm-y:4px}.social-message-sender{font-size:12px}}
-@media(max-width:450px){.social-message{--pm-name:66px;--pm-gap:4px;--pm-y:4px}}
+@media(max-width:450px){.social-message{--pm-name:76px;--pm-gap:4px;--pm-y:4px}}

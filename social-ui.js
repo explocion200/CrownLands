@@ -11,6 +11,22 @@
   const element = (tag, text, className) => { const node = doc.createElement(tag); if (text != null) node.textContent = text; if (className) node.className = className; return node; };
   const button = (label, action, className) => { const node = element("button", label, className); node.type = "button"; node.addEventListener("click", action); return node; };
   const visible = () => ready && section && dialog()?.open && !doc.hidden;
+  let clanTagTimer, clanTags;
+  function paintClanTags() {
+    for (const node of thread?.querySelectorAll("[data-clan-uid]") || []) root.CrownlandsChat.setClanTag(node, clanTags?.get(node.dataset.clanUid));
+  }
+  function refreshClanTags() {
+    clearTimeout(clanTagTimer); paintClanTags();
+    if (!visible() || !current || !api?.loadPlayerIdentities) return;
+    clanTags ||= root.CrownlandsChat.createClanTagLookup({
+      load: ids => api?.loadPlayerIdentities?.(ids) || [],
+      scope: () => JSON.stringify([uid, api?.getRealmIdentity?.()]),
+      active: () => visible() && Boolean(current),
+      onChange: paintClanTags,
+    });
+    void clanTags.refresh(history.map(message => message.senderUid));
+    clanTagTimer = setTimeout(refreshClanTags, 60000);
+  }
   const setStatus = text => { if (status) status.textContent = text || ""; };
   async function call(data) {
     const scope = generation, result = await api.social(data);
@@ -40,7 +56,8 @@
     const wrap = element("span", null, "social-player"), flag = element("span", null, "kingdom-flag social-flag");
     flag.setAttribute("aria-hidden", "true"); flag.append(element("span", null, "flag-symbol"));
     wrap.append(flag, element("strong", player.name || "Ruler"));
-    if (player.clanTag) wrap.append(element("small", "[" + player.clanTag + "]"));
+    const tag = element("small", null, "chat-clan-tag");
+    root.CrownlandsChat.setClanTag(tag, player.clanTag); wrap.append(tag);
     flagRenderer?.render?.(flag, player.flag, { stableKey: player.uid, context: "social" });
     return wrap;
   }
@@ -67,11 +84,12 @@
     workspace.append(list, thread); status = element("p", "", "social-status"); status.setAttribute("role", "status");
     panel.append(toolbar, workspace, status); dialog().querySelector(".chat-card").append(panel);
     badge = element("span", "", "social-tab-unread notification-badge"); badge.hidden = true; messagesTab.append(badge);
-    new MutationObserver(() => { if (!dialog().open) { clearTimeout(presenceTimer); clearTimeout(expiryTimer); } else { recoverStart(); if (visible()) void run(refreshVisible); } }).observe(dialog(), { attributes: true, attributeFilter: ["open"] });
-    doc.addEventListener("visibilitychange", () => { recoverStart(); if (visible()) void run(refreshVisible); });
+    new MutationObserver(() => { if (!dialog().open) { clearTimeout(presenceTimer); clearTimeout(expiryTimer); clearTimeout(clanTagTimer); } else { recoverStart(); if (visible()) void run(refreshVisible); } }).observe(dialog(), { attributes: true, attributeFilter: ["open"] });
+    doc.addEventListener("visibilitychange", () => { clearTimeout(clanTagTimer); recoverStart(); if (visible()) void run(refreshVisible); });
 
   }
   function leave() {
+    clearTimeout(clanTagTimer);
     section = ""; viewVersion++; listVersion++; clearTimeout(presenceTimer); clearTimeout(expiryTimer);
     dialog()?.classList.remove("social-active", "social-thread-open"); if (panel) panel.hidden = true;
     for (const tab of [friendsTab, messagesTab]) if (tab) { tab.setAttribute("aria-selected", "false"); tab.tabIndex = -1; tab.classList.remove("active"); }
@@ -228,6 +246,7 @@
     for (const message of history) {
       const row = element("article", null, "social-message" + (message.senderUid === uid ? " is-own" : "")); row.dataset.messageId = message.id;
       const sender = element("strong", message.senderDisplayName, "social-message-sender"), sentAt = new Date(message.createdAtMs);
+      sender.append(root.CrownlandsChat.clanTagElement(doc, message.senderUid));
       const time = element("time", sentAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
       time.dateTime = sentAt.toISOString(); time.title = sentAt.toLocaleString(); time.setAttribute("aria-label", time.title);
       row.append(sender);
@@ -271,6 +290,7 @@
     log.addEventListener("scroll", mark, { passive: true }); mark();
     if (focused && !input.disabled) { input.focus({ preventScroll: true }); input.setSelectionRange(...selection); }
     if (history.length) expiryTimer = setTimeout(renderThread, Math.max(1, Math.min(2147483647, Math.min(...history.map(item => item.expiresAtMs)) - now() + 1)));
+    refreshClanTags();
   }
   function reportMessage(row, message) {
     if (row.querySelector(".social-report")) return;
@@ -318,6 +338,7 @@
     return startup;
   }
   function stop() {
+    clanTags?.reset(); clearTimeout(clanTagTimer);
     generation++; conversationSession++; clearTimeout(startupTimer); startup = null; startupAttempt = 0; stopSignals?.(); stopSignals = null; clearTimeout(refreshTimer); clearTimeout(presenceTimer); clearTimeout(expiryTimer);
     ready = false; uid = ""; current = null; history = []; listPage = null; pendingDraft = null; senderBusy = false; lastSignals = {}; offset = 0; privateReady = false; leave();
     if (friendsTab) friendsTab.hidden = true; if (messagesTab) { messagesTab.hidden = true; messagesTab.setAttribute("aria-label", "Messages"); }
