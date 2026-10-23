@@ -42,7 +42,21 @@ backfill/rollback/restart and metadata dispatch. Shared timing tests prove async
 isolation and bounded all-outcome aggregation. The combined real-cookie workload
 includes areas, general subscriptions, held chat, route previews and scouts at
 25, 50 and 100 fictional players, counting attempts, failures and exhausted retries.
-Final measurements and required PR checks are pending before merge.
+An isolated PostgreSQL repeat on this host (legacy full-watch responses, before
+combining update 2) passed all three player counts:
+
+| Players | Completed requests | Map 429 retries | Exhausted / failed | Command p95 | Map p95 / max, including retries |
+|---|---|---|---|---|---|
+| 25 | 390 | 1 | 0 / 0 | 99 ms | 72 ms / 10.1 s |
+| 50 | 740 | 9 | 0 / 0 | 170 ms | 83 ms / 10.3 s |
+| 100 | 1,440 | 47 | 0 / 0 | 195 ms | 10.1 s / 20.5 s |
+
+The four-request world admission bound and two database-reader connections remain
+unchanged. At 100 players, map overload delays are a material limitation even
+though commands stayed responsive and all requests eventually succeeded. Retry
+latency is included, not discarded from percentiles. This is a short synthetic
+local workload, not internet latency or sustained production capacity. The final
+combined protocol run and required PR checks remain pending before merge.
 
 ## Rollout
 
