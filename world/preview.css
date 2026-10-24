@@ -34,3 +34,12 @@ footer{min-height:30px;z-index:4;background:#e7d9b6;display:flex;align-items:cen
 #world #objects{z-index:2}
 #world{z-index:auto}
 #marches{z-index:4}
+
+/* A few small composited patches, never a full-screen blur/blend filter.
+   The edge mask softens the existing cloud atlas into isolated wisps. */
+.map-clouds,.map-cloud-shadows{position:absolute;inset:0;pointer-events:none}
+.map-clouds{z-index:3;contain:layout paint style}
+.map-cloud-shadows{z-index:1}
+.map-clouds>i,.map-cloud-shadows>i{position:absolute;left:0;top:0;display:block;pointer-events:none;will-change:transform;mask-image:radial-gradient(ellipse,#000 22%,transparent 69%)}
+.map-clouds>i{background:url(/assets/optimized/map-transition-clouds-448x448-a17eebc9852d.webp) center/100% 100% no-repeat}
+.map-cloud-shadows>i{background:#303824;mask-image:url(/assets/optimized/map-transition-clouds-448x448-a17eebc9852d.webp),radial-gradient(ellipse,#000 22%,transparent 69%);mask-size:100% 100%;mask-composite:intersect}

@@ -92,6 +92,9 @@ window.createContinuousWorldView = async function (options = {}) {
     const cleanups = [];
     const assets = new window.SeamlessAssets.AssetLoader(() => { dirty = true; });
     const sprites = new window.SeamlessSpriteLayer(viewport, assets);
+    // Cosmetic code may be unavailable in an older cached bootstrap/offline
+    // fallback. It must never prevent the authenticated map from mounting.
+    const atmosphere = window.SeamlessAtmosphere ? new window.SeamlessAtmosphere(viewport, world) : null;
     let scenery = [], sceneryCamera = "";
     sprites.changed = () => { sceneryCamera = ""; };
     const homeSection = scene.sections.find(s => s.id === scene.homeSectionId);
@@ -102,7 +105,11 @@ window.createContinuousWorldView = async function (options = {}) {
     function resize() {
       const previous = size; size = { width: viewport.clientWidth, height: viewport.clientHeight };
       if (!camera) home();
-      else camera = M.clamp({ ...camera, zoom: camera.zoom * M.limits(size).home / M.limits(previous).home }, size);
+      else {
+        const before=M.limits(previous),after=M.limits(size);
+        const zoom=Math.abs(camera.zoom-before.min)<1e-8?after.min:camera.zoom*after.max/before.max;
+        camera=M.clamp({...camera,zoom},size);
+      }
       // A resize during a gesture starts a fresh anchor in the new viewport.
       gesture = null; dirty = true;
     }
@@ -320,11 +327,12 @@ window.createContinuousWorldView = async function (options = {}) {
     function frame(now) {
       if (disposed) return;
       if(options.current?.()===false)return;
-      if(document.hidden||options.presentationVisible?.()===false){presentationPaused=true;lastFrame=0;raf=requestAnimationFrame(frame);return;}
+      if(document.hidden||options.presentationVisible?.()===false){presentationPaused=true;lastFrame=0;atmosphere?.pause();raf=requestAnimationFrame(frame);return;}
       if(presentationPaused){presentationPaused=false;dirty=true;patrolPlanAt=0;}
       const start = performance.now();
       presentationFrames++;
       rebase();
+      atmosphere?.frame(now, camera, size, M.limits(size).min, surface);
       // Reuse rasterized layers only at a settled scale. A permanent hint kept
       // old low-resolution tiles while zooming; remove it before every zoom.
       if(!drawnCamera||drawnCamera.zoom!==camera.zoom){zoomAt=now;world.style.willChange="";}
@@ -371,9 +379,9 @@ window.createContinuousWorldView = async function (options = {}) {
       workTimes.push(performance.now() - start); if (workTimes.length > 900) workTimes.shift();
       lastFrame = now; raf = requestAnimationFrame(frame);
     }
-    on(document, "visibilitychange", () => { lastFrame = 0; if (stageThree && !document.hidden) feed?.refresh(); });
+    on(document, "visibilitychange", () => { lastFrame = 0; atmosphere?.pause(); if (stageThree && !document.hidden) feed?.refresh(); });
     raf = requestAnimationFrame(frame);
-    function dispose() { if (disposed) return; disposed = true; cancelAnimationFrame(raf); observer.disconnect(); sprites.dispose(); assets.dispose(); feed?.dispose(); cleanups.forEach(fn => fn()); nodes.clear();pooledNodes.clear();SeamlessAppearance.resetLayout(); listenerCount = 0; options.onClear?.(); }
+    function dispose() { if (disposed) return; disposed = true; cancelAnimationFrame(raf); observer.disconnect(); sprites.dispose(); atmosphere?.dispose(); assets.dispose(); feed?.dispose(); cleanups.forEach(fn => fn()); nodes.clear();pooledNodes.clear();SeamlessAppearance.resetLayout(); listenerCount = 0; options.onClear?.(); }
     on(window, "pagehide", dispose);
     // Camera operations are independent of server-authoritative game commands.
     const controller = {
@@ -386,7 +394,7 @@ window.createContinuousWorldView = async function (options = {}) {
       get selectedKey() { return selected; },
       scene, home, select, routeDraft:null, gameplay:null, refresh: () => feed?.refresh(),
       placementState: () => ({size,feed:feed && {ids:feed.ids,failed:feed.failed,authExpired:feed.authExpired}}),
-      snapshot: () => ({ camera: { ...camera }, size: { ...size }, selected, following: null, surface:{...surface},surfaceVersion,geometryUpdates,presentationFrames, assets: assets.stats(), feed: feed?.stats(), nodes: nodes.size,pooledNodes:pooledNodes.size,renderer:sprites.stats?.(), listeners: listenerCount, frameTimes: [...frameTimes], workTimes: [...workTimes], marches: marches.map(m => ({ key: m.key, position: m.position })) }),
+      snapshot: () => ({ camera: { ...camera }, size: { ...size }, selected, following: null, surface:{...surface},surfaceVersion,geometryUpdates,presentationFrames, atmosphere:atmosphere?.stats(), assets: assets.stats(), feed: feed?.stats(), nodes: nodes.size,pooledNodes:pooledNodes.size,renderer:sprites.stats?.(), listeners: listenerCount, frameTimes: [...frameTimes], workTimes: [...workTimes], marches: marches.map(m => ({ key: m.key, position: m.position })) }),
       view: (x, y, zoom) => { camera = M.clamp({ x, y, zoom: zoom ?? camera.zoom }, size); },
       time: value => { frozenTime = value; dirty = true; },
       resetMetrics: () => { frameTimes.length = 0; workTimes.length = 0; }

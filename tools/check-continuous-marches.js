@@ -24,11 +24,12 @@ exports.march = async (page, march, output) => {
       const sample=await marker.evaluate((node,key)=>{
         const root=nativeContinuousWorld.root,v=nativeContinuousWorld.view,m=v.getObject(key),box=node.getBoundingClientRect();
         const lines=[...root.querySelector(`[data-march-key="${key}"]`).children];
-        return {width:box.width,height:box.height,following:v.snapshot().following,inspector:!root.querySelector("#inspector"),
+        const state=v.snapshot(),range=SeamlessModel.forWorld(v.scene).limits(state.size);
+        return {scale:state.camera.zoom/range.max,width:box.width,height:box.height,following:v.snapshot().following,inspector:!root.querySelector("#inspector"),
           path:lines.every(l=>l.getAttribute("points")===m.points.map(p=>`${p.x},${p.y}`).join(" ")&&getComputedStyle(l).stroke!=="none"&&getComputedStyle(l).display!=="none"),
           sections:m.sections.length,count:node.querySelector(".army-token-count").textContent,timer:node.querySelector(".army-token-time").textContent};
       },key);
-      assert(Math.abs(sample.height-30*fraction)<.1,"March grows beyond its original 30px close-up height");
+      assert(Math.abs(sample.height-30*sample.scale)<.1,"March grows beyond its original 30px close-up height");
       assert(sample.path&&sample.sections>1,"Accepted cross-section path must be drawn exactly");
       assert(sample.count&&sample.timer); assert(sample.inspector);assert.equal(sample.following,null);
       results.push({viewport:{width,height},fraction,...sample});
@@ -81,12 +82,13 @@ exports.pickup = async (page,bonus,output) => {
         const overlaps=[...nativeContinuousWorld.root.querySelectorAll(".object>img,.object .city-label")].filter(n=>{
           const r=n.getBoundingClientRect(),s=getComputedStyle(n);return r.width>0&&r.height>0&&s.visibility!=="hidden"&&s.display!=="none"&&r.left<i.right&&r.right>i.left&&r.top<i.bottom&&r.bottom>i.top;
         }).length;
-        return {width:b.width,height:b.height,art:i.width,ring:getComputedStyle(node,"::before").width,safe:isHarvestBonusPlacementSafe(node.bonus),overlaps};
+        const v=nativeContinuousWorld.view,state=v.snapshot(),range=SeamlessModel.forWorld(v.scene).limits(state.size);
+        return {scale:state.camera.zoom/range.max,width:b.width,height:b.height,art:i.width,ring:getComputedStyle(node,"::before").width,safe:isHarvestBonusPlacementSafe(node.bonus),overlaps};
       });
       assert(sample.safe,"Pickup overlaps current map artwork");
       assert.equal(sample.overlaps,0,"Pickup overlaps a rendered image or label");
-      assert(Math.abs(sample.width-44*.8*fraction)<.1,"Pickup hit area/glow ignores its smaller camera scale");
-      assert(Math.abs(sample.art-62*.8*fraction)<.1,"Pickup artwork ignores its smaller camera scale");
+      assert(Math.abs(sample.width-44*.8*sample.scale)<.1,"Pickup hit area/glow ignores its smaller camera scale");
+      assert(Math.abs(sample.art-62*.8*sample.scale)<.1,"Pickup artwork ignores its smaller camera scale");
       results.push({viewport:{width,height},fraction,...sample});
       if(width===844&&fraction!==.5)await page.screenshot({path:path.join(output,`pickup-${bonus.type}-${fraction===1?"close":"overview"}.png`)});
     }

@@ -1,30 +1,38 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "a89fd55c5631d2c357b473738b8b72f2bd6384f7",
+  "baseCommit": "becb251de6ccedefc023a3f7ff64db3e2c06e72e",
   "coverage": [
     {
       "paths": [
-        "local-backend/game-http.js",
-        "local-client.js",
-        "tools/test-local-transport-priority.js",
-        "tools/test-local-postgres-permanent.js"
+        "world/model.js",
+        "world/atmosphere.js",
+        "world/bootstrap.js",
+        "world/preview.js",
+        "world/preview.css",
+        "tools/validate-map-atmosphere.js",
+        "tools/check-map-atmosphere.js",
+        "tools/check-continuous-zoom-limit.js",
+        "tools/test-local-postgres-map-pan-performance.js",
+        "tools/check-continuous-marches.js",
+        "tools/check-continuous-control-scale.js"
       ],
       "tests": [
-        "tools/test-local-transport-priority.js",
-        "tools/test-local-postgres-permanent.js",
-        "tools/test-local-postgres-game-http.js",
-        "tools/test-local-watch-revisions.js",
-        "tools/test-local-deployment.js",
-        "tools/test-local-production-client.js"
+        "tools/validate-map-atmosphere.js",
+        "tools/validate-world-render-cache.js",
+        "tools/test-local-postgres-production-world.js",
+        "tools/test-local-postgres-map-pan-performance.js",
+        "tools/test-local-production-client.js",
+        "tools/validate-asset-performance-budgets.js"
       ],
-      "reason": "Keep the permanent health JSON compatible with exact publisher identity validation while negotiating watch revision support through an optional header. Exercise real restricted-role permanent services, source/minified client capability and legacy behavior, authenticated HTTP/watch privacy, production packaging and unchanged publisher activation/rollback gates. Shared Firebase gameplay functions and rules are unchanged; no emulator gameplay suite applies. The disposable permanent-cluster fixture now applies the reviewed compact-counter migration after rehearsing the original empty cutover, matching the actual installation sequence and narrow worker grants; historical production migration tools stay unchanged."
+      "reason": "Verify the closer viewport-dependent camera floor, anchored zoom and every production camera input, plus sparse noninteractive cloud/shadow projection, motion preferences, pause and disposal. The actual packaged-client disposable PostgreSQL fixture exercises mouse/pinch/resize, selections, skins, shields, paths, pickups, native controls, area authorization and session revocation at desktop and two landscape sizes. Pan benchmarks enforce bounded terrain/sprite/node caches and hidden-window suspension; compare full-motion clouds on/off independently. Packaging and asset budgets cover the new lazy module and reused existing texture. No server authority, storage, shared Firebase functions, security rules or backend contract changes; no emulator gameplay suite applies."
     },
     {
       "paths": [
-        "docs/GAMEPLAY_TRANSPORT_PERFORMANCE.md"
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/MAP_ZOOM_CLOUDS_2026-10-23.md"
       ],
       "tests": [],
-      "reason": "Records the installation compatibility failure and narrow correction without claiming successful deployment or changing game rules."
+      "reason": "Record the explicitly requested closer zoom range and sparse cloud presentation, superseding the older no-zoom-change restriction only for the live map. Document reproducible isolated measurements and deployment limitations without changing other gameplay rules."
     }
   ]
 }

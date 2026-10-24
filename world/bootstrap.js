@@ -1,7 +1,7 @@
 /* Optional local-world adapter. Authority and availability come from the server. */
 (function () {
   "use strict";
-  const modules=["model","assets","feed","delta-feed","sprite-layer","game-bridge","appearance","preview","native"];
+  const modules=["model","assets","feed","delta-feed","sprite-layer","atmosphere","game-bridge","appearance","preview","native"];
   let loading=false,loaded=false,stopped=false,session=null,lastAttempt=0,reload=false,restore,lastError="",lastErrorAt=0;
   const ready=()=>{try{return typeof getOnlineSessionRequestScope==="function"&&onlineWorldConnected&&!isMapInteractionBlocked()&&state?.mainCityId&&getOnlineApi()?.getUser?.();}catch{return false;}};
   function save(){
@@ -29,7 +29,14 @@
       if(scope!==getOnlineSessionRequestScope())return;
       if(!scene.enabled){reload=false;lastAttempt=Date.now()+25000;return;}
       if(scene.protocol!==1||scene.routingVersion!=="continuous-world-v1"||!/^[a-f0-9]{64}$/.test(scene.revision||""))throw Error("Refresh Crownlands to load the updated world.");
-      if(!loaded){for(const name of modules)await script(name);loaded=true;}
+      if(!loaded){
+        for(const name of modules){
+          const request=script(name);
+          // Missing decoration must not block otherwise available gameplay.
+          if(name==="atmosphere")await request.catch(()=>{});else await request;
+        }
+        loaded=true;
+      }
       if(scope!==getOnlineSessionRequestScope())return;
       window.CrownlandsContinuousWorld?.dispose();
       const main=cityById(state.mainCityId);if(main&&scene.sections.some(s=>s.id===getCityRegionId(main)))scene.homeSectionId=getCityRegionId(main);
