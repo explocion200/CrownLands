@@ -107,6 +107,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       assert(ui.banner&&ui.level&&ui.troops,"Original own-city banner must show level and authorized troops");
       assert(!ui.tag&&ui.cameraPanel==="none"&&ui.statusHidden,"Prototype presentation must not replace the normal HUD");
     }
+    if(production)await require("./check-continuous-scout-intel")(page,pages[1],pilot,source,target,select,output);
     if(production)await require("./check-continuous-zoom-limit")(page,source,select,output);
     if(production)await require("./check-continuous-map-ui")(page,source,select,output);
     if(production)await require("./check-continuous-map-power")(page,source,select,output);
