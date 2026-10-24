@@ -1,5 +1,5 @@
-/* Original map banners and march tokens on the continuous camera. Only the
-   authorized area's public fields and explicitly disclosed counts are used. */
+/* Original map banners and march tokens on the continuous camera. Private
+   scout snapshots stay in the current account, never in shared area objects. */
 (function(){
   "use strict";
   const rendered=new WeakMap();
@@ -51,7 +51,23 @@
     pruneEnemyPowerBandCache(cities);
     queuePlayerIdentityLookupForUids(cities.filter(city=>city.owner==="enemy").map(city=>city.ownerUid));
   }
-  const count=item=>item.troopVisibility==="exact"&&Number.isFinite(item.troops)?formatNumber(item.troops):item.troopVisibility==="estimate"?esc(item.troopEstimateLabel):"?";
+  function scoutReport(item,nowMs=Date.now()){
+    if(!state||!["castle","stronghold","citadel"].includes(item.kind))return null;
+    // Reports are normalized on receipt. Do not normalize/scan the entire
+    // account's history for every visible castle on every camera frame.
+    const report=state.scoutReports?.[item.id];
+    if(!report||(report.targetType&&report.targetType!=="city")
+        ||(report.cityId&&report.cityId!==item.id)||(report.regionId&&report.regionId!==item.sectionId)
+        ||String(report.ownerUid||"")!==String(item.ownerUid||"")
+        ||!Number.isFinite(report.troops)||getScoutReportRemainingSeconds(report,nowMs)<=0)return null;
+    return report;
+  }
+  function count(item,nowMs){
+    if(item.troopVisibility==="exact"&&Number.isFinite(item.troops))return formatNumber(item.troops);
+    if(item.troopVisibility==="estimate")return esc(item.troopEstimateLabel);
+    const report=scoutReport(item,nowMs);
+    return report?formatNumber(report.troops):"?";
+  }
   const flag=item=>item.ownerFlag?'<span class="kingdom-flag city-owner-flag city-kingdom-flag" aria-hidden="true"><span class="flag-symbol"></span></span>':`<span class="city-owner-flag owner-flag" aria-hidden="true">${renderCrownlandsIcon(OWNER.neutral.flagIcon,"owner-flag-icon")}</span>`;
   function tickShield(node,item,now){
     const shown=item.kind==="castle"&&Boolean(item.ownerUid)&&Number.isFinite(item.peaceShieldExpiresAtMs)&&item.peaceShieldExpiresAtMs>now;
@@ -79,7 +95,8 @@
     const powerLabel=getEnemyCityPowerBandLabel(powerBand,city);
     const countdown=item.kind==="camp"?item.payoutPending?formatDuration(Math.max(0,Math.ceil((item.payoutAtMs-now)/1000))):"Securing":item.kind==="npc"&&!item.selectable?getMarauderRespawnLabel(item):"";
     const main=item.isMainCity===true||(own(item)&&item.id===state.mainCityId&&item.sectionId===getMainCityRegionId());
-    const signature=JSON.stringify([item.key,item.name,item.kind,item.owner,item.ownerUid,item.ownerFlag,item.ownerClanId,item.ownerClanTag,item.level,item.campType,item.classification,item.troopVisibility,count(item),item.selectable,item.missionKind,item.returning,selected,owner,countdown,main,powerBand,powerLabel]);
+    const troopCount=count(item,nowMs);
+    const signature=JSON.stringify([item.key,item.name,item.kind,item.owner,item.ownerUid,item.ownerFlag,item.ownerClanId,item.ownerClanTag,item.level,item.campType,item.classification,item.troopVisibility,troopCount,item.selectable,item.missionKind,item.returning,selected,owner,countdown,main,powerBand,powerLabel]);
     if(rendered.get(node)===signature)return;
     rendered.set(node,signature);
     node.classList.remove("player","enemy","neutral","clan-ally");node.classList.add(owner);
@@ -95,8 +112,8 @@
       node.classList.toggle("clan-attack",owner==="clan-ally"&&!item.returning&&["attack","rally"].includes(item.missionKind));
       node.setAttribute("aria-expanded",String(selected));
       const shown=item.troopVisibility!=="hidden";
-      node.innerHTML=`<span class="army-token-icon">${item.missionKind==="scout"?renderCrownlandsIcon("scout","army-token-svg"):item.missionKind==="transfer"?"♞":"⚔"}</span><strong class="army-token-count"${shown?"":" hidden"}>${shown?count(item):""}</strong><small class="army-token-time"></small><span class="army-token-nav" data-army-relationship="${owner==="clan-ally"?"ally":owner}"${selected?"":" hidden"}>${["from","to"].map((endpoint,i)=>`<button type="button" data-army-endpoint="${endpoint}" aria-label="Go to march ${i?"destination":"origin"}"><span aria-hidden="true">${renderCrownlandsIcon(i?"forward":"back")}</span><small>${i?"To":"From"}</small></button>`).join("")}</span>`;
-      node.setAttribute("aria-label",`${item.owner||"Ruler"} · ${item.missionKind||"Army"}${shown?" · "+count(item)+" troops":""}`);
+      node.innerHTML=`<span class="army-token-icon">${item.missionKind==="scout"?renderCrownlandsIcon("scout","army-token-svg"):item.missionKind==="transfer"?"♞":"⚔"}</span><strong class="army-token-count"${shown?"":" hidden"}>${shown?troopCount:""}</strong><small class="army-token-time"></small><span class="army-token-nav" data-army-relationship="${owner==="clan-ally"?"ally":owner}"${selected?"":" hidden"}>${["from","to"].map((endpoint,i)=>`<button type="button" data-army-endpoint="${endpoint}" aria-label="Go to march ${i?"destination":"origin"}"><span aria-hidden="true">${renderCrownlandsIcon(i?"forward":"back")}</span><small>${i?"To":"From"}</small></button>`).join("")}</span>`;
+      node.setAttribute("aria-label",`${item.owner||"Ruler"} · ${item.missionKind||"Army"}${shown?" · "+troopCount+" troops":""}`);
       return;
     }
     node.querySelector(".map-banner")?.remove();
@@ -114,10 +131,10 @@
       label.innerHTML=`<span class="camp-map-banner city-label player-city-label"><span class="player-city-banner">${item.ownerFlag?`<span class="camp-holder-flag city-owner-column">${flag(item)}</span>`:`<img class="camp-type-flag" src="/assets/icons/camps/camp-${type}-v2.webp" width="42" height="53" alt="" draggable="false">`}<span class="player-city-data">${clan}${ruler}${name}${item.ownerUid?`<span class="gold-camp-active-timer city-army-count"><small>${item.contested?"Contested":"Active"}</small><strong>${esc(countdown)}</strong></span>`:""}</span></span></span>`;
     }else if(own(item)){
       node.classList.add("city-node");
-      label.innerHTML=`<span class="city-label player-city-label"><span class="player-city-banner"><span class="city-owner-column">${flag(item)}${level}</span><span class="player-city-data">${clan}${ruler}${name}<span class="city-army-count">${count(item)} troops</span></span></span>`;
+      label.innerHTML=`<span class="city-label player-city-label"><span class="player-city-banner"><span class="city-owner-column">${flag(item)}${level}</span><span class="player-city-data">${clan}${ruler}${name}<span class="city-army-count">${troopCount} troops</span></span></span>`;
     }else{
       node.classList.add("city-node");
-      label.innerHTML=selected?`<span class="city-label foreign-city-label selected-foreign-label">${clan}${ruler}<span class="foreign-selected-banner"><span class="foreign-city-shield">${flag(item)}${level}</span><span class="foreign-selected-data">${name}<span class="foreign-garrison">${count(item)} troops</span></span></span></span>`:`<span class="city-label foreign-city-label">${clan}${item.ownerUid?ruler:""}${name}<span class="foreign-city-shield">${flag(item)}${level}</span></span>`;
+      label.innerHTML=selected?`<span class="city-label foreign-city-label selected-foreign-label">${clan}${ruler}<span class="foreign-selected-banner"><span class="foreign-city-shield">${flag(item)}${level}</span><span class="foreign-selected-data">${name}<span class="foreign-garrison">${troopCount} troops</span></span></span></span>`:`<span class="city-label foreign-city-label">${clan}${item.ownerUid?ruler:""}${name}<span class="foreign-city-shield">${flag(item)}${level}</span></span>`;
     }
     node.append(label);
     if(item.ownerFlag)for(const element of label.querySelectorAll(".city-kingdom-flag"))FlagRenderer.render(element,item.ownerFlag,{stableKey:item.ownerUid||item.key,context:"city",size:"small"});
@@ -156,7 +173,9 @@
     const byKey=new Map(entries.map(e=>[e.item.key,e]));
     const labels=entries.map(e=>({key:e.item.key,x:e.item.x,y:(e.item.labelTop??e.item.top)-4,anchored:e.item.kind==="npc",priority:e.node.classList.contains("selected")?1:0,...measurements.get(e.label)}));
     const labelBounds=new Map();
-    const obstacles=[...clearings,...rows.filter(({item})=>item.kind!=="courtyard").map(({item:o})=>({left:o.left,top:o.top,right:o.left+o.width,bottom:o.top+o.height}))];
+    // Place complete banners around Report controls just like castle artwork;
+    // the existing solver tries a small sideways adjustment before lifting.
+    const obstacles=[...clearings,...controls.filter(c=>c.anchorKey),...rows.filter(({item})=>item.kind!=="courtyard").map(({item:o})=>({left:o.left,top:o.top,right:o.left+o.width,bottom:o.top+o.height}))];
     let results=placements.get(signature);
     if(!results){results=SeamlessModel.placeLabels(labels,new Set(),0,obstacles);placements.set(signature,results);if(placements.size>16)placements.delete(placements.keys().next().value);}
     for(const result of results){
@@ -172,7 +191,7 @@
     }
     window.SeamlessAppearance.labelBounds=labelBounds;
   }
-  window.SeamlessAppearance={render,layout,geometry,courtyard,loadIdentities,tickShield,resetLayout,stats:()=>({measured,cacheHits,measurements:measurementCache.size,placements:placements.size}),routeClass(item){return own(item)?"player-route":ally(item)?!item.returning&&["attack","rally"].includes(item.missionKind)?"clan-hostile-route":"clan-support-route":"enemy-route";},tickMarch(node,item,now){
+  window.SeamlessAppearance={render,scoutReport,layout,geometry,courtyard,loadIdentities,tickShield,resetLayout,stats:()=>({measured,cacheHits,measurements:measurementCache.size,placements:placements.size}),routeClass(item){return own(item)?"player-route":ally(item)?!item.returning&&["attack","rally"].includes(item.missionKind)?"clan-hostile-route":"clan-support-route":"enemy-route";},tickMarch(node,item,now){
     const second=Math.ceil(item.arriveAt-now);if(node.marchSecond===second)return;node.marchSecond=second;
     const timer=node.querySelector(".army-token-time"),value=formatDuration(Math.max(0,Math.ceil(item.arriveAt-now)));
     if(timer&&timer.textContent!==value)timer.textContent=value;

@@ -104,7 +104,7 @@ async function nearbyChecks() {
   const sent=[];
   const source={id:"source",name:"Source",owner:"player",troops:100};
   const targets=Array.from({length:24},(_,i)=>({id:"target-"+i}));
-  const scope=load({console,performance:{now:()=>1},requestAnimationFrame:fn=>fn(),
+  const scope=load({console,window:{},performance:{now:()=>1},requestAnimationFrame:fn=>fn(),
     state:{gold:100000},SCOUT_NEARBY_COST:75000,ONLINE_WORLD_ID:"realm",RESET_GENERATION:"generation",
     scoutNearbySourceId:null,regroupSourceId:null,pendingBulkOrderAction:null,bulkOrderActionRequestId:0,bulkOrderRequestIds:new Map(),
     canUseBulkArmyOrders:()=>true,supportsBulkArmyOrders:()=>true,getOnlineSessionRequestScope:()=>scopeKey,

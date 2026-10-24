@@ -146,7 +146,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   // The legacy map has a capturing tower-click guard. Its prior drag flag must
   // not suppress a fresh command tap owned by this separate screen-space UI.
   overlay.addEventListener("pointerdown", () => { suppressMapClick = false; }, true);
-  const original = { renderCities, renderArmies, renderPaths, renderHarvestBonuses, centerOnMap, centerOnCity, centerOnWorldPoint, beginMapVisualTransition, updateMainCityReturnButton,
+  const original = { refreshScoutActionWheels, renderCities, renderArmies, renderPaths, renderHarvestBonuses, centerOnMap, centerOnCity, centerOnWorldPoint, beginMapVisualTransition, updateMainCityReturnButton,
     renderWorldMap, renderIslandTeleporters, preloadIslandMap, preloadNearbyIslandMaps,
     getNearbyScoutCandidates, getNearbyRegroupCandidates, toggleScoutNearby, toggleRegroup, createHarvestBonusPoint, isHarvestBonusPlacementSafe, getCityPeaceShieldExpiresAtMs };
   let view, bridge, transitioning = false, restoringSelection = false, disposed = false, lastWheel = "", wheelPoint = null, pendingFocus = null, frameView = null;
@@ -233,7 +233,8 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
       if(focusCastleActions(point))return;
     }
     wheelPoint = point;
-    const signature = JSON.stringify([point.key,target.owner,target.troops,target.level,getCityPeaceShieldExpiresAtMs(target),Math.floor(getProjectedGold()),scoutNearbySourceId,regroupSourceId,pendingBulkOrderAction?.phase]);
+    const intel = SeamlessAppearance.scoutReport(point,view.serverNowMs());
+    const signature = JSON.stringify([intel?.scoutedAtMs,intel?.expiresAtMs,intel?.troops,point.key,target.owner,target.troops,target.level,getCityPeaceShieldExpiresAtMs(target),Math.floor(getProjectedGold()),scoutNearbySourceId,regroupSourceId,pendingBulkOrderAction?.phase]);
     if (signature === lastWheel) return;
     clearWheel(); wheelPoint = point; lastWheel = signature;
     cityLayer.replaceChildren();
@@ -258,6 +259,15 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   // Identity repairs, own-power subscriptions and the existing power-band
   // stabilization timer must repaint visible banners as well as action wheels.
   renderCities = () => { ensureHoldingTowerMapSubscriptions(); view?.invalidate(); paintWheel(); };
+  refreshScoutActionWheels = targetIds => {
+    // Scout delivery otherwise updates the hidden legacy cityLayer and can
+    // move its action wheel out of this overlay. Refresh the active surface.
+    view?.invalidate();
+    if (wheelPoint && targetIds.includes(wheelPoint.id)) {
+      lastWheel = "";
+      preserveScoutViewInteraction(mapFrame,paintWheel);
+    }
+  };
   renderArmies = renderPaths = () => {};
   renderHarvestBonuses=renderPickups;
   // A section change still loads authoritative gameplay state, but the hidden
@@ -342,7 +352,15 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
     })));
     view = await window.createContinuousWorldView({ root, scene, nativeUi:true,
     getTowerState: id => holdingTowerSnapshots.get(id),
-    labelClearings: size => {
+    labelClearings: (size,camera) => {
+      const report=overlay.querySelector(".continuous-castle-wheel .wheel-report");
+      if(report&&wheelPoint?.kind==="castle"){
+        // Button slots are already sized by castleActions. Reserve the Report
+        // face without synchronous layout reads or moving the approved buttons.
+        const half=(size.height<=500?44:56)/2,z=camera.zoom;
+        const x=wheelPoint.x+parseFloat(report.style.left)/z,y=wheelPoint.y+parseFloat(report.style.top)/z;
+        return [{left:x-half/z,right:x+half/z,top:y-half/z,bottom:y+half/z,anchorKey:wheelPoint.key}];
+      }
       const count=overlay.querySelector(".clan-tower-action-wheel")?.children.length;
       if(!count||wheelPoint?.kind!=="tower")return [];
       const maxZoom=SeamlessModel.forWorld(scene).limits(size).max,scale=(size.height<500?.74:.9)/maxZoom;
@@ -432,7 +450,7 @@ window.mountContinuousWorld = async function (scene, {restoreSelection=null}={})
   root.querySelector("#load-status").textContent="Connected";
   function dispose() {
     if(disposed)return;disposed=true;castleActions.dispose();window.removeEventListener("pagehide",dispose);bridge.dispose();view?.dispose();host.remove();overlay.remove();pickups.remove();pickupNodes.clear();mapWorld.hidden=false;setMainCityReturnHudMode(false);
-    ({renderCities,renderArmies,renderPaths,renderHarvestBonuses,centerOnMap,centerOnCity,centerOnWorldPoint,beginMapVisualTransition,updateMainCityReturnButton,
+    ({refreshScoutActionWheels,renderCities,renderArmies,renderPaths,renderHarvestBonuses,centerOnMap,centerOnCity,centerOnWorldPoint,beginMapVisualTransition,updateMainCityReturnButton,
       renderWorldMap,renderIslandTeleporters,preloadIslandMap,preloadNearbyIslandMaps,getNearbyScoutCandidates,getNearbyRegroupCandidates,toggleScoutNearby,toggleRegroup,createHarvestBonusPoint,isHarvestBonusPlacementSafe,getCityPeaceShieldExpiresAtMs}=original);
     delete window.CrownlandsContinuousControls;
     delete window.CrownlandsContinuousWorld;cityRenderSignature="";renderedMapBoundsSignature="";renderAll();

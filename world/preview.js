@@ -302,7 +302,7 @@ window.createContinuousWorldView = async function (options = {}) {
         node.classList.toggle("selected", item.key === selected);
 
       }
-      const controlClearings=options.labelClearings?.(size)||[];
+      const controlClearings=options.labelClearings?.(size,camera)||[];
       window.SeamlessAppearance?.layout(interactive.map(item => ({item,node:nodes.get(item.key)})),pickupClearings,controlClearings);
       const exclusions=[...controlClearings,...(window.SeamlessAppearance?.labelBounds?.values()||[])];
       // Preserve existing encounter positions until natural respawn. A moved

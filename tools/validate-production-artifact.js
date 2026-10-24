@@ -453,7 +453,10 @@ const incrementalWorldBudget=4096;
 // Sparse clouds/shadows, the measured camera floor and optional loading add
 // 3,352 lazy bytes. Reuse existing artwork; no installation precache growth.
 const mapAtmosphereBudget=3584;
-assert(worldBytes<=64*1024+256+castleActionLayoutBudget+worldClearanceBudget+cityShieldBudget+npcLabelBudget+clanCourtyardBudget+incrementalWorldBudget+mapAtmosphereBudget,"Lazy continuous-world modules exceed 82.5 KiB");
+// Private scout banner projection, targeted delivery and Report-button
+// clearance add 1,094 lazy bytes; no new art, subscriptions or precache entries.
+const scoutBannerBudget=1280;
+assert(worldBytes<=64*1024+256+castleActionLayoutBudget+worldClearanceBudget+cityShieldBudget+npcLabelBudget+clanCourtyardBudget+incrementalWorldBudget+mapAtmosphereBudget+scoutBannerBudget,"Lazy continuous-world modules exceed 83.75 KiB");
 assert(!worker.includes('world/'),"Continuous world must not expand installation precaching");
 for(const f of worldFiles)assert(!fs.readFileSync(f,"utf8").includes('/__benchmark__/'),"No private preview endpoints in the game");
 if (baseClientBytes - worldBytes > baseClientBudget + campFlagArtBudget) {
