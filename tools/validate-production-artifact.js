@@ -425,7 +425,7 @@ assert(!worker.includes("assets/icons/camps/"), "Camp type banners must load on 
 // Eight transparent support-building stages (402,478 bytes) plus bounded private-board UI/integration.
 const clanSupportBudget = 464 * 1024;
 const baseClientBudget = 25 * 1024 * 1024 + (352 + 136 + 148 + 148 + 48 + 52 + 224 + 64 + 48 + 48 + 100 + 40 + 52 + 68 + 40 + 64 + 64 + 132 + 84 + 116 + 16 + 16 + 32 + 1264 + 340 + 32 + 1232 + 5824 + 600 + 24 + 40) * 1024 + soundtrackIncrementBudget + battleItemReportingBudget + cosmeticFeatureBudget + halloweenMapFeatureBudget + halloweenMapTransitionBudget + animatedMapBatsBudget + troopsHelmetArtworkBudget + liveCrownPurchaseBudget + crownShopTabBudget + estateArtBudget + estateModuleBudget + guildFeatureBudget + clanSupportBudget;
-const worldModules=["appearance.js","assets.js","bootstrap.js","delta-feed.js","feed.js","flags.css","game-bridge.js","model.js","native.js","preview.css","preview.js","sprite-layer.js","surface.html"].map(f=>"world/"+f).sort();
+const worldModules=["appearance.js","assets.js","atmosphere.js","bootstrap.js","delta-feed.js","feed.js","flags.css","game-bridge.js","model.js","native.js","preview.css","preview.js","sprite-layer.js","surface.html"].map(f=>"world/"+f).sort();
 const worldFiles=files.filter(f=>path.relative(dist,f).replace(/\\/g,"/").startsWith("world/"));
 assert.deepEqual(worldFiles.map(f=>path.relative(dist,f).replace(/\\/g,"/")).sort(),worldModules,"Ship only reviewed production world modules");
 const worldBytes=worldFiles.reduce((n,f)=>n+fs.statSync(f).size,0);
@@ -450,7 +450,10 @@ const clanCourtyardBudget=3840;
 // Incremental indexes/data identities, viewport rebasing and visibility gating
 // add bounded lazy code only; no new artwork, boot or precache downloads.
 const incrementalWorldBudget=4096;
-assert(worldBytes<=64*1024+256+castleActionLayoutBudget+worldClearanceBudget+cityShieldBudget+npcLabelBudget+clanCourtyardBudget+incrementalWorldBudget,"Lazy continuous-world modules exceed 79 KiB");
+// Sparse clouds/shadows, the measured camera floor and optional loading add
+// 3,352 lazy bytes. Reuse existing artwork; no installation precache growth.
+const mapAtmosphereBudget=3584;
+assert(worldBytes<=64*1024+256+castleActionLayoutBudget+worldClearanceBudget+cityShieldBudget+npcLabelBudget+clanCourtyardBudget+incrementalWorldBudget+mapAtmosphereBudget,"Lazy continuous-world modules exceed 82.5 KiB");
 assert(!worker.includes('world/'),"Continuous world must not expand installation precaching");
 for(const f of worldFiles)assert(!fs.readFileSync(f,"utf8").includes('/__benchmark__/'),"No private preview endpoints in the game");
 if (baseClientBytes - worldBytes > baseClientBudget + campFlagArtBudget) {

@@ -18,6 +18,9 @@ instruction to leave zoom limits unchanged. Backend authority and data are uncha
   Maximum cloud opacity is 32%; shadows are 12%. Soft masks feather the existing
   `assets/optimized/map-transition-clouds-448x448-a17eebc9852d.webp` texture.
   No new artwork, world data, asset pipeline or backend capability is required.
+  The reviewed lazy-module inventory adds `world/atmosphere.js`; the measured
+  3,352-byte runtime/style increase has a separate 3,584-byte allowance without
+  expanding installation precaching or existing artwork budgets.
 - Paired shadows project into the rebased ground surface below castles/banners.
   Cloud wisps sit below native HUD/action overlays. All weather nodes ignore input.
 - Patches fade out by 1.8 times minimum zoom. Full animates, Reduced freezes drift,

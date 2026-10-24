@@ -10,6 +10,7 @@
         "world/preview.js",
         "world/preview.css",
         "tools/validate-map-atmosphere.js",
+        "tools/validate-production-artifact.js",
         "tools/check-map-atmosphere.js",
         "tools/check-continuous-zoom-limit.js",
         "tools/test-local-postgres-map-pan-performance.js",
@@ -22,7 +23,8 @@
         "tools/test-local-postgres-production-world.js",
         "tools/test-local-postgres-map-pan-performance.js",
         "tools/test-local-production-client.js",
-        "tools/validate-asset-performance-budgets.js"
+        "tools/validate-asset-performance-budgets.js",
+        "tools/validate-production-artifact.js"
       ],
       "reason": "Verify the closer viewport-dependent camera floor, anchored zoom and every production camera input, plus sparse noninteractive cloud/shadow projection, motion preferences, pause and disposal. The actual packaged-client disposable PostgreSQL fixture exercises mouse/pinch/resize, selections, skins, shields, paths, pickups, native controls, area authorization and session revocation at desktop and two landscape sizes. Pan benchmarks enforce bounded terrain/sprite/node caches and hidden-window suspension; compare full-motion clouds on/off independently. Packaging and asset budgets cover the new lazy module and reused existing texture. No server authority, storage, shared Firebase functions, security rules or backend contract changes; no emulator gameplay suite applies."
     },
