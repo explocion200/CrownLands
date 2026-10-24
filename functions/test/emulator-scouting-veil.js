@@ -402,6 +402,12 @@ async function main() {
   assert(Number(afterBulkLaunchProfile.gold) === Number(beforeBulkProfile.gold) - scoutCost, "Successful Scout Nearby charged the wrong gold amount.");
   assert(Number(afterBulkLaunchSource.troops) === Number(beforeBulkSource.troops) - 1, "Successful Scout Nearby removed the wrong troop count.");
 
+  await require("./small-attack-scout-cases")({ db,
+    call: (name, actor, data) => callFunction(name, actor.token, data), attacker, defender,
+    source: { id: sourceRef.id, regionId }, target: { id: targetRef.id, regionId },
+    cityRef: city => cities.doc(city.id),
+  });
+
   console.log("Validated direct and Nearby Veil launch blocking, in-flight activation, expiry, and side effects.");
 }
 

@@ -1,28 +1,38 @@
 {
   "schemaVersion": 1,
-  "baseCommit": "b0cbd5ff41ff99e1bf39258edba6164163d12f51",
+  "baseCommit": "2ee5408dc4cc739822ead1f3e905ef8edc4d371f",
   "coverage": [
     {
       "paths": [
-        "world/appearance.js",
-        "world/native.js",
-        "world/preview.js",
-        "tools/check-continuous-scout-intel.js",
-        "tools/validate-continuous-scout-intel.js",
-        "tools/test-local-postgres-native-auth-world.js",
-        "tools/validate-scout-responsiveness.js",
-        "tools/validate-production-artifact.js"
+        "functions/index.js",
+        "functions/test/emulator-scouting-veil.js",
+        "functions/test/small-attack-scout-cases.js",
+        "tools/test-local-postgres-small-attack-scout.js",
+        "tools/validate-small-attack-scout.js"
       ],
       "tests": [
-        "tools/validate-continuous-scout-intel.js",
+        "tools/validate-small-attack-scout.js",
+        "tools/test-local-postgres-small-attack-scout.js",
         "tools/validate-scout-report-lifecycle.js",
-        "tools/validate-scout-responsiveness.js",
-        "tools/validate-world-render-cache.js",
-        "tools/test-local-postgres-production-world.js",
-        "tools/test-local-production-client.js",
-        "tools/validate-production-artifact.js"
+        "tools/validate-scout-report-ui.js",
+        "tools/validate-continuous-scout-intel.js",
+        "tools/validate-scout-responsiveness-browser.js",
+        "tools/validate-siege-combat.js",
+        "tools/validate-peace-shield-returns.js",
+        "tools/validate-attack-departure-snapshots.js",
+        "functions/test/emulator-scouting-veil.js",
+        "functions/test/emulator-scout-report-lifecycle.js",
+        "functions/test/emulator-peace-shield-returns.js"
       ],
-      "reason": "Restore existing private scout snapshots in selected continuous-world city banners and route targeted scout delivery to the active action overlay. Validate original expiry, owner/target/type matching, zero counts, replacements and session clearing without changing shared DTOs or rebuilding map geometry. The actual packaged world modules and isolated PostgreSQL command/subscription harness test a real scout arrival, a second unauthorized account, immediate targeted updates, idle expiry, desktop and two landscape sizes, plus affected selection, routes, shields, pickup and sign-out paths. The existing scout responsiveness VM fixture now supplies the window global used by the current continuous-world bulk adapter. No backend, game authority, database, Firebase rules or server contract changes; no emulator gameplay suite applies. Packaging and cache validators cover module delivery and affected rendering dependencies. Reserve the existing Report button in banner layout so the complete flag/banner stays attached and the troop count is unobstructed on small castles; test button/count rectangles at all three viewport sizes. Measure the 1,094-byte lazy module increase and grant an isolated 1.25 KiB allowance without expanding initial load or service-worker precaching."
+      "reason": "Server-only arrival exception for 1-49-soldier player attacks against enemy regular cities at current level 61+. Shared real-command cases exercise PostgreSQL continuous-world dispatch and arrival and the emulator: launch/retry route identity, 49/50 and 60/61 boundaries, upgraded/downgraded targets, no damage/capture/XP, private expiring scout reports and defender notices, concurrent resolution, one-soldier cost, deterministic safe surplus return, Veil returning everyone, shield/main-city blocking, neutral targets, recalls, ownership and clan changes, and unspent retaliation reservations. Pure eligibility cases cover NPCs/objectives, rallies, transfers and hostile returns. Existing siege, departure, shield-return, scout lifecycle and continuous-intelligence validators cover affected shared dependencies. The unchanged scout report interface is checked at desktop and both landscape-mobile sizes through the browser fixture. No production data or archived world layout is modified."
+    },
+    {
+      "paths": [
+        "docs/CROWNLANDS_MASTER_DEVELOPMENT_SPECIFICATION.md",
+        "docs/SMALL_ATTACK_SCOUT_ARRIVAL.md"
+      ],
+      "tests": [],
+      "reason": "Document the explicitly confirmed arrival threshold and one-soldier cost with safe surplus returns, existing protection/expiry/privacy rules, tested scope and compatible local-backend rollout. Documentation makes no deployment claim and needs no separate runtime suite."
     }
   ]
 }

@@ -29129,6 +29129,36 @@ async function resolveMarauderArmyById({ armyId, callerUid = "", nowMs = Date.no
   }, "resolveMarauderArmy");
 }
 
+function isSmallHostileCityAttackScout(army = {}, target = {}, clanAllies = false) {
+  const troops = Math.floor(safeNumber(army.troops, 0));
+  const attackerUid = safeString(army.ownerUid, 128);
+  const defenderUid = getOwnerUid(target);
+  return Boolean(
+    army.kind === "attack"
+    && (!army.launchKind || army.launchKind === "attack")
+    && (!army.targetType || army.targetType === "city")
+    && army.ownerKind === "player"
+    && attackerUid && defenderUid && defenderUid !== attackerUid && !clanAllies
+    && !isStronghold(target)
+    && clampCityLevel(target.level) > 60
+    && troops > 0 && troops < 50
+    && !army.returning && !army.recalledAtMs
+    && !army.rallyAttack && !army.rallyJoin && !army.rallyReturn && !army.rallyReturnAttack
+    && !army.campReturn && !army.reinforcementReturn && !army.relinquishTransfer
+    && !army.retargetedFromKind && !army.eventKind
+  );
+}
+
+function createSmallAttackScoutReturn(army, troops, nowMs) {
+  if (troops <= 0) return null;
+  const id = `scout_return_${crypto.createHash("sha256").update(army.id).digest("hex").slice(0, 40)}`;
+  const movement = createAlliedTargetReturnMovement({ ...army, id, troops, requestedTroops: troops }, nowMs);
+  movement.returnReason = "small_attack_scout";
+  // This is a new safe return, not another use of the attack's authorization.
+  delete movement.retaliationAuthorization;
+  return movement;
+}
+
 async function resolveArmyOrderById({ armyId = "", requestedRegions = [], callerUid = "", nowMs = Date.now() } = {}) {
   await ensureTravelNetworkContext();
   if (!armyId) throw new HttpsError("invalid-argument", "Missing army id.");
@@ -31762,7 +31792,12 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       };
     }
 
-    if (army.kind === "scout") {
+    // Keep the launch, route, shield/cooldown and hostility checks as an attack.
+    // Only an eligible arrival becomes intelligence; it must never reach combat.
+    const attackResolvedAsScout = isSmallHostileCityAttackScout(army, target, currentClanAllies)
+      && !isProtectedMainCity(target, attackerUid, defenderProfile)
+      && !isCityShielded(target, attackerUid, nowMs, defenderProfile);
+    if (army.kind === "scout" || attackResolvedAsScout) {
       if (isProtectedMainCity(target, attackerUid, defenderProfile)) {
         const returned = returnTroopsToSource(troopCount);
         writeParticipantEconomies({}, {}, { statsCityPatches: getLatestSourceReturnStatsPatches() });
@@ -31802,9 +31837,12 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         };
       }
 
-      if (doesVeilOfSilenceBlock(army.kind, army.targetType) && defenderUid && defenderUid !== attackerUid && isVeilOfSilenceActive(defenderProfile, nowMs)) {
-        const returned = returnTroopsToSource(troopCount);
-        writeParticipantEconomies({}, {}, { statsCityPatches: getLatestSourceReturnStatsPatches() });
+      if (doesVeilOfSilenceBlock("scout", army.targetType) && defenderUid && defenderUid !== attackerUid && isVeilOfSilenceActive(defenderProfile, nowMs)) {
+        const movement = attackResolvedAsScout ? createSmallAttackScoutReturn(army, troopCount, nowMs) : null;
+        const returned = movement ? 0 : returnTroopsToSource(troopCount);
+        if (movement) writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
+        writeParticipantEconomies({}, {}, { statsCityPatches: getLatestSourceReturnStatsPatches(),
+          addActiveArmies: movement ? [movement] : [] });
         const report = makeReport({
           id: `${armyId}_scout_veiled_${attackerUid}`,
           uid: attackerUid,
@@ -31817,7 +31855,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           sentTroops: troopCount,
           troopCount: 0,
           totalDefense: 0,
-          summary: `Veil of Silence blocked the scout. ${returned.toLocaleString()} scout returned.`,
+          summary: movement
+            ? `The small attack became a scout, but Veil of Silence blocked intelligence. All ${troopCount.toLocaleString()} soldiers are returning.`
+            : `Veil of Silence blocked the scout. ${returned.toLocaleString()} scout returned.`,
           ...getArmyBulkAudioReportContext(army),
           nowMs,
         });
@@ -31827,11 +31867,13 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           createdAt: FieldValue.serverTimestamp(),
         }, { merge: true });
         reports.push(report);
-        markResolved({ kind: "scout", blocked: "veil_of_silence", returned });
+        markResolved({ kind: "scout", blocked: "veil_of_silence", returned,
+          ...(attackResolvedAsScout ? { convertedFromAttack: true, scoutTroopsUsed: 0, returnArmyId: movement.id } : {}) });
         return {
           ok: true,
           status: "resolved",
           kind: "scout",
+          ...(movement ? { movement } : {}),
           reports: reportsForCaller(),
           cityUpdates: withEconomyCityUpdates(cityUpdates),
           currentUser: profilePatchForCaller(
@@ -31885,7 +31927,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         };
       }
 
-      writeParticipantEconomies();
+      const movement = attackResolvedAsScout ? createSmallAttackScoutReturn(army, troopCount - 1, nowMs) : null;
+      if (movement) writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
+      writeParticipantEconomies({}, {}, { addActiveArmies: movement ? [movement] : [] });
       const scoutReport = createScoutReportSnapshot(combatTarget, defenderProfile, nowMs, defenderBonuses, targetStats, defensePackages);
       const report = makeReport({
         id: getCurrentScoutReportId(attackerUid, target.id),
@@ -31900,7 +31944,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         troopCount: scoutReport.troops,
         totalDefense: scoutReport.totalDefense,
         defenseStats: scoutReport,
-        summary: `Scout revealed ${scoutReport.troops.toLocaleString()} troops at ${target.name || target.id}.`,
+        summary: attackResolvedAsScout
+          ? `The ${troopCount.toLocaleString()}-soldier attack became a scout at level ${clampCityLevel(target.level)} ${target.name || target.id}. Scout revealed ${scoutReport.troops.toLocaleString()} troops. One soldier was used for scouting.${movement ? ` The remaining ${movement.troops.toLocaleString()} soldiers are returning.` : ""}`
+          : `Scout revealed ${scoutReport.troops.toLocaleString()} troops at ${target.name || target.id}.`,
         scoutReport,
         ...getArmyBulkAudioReportContext(army),
         nowMs,
@@ -31927,11 +31973,13 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         createdAt: FieldValue.serverTimestamp(),
       }, { merge: true });
       reports.push(report);
-      markResolved({ kind: "scout", targetTroops: scoutReport.troops });
+      markResolved({ kind: "scout", targetTroops: scoutReport.troops,
+        ...(attackResolvedAsScout ? { convertedFromAttack: true, scoutTroopsUsed: 1, returnArmyId: movement?.id || "" } : {}) });
       return {
         ok: true,
         status: "resolved",
         kind: "scout",
+        ...(movement ? { movement } : {}),
         reports: reportsForCaller(),
         scoutReport: callerUid === attackerUid ? scoutReport : null,
         cityUpdates: withEconomyCityUpdates(cityUpdates),
