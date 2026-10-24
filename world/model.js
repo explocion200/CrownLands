@@ -19,9 +19,12 @@
   function limits(size, world = WORLD) {
     const fit = Math.min(size.width / TILE.width, size.height / TILE.height);
     const detail = fit * 0.56;
-    // Stop just above the detail cutoff so cities and their area feed remain
-    // visible. Apply the same floor to every camera input, including resize.
-    return { min: Math.max(detail + fit * 0.04, Math.min(size.width / world.width, size.height / world.height)), detail, home: fit, max: fit * 3 };
+    // Crowded-phone measurements need a closer floor than desktop. Interpolate
+    // without a breakpoint jump: 140% fit at <=500px high, 85% at >=900px.
+    // Every input uses this same limit; Home also respects it on small screens.
+    const floorScale = .85 + .55 * Math.max(0, Math.min(1, (900 - size.height) / 400));
+    const min = Math.max(fit * floorScale, Math.min(size.width / world.width, size.height / world.height));
+    return { min, detail, home: Math.max(fit, min), max: fit * 3 };
   }
   function clamp(camera, size, world = WORLD) {
     const range = limits(size, world);

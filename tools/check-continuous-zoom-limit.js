@@ -7,7 +7,7 @@ module.exports = async function checkZoomLimit(page, source, select, output) {
   // Anchoring and the floor must remain independent of catalog growth.
   for (const sections of [3,12,30]) for (const [width,height] of sizes) {
     const size={width,height}, world={width:sections*1448,height:sections*1086}, M=model.forWorld(world), range=M.limits(size);
-    assert(range.min>range.detail && range.min<range.home);
+    assert(range.min>range.detail && range.min<=range.home && range.home<range.max);
     const camera={x:world.width/2,y:world.height/2,zoom:range.home}, anchor={x:width*.6,y:height*.4};
     const before=M.unproject(camera,anchor,size), after=M.zoomAt(camera,size,anchor,range.min/100);
     assert.equal(after.zoom,range.min);
@@ -62,6 +62,7 @@ module.exports = async function checkZoomLimit(page, source, select, output) {
         await frames(page);
       }
       await check("wheel");
+      await require("./check-map-atmosphere")(page,output,width);
       await page.screenshot({path:path.join(output,`zoom-limit-${width}.png`)});
       // Native controls use the same floor even though their prototype toolbar
       // is hidden in the restored game HUD.
@@ -89,6 +90,10 @@ module.exports = async function checkZoomLimit(page, source, select, output) {
       await check("navigation clamp");
       await page.setViewportSize({width:width+20,height:height+10});await check("resize");
       await page.setViewportSize({width,height});await check("resize back");
+      await page.evaluate(()=>{const v=nativeContinuousWorld.view,s=v.snapshot();v.view(s.camera.x,s.camera.y,SeamlessModel.forWorld(v.scene).limits(s.size).max);});await frames(page);
+      await page.setViewportSize(width>1000?{width:844,height:390}:{width:1440,height:900});await frames(page);
+      assert(await page.evaluate(()=>{const v=nativeContinuousWorld.view,s=v.snapshot();return Math.abs(s.camera.zoom-SeamlessModel.forWorld(v.scene).limits(s.size).max)<1e-8;}),"Resize must preserve the maximum close-up across phone/desktop floors");
+      await page.setViewportSize({width,height});await frames(page);
       await page.evaluate(()=>nativeContinuousWorld.view.home());await frames(page);
       assert(await page.evaluate(()=>{const v=nativeContinuousWorld.view,s=v.snapshot();return Math.abs(s.camera.zoom-SeamlessModel.forWorld(v.scene).limits(s.size).home)<1e-8;}),"Home no longer restores the fitted view");
     }

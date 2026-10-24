@@ -37,7 +37,7 @@ module.exports=async function checkControlScale(page,targets,select,output){
             v.view(o.x,o.y,SeamlessModel.forWorld(v.scene).limits(size).max*fraction);
           },{key,fraction});
           await frames();await page.waitForFunction(()=>!nativeContinuousWorld.view.snapshot().feed.pending&&!nativeContinuousWorld.bridge.running&&document.querySelector("#continuous-game-actions button"));await frames();
-          const sample=await measure(),expected=sample.kind==="castle"?1:(height<500?.74:.9)*fraction;
+          const sample=await measure(),expected=sample.kind==="castle"?1:(height<500?.74:.9)*sample.zoom/sample.max;
           assert(Math.abs(sample.scale-expected)<1e-5,"Action controls did not scale with map zoom");
           assert(Math.hypot(sample.left-sample.point.x,sample.top-sample.point.y)<.1,"Action controls detached from the selected target");
           assert(sample.buttons.length>0);assert(sample.buttons.every(b=>b.width>0&&b.height>0));
@@ -48,7 +48,7 @@ module.exports=async function checkControlScale(page,targets,select,output){
             assert(sample.buttons.every(b=>Math.abs(b.width-(height<=500?44:56))<.1),"Approved castle controls must remain readable");
             if(samples.length)assert(sample.width<=samples[0].width+.1,"Castle menu must not grow while zooming out");
           }else if(samples.length){
-            const ratio=fraction/samples[0].fraction;
+            const ratio=sample.zoom/samples[0].zoom;
             assert(Math.abs(sample.width/samples[0].width-ratio)<.002,"Wheel footprint grows relative to the target: "+JSON.stringify({width,height,target,fraction,sample,first:samples[0]}));
             sample.buttons.forEach((b,i)=>assert(Math.abs(b.width/samples[0].buttons[i].width-ratio)<.002,"A button ignores its wheel scale"));
           }

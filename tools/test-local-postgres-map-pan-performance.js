@@ -6,11 +6,13 @@ const {chromium}=require("playwright");
 const {createGameplayPilot}=require("./map-benchmark/seamless/gameplay-pilot");
 const {createAuthenticatedNativeHarness}=require("./map-benchmark/seamless/native-auth-harness");
 const baseline=process.argv.find(a=>a.startsWith("--baseline="))?.slice(11),source=process.argv.includes("--source");
-const crowded=!process.argv.includes("--normal");
+const crowded=!process.argv.includes("--normal"),survey=process.argv.includes("--zoom-survey"),minOnly=process.argv.includes("--min-only");
+const cloudsOff=process.argv.includes("--clouds-off"),repeats=Number(process.argv.find(a=>a.startsWith("--repeats="))?.slice(10)||1);
+if(!Number.isInteger(repeats)||repeats<1||repeats>5)throw Error("Invalid repeat count");
 const soakSeconds=Number(process.env.CROWNLANDS_MAP_SOAK_SECONDS||0);
 if(!Number.isInteger(soakSeconds)||soakSeconds<0||soakSeconds>3600)throw Error("Invalid soak duration");
 const ref=baseline&&execFileSync("git",["rev-parse","--verify",baseline+"^{commit}"],{encoding:"utf8"}).trim();
-const output=path.resolve("release-artifacts/map-pan-performance",(ref?"baseline":source?"source":"packaged")+(crowded?"":"-normal")+(soakSeconds?"-soak":""));
+const output=path.resolve("release-artifacts/map-pan-performance",(ref?"baseline":source?"source":"packaged")+(crowded?"":"-normal")+(soakSeconds?"-soak":"")+(survey?"-zoom-survey":"")+(cloudsOff?"-clouds-off":"")+(repeats>1?`-r${repeats}`:"")+(minOnly?"-min":""));
 (async()=>{
  const pilot=await createGameplayPilot({productionRouting:true});let world,harness,browser;
  const results=[],errors=[];fs.mkdirSync(output,{recursive:true});
@@ -33,11 +35,15 @@ const output=path.resolve("release-artifacts/map-pan-performance",(ref?"baseline
   await page.getByRole("button",{name:"Keep analytics off"}).click();await page.waitForFunction(()=>!document.getElementById("enterKingdomBtn")?.disabled);await page.locator("#enterKingdomBtn").click();
   await page.waitForFunction(()=>!!window.CrownlandsContinuousWorld&&!isMapInteractionBlocked(),null,{timeout:90000});
   if(source)assert.equal(await page.evaluate(()=>typeof CrownlandsContinuousWorld.view.snapshot().pooledNodes),"number","Source renderer must actually be loaded");
+  // Measure moving clouds even if adaptive decoration reduction would engage
+  // under CPU throttling. The clouds-off comparison uses the same full mode.
+  await page.evaluate(()=>setAnimationModePreference("full"));
+  if(cloudsOff)await page.evaluate(()=>CrownlandsContinuousWorld.root.querySelectorAll(".map-clouds,.map-cloud-shadows").forEach(n=>n.hidden=true));
   const cdp=await context.newCDPSession(page);await cdp.send("Performance.enable");
   for(const [width,height,cpu]of [[844,390,4],[568,320,4],[1440,900,1]]){
    await page.setViewportSize({width,height});await cdp.send("Emulation.setCPUThrottlingRate",{rate:cpu});
-   for(const zoom of ["home","min"]){
-    await page.evaluate(zoom=>{if(modal.open)modal.close();clearSelection(false);const v=CrownlandsContinuousWorld.view,s=v.scene.sections.find(s=>s.name==="Stoneward");v.view(s.x+724,s.y+543,SeamlessModel.forWorld(v.scene).limits(v.snapshot().size)[zoom]);},zoom);
+   for(const zoom of (survey?[.6,.85,1,1.2,1.4,1.6]:minOnly?["min"]:["home","min"]))for(let repeat=1;repeat<=repeats;repeat++){
+    await page.evaluate(zoom=>{if(modal.open)modal.close();clearSelection(false);const v=CrownlandsContinuousWorld.view,s=v.scene.sections.find(s=>s.name==="Stoneward");v.view(s.x+724,s.y+543,typeof zoom==="number"?Math.min(v.snapshot().size.width/1448,v.snapshot().size.height/1086)*zoom:SeamlessModel.forWorld(v.scene).limits(v.snapshot().size)[zoom]);},zoom);
     await page.waitForTimeout(2000);
     // Startup can deliver a welcome/reward dialog after the initial enter.
     // An intentionally obscured renderer is not a meaningful pan measurement.
@@ -54,7 +60,7 @@ const output=path.resolve("release-artifacts/map-pan-performance",(ref?"baseline
     const sample=await page.evaluate(async()=>{
      const v=CrownlandsContinuousWorld.view,c=v.snapshot().camera;v.resetMetrics();let start;
      await new Promise(done=>{function move(t){start??=t;const e=t-start;v.view(c.x+Math.sin(e/1400)*1200,c.y+Math.sin(e/2000)*800,c.zoom);if(e<6500)requestAnimationFrame(move);else done();}requestAnimationFrame(move);});
-     const s=v.snapshot(),p=(a,q)=>[...a].sort((a,b)=>a-b)[Math.floor(a.length*q)];return{fps:1000/(s.frameTimes.reduce((a,b)=>a+b,0)/s.frameTimes.length),frameP95:p(s.frameTimes,.95),frameP99:p(s.frameTimes,.99),workP95:p(s.workTimes,.95),longFrames:s.frameTimes.filter(t=>t>50).length,frames:s.frameTimes.length,nodes:s.nodes,pooledNodes:s.pooledNodes,assets:s.assets,renderer:s.renderer,labels:SeamlessAppearance.stats?.(),feed:{pending:s.feed.pending,failed:s.feed.failed,sections:s.feed.sections,requests:s.feed.requests}};
+     const s=v.snapshot(),p=(a,q)=>[...a].sort((a,b)=>a-b)[Math.floor(a.length*q)];return{actualZoom:s.camera.zoom,atmosphere:s.atmosphere,fps:1000/(s.frameTimes.reduce((a,b)=>a+b,0)/s.frameTimes.length),frameP95:p(s.frameTimes,.95),frameP99:p(s.frameTimes,.99),workP95:p(s.workTimes,.95),longFrames:s.frameTimes.filter(t=>t>50).length,frames:s.frameTimes.length,nodes:s.nodes,pooledNodes:s.pooledNodes,assets:s.assets,renderer:s.renderer,labels:SeamlessAppearance.stats?.(),feed:{pending:s.feed.pending,failed:s.feed.failed,sections:s.feed.sections,requests:s.feed.requests}};
     });
     const after=(await cdp.send("Performance.getMetrics")).metrics,perf={};for(const name of ["TaskDuration","ScriptDuration","LayoutDuration","RecalcStyleDuration","JSHeapUsedSize"]){const a=after.find(m=>m.name===name)?.value,b=before.find(m=>m.name===name)?.value;perf[name]=name==="JSHeapUsedSize"?a:a-b;}
     if(tracing){const ended=new Promise(resolve=>cdp.once("Tracing.tracingComplete",resolve));await cdp.send("Tracing.end");await ended;cdp.off("Tracing.dataCollected",collect);const durations={};for(const e of events)if(e.ph==="X"&&e.dur)durations[e.name]=(durations[e.name]||0)+e.dur/1000;fs.writeFileSync(path.join(output,"diagnostic-trace.json"),JSON.stringify(durations,null,2));}
@@ -63,10 +69,11 @@ const output=path.resolve("release-artifacts/map-pan-performance",(ref?"baseline
     if(sample.assets.sprites!==undefined)assert(sample.assets.sprites<=sample.assets.requestedSprites+64);
     if(sample.renderer)assert(sample.renderer.tiles<=1&&sample.renderer.tileBytes<=48*1024*1024);
     if(sample.labels)assert(sample.labels.measurements<=2048&&sample.labels.placements<=16);
-    await page.screenshot({path:path.join(output,`${width}-${zoom}.png`)});results.push({width,height,cpu,zoom,...sample,perf});console.log(JSON.stringify(results.at(-1)));
+    if(sample.atmosphere)assert.equal(sample.atmosphere.nodes,6,"Weather must have bounded reusable patches");
+    await page.screenshot({path:path.join(output,`${width}-${zoom}-${repeat}.png`)});results.push({width,height,cpu,zoom,repeat,...sample,perf});console.log(JSON.stringify(results.at(-1)));
    }
   }
-  if(!ref){
+  if(!ref&&!survey){
    await cdp.send("Emulation.setCPUThrottlingRate",{rate:1});await page.setViewportSize({width:844,height:390});
    const target=await page.evaluate(()=>{const v=CrownlandsContinuousWorld.view,s=v.scene.sections.find(s=>s.name==="Stoneward");v.view(s.x+724,s.y+543,SeamlessModel.forWorld(v.scene).limits(v.snapshot().size).max);return s.id;});
    await page.waitForFunction(id=>{const v=CrownlandsContinuousWorld.view;return !v.snapshot().feed.pending&&v.scene.objects.some(o=>o.sectionId===id&&o.kind==="castle");},target);
@@ -100,20 +107,21 @@ const output=path.resolve("release-artifacts/map-pan-performance",(ref?"baseline
    const soak=[];for(let elapsed=0;elapsed<soakSeconds;elapsed+=30){
     await page.evaluate(async()=>{const v=CrownlandsContinuousWorld.view,s=v.scene.sections.find(s=>s.name==="Stoneward");let start;await new Promise(done=>{function move(t){start??=t;const e=t-start;v.view(s.x+724+Math.sin(e/3000)*2600,s.y+543+Math.sin(e/4100)*1800,SeamlessModel.forWorld(v.scene).limits(v.snapshot().size).min);if(e<30000)requestAnimationFrame(move);else done();}requestAnimationFrame(move);});});
     if(elapsed%300===0||elapsed+30>=soakSeconds)await cdp.send("HeapProfiler.collectGarbage");
-    const s=await page.evaluate(()=>{const v=CrownlandsContinuousWorld.view.snapshot();return {nodes:v.nodes,pooledNodes:v.pooledNodes,listeners:v.listeners,assets:v.assets,renderer:v.renderer,labels:SeamlessAppearance.stats?.()};});
+    const s=await page.evaluate(()=>{const v=CrownlandsContinuousWorld.view.snapshot();return {nodes:v.nodes,pooledNodes:v.pooledNodes,listeners:v.listeners,assets:v.assets,renderer:v.renderer,atmosphere:v.atmosphere,labels:SeamlessAppearance.stats?.()};});
     s.memory=await cdp.send("Memory.getDOMCounters");s.heapBytes=(await cdp.send("Performance.getMetrics")).metrics.find(m=>m.name==="JSHeapUsedSize").value;
     assert(s.nodes<2400&&(s.pooledNodes||0)<=512&&s.assets.full<=4&&s.assets.thumbnails<=16);
     assert(s.assets.sprites<=s.assets.requestedSprites+64&&s.renderer.tileBytes<=48*1024*1024&&s.labels.measurements<=2048&&s.labels.placements<=16);
+    if(s.atmosphere)assert.equal(s.atmosphere.nodes,6);
     if(soak.length)assert.equal(s.listeners,soak[0].listeners);soak.push(s);
     fs.writeFileSync(path.join(output,"soak.json"),JSON.stringify({seconds:elapsed+30,samples:soak},null,2));console.log(`Soak ${elapsed+30}/${soakSeconds}s: ${s.nodes} active nodes, ${s.pooledNodes||0} retained.`);
    }
   }
-  if(!ref){
+  if(!ref&&!survey){
    await page.evaluate(()=>{if(!modal.open)modal.showModal();});
    await pilot.store.doc("players/"+pilot.players[0].uid).update({worldId:"retired-fixture-world"});
    await page.evaluate(()=>CrownlandsContinuousWorld.view.refresh());
    await page.waitForFunction(()=>!window.CrownlandsContinuousWorld||CrownlandsContinuousWorld.view.snapshot().nodes===0);
   }
-  assert.deepEqual(errors,[]);fs.writeFileSync(path.join(output,"report.json"),JSON.stringify({baseline:ref||null,source,crowded,traced:process.env.CROWNLANDS_MAP_TRACE==="1",results},null,2));
+  assert.deepEqual(errors,[]);fs.writeFileSync(path.join(output,"report.json"),JSON.stringify({baseline:ref||null,source,crowded,survey,minOnly,cloudsOff,repeats,traced:process.env.CROWNLANDS_MAP_TRACE==="1",results},null,2));
  }finally{await browser?.close();await harness?.close();await world?.close();await pilot.close();}
 })().catch(e=>{console.error(e.stack);process.exitCode=1;});
